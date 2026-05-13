@@ -1,10 +1,12 @@
-import { User } from './auth';
+import type { User } from './auth';
 
 export interface Store {
     id: number;
     user_id: number;
     category_id: number | null;
     city_id: number | null;
+    city: City;
+    user: User;
     store_name: string;
     slug: string;
     description: string | null;
@@ -43,6 +45,12 @@ export interface Media {
     updated_at: string;
 }
 
+export type ProductStatus =
+    | 'published'
+    | 'archived'
+    | 'rejected'
+    | 'pending_review';
+
 export interface Product {
     id: number;
     store_id: number;
@@ -53,13 +61,17 @@ export interface Product {
     base_price: string;
     sale_price: string | null;
     stock: number;
-    status: 'draft' | 'published' | 'archived';
+    status: ProductStatus;
     average_rating: string;
-    category: Category | null;
-    images: Media[];
-    videos: Media[];
     created_at: string;
     updated_at: string;
+    rejection_reason: string | null;
+    reviewed_by: number | null;
+    reviewed_at: string | null;
+    store: Store;
+    images: Media[];
+    videos: Media[];
+    category: Category | null;
 }
 
 export interface OrderItem {
@@ -72,13 +84,20 @@ export interface OrderItem {
     product: Product;
 }
 
+export type OrderStatus =
+    | 'pending'
+    | 'confirmed'
+    | 'shipped'
+    | 'delivered'
+    | 'cancelled';
+
 export interface Order {
     id: number;
     buyer_id: number;
     store_id: number;
     city_id: number | null;
     tracking_number: string | null;
-    status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+    status: OrderStatus;
     total_amount: string;
     platform_fee: string;
     amana_fee: string;
@@ -107,4 +126,22 @@ export interface Earning {
     order: Order;
     store: Store;
     buyer: User;
+}
+
+export interface CartItem {
+    cart_id: number;
+    created_at: string;
+    id: number;
+    product_id: string;
+    product: Product;
+    quantity: number;
+    updated_at: string;
+}
+
+export interface Cart {
+    id: number;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+    items: CartItem[];
 }

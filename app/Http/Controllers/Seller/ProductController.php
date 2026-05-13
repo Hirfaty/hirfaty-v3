@@ -5,28 +5,34 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
-use DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = auth()->user()
-                    ->store
-                    ->products()
-                    ->with(['category', 'images'])
-                    ->latest()
-                    ->paginate(20);
-    
+        $user = $request->user();
+        if (! $user || ! $user->store) {
+            abort(403, 'Seller store not found.');
+        }
+
+        $products = $user
+            ->store
+            ->products()
+            ->with(['category', 'images'])
+            ->latest()
+            ->paginate(20);
+
         return Inertia::render('seller/products/index', [
-            "pageProps" => $products
+            'products' => $products,
         ]);
     }
 
@@ -35,8 +41,8 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return Inertia::render("seller/products/create", [
-            "categories" => Category::whereNull('parent_id')->get()
+        return Inertia::render('seller/products/create', [
+            'categories' => Category::whereNull('parent_id')->get(),
         ]
         );
     }
@@ -47,48 +53,59 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'base_price'  => ['required', 'numeric', 'min:0'],
-            'sale_price'  => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
-            'stock'       => ['required', 'integer', 'min:0'],
+            'base_price' => ['required', 'numeric', 'min:0'],
+            'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
+            'stock' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
-            'status'      => ['required', 'in:draft,published'],
-            'media'       => ['nullable', 'array', 'max:5'],
-            'media.*'     => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
+            'media' => ['nullable', 'array', 'max:5'],
+            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
         ]);
 
-        
+        $user = $request->user();
+        if (! $user || ! $user->store) {
+            abort(403, 'Seller store not found.');
+        }
 
-
-        DB::transaction(function () use ($data, $request) {
-            $store = auth()->user()->store;
+        DB::transaction(function () use ($data, $request, $user) {
+            $store = $user->store;
 
             $product = $store->products()->create([
-                'name'        => $data['name'],
-                'slug'        => Str::slug($data['name']) . '-' . Str::random(5),
+                'name' => $data['name'],
+                'slug' => Str::slug($data['name']).'-'.Str::random(5),
                 'description' => $data['description'] ?? null,
-                'base_price'  => $data['base_price'],
-                'sale_price'  => $data['sale_price'] ?? null,
-                'stock'       => $data['stock'],
+                'base_price' => $data['base_price'],
+                'sale_price' => $data['sale_price'] ?? null,
+                'stock' => $data['stock'],
                 'category_id' => $data['category_id'],
-                'status'      => $data['status'],
+                'status' => 'pending_review',
             ]);
             $this->uploadMedia($product, $request);
         });
 
-
         return redirect()->route('seller.products.index')->with(
-            'success', 'Product created successfully.'
+            'success', 'Product submitted for review. We\'ll notify you once it\'s approved.'
         );
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Product $product)
     {
-        //
+        $this->authorizeProduct($product);
+
+        $product->load(['media', 'category']);
+
+        return Inertia::render('seller/products/show', [
+            'product' => $product,
+            'stats' => [
+                'total_views' => $product->views()->count(),
+                'total_wishlists' => $product->wishlists()->count(),
+                'total_orders'    => $product->orderItems()->sum('quantity')
+            ]
+        ]);
     }
 
     /**
@@ -99,7 +116,7 @@ class ProductController extends Controller
         $this->authorizeProduct($product);
 
         return Inertia::render('seller/products/edit', [
-            'product'    => $product->load(['images', 'videos', 'category']),
+            'product' => $product->load(['images', 'videos', 'category']),
             'categories' => Category::whereNull('parent_id')->get(),
         ]);
     }
@@ -111,34 +128,35 @@ class ProductController extends Controller
     {
         $this->authorizeProduct($product);
 
+        // Can only edit if rejected or pending — not published
+        if ($product->isPublished()) {
+            return back()->withErrors(['status' => 'Published products cannot be edited directly. Archive it first.']);
+        }
+
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:255'],
-            'description'   => ['nullable', 'string'],
-            'base_price'    => ['required', 'numeric', 'min:0'],
-            'sale_price'    => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
-            'stock'         => ['required', 'integer', 'min:0'],
-            'category_id'   => ['required', 'exists:categories,id'],
-            'status'        => ['required', 'in:draft,published'],
-            'media'         => ['nullable', 'array'],
-            'media.*'       => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
-            'deleted_media' => ['nullable', 'array'],  // IDs of media to remove
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'base_price' => ['required', 'numeric', 'min:0'],
+            'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
+            'stock' => ['required', 'integer', 'min:0'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'media' => ['nullable', 'array'],
+            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
+            'deleted_media' => ['nullable', 'array'],
             'deleted_media.*' => ['integer'],
         ]);
 
         DB::transaction(function () use ($data, $request, $product) {
             $product->update([
-                'name'        => $data['name'],
-                'slug'        => Str::slug($data['name']) . '-' . Str::random(5),
-                'description' => $data['description'] ?? null,
-                'base_price'  => $data['base_price'],
-                'sale_price'  => $data['sale_price'] ?? null,
-                'stock'       => $data['stock'],
-                'category_id' => $data['category_id'],
-                'status'      => $data['status'],
+                ...$data,
+                'slug' => Str::slug($data['name']).'-'.Str::random(5),
+                'status' => 'pending_review', // ← resubmit for review on edit
+                'rejection_reason' => null,             // ← clear old rejection
+                'reviewed_by' => null,
+                'reviewed_at' => null,
             ]);
 
-            // Delete removed media
-            if (!empty($data['deleted_media'])) {
+            if (! empty($data['deleted_media'])) {
                 $toDelete = $product->media()->whereIn('id', $data['deleted_media'])->get();
                 foreach ($toDelete as $media) {
                     Storage::disk($media->disk)->delete($media->path);
@@ -146,12 +164,11 @@ class ProductController extends Controller
                 }
             }
 
-            // Upload new media
             $this->uploadMedia($product, $request);
         });
 
         return redirect()->route('seller.products.index')
-            ->with('success', 'Product updated.');
+            ->with('success', 'Product resubmitted for review.');
     }
 
     /**
@@ -172,28 +189,29 @@ class ProductController extends Controller
             ->with('success', 'Product deleted.');
     }
 
-
     // ─── Private helpers ─────────────────────────────────────────
 
     private function uploadMedia(Product $product, Request $request): void
     {
-        if (!$request->hasFile('media')) return;
+        if (! $request->hasFile('media')) {
+            return;
+        }
 
         $existingCount = $product->images()->count();
 
         foreach ($request->file('media') as $index => $file) {
-            $isVideo   = str_starts_with($file->getMimeType(), 'video');
-            $folder    = 'products/' . $product->id;
-            $path      = $file->store($folder, 'public');
+            $isVideo = str_starts_with($file->getMimeType(), 'video');
+            $folder = 'products/'.$product->id;
+            $path = $file->store($folder, 'public');
 
             $product->media()->create([
-                'type'      => $isVideo ? 'video' : 'image',
-                'path'      => $path,
-                'url'       => Storage::url($path),
-                'disk'      => 'public',
+                'type' => $isVideo ? 'video' : 'image',
+                'path' => $path,
+                'url' => Storage::url($path),
+                'disk' => 'public',
                 'mime_type' => $file->getMimeType(),
-                'size'      => $file->getSize(),
-                'order'     => $existingCount + $index,
+                'size' => $file->getSize(),
+                'order' => $existingCount + $index,
             ]);
         }
     }
@@ -201,7 +219,8 @@ class ProductController extends Controller
     private function authorizeProduct(Product $product): void
     {
         // Make sure this product belongs to the logged-in seller's store
-        if ($product->store_id !== auth()->user()->store->id) {
+        $user = Auth::user();
+        if (! $user || ! $user->store || $product->store_id !== $user->store->id) {
             abort(403);
         }
     }

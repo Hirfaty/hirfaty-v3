@@ -15,7 +15,7 @@ export default function PasswordInput({
         <div className="relative">
             <Input
                 type={showPassword ? 'text' : 'password'}
-                className={cn('pr-10', className)}
+                className={cn('pr-10 placeholder:text-ink-soft/30', className)}
                 ref={ref}
                 {...props}
             />

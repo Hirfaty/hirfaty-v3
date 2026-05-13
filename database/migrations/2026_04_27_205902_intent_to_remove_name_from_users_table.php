@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             Schema::table('users', function (Blueprint $table) {
                 // This allows you to "undo" the deletion if needed
-                $table->string('name')->after('id'); 
+                $table->string('name')->after('id');
             });
         });
     }

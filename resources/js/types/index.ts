@@ -1,3 +1,6 @@
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
+import type { Auth } from './auth';
+
 export type * from './auth';
 export type * from './navigation';
 export type * from './ui';
@@ -18,4 +21,30 @@ export interface PaginatedData<T> {
         label: string;
         active: boolean;
     }[];
+}
+
+export interface PageProps extends InertiaPageProps {
+    auth: Auth;
+    name: string;
+    sidebarOpen: boolean;
+    flash: {
+        success?: string;
+        error?: string;
+    };
+    locale: 'ar' | 'fr' | 'en';
+    direction: 'ltr' | 'rtl';
+    translations: Record<string, Record<string, string>>;
+    cart: {
+        items: Array<{
+            id: number;
+            name: string;
+            seller: string;
+            qty: number;
+            price: number;
+            line_total: number;
+        }>;
+        count: number;
+        subtotal: number;
+    };
+    [key: string]: unknown;
 }

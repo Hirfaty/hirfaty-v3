@@ -14,7 +14,7 @@ export default function Appearance() {
                 <Heading
                     variant="small"
                     title="Appearance settings"
-                    description="Update your account's appearance settings"
+                    description="Dark mode is disabled. The app always uses light mode."
                 />
                 <AppearanceTabs />
             </div>

@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 
 /**
  * Warm abstract fill used in place of artisan photography.

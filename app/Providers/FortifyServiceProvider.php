@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Http\Responses\LoginResponse;
 use App\Http\Responses\VerifyEmailResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -12,8 +13,10 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LoginResponse as ContractsLoginResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use App\Http\Responses\LoginResponse as CustomLoginResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -23,6 +26,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(VerifyEmailResponse::class, CustomVerifyEmailResponse::class);
+        $this->app->singleton(ContractsLoginResponse::class, CustomLoginResponse::class);
     }
 
     /**

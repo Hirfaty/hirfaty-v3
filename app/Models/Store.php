@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -13,11 +14,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $slug
  * @property string|null $description
  * @property string $status
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
- * @property-read \App\Models\Category|null $category
- * @property-read \App\Models\City|null $city
- * @property-read \App\Models\User $user
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read Category|null $category
+ * @property-read City|null $city
+ * @property-read User $user
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store query()
@@ -31,6 +33,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereStoreName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereUserId($value)
+ *
  * @mixin \Eloquent
  */
 class Store extends Model
@@ -40,18 +43,20 @@ class Store extends Model
         'description', 'logo', 'banner', 'status',
         'submitted_at', 'approved_at', 'approved_by', 'rejection_reason',
     ];
- 
+
     protected $casts = [
         'submitted_at' => 'datetime',
-        'approved_at'  => 'datetime',
+        'approved_at' => 'datetime',
     ];
 
-    //Relationships
-    public function user() {
+    // Relationships
+    public function user()
+    {
         return $this->belongsto(User::class);
     }
 
-    public function category() {
+    public function category()
+    {
         return $this->belongsTo(Category::class);
     }
 
@@ -64,7 +69,7 @@ class Store extends Model
     {
         return $this->hasMany(Product::class);
     }
- 
+
     public function orders()
     {
         return $this->hasMany(Order::class);

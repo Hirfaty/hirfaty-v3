@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'app_name' => 'Hirfaty',
+    'save' => 'Save',
+    'cancel' => 'Cancel',
+    'delete' => 'Delete',
+    'edit' => 'Edit',
+    'view' => 'View',
+    'search' => 'Search',
+    'filter' => 'Filter',
+    'loading' => 'Loading...',
+    'confirm' => 'Are you sure?',
+    'back' => 'Back',
+    'next' => 'Next',
+    'submit' => 'Submit',
+    'total' => 'Total',
+    'status' => 'Status',
+    'date' => 'Date',
+    'actions' => 'Actions',
+    'yes' => 'Yes',
+    'no' => 'No',
+    'welcome' => 'Welcome',
+    'logout' => 'Logout',
+    'login' => 'Login',
+    'register' => 'Register',
+];

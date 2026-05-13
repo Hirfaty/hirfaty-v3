@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'app_name' => 'Hirfaty',
+    'save' => 'Enregistrer',
+    'cancel' => 'Annuler',
+    'delete' => 'Supprimer',
+    'edit' => 'Modifier',
+    'view' => 'Voir',
+    'search' => 'Rechercher',
+    'filter' => 'Filtrer',
+    'loading' => 'Chargement...',
+    'confirm' => 'Êtes-vous sûr ?',
+    'back' => 'Retour',
+    'next' => 'Suivant',
+    'submit' => 'Envoyer',
+    'total' => 'Total',
+    'status' => 'Statut',
+    'date' => 'Date',
+    'actions' => 'Actions',
+    'yes' => 'Oui',
+    'no' => 'Non',
+    'welcome' => 'Bienvenue',
+    'logout' => 'Déconnexion',
+    'login' => 'Connexion',
+    'register' => 'S\'inscrire',
+];

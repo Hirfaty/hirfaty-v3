@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Product;
 use Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,7 +23,7 @@ class CartController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'quantity'   => ['integer', 'min:1'],
+            'quantity' => ['integer', 'min:1'],
         ]);
 
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
@@ -36,7 +35,7 @@ class CartController extends Controller
         } else {
             $cart->items()->create([
                 'product_id' => $data['product_id'],
-                'quantity'   => $data['quantity'] ?? 1,
+                'quantity' => $data['quantity'] ?? 1,
             ]);
         }
 
@@ -59,5 +58,31 @@ class CartController extends Controller
         $cartItem->delete();
 
         return back()->with('success', 'Item removed.');
+    }
+
+    public function merge(Request $request)
+    {
+        $data = $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
+        foreach ($data['items'] as $item) {
+            $existing = $cart->items()->where('product_id', $item['product_id'])->first();
+
+            if ($existing) {
+                // Add guest quantity on top of existing DB quantity
+                $existing->increment('quantity', $item['quantity']);
+            } else {
+                $cart->items()->create([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Cart merged successfully.');
     }
 }

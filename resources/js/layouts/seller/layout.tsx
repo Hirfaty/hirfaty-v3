@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import type { ReactNode } from 'react';
 import SellerSidebar from '@/components/SellerSidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
     return (

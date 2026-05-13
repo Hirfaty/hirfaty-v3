@@ -1,7 +1,10 @@
-import { Package, PlusCircle, Store } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { LogOut, Package, PlusCircle, Store } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
     SidebarGroupLabel,
@@ -11,8 +14,6 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { Link, usePage } from '@inertiajs/react';
-import { ShoppingBag } from 'lucide-react';
 
 const catalogueItems = [
     { title: 'Produits', url: '/seller/products', icon: Package },
@@ -30,10 +31,16 @@ const salesItems = [
 export function SellerSidebar() {
     const { state } = useSidebar();
     const collapsed = state === 'collapsed';
-    const { url, component } = usePage();
-    console.log('url: ', url);
+    const { url } = usePage();
 
-    const isActive = (path: string) => url === path;
+    // const isActive = (path: string) => url === path;
+    const isActive = (path: string) => {
+        // Escapes special characters and ensures the string ends
+        // after the path or continues with a query parameter
+        const regex = new RegExp(`^${path}$`);
+
+        return regex.test(url.split('?')[0]); // split to ignore query strings
+    };
 
     return (
         <Sidebar collapsible="icon" className="border-r border-border">
@@ -60,21 +67,34 @@ export function SellerSidebar() {
                         <SidebarMenu>
                             {catalogueItems.map((item) => (
                                 <SidebarMenuItem key={item.url}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        isActive={isActive(item.url)}
-                                    >
-                                        <Link
-                                            className="flex items-center gap-2"
-                                            href={item.url}
-                                        >
-                                            <item.icon className="h-4 w-4" />
+                                    {(() => {
+                                        const active = isActive(item.url);
 
-                                            {!collapsed && (
-                                                <span>{item.title}</span>
-                                            )}
-                                        </Link>
-                                    </SidebarMenuButton>
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    className="flex items-center gap-2"
+                                                    href={item.url}
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
                                 </SidebarMenuItem>
                             ))}
                         </SidebarMenu>
@@ -87,27 +107,53 @@ export function SellerSidebar() {
                         <SidebarMenu>
                             {salesItems.map((item) => (
                                 <SidebarMenuItem key={item.url}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        isActive={true}
-                                        // isActive={pathname.startsWith(item.url)}
-                                    >
-                                        <Link
-                                            href={item.url}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <item.icon className="h-4 w-4" />
-                                            {!collapsed && (
-                                                <span>{item.title}</span>
-                                            )}
-                                        </Link>
-                                    </SidebarMenuButton>
+                                    {(() => {
+                                        const active = isActive(item.url);
+
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    href={item.url}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
                                 </SidebarMenuItem>
                             ))}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
+
+            <SidebarFooter className="border-t border-border">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={() => router.post(route('logout'))}
+                            className="flex items-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            {!collapsed && <span>Déconnexion</span>}
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
         </Sidebar>
     );
 }

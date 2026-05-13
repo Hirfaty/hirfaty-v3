@@ -4,6 +4,7 @@ export type User = {
     last_name: string;
     phone_number: string;
     email: string;
+    is_banned: boolean;
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;

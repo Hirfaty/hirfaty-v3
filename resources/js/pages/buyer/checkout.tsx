@@ -1,39 +1,27 @@
-import { useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
+import { ArrowLeft, ShieldCheck, Truck, AlertCircle } from 'lucide-react';
 import React from 'react';
-
-type Media = { id: number; url: string };
-
-type Product = {
-    id: number;
-    name: string;
-    base_price: string;
-    sale_price: string | null;
-    images: Media[];
-    store: { id: number; store_name: string };
-};
-
-type CartItem = {
-    id: number;
-    quantity: number;
-    product: Product;
-};
-
-type Cart = {
-    id: number;
-    items: CartItem[];
-};
-
-type City = { id: number; name: string };
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
+import { Separator } from '@/components/ui/separator';
+import { Cart, CartItem, City, Product, Store } from '@/types';
 
 const PLATFORM_FEE_PERCENT = 0.05;
 const AMANA_FEE = 15;
 
 const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
+    console.log('cart: ', cart);
     const { data, setData, post, processing, errors } = useForm({
         shipping_address: '',
         city_id: cities[0]?.id ?? null,
         notes: '',
     });
+
+    const formatMAD = (value: number) =>
+        new Intl.NumberFormat('fr-MA', {
+            style: 'currency',
+            currency: 'MAD',
+        }).format(value);
 
     const getPrice = (product: Product) =>
         parseFloat(product.sale_price ?? product.base_price);
@@ -43,13 +31,16 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
         Record<number, { storeName: string; items: CartItem[] }>
     >((acc, item) => {
         const storeId = item.product.store.id;
+
         if (!acc[storeId]) {
             acc[storeId] = {
                 storeName: item.product.store.store_name,
                 items: [],
             };
         }
+
         acc[storeId].items.push(item);
+
         return acc;
     }, {});
 
@@ -64,204 +55,269 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
     const totalAmanaFee = AMANA_FEE * storeCount;
     const grandTotal = productsTotal + totalAmanaFee;
 
-    const handleSubmit = () => {
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
         post(route('checkout.store'));
     };
 
     return (
-        <div className="mx-auto grid max-w-5xl grid-cols-12 gap-8 p-8">
-            <h1 className="col-span-12 text-2xl font-bold">Checkout</h1>
+        <div className="paper-grain min-h-screen bg-cream font-sans text-ink">
+            <SiteHeader />
 
-            {/* ── Left — form ── */}
-            <div className="col-span-12 space-y-6 md:col-span-7">
-                {/* Shipping address */}
-                <div>
-                    <label className="mb-1 block text-sm font-medium">
-                        Shipping address
-                    </label>
-                    <textarea
-                        value={data.shipping_address}
-                        onChange={(e) =>
-                            setData('shipping_address', e.target.value)
-                        }
-                        rows={3}
-                        placeholder="Full address..."
-                        className="w-full border p-3 text-sm focus:ring-1 focus:ring-black focus:outline-none"
-                    />
-                    {errors.shipping_address && (
-                        <p className="mt-1 text-xs text-red-500">
-                            {errors.shipping_address}
-                        </p>
-                    )}
-                </div>
+            <section className="container pt-12 pb-6">
+                <Link
+                    href={route('cart.show')}
+                    className="inline-flex items-center gap-2 text-sm text-ink-soft transition-colors hover:text-ink"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Retour au panier
+                </Link>
 
-                {/* City */}
-                <div>
-                    <label className="mb-1 block text-sm font-medium">
-                        City
-                    </label>
-                    <select
-                        value={data.city_id ?? ''}
-                        onChange={(e) =>
-                            setData('city_id', Number(e.target.value))
-                        }
-                        className="w-full border p-3 text-sm focus:ring-1 focus:ring-black focus:outline-none"
-                    >
-                        {cities.map((city) => (
-                            <option key={city.id} value={city.id}>
-                                {city.name}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.city_id && (
-                        <p className="mt-1 text-xs text-red-500">
-                            {errors.city_id}
-                        </p>
-                    )}
-                </div>
+                <h1 className="h-editorial mt-6 text-4xl md:text-5xl">
+                    Finaliser la commande
+                </h1>
+            </section>
 
-                {/* Notes */}
-                <div>
-                    <label className="mb-1 block text-sm font-medium">
-                        Notes{' '}
-                        <span className="font-normal text-gray-400">
-                            (optional)
-                        </span>
-                    </label>
-                    <textarea
-                        value={data.notes}
-                        onChange={(e) => setData('notes', e.target.value)}
-                        rows={2}
-                        placeholder="Any notes for the sellers..."
-                        className="w-full border p-3 text-sm focus:ring-1 focus:ring-black focus:outline-none"
-                    />
-                </div>
+            <section className="container pb-24">
+                {/* {errors.cart && (
+                    <div className="mb-8 flex animate-in items-start gap-3 border border-terracotta/20 bg-terracotta/5 p-4 text-sm text-terracotta fade-in slide-in-from-top-2">
+                        <AlertCircle className="h-5 w-5 shrink-0" />
+                        <p>{errors.cart}</p>
+                    </div>
+                )} */}
 
-                {/* Orders breakdown per store */}
-                <div>
-                    <p className="mb-3 text-sm font-medium">
-                        Your cart will generate {storeCount} order
-                        {storeCount > 1 ? 's' : ''}:
-                    </p>
-                    <div className="space-y-3">
-                        {Object.entries(grouped).map(
-                            ([storeId, { storeName, items }]) => {
-                                const storeSubtotal = items.reduce(
-                                    (sum, item) =>
-                                        sum +
-                                        getPrice(item.product) * item.quantity,
-                                    0,
-                                );
-                                const storePlatformFee = parseFloat(
-                                    (
-                                        storeSubtotal * PLATFORM_FEE_PERCENT
-                                    ).toFixed(2),
-                                );
-                                const sellerEarnings =
-                                    storeSubtotal -
-                                    storePlatformFee -
-                                    AMANA_FEE;
+                <form
+                    onSubmit={handleSubmit}
+                    className="grid grid-cols-12 gap-12"
+                >
+                    {/* ── Left — form ── */}
+                    <div className="col-span-12 space-y-10 lg:col-span-7">
+                        {/* Shipping address */}
+                        <div className="space-y-4">
+                            <h2 className="border-b border-ink/10 pb-2 font-display text-xl">
+                                Informations de livraison
+                            </h2>
 
-                                return (
-                                    <div
-                                        key={storeId}
-                                        className="border p-4 text-sm"
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="eyebrow mb-2 block">
+                                        Ville
+                                    </label>
+                                    <select
+                                        value={data.city_id ?? ''}
+                                        onChange={(e) =>
+                                            setData(
+                                                'city_id',
+                                                Number(e.target.value),
+                                            )
+                                        }
+                                        className="w-full border border-ink/10 bg-paper p-3 text-sm transition-colors focus:border-ink focus:outline-none"
                                     >
-                                        <p className="mb-2 font-medium">
-                                            {storeName}
+                                        {cities.map((city) => (
+                                            <option
+                                                key={city.id}
+                                                value={city.id}
+                                            >
+                                                {city.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.city_id && (
+                                        <p className="mt-1 text-xs text-terracotta">
+                                            {errors.city_id}
                                         </p>
-                                        <ul className="mb-3 space-y-1 text-gray-500">
-                                            {items.map((item) => (
-                                                <li
-                                                    key={item.id}
-                                                    className="flex justify-between"
-                                                >
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="eyebrow mb-2 block">
+                                        Adresse complète
+                                    </label>
+                                    <textarea
+                                        value={data.shipping_address}
+                                        onChange={(e) =>
+                                            setData(
+                                                'shipping_address',
+                                                e.target.value,
+                                            )
+                                        }
+                                        rows={3}
+                                        placeholder="Rue, quartier, numéro de maison..."
+                                        className="w-full border border-ink/10 bg-paper p-3 text-sm transition-colors focus:border-ink focus:outline-none"
+                                    />
+                                    {errors.shipping_address && (
+                                        <p className="mt-1 text-xs text-terracotta">
+                                            {errors.shipping_address}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="eyebrow mb-2 block">
+                                        Notes{' '}
+                                        <span className="font-normal text-ink-soft">
+                                            (optionnel)
+                                        </span>
+                                    </label>
+                                    <textarea
+                                        value={data.notes}
+                                        onChange={(e) =>
+                                            setData('notes', e.target.value)
+                                        }
+                                        rows={2}
+                                        placeholder="Instructions pour le livreur..."
+                                        className="w-full border border-ink/10 bg-paper p-3 text-sm transition-colors focus:border-ink focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Orders breakdown per store */}
+                        <div className="space-y-6">
+                            <h2 className="border-b border-ink/10 pb-2 font-display text-xl">
+                                Détail des expéditions
+                            </h2>
+                            <p className="text-sm text-ink-soft italic">
+                                Votre panier contient des articles de{' '}
+                                {storeCount} artisan{storeCount > 1 ? 's' : ''}{' '}
+                                différent{storeCount > 1 ? 's' : ''}. Vous
+                                recevrez {storeCount} colis distinct
+                                {storeCount > 1 ? 's' : ''}.
+                            </p>
+
+                            <div className="space-y-6">
+                                {Object.entries(grouped).map(
+                                    ([storeId, { storeName, items }]) => (
+                                        <div
+                                            key={storeId}
+                                            className="border border-ink/5 bg-cream-deep/30 p-6"
+                                        >
+                                            <p className="eyebrow mb-4 text-xs">
+                                                Expédié par {storeName}
+                                            </p>
+                                            <ul className="space-y-3">
+                                                {items.map((item) => (
+                                                    <li
+                                                        key={item.id}
+                                                        className="flex items-center justify-between"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-10 w-10 flex-shrink-0 overflow-hidden border border-ink/10 bg-paper">
+                                                                {item.product
+                                                                    .images[0] && (
+                                                                    <img
+                                                                        src={
+                                                                            item
+                                                                                .product
+                                                                                .images[0]
+                                                                                .url
+                                                                        }
+                                                                        alt=""
+                                                                        className="h-full w-full object-cover"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-medium">
+                                                                    {
+                                                                        item
+                                                                            .product
+                                                                            .name
+                                                                    }
+                                                                </span>
+                                                                <span className="text-xs text-ink-soft">
+                                                                    Quantité :{' '}
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="font-display text-sm">
+                                                            {formatMAD(
+                                                                getPrice(
+                                                                    item.product,
+                                                                ) *
+                                                                    item.quantity,
+                                                            )}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                            <div className="mt-4 flex items-center justify-between border-t border-ink/5 pt-4 text-xs text-ink-soft">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Truck className="h-3 w-3" />
                                                     <span>
-                                                        {item.product.name} ×{' '}
-                                                        {item.quantity}
+                                                        Livraison Amana
+                                                        (Standard)
                                                     </span>
-                                                    <span>
-                                                        {(
-                                                            getPrice(
-                                                                item.product,
-                                                            ) * item.quantity
-                                                        ).toFixed(2)}{' '}
-                                                        MAD
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <div className="space-y-1 border-t pt-2 text-xs text-gray-400">
-                                            <div className="flex justify-between">
-                                                <span>Amana shipping</span>
+                                                </div>
                                                 <span>
-                                                    {AMANA_FEE.toFixed(2)} MAD
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Platform fee (5%)</span>
-                                                <span>
-                                                    {storePlatformFee.toFixed(
-                                                        2,
-                                                    )}{' '}
-                                                    MAD
+                                                    {formatMAD(AMANA_FEE)}
                                                 </span>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            },
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Right — summary ── */}
-            <aside className="col-span-12 md:col-span-5">
-                <div className="sticky top-8 border p-6">
-                    <p className="mb-4 text-sm font-semibold tracking-wider uppercase">
-                        Order summary
-                    </p>
-
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between text-gray-500">
-                            <span>Products ({cart.items.length})</span>
-                            <span>{productsTotal.toFixed(2)} MAD</span>
-                        </div>
-                        <div className="flex justify-between text-gray-500">
-                            <span>
-                                Amana shipping ({storeCount} store
-                                {storeCount > 1 ? 's' : ''})
-                            </span>
-                            <span>{totalAmanaFee.toFixed(2)} MAD</span>
-                        </div>
-                        <div className="flex justify-between text-gray-500">
-                            <span>Platform fee (5%)</span>
-                            <span>{totalPlatformFee.toFixed(2)} MAD</span>
+                                    ),
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-4 flex justify-between border-t pt-4 font-bold">
-                        <span>Total</span>
-                        <span>{grandTotal.toFixed(2)} MAD</span>
-                    </div>
+                    {/* ── Right — summary ── */}
+                    <aside className="col-span-12 lg:col-span-5">
+                        <div className="sticky top-24 border border-ink/15 bg-paper p-8 shadow-sm">
+                            <h2 className="eyebrow mb-6">Récapitulatif</h2>
 
-                    <p className="mt-3 text-xs text-gray-400">
-                        Payment will be collected on delivery (Cash on Delivery
-                        via Amana).
-                    </p>
+                            <div className="space-y-4 text-sm">
+                                <div className="flex justify-between text-ink-soft">
+                                    <span>Produits ({cart.items.length})</span>
+                                    <span>{formatMAD(productsTotal)}</span>
+                                </div>
+                                <div className="flex justify-between text-ink-soft">
+                                    <span>
+                                        Frais de livraison ({storeCount} colis)
+                                    </span>
+                                    <span>{formatMAD(totalAmanaFee)}</span>
+                                </div>
 
-                    <button
-                        onClick={handleSubmit}
-                        disabled={processing}
-                        className="mt-6 w-full bg-black py-3 text-sm text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
-                    >
-                        {processing
-                            ? 'Placing orders...'
-                            : `Place ${storeCount} order${storeCount > 1 ? 's' : ''}`}
-                    </button>
-                </div>
-            </aside>
+                                <Separator className="bg-ink/10" />
+
+                                <div className="flex items-baseline justify-between pt-2">
+                                    <span className="font-display text-lg">
+                                        Total
+                                    </span>
+                                    <span className="font-display text-3xl">
+                                        {formatMAD(grandTotal)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 space-y-4">
+                                <div className="flex gap-3 rounded-sm border border-ink/5 bg-cream p-4">
+                                    <ShieldCheck className="h-5 w-5 shrink-0 text-ink" />
+                                    <p className="text-xs leading-relaxed text-ink-soft">
+                                        Paiement sécurisé à la livraison. Vous
+                                        payez directement le livreur Amana à
+                                        réception de vos colis.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="w-full bg-ink py-4 font-display text-base text-cream transition-colors hover:bg-ink/90 disabled:opacity-50"
+                                >
+                                    {processing
+                                        ? 'Traitement en cours...'
+                                        : `Confirmer la commande • ${formatMAD(grandTotal)}`}
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+                </form>
+            </section>
+
+            <SiteFooter />
         </div>
     );
 };

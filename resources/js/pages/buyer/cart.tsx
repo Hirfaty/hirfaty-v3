@@ -1,232 +1,263 @@
-import { Link, router, useForm } from '@inertiajs/react';
-import React from 'react';
+import { Link, router } from '@inertiajs/react';
+import {
+    ArrowLeft,
+    Minus,
+    Plus,
+    Trash2,
+    ShieldCheck,
+    Truck,
+    Heart,
+} from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
+import { Separator } from '@/components/ui/separator';
+import type { Cart} from '@/types';
+import { CartItem } from '@/types';
 
-type Media = { id: number; url: string };
+const CartPage = ({ cart }: { cart: Cart }) => {
+    const [promoApplied, setPromoApplied] = useState<number>(0);
 
-type Product = {
-    id: number;
-    name: string;
-    base_price: string;
-    sale_price: string | null;
-    images: Media[];
-    store: { id: number; store_name: string };
-};
+    // ✅ helpers (VERY IMPORTANT)
+    const toPrice = (price: string | null) => Number(price ?? 0);
 
-type CartItem = {
-    id: number;
-    quantity: number;
-    product: Product;
-};
+    const getUnitPrice = (product: any) =>
+        toPrice(product.sale_price ?? product.base_price);
 
-type Cart = {
-    id: number;
-    items: CartItem[];
-};
+    const getBasePrice = (product: any) => toPrice(product.base_price);
 
-const Cart = ({ cart }: { cart: Cart }) => {
-    // Group items by store
-    const grouped = cart.items.reduce<
-        Record<string, { storeName: string; items: CartItem[] }>
-    >((acc, item) => {
-        const storeId = item.product.store.id;
-        if (!acc[storeId]) {
-            acc[storeId] = {
-                storeName: item.product.store.store_name,
-                items: [],
-            };
-        }
-        acc[storeId].items.push(item);
-        return acc;
-    }, {});
+    const formatMAD = (value: number) =>
+        new Intl.NumberFormat('fr-MA', {
+            style: 'currency',
+            currency: 'MAD',
+        }).format(value);
 
-    const getPrice = (product: Product) =>
-        parseFloat(product.sale_price ?? product.base_price);
+    // ✅ calculations
+    const subtotal = cart.items.reduce((sum, item) => {
+        return sum + getUnitPrice(item.product) * item.quantity;
+    }, 0);
 
-    const itemTotal = (item: CartItem) =>
-        getPrice(item.product) * item.quantity;
+    const savings = cart.items.reduce((sum, item) => {
+        if (!item.product.sale_price) {
+return sum;
+}
 
-    const grandTotal = cart.items.reduce(
-        (sum, item) => sum + itemTotal(item),
-        0,
-    );
+        const base = getBasePrice(item.product);
+        const sale = toPrice(item.product.sale_price);
 
-    const removeItem = (itemId: number) => {
-        router.delete(route('cart.remove', itemId));
+        return sum + (base - sale) * item.quantity;
+    }, 0);
+
+    const discount = Math.round((subtotal * promoApplied) / 100);
+    const shipping = subtotal > 600 ? 0 : 45;
+    const total = subtotal - discount + shipping;
+
+    const changeQuantity = (cartItemId: number, quantity: number) => {
+        router.patch(route('cart.update', cartItemId), { quantity: quantity });
     };
-
-    const updateQuantity = (itemId: number, quantity: number) => {
-        if (quantity < 1) return;
-        router.patch(route('cart.update', itemId), { quantity });
-    };
-
-    if (cart.items.length === 0) {
-        return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-                <p className="text-gray-500">Your cart is empty.</p>
-                <Link
-                    href={route('products.index')}
-                    className="text-sm text-blue-600 hover:underline"
-                >
-                    Browse products →
-                </Link>
-            </div>
-        );
-    }
 
     return (
-        <div className="mx-auto max-w-3xl p-8">
-            <h1 className="mb-6 text-2xl font-bold">Your Cart</h1>
+        <div className="paper-grain min-h-screen bg-cream">
+            <SiteHeader />
 
-            <div className="space-y-8">
-                {Object.entries(grouped).map(
-                    ([storeId, { storeName, items }]) => {
-                        const storeTotal = items.reduce(
-                            (sum, item) => sum + itemTotal(item),
-                            0,
-                        );
+            <section className="container pt-12 pb-6">
+                <Link
+                    href="/products"
+                    className="inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Continuer la découverte
+                </Link>
 
-                        return (
-                            <div key={storeId} className="border">
-                                {/* Store header */}
-                                <div className="border-b bg-gray-50 px-4 py-3">
-                                    <p className="text-sm font-semibold">
-                                        {storeName}
-                                    </p>
-                                </div>
+                <div className="mt-6 flex justify-between">
+                    <h1 className="text-4xl">Panier</h1>
+                    <span>{cart.items.length} articles</span>
+                </div>
+            </section>
 
-                                {/* Items */}
-                                <div className="divide-y">
-                                    {items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-center gap-4 p-4"
+            {cart.items.length === 0 ? (
+                <section className="container py-24 text-center">
+                    <p>Panier vide</p>
+                </section>
+            ) : (
+                <section className="container grid grid-cols-12 gap-8 pb-20">
+                    {/* ITEMS */}
+                    <div className="col-span-12 lg:col-span-8">
+                        <div className="border-y border-ink/15">
+                            {cart.items.map((item, i) => (
+                                <article
+                                    key={item.id}
+                                    className={`grid grid-cols-12 gap-4 py-6 ${i > 0 ? 'border-t border-ink/10' : ''}`}
+                                >
+                                    <div className="col-span-9 flex flex-col">
+                                        <Link
+                                            href={`/products/${item.product.slug}`}
+                                            className="text-lg text-ink hover:text-terracotta"
                                         >
-                                            {/* Image */}
-                                            {item.product.images[0] ? (
-                                                <img
-                                                    src={
-                                                        item.product.images[0]
-                                                            .url
-                                                    }
-                                                    alt={item.product.name}
-                                                    className="h-16 w-16 object-cover"
-                                                />
-                                            ) : (
-                                                <div className="h-16 w-16 bg-gray-100" />
-                                            )}
+                                            {item.product.name}
+                                        </Link>
 
-                                            {/* Name + price */}
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium">
-                                                    {item.product.name}
-                                                </p>
-                                                <p className="text-sm text-gray-500">
-                                                    {getPrice(
-                                                        item.product,
-                                                    ).toFixed(2)}{' '}
-                                                    MAD
-                                                    {item.product
-                                                        .sale_price && (
-                                                        <span className="ml-2 text-gray-400 line-through">
-                                                            {
-                                                                item.product
-                                                                    .base_price
-                                                            }{' '}
-                                                            MAD
-                                                        </span>
-                                                    )}
-                                                </p>
-                                            </div>
+                                        <p className="text-sm text-ink-soft">
+                                            par {item.product.store.store_name}
+                                        </p>
 
-                                            {/* Quantity */}
-                                            <div className="flex items-center gap-2">
+                                        <div className="mt-4 flex items-center gap-4">
+                                            <div className="flex items-center border">
                                                 <button
                                                     onClick={() =>
-                                                        updateQuantity(
+                                                        changeQuantity(
                                                             item.id,
                                                             item.quantity - 1,
                                                         )
                                                     }
-                                                    className="h-7 w-7 border text-sm hover:bg-gray-100"
+                                                    disabled={
+                                                        item.quantity == 1
+                                                    }
+                                                    className="disabled:pointer-none: inline-flex h-8 w-8 cursor-pointer items-center justify-center text-ink-soft hover:bg-cream-deep/60 hover:text-ink disabled:opacity-30"
                                                 >
-                                                    −
+                                                    <Minus className="h-3 w-3" />
                                                 </button>
-                                                <span className="w-6 text-center text-sm">
+
+                                                <span className="w-8 text-center font-display text-sm text-ink">
                                                     {item.quantity}
                                                 </span>
+
                                                 <button
                                                     onClick={() =>
-                                                        updateQuantity(
+                                                        changeQuantity(
                                                             item.id,
                                                             item.quantity + 1,
                                                         )
                                                     }
-                                                    className="h-7 w-7 border text-sm hover:bg-gray-100"
+                                                    disabled={
+                                                        item.quantity >=
+                                                        item.product.stock
+                                                    }
+                                                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center text-ink-soft hover:bg-cream-deep/60 hover:text-ink disabled:opacity-30"
                                                 >
-                                                    +
+                                                    <Plus className="h-3 w-3" />
                                                 </button>
                                             </div>
 
-                                            {/* Subtotal */}
-                                            <p className="w-24 text-right text-sm font-medium">
-                                                {itemTotal(item).toFixed(2)} MAD
-                                            </p>
+                                            <button className="text-sm text-ink-soft hover:text-terracotta">
+                                                <Trash2 className="inline h-4 w-4" />{' '}
+                                                Retirer
+                                            </button>
 
-                                            {/* Remove */}
-                                            <button
-                                                onClick={() =>
-                                                    removeItem(item.id)
-                                                }
-                                                className="text-xs text-red-400 hover:text-red-600"
-                                            >
-                                                Remove
+                                            <button className="text-sm text-ink-soft hover:text-ink">
+                                                <Heart className="inline h-4 w-4" />{' '}
+                                                Favoris
                                             </button>
                                         </div>
-                                    ))}
+                                    </div>
+
+                                    {/* ✅ PRICE BLOCK FIXED */}
+                                    <div className="col-span-3 text-right">
+                                        {item.product.sale_price ? (
+                                            <>
+                                                <div className="text-xl text-ink">
+                                                    {formatMAD(
+                                                        getUnitPrice(
+                                                            item.product,
+                                                        ) * item.quantity,
+                                                    )}
+                                                </div>
+
+                                                <div className="text-xs text-ink-soft line-through">
+                                                    {formatMAD(
+                                                        getBasePrice(
+                                                            item.product,
+                                                        ) * item.quantity,
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-xl text-ink">
+                                                {formatMAD(
+                                                    getBasePrice(item.product) *
+                                                        item.quantity,
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="text-xs text-ink-soft">
+                                            {formatMAD(
+                                                getUnitPrice(item.product),
+                                            )}{' '}
+                                            / pièce
+                                        </div>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 flex items-center gap-2 text-sm text-ink-soft">
+                            <Truck className="h-4 w-4" />
+                            {subtotal >= 600 ? (
+                                <span>Livraison offerte</span>
+                            ) : (
+                                <span>
+                                    Encore {formatMAD(600 - subtotal)} pour
+                                    livraison gratuite
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* SUMMARY */}
+                    <aside className="col-span-12 lg:col-span-4">
+                        <div className="border p-6">
+                            <p className="mb-4">Résumé</p>
+
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span>Sous-total</span>
+                                    <span>{formatMAD(subtotal)}</span>
                                 </div>
 
-                                {/* Store subtotal */}
-                                <div className="flex justify-end border-t px-4 py-3">
-                                    <p className="text-sm text-gray-500">
-                                        Store subtotal:{' '}
-                                        <span className="font-medium text-black">
-                                            {storeTotal.toFixed(2)} MAD
-                                        </span>
-                                    </p>
+                                {savings > 0 && (
+                                    <div className="flex justify-between text-terracotta">
+                                        <span>Économies</span>
+                                        <span>-{formatMAD(savings)}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between">
+                                    <span>Livraison</span>
+                                    <span>
+                                        {shipping === 0
+                                            ? 'Gratuit'
+                                            : formatMAD(shipping)}
+                                    </span>
                                 </div>
                             </div>
-                        );
-                    },
-                )}
-            </div>
 
-            {/* Grand total + checkout */}
-            <div className="mt-8 border-t pt-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs text-gray-400">
-                            * Shipping (15 MAD) and platform fees applied at
-                            checkout per store.
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm text-gray-500">
-                            Total:{' '}
-                            <span className="text-xl font-bold text-black">
-                                {grandTotal.toFixed(2)} MAD
-                            </span>
-                        </p>
-                        <Link
-                            href={route('checkout.show')}
-                            className="mt-3 inline-block bg-black px-8 py-3 text-sm text-white hover:bg-gray-800"
-                        >
-                            Proceed to checkout →
-                        </Link>
-                    </div>
-                </div>
-            </div>
+                            <Separator className="my-4" />
+
+                            <div className="flex justify-between text-lg">
+                                <span>Total</span>
+                                <span>{formatMAD(total)}</span>
+                            </div>
+
+                            <Link
+                                href="/checkout"
+                                className="mt-4 block bg-black py-3 text-center text-white"
+                            >
+                                Checkout
+                            </Link>
+
+                            <div className="mt-4 flex gap-2 text-xs text-ink-soft">
+                                <ShieldCheck className="h-4 w-4" />
+                                Paiement sécurisé
+                            </div>
+                        </div>
+                    </aside>
+                </section>
+            )}
+
+            <SiteFooter />
         </div>
     );
 };
 
-export default Cart;
+export default CartPage;

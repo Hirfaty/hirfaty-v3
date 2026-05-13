@@ -11,9 +11,8 @@ use App\Models\Store;
 use App\Models\User;
 use App\Notifications\NewOrderReceived;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
-use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);

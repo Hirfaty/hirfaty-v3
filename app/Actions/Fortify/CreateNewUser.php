@@ -6,8 +6,8 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Illuminate\Validation\Rule;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -24,20 +24,24 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             ...$this->profileRules(),
             'first_name' => ['required', 'string', 'max:255'],
-            'last_name'  => ['required', 'string', 'max:255'],
-            'email'      => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'role'       => ['required', Rule::in(['seller', 'buyer'])],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'role' => ['required', Rule::in(['seller', 'buyer'])],
+            'phone_number' => ['required', 'string', 'max:20'],
             'password' => $this->passwordRules(),
+            'terms_accepted' => ['required', 'accepted'],
         ])->validate();
 
-
         return User::create([
-            // 'name' => $input['name'],
-            'first_name' => $input["first_name"],
-            "last_name" => $input["last_name"],
+            'first_name' => $input['first_name'],
+            'last_name' => $input['last_name'],
             'email' => $input['email'],
-            'role' => $input["role"],
+            'role' => $input['role'],
+            'phone_number' => $input['phone_number'],
             'password' => $input['password'],
+            'terms_accepted' => true,
+            'terms_accepted_at' => now(),
+            'locale' => session('locale', 'fr')
         ]);
     }
 }

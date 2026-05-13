@@ -3,16 +3,22 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Notifications\BuyerVerifyEmail;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\SellerVerifyEmail;
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Contacts\Auth\MustVerifyEmail;
-use App\Notifications\SellerVerifyEmail;
-use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
+use Override;
 
 /**
  * @property int $id
@@ -24,17 +30,18 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
  * @property string|null $bio
  * @property int $is_banned
  * @property string $email
- * @property \Carbon\CarbonImmutable|null $email_verified_at
+ * @property CarbonImmutable|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
- * @property \Carbon\CarbonImmutable|null $two_factor_confirmed_at
+ * @property CarbonImmutable|null $two_factor_confirmed_at
  * @property string|null $remember_token
- * @property \Carbon\CarbonImmutable|null $created_at
- * @property \Carbon\CarbonImmutable|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  * @property int $two_factor_enabled
- * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
+ * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
+ *
  * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
@@ -57,9 +64,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereTwoFactorRecoveryCodes($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereTwoFactorSecret($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
-#[Fillable(['email', 'password', "first_name", "last_name", "phone_number", "role"])]
+#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements AuthMustVerifyEmail
 {
@@ -81,24 +89,48 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     }
 
     // Role helpers
-    public function isSuperAdmin(): bool {
-        return $this->role === "super_admin";
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
     }
 
-    public function isBuyer(): bool {
-        return  $this->role === "buyer";
+    public function isBuyer(): bool
+    {
+        return $this->role === 'buyer';
     }
 
-    public function isSeller(): bool {
-         return $this->role === "seller";
+    public function isSeller(): bool
+    {
+        return $this->role === 'seller';
     }
 
     public function sendEmailVerificationNotification()
     {
-        $this->notify(new SellerVerifyEmail());
+        switch($this->role) {
+            case "seller":
+                $this->notify(new SellerVerifyEmail);
+                break;
+            case "buyer":
+                $this->notify(new BuyerVerifyEmail);
+                break;
+            default:
+                $this->notify(new BuyerVerifyEmail);
+        }
     }
 
-    public function store() {
+    #[Override]
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    public function store()
+    {
         return $this->hasOne(Store::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'buyer_id');
     }
 }

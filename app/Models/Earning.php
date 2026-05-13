@@ -13,12 +13,19 @@ class Earning extends Model
     ];
 
     protected $casts = [
-        'gross_amount'  => 'decimal:2',
-        'platform_fee'  => 'decimal:2',
-        'amana_fee'     => 'decimal:2',
-        'net_amount'    => 'decimal:2',
+        'gross_amount' => 'decimal:2',
+        'platform_fee' => 'decimal:2',
+        'amana_fee' => 'decimal:2',
+        'net_amount' => 'decimal:2',
     ];
 
-    public function store() { return $this->belongsTo(Store::class); }
-    public function order() { return $this->belongsTo(Order::class); }
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 }

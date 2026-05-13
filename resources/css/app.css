@@ -103,10 +103,12 @@
 }
 
 :root {
-    --cream: oklch(96.2% 0.015 81.5);
+    /* --cream: oklch(96.38% 0.015 84.75);
+     */
+    --cream: oklch(0.99 0 0);
     --cream-deep: oklch(90% 0.04 32);
     --paper: oklch(97% 0.01 38);
-    --ink: oklch(20% 0.06 232);
+    --ink: oklch(28.48% 0.053 252.6);
     --ink-soft: oklch(35% 0.04 232);
     --terracotta: oklch(67.89% 0.184 41.23);
     --terracotta-deep: oklch(58.28% 0.184 36.18);
@@ -158,4 +160,116 @@
     label {
         @apply mb-2 block text-[11px] tracking-[0.18em] text-ink-soft uppercase;
     }
+}
+
+.font-display {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+}
+.font-arabic {
+    font-family: 'Noto Naskh Arabic', serif;
+}
+
+.h-editorial {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+}
+
+.eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 600;
+    color: hsl(var(--ink-soft));
+}
+
+.rule {
+    height: 1px;
+    background: hsl(var(--ink) / 0.15);
+}
+.rule-strong {
+    height: 1px;
+    background: hsl(var(--ink) / 0.85);
+}
+
+/* Subtle warm paper texture using layered SVG noise + radial wash */
+.paper-grain {
+    background-image:
+        radial-gradient(
+            1200px 600px at 80% -10%,
+            hsl(var(--terracotta) / 0.07),
+            transparent 60%
+        ),
+        radial-gradient(
+            900px 500px at -10% 110%,
+            hsl(var(--olive) / 0.08),
+            transparent 60%
+        );
+}
+
+.clay-fill {
+    background: hsl(var(--clay));
+}
+.sand-fill {
+    background: hsl(var(--sand));
+}
+.ink-fill {
+    background: hsl(var(--ink));
+    color: hsl(var(--cream));
+}
+.terracotta-fill {
+    background: hsl(var(--terracotta));
+    color: hsl(var(--paper));
+}
+
+.link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    padding-bottom: 2px;
+}
+
+/* Zellige-inspired decorative divider (CSS only, restrained) */
+
+/* Zellij tile pattern — uses uploaded artwork, kept very faint for harmony */
+.zellige-bg {
+    position: relative;
+    background-color: hsl(var(--cream));
+    isolation: isolate;
+}
+.zellige-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url('/resources/js/images/zellij-pattern.png');
+    background-size: 280px 280px;
+    background-repeat: repeat;
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+.zellige-divider {
+    height: 14px;
+    background-image:
+        linear-gradient(45deg, hsl(var(--terracotta)) 25%, transparent 25%),
+        linear-gradient(-45deg, hsl(var(--terracotta)) 25%, transparent 25%);
+    background-size: 14px 14px;
+    background-position:
+        0 0,
+        0 0;
+    opacity: 0.35;
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        black 10%,
+        black 90%,
+        transparent
+    );
 }

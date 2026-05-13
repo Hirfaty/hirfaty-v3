@@ -1,6 +1,6 @@
-import { Earning } from '@/types';
-import { PaginatedData } from '@/types';
 import SellerLayout from '@/layouts/seller/layout';
+import type { Earning } from '@/types';
+import type { PaginatedData } from '@/types';
 
 type Summary = {
     total_earnings: number;
@@ -16,6 +16,7 @@ const Index = ({
     earnings: PaginatedData<Earning>;
 }) => {
     console.log('earnings: ', earnings);
+
     return (
         <div className="p-8">
             <h1 className="mb-6 text-2xl font-bold">Earnings</h1>

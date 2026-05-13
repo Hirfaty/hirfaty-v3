@@ -9,6 +9,6 @@ class VerifyEmailResponse implements VerifyEmailResponseContract
     public function toResponse($request)
     {
         // Redirect to your custom route
-        return redirect()->route('seller.complete.data');
+        return redirect()->route('seller.setup.store');
     }
 }

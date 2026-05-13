@@ -1,36 +1,34 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import SiteHeader from '@/components/SiteHeader';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import buyerImage from '@/images/cat-beauty.jpg';
+import sellerImage from '@/images/cat-pottery.jpg';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { useState, useMemo } from 'react';
-import WarmFill from '@/components/WarmFill';
-import { ArrowRight } from 'lucide-react';
 
 type Role = 'buyer' | 'seller';
 
 export default function Register() {
-    const [role, setRole] = useState<Role>('buyer');
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirm, setConfirm] = useState('');
-    const [touched, setTouched] = useState(false);
+    const [role, setRole] = useState<Role>(() => {
+        if (typeof window === 'undefined') {
+            return 'buyer';
+        }
 
-    const passwordsMatch = password.length > 0 && password === confirm;
-    const emailValid = /\S+@\S+\.\S+/.test(email);
-    const canSubmit =
-        firstName.trim().length > 1 &&
-        lastName.trim().length > 1 &&
-        emailValid &&
-        password.length >= 8 &&
-        passwordsMatch;
+        const type = new URLSearchParams(window.location.search)
+            .get('type')
+            ?.toLowerCase();
+
+        return type === 'seller' ? 'seller' : 'buyer';
+    });
 
     const copy = useMemo(
         () =>
@@ -72,6 +70,7 @@ export default function Register() {
 
     return (
         <>
+            <SiteHeader />
             <Head title="Register" />
             <div className="paper-grain min-h-screen bg-cream">
                 <section className="container pt-12 pb-10 md:pt-16">
@@ -93,11 +92,21 @@ export default function Register() {
                         {/* Left: editorial side panel */}
                         <aside className="hidden lg:col-span-5 lg:block">
                             <div className="sticky top-24">
-                                <div className="aspect-[4/5] overflow-hidden">
-                                    <WarmFill
-                                        variant={copy.fillVariant}
-                                        className="h-full w-full"
+                                <div className="relative h-[calc(100vh-7rem)] overflow-hidden rounded-[2rem] shadow-xl shadow-ink/10">
+                                    <img
+                                        src={
+                                            role === 'buyer'
+                                                ? buyerImage
+                                                : sellerImage
+                                        }
+                                        alt={
+                                            role === 'buyer'
+                                                ? 'Buyer registration artwork'
+                                                : 'Seller registration artwork'
+                                        }
+                                        className="absolute inset-0 h-full w-full object-cover"
                                     />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/10 to-transparent" />
                                 </div>
                                 <p className="mt-6 max-w-sm text-sm leading-relaxed text-ink-soft">
                                     {role === 'buyer' ? (
@@ -127,6 +136,7 @@ export default function Register() {
                             >
                                 {(['buyer', 'seller'] as Role[]).map((r) => {
                                     const active = role === r;
+
                                     return (
                                         <button
                                             key={r}
@@ -165,7 +175,6 @@ export default function Register() {
                             >
                                 {({ processing, errors }) => (
                                     <>
-                                        {console.log('errors: ', errors)}
                                         <input
                                             type="hidden"
                                             name="role"
@@ -182,9 +191,12 @@ export default function Register() {
                                                     required
                                                     autoFocus
                                                     tabIndex={1}
-                                                    autoComplete="name"
+                                                    autoComplete="given-name"
                                                     name="first_name"
                                                     placeholder="First name"
+                                                />
+                                                <InputError
+                                                    message={errors.first_name}
                                                 />
                                             </div>
                                             <div>
@@ -195,33 +207,70 @@ export default function Register() {
                                                     id="last_name"
                                                     type="text"
                                                     required
-                                                    autoFocus
-                                                    tabIndex={1}
-                                                    autoComplete="name"
+                                                    tabIndex={2}
+                                                    autoComplete="family-name"
                                                     name="last_name"
                                                     placeholder="Last name"
+                                                />
+                                                <InputError
+                                                    message={errors.last_name}
                                                 />
                                             </div>
                                         </div>
 
-                                        <Label htmlFor="email">
-                                            Email address
-                                        </Label>
-                                        <Input
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                            <div>
+                                                <Label htmlFor="phone_number">
+                                                    Phone number
+                                                </Label>
+                                                <Input
+                                                    id="phone_number"
+                                                    type="tel"
+                                                    required
+                                                    tabIndex={3}
+                                                    autoComplete="tel"
+                                                    name="phone_number"
+                                                    placeholder="+212 6 12 34 56 78"
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.phone_number
+                                                    }
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor="email">
+                                                    Email address
+                                                </Label>
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    required
+                                                    tabIndex={4}
+                                                    autoComplete="email"
+                                                    name="email"
+                                                    placeholder="email@example.com"
+                                                />
+                                                <InputError
+                                                    message={errors.email}
+                                                />
+                                            </div>
+                                        </div>
+                                        {/* <Input
                                             id="email"
                                             type="email"
                                             required
-                                            tabIndex={2}
+                                            tabIndex={3}
                                             autoComplete="email"
                                             name="email"
                                             placeholder="email@example.com"
                                         />
-                                        <InputError message={errors.email} />
+                                        <InputError message={errors.email} /> */}
 
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             <div>
-                                                <Label htmlFor="password_confirmation">
-                                                    password
+                                                <Label htmlFor="password">
+                                                    Password
                                                 </Label>
                                                 <PasswordInput
                                                     id="password"
@@ -229,7 +278,7 @@ export default function Register() {
                                                     tabIndex={4}
                                                     autoComplete="new-password"
                                                     name="password"
-                                                    placeholder="Confirm password"
+                                                    placeholder="Password"
                                                 />
                                                 <InputError
                                                     message={errors.password}
@@ -242,7 +291,7 @@ export default function Register() {
                                                 <PasswordInput
                                                     id="password_confirmation"
                                                     required
-                                                    tabIndex={4}
+                                                    tabIndex={5}
                                                     autoComplete="new-password"
                                                     name="password_confirmation"
                                                     placeholder="Confirm password"
@@ -250,6 +299,42 @@ export default function Register() {
                                                 <InputError
                                                     message={
                                                         errors.password_confirmation
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3 py-2">
+                                            <Checkbox
+                                                id="terms_accepted"
+                                                name="terms_accepted"
+                                                required
+                                            />
+                                            <div className="grid gap-1.5 leading-none">
+                                                <Label
+                                                    htmlFor="terms_accepted"
+                                                    className="mb-0 cursor-pointer text-sm leading-normal font-normal tracking-normal text-ink-soft normal-case"
+                                                >
+                                                    J'accepte la{' '}
+                                                    <Link
+                                                        href="/privacy"
+                                                        className="text-ink underline underline-offset-4"
+                                                    >
+                                                        politique de
+                                                        confidentialité
+                                                    </Link>{' '}
+                                                    et les{' '}
+                                                    <Link
+                                                        href="/terms"
+                                                        className="text-ink underline underline-offset-4"
+                                                    >
+                                                        conditions d'utilisation
+                                                    </Link>
+                                                    .
+                                                </Label>
+                                                <InputError
+                                                    message={
+                                                        errors.terms_accepted
                                                     }
                                                 />
                                             </div>
@@ -268,10 +353,13 @@ export default function Register() {
 
                                             <button
                                                 type="submit"
-                                                disabled={!canSubmit && touched}
+                                                disabled={processing}
                                                 className="group inline-flex items-center justify-between gap-6 bg-ink px-6 py-4 text-cream transition-colors hover:bg-terracotta disabled:opacity-60"
                                             >
                                                 <span className="font-display text-base">
+                                                    {processing ? (
+                                                        <Spinner className="mr-2 inline-block h-4 w-4" />
+                                                    ) : null}
                                                     {copy.cta}
                                                 </span>
                                                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />

@@ -1,11 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import { dashboard } from '@/routes';
 import { LogOut, Settings } from 'lucide-react';
-import { logout } from '@/routes';
-import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import React from 'react';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import SellerLayout from '@/layouts/seller/layout';
+import { dashboard } from '@/routes';
+import { logout } from '@/routes';
 
 const Dashboard = () => {
     const cleanup = useMobileNavigation();
@@ -14,6 +14,7 @@ const Dashboard = () => {
         cleanup();
         router.flushAll();
     };
+
     return (
         <>
             <Head title="Dashboard" />

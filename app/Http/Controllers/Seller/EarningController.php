@@ -20,10 +20,10 @@ class EarningController extends Controller
             'pending_earnings' => $store->earnings()->where('status', 'pending')->sum('net_amount'),
         ];
 
-        return Inertia::render("seller/earnings/index", [
+        return Inertia::render('seller/earnings/index', [
             'earnings' => $earnings,
             'summary' => $summary,
         ]);
-        
+
     }
 }

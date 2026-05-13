@@ -2,9 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
@@ -12,6 +9,7 @@ use App\Models\City;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -22,18 +20,18 @@ class BuyerCartSeeder extends Seeder
      */
     public function run(): void
     {
-        $city     = City::first();
+        $city = City::first();
         $category = Category::first();
 
         // ─── Seller 1 + 5 products ────────────────────────────
         $seller1 = User::firstOrCreate(
             ['email' => 'seller1@hirfaty.test'],
             [
-                'first_name'        => 'Youssef',
-                'last_name'         => 'Alami',
-                'phone_number'             => '0600000001',
-                'password'          => Hash::make('password'),
-                'role'              => 'seller',
+                'first_name' => 'Youssef',
+                'last_name' => 'Alami',
+                'phone_number' => '0600000001',
+                'password' => Hash::make('password'),
+                'role' => 'seller',
                 'email_verified_at' => now(),
             ]
         );
@@ -42,9 +40,9 @@ class BuyerCartSeeder extends Seeder
             ['user_id' => $seller1->id],
             [
                 'category_id' => $category->id,
-                'city_id'     => $city->id,
-                'store_name'  => 'Atelier Alami',
-                'slug'        => 'atelier-alami',
+                'city_id' => $city->id,
+                'store_name' => 'Atelier Alami',
+                'slug' => 'atelier-alami',
                 'description' => 'Poterie artisanale de Fès.',
             ]
         );
@@ -60,15 +58,15 @@ class BuyerCartSeeder extends Seeder
         $products1 = [];
         foreach ($store1Products as $p) {
             $products1[] = Product::create([
-                'store_id'    => $store1->id,
+                'store_id' => $store1->id,
                 'category_id' => $category->id,
-                'name'        => $p['name'],
-                'slug'        => Str::slug($p['name']) . '-' . Str::random(5),
+                'name' => $p['name'],
+                'slug' => Str::slug($p['name']).'-'.Str::random(5),
                 'description' => "Produit artisanal fait main par {$store1->store_name}.",
-                'base_price'  => $p['price'],
-                'sale_price'  => $p['sale'],
-                'stock'       => 10,
-                'status'      => 'published',
+                'base_price' => $p['price'],
+                'sale_price' => $p['sale'],
+                'stock' => 10,
+                'status' => 'published',
             ]);
         }
 
@@ -76,11 +74,11 @@ class BuyerCartSeeder extends Seeder
         $seller2 = User::firstOrCreate(
             ['email' => 'seller2@hirfaty.test'],
             [
-                'first_name'        => 'Fatima',
-                'last_name'         => 'Benali',
-                'phone_number'             => '0600000002',
-                'password'          => Hash::make('password'),
-                'role'              => 'seller',
+                'first_name' => 'Fatima',
+                'last_name' => 'Benali',
+                'phone_number' => '0600000002',
+                'password' => Hash::make('password'),
+                'role' => 'seller',
                 'email_verified_at' => now(),
             ]
         );
@@ -89,9 +87,9 @@ class BuyerCartSeeder extends Seeder
             ['user_id' => $seller2->id],
             [
                 'category_id' => $category->id,
-                'city_id'     => $city->id,
-                'store_name'  => 'Maison Benali',
-                'slug'        => 'maison-benali',
+                'city_id' => $city->id,
+                'store_name' => 'Maison Benali',
+                'slug' => 'maison-benali',
                 'description' => 'Maroquinerie artisanale de Marrakech.',
             ]
         );
@@ -101,21 +99,21 @@ class BuyerCartSeeder extends Seeder
             ['name' => 'Ceinture en cuir tanné',       'price' => 120.00, 'sale' => null],
             ['name' => 'Portefeuille artisanal',       'price' => 85.00,  'sale' => 70.00],
             ['name' => 'Babouches en cuir doré',       'price' => 195.00, 'sale' => null],
-            ['name' => 'Pochette brodée traditionnelle','price' => 145.00, 'sale' => 125.00],
+            ['name' => 'Pochette brodée traditionnelle', 'price' => 145.00, 'sale' => 125.00],
         ];
 
         $products2 = [];
         foreach ($store2Products as $p) {
             $products2[] = Product::create([
-                'store_id'    => $store2->id,
+                'store_id' => $store2->id,
                 'category_id' => $category->id,
-                'name'        => $p['name'],
-                'slug'        => Str::slug($p['name']) . '-' . Str::random(5),
+                'name' => $p['name'],
+                'slug' => Str::slug($p['name']).'-'.Str::random(5),
                 'description' => "Produit artisanal fait main par {$store2->store_name}.",
-                'base_price'  => $p['price'],
-                'sale_price'  => $p['sale'],
-                'stock'       => 10,
-                'status'      => 'published',
+                'base_price' => $p['price'],
+                'sale_price' => $p['sale'],
+                'stock' => 10,
+                'status' => 'published',
             ]);
         }
 
@@ -123,11 +121,11 @@ class BuyerCartSeeder extends Seeder
         $buyer = User::firstOrCreate(
             ['email' => 'buyer1@hirfaty.test'],
             [
-                'first_name'        => 'Karim',
-                'last_name'         => 'Mansouri',
-                'phone_number'             => '0600000003',
-                'password'          => Hash::make('password'),
-                'role'              => 'buyer',
+                'first_name' => 'Karim',
+                'last_name' => 'Mansouri',
+                'phone_number' => '0600000003',
+                'password' => Hash::make('password'),
+                'role' => 'buyer',
                 'email_verified_at' => now(),
             ]
         );
@@ -145,10 +143,10 @@ class BuyerCartSeeder extends Seeder
         CartItem::firstOrCreate(['cart_id' => $cart->id, 'product_id' => $products2[2]->id], ['quantity' => 3]);
 
         $this->command->info('✅ Seeded:');
-        $this->command->info("   seller1@hirfaty.test → Atelier Alami → 5 products");
-        $this->command->info("   seller2@hirfaty.test → Maison Benali → 5 products");
-        $this->command->info("   buyer@hirfaty.test   → cart with 5 items (2 + 3)");
-        $this->command->info("   Password for all: password");
+        $this->command->info('   seller1@hirfaty.test → Atelier Alami → 5 products');
+        $this->command->info('   seller2@hirfaty.test → Maison Benali → 5 products');
+        $this->command->info('   buyer@hirfaty.test   → cart with 5 items (2 + 3)');
+        $this->command->info('   Password for all: password');
 
     }
 }
