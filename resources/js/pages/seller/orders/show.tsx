@@ -38,7 +38,6 @@ const ORDER_STATUSES: Array<OrderStatus> = [
     'pending',
     'confirmed',
     'shipped',
-    'delivered',
     'cancelled',
 ];
 
@@ -58,19 +57,30 @@ const statusClassName: Record<OrderStatus, string> = {
     cancelled: 'bg-destructive/10 text-destructive border-destructive/30',
 };
 
-function SellerOrderDetail({ order }: { order: Order }) {
+function SellerOrderDetail({
+    order,
+    cancellationReasons,
+}: {
+    order: Order;
+    cancellationReasons: Record<string, string>;
+}) {
     const { data, setData, processing, errors } = useForm<{
         status: OrderStatus;
         tracking_number: string;
+        cancellation_reason: string;
     }>({
         status: order.status,
         tracking_number: order.tracking_number ?? '',
+        cancellation_reason: order.cancellation_reason ?? '',
     });
+
+    console.log('errors: ', errors);
 
     const total = Number(order.total_amount || 0);
     const dirty =
         data.status !== order.status ||
-        data.tracking_number !== (order.tracking_number ?? '');
+        data.tracking_number !== (order.tracking_number ?? '') ||
+        data.cancellation_reason !== (order.cancellation_reason ?? '');
 
     const handleSave = () => {
         router.patch(
@@ -78,6 +88,7 @@ function SellerOrderDetail({ order }: { order: Order }) {
             {
                 status: data.status,
                 tracking_number: data.tracking_number || null,
+                cancellation_reason: data.cancellation_reason || null,
             },
             {
                 onSuccess: () => {
@@ -173,7 +184,8 @@ function SellerOrderDetail({ order }: { order: Order }) {
                                             className="border-border"
                                         >
                                             <TableCell className="font-medium">
-                                                {item.product?.name ?? 'Produit'}
+                                                {item.product?.name ??
+                                                    'Produit'}
                                             </TableCell>
                                             <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {item.product_id}
@@ -220,9 +232,9 @@ function SellerOrderDetail({ order }: { order: Order }) {
                                     <div className="flex justify-between text-sm text-muted-foreground">
                                         <span>Frais livraison</span>
                                         <span className="tabular-nums">
-                                            {Number(order.amana_fee).toLocaleString(
-                                                'fr-FR',
-                                            )}{' '}
+                                            {Number(
+                                                order.amana_fee,
+                                            ).toLocaleString('fr-FR')}{' '}
                                             MAD
                                         </span>
                                     </div>
@@ -309,6 +321,43 @@ function SellerOrderDetail({ order }: { order: Order }) {
                                     )}
                                 </div>
                             )}
+                            {data.status === 'cancelled' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="cancellation-reason">
+                                        Raison de l'annulation
+                                    </Label>
+                                    <Select
+                                        value={data.cancellation_reason}
+                                        onValueChange={(value) =>
+                                            setData(
+                                                'cancellation_reason',
+                                                value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger className="rounded-sm">
+                                            <SelectValue placeholder="Sélectionnez une raison" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(
+                                                cancellationReasons,
+                                            ).map(([key, label]) => (
+                                                <SelectItem
+                                                    key={key}
+                                                    value={label}
+                                                >
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.cancellation_reason && (
+                                        <p className="text-xs text-destructive">
+                                            {errors.cancellation_reason}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             {errors.status && (
                                 <p className="text-xs text-destructive">
                                     {errors.status}
@@ -320,7 +369,9 @@ function SellerOrderDetail({ order }: { order: Order }) {
                                 className="w-full rounded-sm"
                             >
                                 <Save className="me-2 h-4 w-4" />
-                                {processing ? 'Enregistrement...' : 'Enregistrer'}
+                                {processing
+                                    ? 'Enregistrement...'
+                                    : 'Enregistrer'}
                             </Button>
                         </CardContent>
                     </Card>

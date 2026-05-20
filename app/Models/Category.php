@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -27,7 +28,26 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @mixin \Eloquent
  */
+#[Fillable(['name', 'slug', 'parent_id', 'icon'])]      
 class Category extends Model
 {
-    //
+    public function stores()
+    {
+        return $this->hasMany(\App\Models\Store::class);
+    }
+
+    public function products()
+    {
+        return $this->hasMany(\App\Models\Product::class);
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
 }

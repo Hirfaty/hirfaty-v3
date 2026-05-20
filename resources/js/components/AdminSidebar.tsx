@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     ShieldCheck,
     Package,
@@ -6,6 +6,8 @@ import {
     Store,
     LogOut,
     LayoutDashboard,
+    ChartBarIcon,
+    MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -29,17 +31,22 @@ const overviewItems = [
 const moderationItems = [
     { title: 'Produits', url: '/admin/products', icon: Package },
     { title: 'Utilisateurs', url: '/admin/users', icon: Users },
+    { title: 'Orders', url: '/admin/orders', icon: Package },
+    { title: 'Create User', url: '/admin/users/create', icon: Users },
+    { title: 'Catégories', url: '/admin/categories', icon: ChartBarIcon },
+    { title: 'Villes', url: '/admin/cities', icon: MapPin },
 ];
 
 export function AdminSidebar() {
     const { state } = useSidebar();
     const collapsed = state === 'collapsed';
-    //   const { pathname } = useLocation();
-    //   const navigate = useNavigate();
+    const { url } = usePage();
 
-    // const isActive = (path: string) =>
-    //     pathname === path || pathname.startsWith(path + '/');
-    const isActive = false;
+    const isActive = (path: string) => {
+        const regex = new RegExp(`^${path}$`);
+
+        return regex.test(url.split('?')[0]);
+    };
 
     const handleLogout = () => {
         router.post(route('logout'));
@@ -70,21 +77,33 @@ export function AdminSidebar() {
                         <SidebarMenu>
                             {overviewItems.map((item) => (
                                 <SidebarMenuItem key={item.url}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        // isActive={pathname === item.url}
-                                        isActive={false}
-                                    >
-                                        <Link
-                                            href={item.url}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <item.icon className="h-4 w-4" />
-                                            {!collapsed && (
-                                                <span>{item.title}</span>
-                                            )}
-                                        </Link>
-                                    </SidebarMenuButton>
+                                    {(() => {
+                                        const active = isActive(item.url);
+
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'rounded-none border-r-4 border-r-terracotta bg-terracotta/10 p-0 !py-6 text-terracotta hover:bg-terracotta/15 hover:text-terracotta'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    href={item.url}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
                                 </SidebarMenuItem>
                             ))}
                         </SidebarMenu>
@@ -97,21 +116,33 @@ export function AdminSidebar() {
                         <SidebarMenu>
                             {moderationItems.map((item) => (
                                 <SidebarMenuItem key={item.url}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        // isActive={isActive(item.url)}
-                                        isActive={false}
-                                    >
-                                        <Link
-                                            href={item.url}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <item.icon className="h-4 w-4" />
-                                            {!collapsed && (
-                                                <span>{item.title}</span>
-                                            )}
-                                        </Link>
-                                    </SidebarMenuButton>
+                                    {(() => {
+                                        const active = isActive(item.url);
+
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'rounded-none border-r-4 border-r-terracotta bg-terracotta/10 p-0 !py-6 text-terracotta hover:bg-terracotta/15 hover:text-terracotta'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    href={item.url}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
                                 </SidebarMenuItem>
                             ))}
                         </SidebarMenu>

@@ -33,7 +33,6 @@ export const ORDER_STATUSES: Array<OrderStatus> = [
     'pending',
     'confirmed',
     'shipped',
-    'delivered',
     'cancelled',
 ];
 

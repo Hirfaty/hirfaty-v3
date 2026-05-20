@@ -71,7 +71,18 @@ export interface Product {
     store: Store;
     images: Media[];
     videos: Media[];
+    media?: Media[];
     category: Category | null;
+    delivery_options?: DeliveryOption[];
+}
+
+export interface DeliveryOption {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    price: string;
+    is_active: boolean;
 }
 
 export interface OrderItem {
@@ -82,6 +93,7 @@ export interface OrderItem {
     unit_price: string;
     subtotal: string;
     product: Product;
+    order?: Order;
 }
 
 export type OrderStatus =
@@ -108,6 +120,7 @@ export interface Order {
     buyer: User;
     items: OrderItem[];
     city: City | null;
+    store?: Store;
     created_at: string;
     updated_at: string;
 }

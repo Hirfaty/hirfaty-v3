@@ -11,6 +11,7 @@ import {
     Tag,
     Image as ImageIcon,
     LayoutDashboard,
+    Truck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import SellerLayout from '@/layouts/seller/layout';
 import { cn } from '@/lib/utils';
 import type { Category } from '@/types';
@@ -36,7 +38,8 @@ const steps = [
     { n: 1, label: 'Détails', icon: LayoutDashboard },
     { n: 2, label: 'Médias', icon: ImageIcon },
     { n: 3, label: 'Prix & Stock', icon: Tag },
-    { n: 4, label: 'Révision', icon: Package },
+    { n: 4, label: 'Livraison', icon: Truck },
+    { n: 5, label: 'Révision', icon: Package },
 ];
 
 function SellerProductNew({ categories }: { categories: Category[] }) {
@@ -70,44 +73,48 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
 
         if (s === 1) {
             if (!data.name.trim()) {
-e.name = 'Nom requis';
-}
+                e.name = 'Nom requis';
+            }
 
             if (!data.description.trim()) {
-e.description = 'Description requise';
-}
+                e.description = 'Description requise';
+            }
 
             if (!data.category_id) {
-e.category_id = 'Catégorie requise';
-}
+                e.category_id = 'Catégorie requise';
+            }
         }
 
         if (s === 2) {
             if (images.length < 1) {
-e.images = 'Au moins une image requise';
-}
+                e.images = 'Au moins une image requise';
+            }
 
             if (images.length > 5) {
-e.images = 'Maximum 5 images';
-}
+                e.images = 'Maximum 5 images';
+            }
         }
 
         if (s === 3) {
             if (!data.base_price || Number(data.base_price) <= 0) {
-e.basePrice = 'Prix invalide';
-}
+                e.basePrice = 'Prix invalide';
+            }
 
             if (data.stock === undefined || data.stock < 0) {
-e.stock = 'Stock invalide';
-}
+                e.stock = 'Stock invalide';
+            }
 
             if (saleEnabled) {
                 if (!data.sale_price || Number(data.sale_price) <= 0) {
-e.salePrice = 'Prix soldé invalide';
-} else if (Number(data.sale_price) >= Number(data.base_price)) {
-e.salePrice = 'Doit être inférieur au prix de base';
-}
+                    e.salePrice = 'Prix soldé invalide';
+                } else if (Number(data.sale_price) >= Number(data.base_price)) {
+                    e.salePrice = 'Doit être inférieur au prix de base';
+                }
             }
+        }
+
+        if (s === 4) {
+            // Step 4 no longer requires delivery option selection.
         }
 
         setStepErrors(e);
@@ -117,15 +124,15 @@ e.salePrice = 'Doit être inférieur au prix de base';
 
     const next = () => {
         if (validateStep(step)) {
-setStep((s) => Math.min(4, s + 1));
-}
+            setStep((s) => Math.min(5, s + 1));
+        }
     };
     const back = () => setStep((s) => Math.max(1, s - 1));
 
     const handleImages = (files: FileList | null) => {
         if (!files) {
-return;
-}
+            return;
+        }
 
         const newOnes: MediaItem[] = Array.from(files)
             .slice(0, 5 - images.length)
@@ -137,10 +144,10 @@ return;
             }));
         setImages((prev) => {
             const updated = [...prev, ...newOnes];
-            setData(
-                'media',
-                [...updated.map((item) => item.file), ...(video ? [video.file] : [])]
-            );
+            setData('media', [
+                ...updated.map((item) => item.file),
+                ...(video ? [video.file] : []),
+            ]);
 
             return updated;
         });
@@ -160,8 +167,8 @@ return;
 
     const handleVideo = (files: FileList | null) => {
         if (!files || !files[0]) {
-return;
-}
+            return;
+        }
 
         const selected = files[0];
         setVideo({
@@ -174,7 +181,12 @@ return;
     };
 
     const publish = () => {
-        if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
+        if (
+            !validateStep(1) ||
+            !validateStep(2) ||
+            !validateStep(3) ||
+            !validateStep(4)
+        ) {
             toast.error('Champs manquants', {
                 description: 'Vérifiez chaque étape.',
             });
@@ -191,6 +203,8 @@ return;
             },
         });
     };
+
+    // delivery options removed — shipping handled by Amana by default
 
     return (
         <div className="mx-auto max-w-[1000px] px-4 py-10 sm:px-6 lg:px-8">
@@ -211,13 +225,14 @@ return;
                     Donnez vie à <br /> une nouvelle pièce
                 </h1>
                 <p className="mt-4 max-w-xl text-muted-foreground">
-                    Partagez l'histoire, le savoir-faire et les détails de votre création avec notre communauté de passionnés.
+                    Partagez l'histoire, le savoir-faire et les détails de votre
+                    création avec notre communauté de passionnés.
                 </p>
             </header>
 
             {/* Stepper */}
             <div className="mb-12 overflow-x-auto pb-4">
-                <ol className="flex min-w-[600px] items-center gap-0">
+                <ol className="flex min-w-[750px] items-center gap-0">
                     {steps.map((s, i) => {
                         const active = step === s.n;
                         const done = step > s.n;
@@ -227,39 +242,62 @@ return;
                             <li
                                 key={s.n}
                                 className={cn(
-                                    "flex items-center",
-                                    i < steps.length - 1 ? "flex-1" : ""
+                                    'flex items-center',
+                                    i < steps.length - 1 ? 'flex-1' : '',
                                 )}
                             >
                                 <button
                                     onClick={() => step > s.n && setStep(s.n)}
                                     disabled={step <= s.n}
                                     className={cn(
-                                        "flex flex-col items-start gap-2 text-left transition-all",
-                                        active ? "opacity-100" : "opacity-60 hover:opacity-100",
-                                        step < s.n && "cursor-not-allowed"
+                                        'flex flex-col items-start gap-2 text-left transition-all',
+                                        active
+                                            ? 'opacity-100'
+                                            : 'opacity-60 hover:opacity-100',
+                                        step < s.n && 'cursor-not-allowed',
                                     )}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all",
-                                            active && "border-primary bg-primary text-primary-foreground scale-110",
-                                            done && "border-foreground bg-foreground text-background",
-                                            !active && !done && "border-border"
-                                        )}>
-                                            {done ? <Check className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+                                        <div
+                                            className={cn(
+                                                'flex h-10 w-10 items-center justify-center border-2 transition-all',
+                                                active &&
+                                                    'scale-110 border-primary bg-primary text-primary-foreground',
+                                                done &&
+                                                    'border-foreground bg-foreground text-background',
+                                                !active &&
+                                                    !done &&
+                                                    'border-border',
+                                            )}
+                                        >
+                                            {done ? (
+                                                <Check className="h-5 w-5" />
+                                            ) : (
+                                                <StepIcon className="h-5 w-5" />
+                                            )}
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground uppercase">Étape {s.n}</p>
-                                            <p className={cn("text-sm font-medium", active && "text-foreground")}>{s.label}</p>
+                                            <p className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground uppercase">
+                                                Étape {s.n}
+                                            </p>
+                                            <p
+                                                className={cn(
+                                                    'text-sm font-medium',
+                                                    active && 'text-foreground',
+                                                )}
+                                            >
+                                                {s.label}
+                                            </p>
                                         </div>
                                     </div>
                                 </button>
                                 {i < steps.length - 1 && (
-                                    <div className={cn(
-                                        "mx-4 h-[2px] flex-1 rounded-full bg-border",
-                                        done && "bg-foreground"
-                                    )} />
+                                    <div
+                                        className={cn(
+                                            'mx-4 h-[2px] flex-1 bg-border',
+                                            done && 'bg-foreground',
+                                        )}
+                                    />
                                 )}
                             </li>
                         );
@@ -267,9 +305,9 @@ return;
                 </ol>
             </div>
 
-            <main className="min-h-[400px] rounded-xl border border-border bg-card/50 p-6 md:p-10">
+            <main className="min-h-[400px] border border-border bg-card/50 p-6 md:p-10">
                 {step === 1 && (
-                    <section className="animate-in fade-in slide-in-from-bottom-4 space-y-8 duration-500">
+                    <section className="animate-in space-y-8 duration-500 fade-in slide-in-from-bottom-4">
                         <div className="grid gap-8 md:grid-cols-2">
                             <div className="space-y-6">
                                 <div className="space-y-2">
@@ -286,11 +324,12 @@ return;
                                             setData('name', e.target.value)
                                         }
                                         placeholder="Ex. Tajine émaillé de Safi"
-                                        className="h-12 rounded-lg border-border/60 bg-background/50 focus-visible:ring-primary/20"
+                                        className="h-12 border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                     />
                                     {(stepErrors.name || serverErrors.name) && (
                                         <p className="text-xs font-medium text-destructive">
-                                            {stepErrors.name || serverErrors.name}
+                                            {stepErrors.name ||
+                                                serverErrors.name}
                                         </p>
                                     )}
                                 </div>
@@ -305,7 +344,7 @@ return;
                                             setData('category_id', value)
                                         }
                                     >
-                                        <SelectTrigger className="h-12 rounded-lg border-border/60 bg-background/50 focus:ring-primary/20">
+                                        <SelectTrigger className="h-12 border-border/60 bg-background/50 focus:ring-primary/20">
                                             <SelectValue placeholder="Choisir une catégorie" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -344,7 +383,7 @@ return;
                                         setData('description', e.target.value)
                                     }
                                     placeholder="Racontez l'histoire derrière cette pièce, les matériaux utilisés, les dimensions..."
-                                    className="resize-none rounded-lg border-border/60 bg-background/50 focus-visible:ring-primary/20"
+                                    className="resize-none border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                 />
                                 {(stepErrors.description ||
                                     serverErrors.description) && (
@@ -359,14 +398,19 @@ return;
                 )}
 
                 {step === 2 && (
-                    <section className="animate-in fade-in slide-in-from-bottom-4 space-y-10 duration-500">
+                    <section className="animate-in space-y-10 duration-500 fade-in slide-in-from-bottom-4">
                         <div>
                             <div className="mb-6 flex items-baseline justify-between">
                                 <div>
-                                    <h3 className="font-display text-2xl">Galerie d'images</h3>
-                                    <p className="text-sm text-muted-foreground">Téléversez jusqu'à 5 photos haute résolution.</p>
+                                    <h3 className="font-display text-2xl">
+                                        Galerie d'images
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Téléversez jusqu'à 5 photos haute
+                                        résolution.
+                                    </p>
                                 </div>
-                                <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                                <span className="text-xs font-medium text-muted-foreground tabular-nums">
                                     {images.length} / 5
                                 </span>
                             </div>
@@ -375,7 +419,7 @@ return;
                                 {images.map((img) => (
                                     <div
                                         key={img.id}
-                                        className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                                        className="group relative aspect-square overflow-hidden border border-border bg-muted"
                                     >
                                         <img
                                             src={img.url}
@@ -386,7 +430,7 @@ return;
                                         <button
                                             type="button"
                                             onClick={() => removeImage(img.id)}
-                                            className="absolute end-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-destructive shadow-lg transition-transform hover:scale-110"
+                                            className="absolute end-2 top-2 flex h-8 w-8 items-center justify-center bg-white/90 text-destructive shadow-lg transition-transform hover:scale-110"
                                             aria-label="Supprimer"
                                         >
                                             <X className="h-4 w-4" />
@@ -395,11 +439,13 @@ return;
                                 ))}
 
                                 {images.length < 5 && (
-                                    <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background/50 text-muted-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary/10">
+                                    <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed border-border bg-background/50 text-muted-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">
+                                        <div className="flex h-10 w-10 items-center justify-center bg-muted transition-colors group-hover:bg-primary/10">
                                             <ImagePlus className="h-5 w-5" />
                                         </div>
-                                        <span className="text-[10px] font-bold tracking-wider uppercase">Ajouter</span>
+                                        <span className="text-[10px] font-bold tracking-wider uppercase">
+                                            Ajouter
+                                        </span>
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -421,12 +467,17 @@ return;
 
                         <div className="border-t border-border pt-8">
                             <div className="mb-6">
-                                <h3 className="font-display text-2xl">Vidéo du produit</h3>
-                                <p className="text-sm text-muted-foreground">Montrez votre travail en mouvement. Optionnel mais recommandé.</p>
+                                <h3 className="font-display text-2xl">
+                                    Vidéo du produit
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Montrez votre travail en mouvement.
+                                    Optionnel mais recommandé.
+                                </p>
                             </div>
 
                             {video ? (
-                                <div className="group relative max-w-2xl overflow-hidden rounded-xl border border-border bg-black shadow-xl">
+                                <div className="group relative max-w-2xl overflow-hidden border border-border bg-black shadow-xl">
                                     <video
                                         src={video.url}
                                         controls
@@ -441,20 +492,24 @@ return;
                                                 images.map((item) => item.file),
                                             );
                                         }}
-                                        className="absolute end-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-destructive shadow-lg transition-transform hover:scale-110"
+                                        className="absolute end-4 top-4 flex h-10 w-10 items-center justify-center bg-white/90 text-destructive shadow-lg transition-transform hover:scale-110"
                                         aria-label="Supprimer la vidéo"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
                                 </div>
                             ) : (
-                                <label className="flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border bg-background/50 py-12 text-muted-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary/10">
+                                <label className="flex cursor-pointer flex-col items-center justify-center gap-4 border-2 border-dashed border-border bg-background/50 py-12 text-muted-foreground transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">
+                                    <div className="flex h-12 w-12 items-center justify-center bg-muted transition-colors group-hover:bg-primary/10">
                                         <Video className="h-6 w-6" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-sm font-medium text-foreground">Téléverser une vidéo</p>
-                                        <p className="text-xs">MP4 ou MOV, max 50Mo</p>
+                                        <p className="text-sm font-medium text-foreground">
+                                            Téléverser une vidéo
+                                        </p>
+                                        <p className="text-xs">
+                                            MP4 ou MOV, max 50Mo
+                                        </p>
                                     </div>
                                     <input
                                         type="file"
@@ -471,7 +526,7 @@ return;
                 )}
 
                 {step === 3 && (
-                    <section className="animate-in fade-in slide-in-from-bottom-4 space-y-10 duration-500">
+                    <section className="animate-in space-y-10 duration-500 fade-in slide-in-from-bottom-4">
                         <div className="grid gap-10 md:grid-cols-2">
                             <div className="space-y-6">
                                 <div className="space-y-2">
@@ -488,12 +543,15 @@ return;
                                             min="0"
                                             value={data.base_price}
                                             onChange={(e) =>
-                                                setData('base_price', e.target.value)
+                                                setData(
+                                                    'base_price',
+                                                    e.target.value,
+                                                )
                                             }
                                             placeholder="0.00"
-                                            className="h-14 pl-12 rounded-lg border-border/60 bg-background/50 text-lg font-medium tabular-nums"
+                                            className="h-14 border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
                                         />
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                                        <span className="absolute top-1/2 left-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                                             DH
                                         </span>
                                     </div>
@@ -519,24 +577,34 @@ return;
                                         min="0"
                                         value={data.stock}
                                         onChange={(e) =>
-                                            setData('stock', Number(e.target.value))
+                                            setData(
+                                                'stock',
+                                                Number(e.target.value),
+                                            )
                                         }
                                         placeholder="1"
-                                        className="h-14 rounded-lg border-border/60 bg-background/50 text-lg font-medium tabular-nums"
+                                        className="h-14 border-border/60 bg-background/50 text-lg font-medium tabular-nums"
                                     />
-                                    {(stepErrors.stock || serverErrors.stock) && (
+                                    {(stepErrors.stock ||
+                                        serverErrors.stock) && (
                                         <p className="text-xs font-medium text-destructive">
-                                            {stepErrors.stock || serverErrors.stock}
+                                            {stepErrors.stock ||
+                                                serverErrors.stock}
                                         </p>
                                     )}
-                                    <p className="text-xs text-muted-foreground italic">Combien d'exemplaires sont prêts à être expédiés ?</p>
+                                    <p className="text-xs text-muted-foreground italic">
+                                        Combien d'exemplaires sont prêts à être
+                                        expédiés ?
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="rounded-xl border border-border bg-muted/30 p-6">
+                            <div className="border border-border bg-muted/30 p-6">
                                 <div className="mb-6 flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <h4 className="font-medium">Promotion</h4>
+                                        <h4 className="font-medium">
+                                            Promotion
+                                        </h4>
                                         <p className="text-xs text-muted-foreground">
                                             Appliquer une réduction immédiate.
                                         </p>
@@ -548,7 +616,7 @@ return;
                                 </div>
 
                                 {saleEnabled && (
-                                    <div className="animate-in fade-in slide-in-from-top-4 space-y-4 duration-300">
+                                    <div className="animate-in space-y-4 duration-300 fade-in slide-in-from-top-4">
                                         <div className="space-y-2">
                                             <Label
                                                 htmlFor="sale"
@@ -563,12 +631,15 @@ return;
                                                     min="0"
                                                     value={data.sale_price}
                                                     onChange={(e) =>
-                                                        setData('sale_price', e.target.value)
+                                                        setData(
+                                                            'sale_price',
+                                                            e.target.value,
+                                                        )
                                                     }
                                                     placeholder="0.00"
-                                                    className="h-14 pl-12 rounded-lg border-border/60 bg-background/50 text-lg font-medium tabular-nums"
+                                                    className="h-14 border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
                                                 />
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                                                <span className="absolute top-1/2 left-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                                                     DH
                                                 </span>
                                             </div>
@@ -580,11 +651,30 @@ return;
                                                 </p>
                                             )}
                                         </div>
-                                        <div className="rounded-lg bg-primary/5 p-4 text-xs text-primary">
-                                            {data.base_price && data.sale_price && Number(data.base_price) > Number(data.sale_price) ? (
-                                                <p>Réduction de {Math.round((1 - Number(data.sale_price) / Number(data.base_price)) * 100)}% appliquée.</p>
+                                        <div className="bg-primary/5 p-4 text-xs text-primary">
+                                            {data.base_price &&
+                                            data.sale_price &&
+                                            Number(data.base_price) >
+                                                Number(data.sale_price) ? (
+                                                <p>
+                                                    Réduction de{' '}
+                                                    {Math.round(
+                                                        (1 -
+                                                            Number(
+                                                                data.sale_price,
+                                                            ) /
+                                                                Number(
+                                                                    data.base_price,
+                                                                )) *
+                                                            100,
+                                                    )}
+                                                    % appliquée.
+                                                </p>
                                             ) : (
-                                                <p>Saisissez un prix inférieur au prix de base.</p>
+                                                <p>
+                                                    Saisissez un prix inférieur
+                                                    au prix de base.
+                                                </p>
                                             )}
                                         </div>
                                     </div>
@@ -595,14 +685,29 @@ return;
                 )}
 
                 {step === 4 && (
-                    <section className="animate-in fade-in slide-in-from-bottom-4 space-y-10 duration-500">
-                        <div className="rounded-lg bg-primary/5 p-6 text-sm text-primary">
+                    <section className="animate-in space-y-8 duration-500 fade-in slide-in-from-bottom-4">
+                        <div>
+                            <h3 className="font-display text-2xl">Livraison</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Toutes les commandes sont expédiées via Amana.
+                                Vous n'avez plus besoin de choisir une option de
+                                livraison.
+                            </p>
+                        </div>
+                    </section>
+                )}
+
+                {step === 5 && (
+                    <section className="animate-in space-y-10 duration-500 fade-in slide-in-from-bottom-4">
+                        <div className="bg-primary/5 p-6 text-sm text-primary">
                             <p className="flex items-center gap-2 font-medium">
                                 <Package className="h-4 w-4" />
                                 Presque prêt !
                             </p>
                             <p className="mt-1 text-primary/80">
-                                Votre produit sera soumis à une révision par notre équipe artisanale avant d'être visible sur la place de marché.
+                                Votre produit sera soumis à une révision par
+                                notre équipe artisanale avant d'être visible sur
+                                la place de marché.
                             </p>
                         </div>
 
@@ -610,7 +715,9 @@ return;
                             {/* Détails */}
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between border-b border-border pb-2">
-                                    <h3 className="font-display text-xl">Détails de la pièce</h3>
+                                    <h3 className="font-display text-xl">
+                                        Détails de la pièce
+                                    </h3>
                                     <button
                                         type="button"
                                         onClick={() => setStep(1)}
@@ -621,11 +728,17 @@ return;
                                 </div>
                                 <dl className="space-y-4 text-sm">
                                     <div className="flex flex-col gap-1">
-                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Nom</dt>
-                                        <dd className="text-lg font-medium">{data.name || '—'}</dd>
+                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            Nom
+                                        </dt>
+                                        <dd className="text-lg font-medium">
+                                            {data.name || '—'}
+                                        </dd>
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Catégorie</dt>
+                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            Catégorie
+                                        </dt>
                                         <dd className="font-medium">
                                             {categories.find(
                                                 (c) =>
@@ -635,18 +748,43 @@ return;
                                         </dd>
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Histoire</dt>
-                                        <dd className="whitespace-pre-line leading-relaxed text-muted-foreground">
+                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            Histoire
+                                        </dt>
+                                        <dd className="leading-relaxed whitespace-pre-line text-muted-foreground">
                                             {data.description || '—'}
                                         </dd>
                                     </div>
                                 </dl>
+
+                                <div className="mt-8">
+                                    <div className="mb-4 flex items-center justify-between border-b border-border pb-2">
+                                        <h3 className="font-display text-xl">
+                                            Livraison
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep(4)}
+                                            className="text-xs font-medium text-primary hover:underline"
+                                        >
+                                            Modifier
+                                        </button>
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                        Livraison via Amana. Les frais de
+                                        livraison seront calculés
+                                        automatiquement lors du passage à la
+                                        caisse.
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Prix & Stock */}
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between border-b border-border pb-2">
-                                    <h3 className="font-display text-xl">Commercialisation</h3>
+                                    <h3 className="font-display text-xl">
+                                        Commercialisation
+                                    </h3>
                                     <button
                                         type="button"
                                         onClick={() => setStep(3)}
@@ -657,21 +795,36 @@ return;
                                 </div>
                                 <dl className="grid grid-cols-2 gap-6 text-sm">
                                     <div className="flex flex-col gap-1">
-                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Prix final</dt>
-                                        <dd className="text-2xl font-display tabular-nums">
-                                            {saleEnabled ? data.sale_price : data.base_price} MAD
-                                            {saleEnabled && <span className="ml-2 text-sm text-muted-foreground line-through decoration-destructive/50">{data.base_price} MAD</span>}
+                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            Prix final
+                                        </dt>
+                                        <dd className="font-display text-2xl tabular-nums">
+                                            {saleEnabled
+                                                ? data.sale_price
+                                                : data.base_price}{' '}
+                                            MAD
+                                            {saleEnabled && (
+                                                <span className="ml-2 text-sm text-muted-foreground line-through decoration-destructive/50">
+                                                    {data.base_price} MAD
+                                                </span>
+                                            )}
                                         </dd>
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Stock</dt>
-                                        <dd className="text-2xl font-display tabular-nums">{data.stock} unités</dd>
+                                        <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            Stock
+                                        </dt>
+                                        <dd className="font-display text-2xl tabular-nums">
+                                            {data.stock} unités
+                                        </dd>
                                     </div>
                                 </dl>
 
                                 <div className="mt-8">
                                     <div className="mb-4 flex items-center justify-between">
-                                        <h3 className="text-sm font-medium">Médias téléversés</h3>
+                                        <h3 className="text-sm font-medium">
+                                            Médias téléversés
+                                        </h3>
                                         <button
                                             type="button"
                                             onClick={() => setStep(2)}
@@ -684,7 +837,7 @@ return;
                                         {images.map((img) => (
                                             <div
                                                 key={img.id}
-                                                className="h-16 w-16 overflow-hidden rounded-lg border border-border"
+                                                className="h-16 w-16 overflow-hidden border border-border"
                                             >
                                                 <img
                                                     src={img.url}
@@ -694,7 +847,7 @@ return;
                                             </div>
                                         ))}
                                         {video && (
-                                            <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-border bg-black">
+                                            <div className="flex h-16 w-16 items-center justify-center border border-border bg-black">
                                                 <Video className="h-4 w-4 text-white" />
                                             </div>
                                         )}
@@ -713,18 +866,18 @@ return;
                     variant="outline"
                     onClick={back}
                     disabled={step === 1}
-                    className="h-12 gap-2 rounded-lg px-6"
+                    className="h-12 gap-2 px-6"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Précédent
                 </Button>
 
                 <div className="flex items-center gap-3">
-                    {step < 4 ? (
+                    {step < 5 ? (
                         <Button
                             type="button"
                             onClick={next}
-                            className="h-12 gap-2 rounded-lg bg-foreground px-8 text-background hover:bg-foreground/90"
+                            className="h-12 gap-2 bg-foreground px-8 text-background hover:bg-foreground/90"
                         >
                             Étape suivante
                             <ArrowRight className="h-4 w-4" />
@@ -734,7 +887,7 @@ return;
                             type="button"
                             onClick={publish}
                             disabled={processing}
-                            className="h-12 gap-2 rounded-lg bg-primary px-10 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+                            className="h-12 gap-2 bg-primary px-10 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
                         >
                             {processing ? (
                                 <>
@@ -760,7 +913,6 @@ SellerProductNew.layout = (page: React.ReactNode) => (
 );
 
 export default SellerProductNew;
-
 
 // import SellerLayout from '@/layouts/seller/layout';
 // import { useForm } from '@inertiajs/react';

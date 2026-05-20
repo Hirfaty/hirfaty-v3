@@ -37,9 +37,18 @@ class OrderController extends Controller
 
         $orders = $query->latest()->paginate(20)->withQueryString();
 
-        return Inertia::render('Admin/Orders/Index', [
+        return Inertia::render('admin/orders/index', [
             'orders' => $orders,
             'filters' => $request->only(['search', 'status', 'from', 'to']),
+        ]);
+    }
+
+    public function show(Order $order)
+    {
+        $order->load(['buyer', 'store', 'items.product.media', 'city']);
+
+        return Inertia::render('admin/orders/show', [
+            'order' => $order,
         ]);
     }
 

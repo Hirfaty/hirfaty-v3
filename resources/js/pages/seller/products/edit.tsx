@@ -149,7 +149,7 @@ function SellerProductEdit({
                     Peaufiner <br /> {product.name}
                 </h1>
                 {product.status === 'rejected' && (
-                    <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                    <div className="mt-6 flex items-start gap-3 border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                         <div>
                             <p className="font-bold">
@@ -168,9 +168,9 @@ function SellerProductEdit({
                 {/* Main Form Area */}
                 <div className="space-y-10">
                     {/* Section: Détails */}
-                    <section className="rounded-2xl border border-border bg-card/50 p-6 md:p-8">
+                    <section className="border border-border bg-card/50 p-6 md:p-8">
                         <div className="mb-8 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                            <div className="flex h-10 w-10 items-center justify-center bg-muted">
                                 <History className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <h2 className="font-display text-2xl">
@@ -192,7 +192,7 @@ function SellerProductEdit({
                                     onChange={(e) =>
                                         setData('name', e.target.value)
                                     }
-                                    className="h-12 rounded-lg border-border/60 bg-background/50 focus-visible:ring-primary/20"
+                                    className="h-12 border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                 />
                                 {errors.name && (
                                     <p className="text-xs font-medium text-destructive">
@@ -215,7 +215,7 @@ function SellerProductEdit({
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
-                                    className="resize-none rounded-lg border-border/60 bg-background/50 focus-visible:ring-primary/20"
+                                    className="resize-none border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                 />
                                 {errors.description && (
                                     <p className="text-xs font-medium text-destructive">
@@ -235,7 +235,7 @@ function SellerProductEdit({
                                             setData('category_id', value)
                                         }
                                     >
-                                        <SelectTrigger className="h-12 rounded-lg border-border/60 bg-background/50">
+                                        <SelectTrigger className="h-12 border-border/60 bg-background/50">
                                             <SelectValue placeholder="Choisir" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -260,9 +260,9 @@ function SellerProductEdit({
                     </section>
 
                     {/* Section: Prix & Stock */}
-                    <section className="rounded-2xl border border-border bg-card/50 p-6 md:p-8">
+                    <section className="border border-border bg-card/50 p-6 md:p-8">
                         <div className="mb-8 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                            <div className="flex h-10 w-10 items-center justify-center bg-muted">
                                 <Tag className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <h2 className="font-display text-2xl">
@@ -287,7 +287,7 @@ function SellerProductEdit({
                                                     e.target.value,
                                                 )
                                             }
-                                            className="h-14 rounded-lg border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
+                                            className="h-14 border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
                                         />
                                         <span className="absolute top-1/2 left-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                                             DH
@@ -314,7 +314,7 @@ function SellerProductEdit({
                                                 Number(e.target.value),
                                             )
                                         }
-                                        className="h-14 rounded-lg border-border/60 bg-background/50 text-lg font-medium tabular-nums"
+                                        className="h-14 border-border/60 bg-background/50 text-lg font-medium tabular-nums"
                                     />
                                     {errors.stock && (
                                         <p className="text-xs font-medium text-destructive">
@@ -324,7 +324,7 @@ function SellerProductEdit({
                                 </div>
                             </div>
 
-                            <div className="rounded-xl bg-muted/30 p-6">
+                            <div className="bg-muted/30 p-6">
                                 <div className="mb-6 flex items-center justify-between">
                                     <div className="space-y-1">
                                         <h4 className="text-sm font-medium">
@@ -357,7 +357,7 @@ function SellerProductEdit({
                                                             e.target.value,
                                                         )
                                                     }
-                                                    className="h-14 rounded-lg border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
+                                                    className="h-14 border-border/60 bg-background/50 pl-12 text-lg font-medium tabular-nums"
                                                 />
                                                 <span className="absolute top-1/2 left-4 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                                                     DH
@@ -378,9 +378,9 @@ function SellerProductEdit({
 
                 {/* Side Actions Panel */}
                 <aside className="space-y-6">
-                    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm md:sticky md:top-8">
+                    <div className="border border-border bg-card p-6 shadow-sm md:sticky md:top-8">
                         <div className="mb-6 flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-primary" />
+                            <div className="h-2 w-2 bg-primary" />
                             <h3 className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase">
                                 Actions
                             </h3>
@@ -390,7 +390,7 @@ function SellerProductEdit({
                             <Button
                                 onClick={save}
                                 disabled={processing}
-                                className="h-12 w-full gap-2 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+                                className="h-12 w-full gap-2 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
                             >
                                 <Save className="h-4 w-4" />
                                 {processing
@@ -400,7 +400,7 @@ function SellerProductEdit({
 
                             <Button
                                 variant="outline"
-                                className="h-12 w-full gap-2 rounded-xl"
+                                className="h-12 w-full gap-2"
                                 onClick={() =>
                                     router.visit(
                                         route(
@@ -420,13 +420,13 @@ function SellerProductEdit({
                                 <AlertDialogTrigger asChild>
                                     <Button
                                         variant="ghost"
-                                        className="h-12 w-full gap-2 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        className="h-12 w-full gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                         Retirer du catalogue
                                     </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-2xl border-border">
+                                <AlertDialogContent className="border-border">
                                     <AlertDialogHeader>
                                         <AlertDialogTitle className="font-display text-2xl">
                                             Confirmer la suppression ?
@@ -439,12 +439,12 @@ function SellerProductEdit({
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter className="mt-6">
-                                        <AlertDialogCancel className="h-11 rounded-xl">
+                                        <AlertDialogCancel className="h-11">
                                             Annuler
                                         </AlertDialogCancel>
                                         <AlertDialogAction
                                             onClick={remove}
-                                            className="h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            className="h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                         >
                                             Oui, supprimer
                                         </AlertDialogAction>
@@ -453,7 +453,7 @@ function SellerProductEdit({
                             </AlertDialog>
                         </div>
 
-                        <div className="mt-8 rounded-xl bg-muted/30 p-4 text-[11px] leading-relaxed text-muted-foreground italic">
+                        <div className="mt-8 bg-muted/30 p-4 text-[11px] leading-relaxed text-muted-foreground italic">
                             Dernière mise à jour le{' '}
                             {new Date(product.updated_at).toLocaleDateString(
                                 'fr-FR',

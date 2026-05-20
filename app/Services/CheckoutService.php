@@ -16,7 +16,7 @@ class CheckoutService
 {
     const PLATFORM_FEE_PERCENT = 0.20; // 20%
 
-    const AMANA_FEE = 15.00; // flat per order
+    const AMANA_FEE = 20.00; // flat per order
 
     /**
      * Create a new class instance.
@@ -56,7 +56,7 @@ class CheckoutService
                 $grossAmount = $items->sum(fn ($item) => (float) ($item->product->sale_price ?? $item->product->base_price) * $item->quantity);
                 $platformFee = round($grossAmount * self::PLATFORM_FEE_PERCENT, 2);
                 $amanaFee = self::AMANA_FEE;
-                $sellerEarnings = $grossAmount - $platformFee - $amanaFee;
+                $sellerEarnings = $grossAmount - $platformFee + $amanaFee;
 
                 // Create order
                 $order = Order::create([

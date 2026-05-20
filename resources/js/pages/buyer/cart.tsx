@@ -13,11 +13,14 @@ import { toast } from 'sonner';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Separator } from '@/components/ui/separator';
-import type { Cart} from '@/types';
+import { Spinner } from '@/components/ui/spinner';
+import type { Cart } from '@/types';
 import { CartItem } from '@/types';
 
 const CartPage = ({ cart }: { cart: Cart }) => {
+    console.log('cart: ', cart);
     const [promoApplied, setPromoApplied] = useState<number>(0);
+    const [deletingItemId, setDeletingItemId] = useState<number | null>(null);
 
     // ✅ helpers (VERY IMPORTANT)
     const toPrice = (price: string | null) => Number(price ?? 0);
@@ -40,8 +43,8 @@ const CartPage = ({ cart }: { cart: Cart }) => {
 
     const savings = cart.items.reduce((sum, item) => {
         if (!item.product.sale_price) {
-return sum;
-}
+            return sum;
+        }
 
         const base = getBasePrice(item.product);
         const sale = toPrice(item.product.sale_price);
@@ -50,11 +53,19 @@ return sum;
     }, 0);
 
     const discount = Math.round((subtotal * promoApplied) / 100);
-    const shipping = subtotal > 600 ? 0 : 45;
+    // const shipping = subtotal > 600 ? 0 : 45;
+    //shipping should be 20 per store, so if the cart has items from 2 different stores, shipping should be 40, etc... but for simplicity, we'll do 20 per item
+    const shipping =
+        20 * cart.items.reduce((sum, item) => sum + item.quantity, 0); // 20 MAD per item
     const total = subtotal - discount + shipping;
 
     const changeQuantity = (cartItemId: number, quantity: number) => {
         router.patch(route('cart.update', cartItemId), { quantity: quantity });
+    };
+
+    const deleteCartItem = (cartItemId: number) => {
+        setDeletingItemId(cartItemId);
+        router.delete(route('cart.remove', cartItemId));
     };
 
     return (
@@ -139,8 +150,20 @@ return sum;
                                                 </button>
                                             </div>
 
-                                            <button className="text-sm text-ink-soft hover:text-terracotta">
-                                                <Trash2 className="inline h-4 w-4" />{' '}
+                                            <button
+                                                onClick={() =>
+                                                    deleteCartItem(item.id)
+                                                }
+                                                disabled={
+                                                    deletingItemId === item.id
+                                                }
+                                                className="inline-flex cursor-pointer items-center gap-2 text-sm text-ink-soft hover:text-terracotta disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {deletingItemId === item.id ? (
+                                                    <Spinner className="h-4 w-4 text-ink-soft" />
+                                                ) : (
+                                                    <Trash2 className="inline h-4 w-4" />
+                                                )}
                                                 Retirer
                                             </button>
 

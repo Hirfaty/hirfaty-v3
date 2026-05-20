@@ -28,10 +28,20 @@ use Illuminate\Database\Eloquent\Model;
  */
 class City extends Model
 {
-    protected $fillable = ['name', 'slug'];
+    protected $fillable = ['name', 'region'];
 
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function stores()
+    {
+        return $this->hasMany(Store::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
     }
 }

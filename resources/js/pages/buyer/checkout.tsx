@@ -1,16 +1,17 @@
 import { Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, ShieldCheck, Truck, AlertCircle } from 'lucide-react';
 import React from 'react';
+import { toast } from 'sonner';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Separator } from '@/components/ui/separator';
 import { Cart, CartItem, City, Product, Store } from '@/types';
 
-const PLATFORM_FEE_PERCENT = 0.05;
-const AMANA_FEE = 15;
+const PLATFORM_FEE_PERCENT = 0.2;
+const AMANA_FEE = 20;
 
 const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
-    console.log('cart: ', cart);
+    // console.log('cart: ', cart);
     const { data, setData, post, processing, errors } = useForm({
         shipping_address: '',
         city_id: cities[0]?.id ?? null,
@@ -57,6 +58,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        toast.loading('Traitement de votre commande en cours...');
         post(route('checkout.store'));
     };
 

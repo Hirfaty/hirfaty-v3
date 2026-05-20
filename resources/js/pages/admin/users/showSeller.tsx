@@ -131,7 +131,16 @@ const ShowSeller = ({
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                        href={route('admin.products.create', {
+                            store_id: user.store.id,
+                        })}
+                        className="inline-flex items-center gap-2 rounded-none border border-ink/10 bg-cream px-4 py-3 text-xs font-bold tracking-widest text-ink uppercase transition-colors hover:bg-ink hover:text-cream"
+                    >
+                        <Package className="h-4 w-4" />
+                        Ajouter un produit
+                    </Link>
                     <Button
                         variant={user.is_banned ? 'outline' : 'destructive'}
                         className="rounded-none"

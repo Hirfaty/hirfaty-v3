@@ -41,8 +41,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->name('admin.')
     ->group(function () {
         // Dashboard
-        // Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
-        Route::redirect("/dashboard", '/admin/products')->name('dashboard');
+        Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+        // Route::redirect("/dashboard", '/admin/products')->name('dashboard');
 
         // Sellers
         // Route::get('/sellers',              [Admin\SellerController::class, 'index'])->name('sellers.index');
@@ -87,6 +87,18 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // Payouts
         Route::get('/payouts', [Admin\PayoutController::class, 'index'])->name('payouts.index');
         Route::patch('/payouts/{payout}/process', [Admin\PayoutController::class, 'process'])->name('payouts.process');
+
+        // Categories
+        Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories.index');
+        Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
+        Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
+
+        // Cities
+        Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
+        Route::post('/cities', [Admin\CityController::class, 'store'])->name('cities.store');
+        Route::patch('/cities/{city}', [Admin\CityController::class, 'update'])->name('cities.update');
+        Route::delete('/cities/{city}', [Admin\CityController::class, 'destroy'])->name('cities.destroy');
     });
 
 // Seller

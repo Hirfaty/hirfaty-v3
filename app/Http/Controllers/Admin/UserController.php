@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\City;
+use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use App\Notifications\WelcomeUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -30,37 +32,26 @@ class UserController extends Controller
             'first_name'  => ['required', 'string', 'max:255'],
             'last_name'   => ['required', 'string', 'max:255'],
             'email'       => ['required', 'email', 'unique:users,email'],
-            'phone_number'       => ['nullable', 'string', 'unique:users,phone_number'],
+            'phone_number' => ['nullable', 'string', 'unique:users,phone_number'],
             'role'        => ['required', 'in:seller,buyer'],
-
-            // Seller-only fields
-            'store_name'  => ['required_if:role,seller', 'nullable', 'string', 'max:255', 'unique:stores,store_name'],
+            'store_name'  => ['required_if:role,seller', 'nullable', 'string', 'unique:stores,store_name'],
             'category_id' => ['required_if:role,seller', 'nullable', 'exists:categories,id'],
             'city_id'     => ['required_if:role,seller', 'nullable', 'exists:cities,id'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        // ── Generate a secure random password ──────────────────
-        $plainPassword = Str::password(
-            length: 12,
-            letters: true,
-            numbers: true,
-            symbols: true,
-            spaces: false,
-        );
+        $plainPassword = config('auth.default_password', Str::random(10));
 
         $user = User::create([
-            'first_name'        => $data['first_name'],
-            'last_name'         => $data['last_name'],
-            'name'              => $data['first_name'] . ' ' . $data['last_name'],
-            'email'             => $data['email'],
-            'phone_number'      => $data['phone_number'] ?? null,
-            'password'          => Hash::make($plainPassword),
-            'role'              => $data['role'],
-            'email_verified_at' => now(), // admin-created users are pre-verified
+            'first_name'   => $data['first_name'],
+            'last_name'    => $data['last_name'],
+            'email'        => $data['email'],
+            'phone_number' => $data['phone_number'] ?? null,
+            'role'         => $data['role'],
+            'password'     => Hash::make($plainPassword),
+            'email_verified_at' => now(),
         ]);
 
-        // ── If seller, create their store too ──────────────────
         if ($data['role'] === 'seller') {
             Store::create([
                 'user_id'     => $user->id,
@@ -70,17 +61,15 @@ class UserController extends Controller
                 'city_id'     => $data['city_id'],
                 'description' => $data['description'] ?? null,
             ]);
+
+            try {
+                $user->notify(new WelcomeUser($plainPassword));
+            } catch (\Exception $e) {
+                \Log::warning("Welcome email failed for user {$user->id}: " . $e->getMessage());
+            }
         }
 
-        // ── Notify user with their credentials ─────────────────
-        try {
-            $user->notify(new WelcomeUser($plainPassword));
-        } catch (\Exception $e) {
-            \Log::warning("Failed to send welcome email to user {$user->id}: " . $e->getMessage());
-        }
-
-        return redirect()->route('admin.users.index')
-            ->with('success', "Account created for {$user->first_name}. Login credentials sent to {$user->email}.");
+        return redirect()->route('admin.users.show', $user)->with('success', 'Utilisateur créé avec succès.');
     }
 
     public function index(Request $request)

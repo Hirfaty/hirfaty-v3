@@ -1,4 +1,5 @@
 import React from 'react';
+import { router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import BuyerLayout from '@/layouts/buyer/layout';
 import type { Order, OrderStatus, PaginatedData } from '@/types';
@@ -40,11 +41,35 @@ const Orders = ({ orders }: { orders: PaginatedData<Order> }) => {
                                     Passée le {formatOrderDate(o.created_at)}
                                 </p>
                             </div>
-                            <Badge
-                                className={`rounded-none font-normal ${statusColor[o.status]}`}
-                            >
-                                {o.status}
-                            </Badge>
+                            <div className="flex items-center gap-3">
+                                {o.status === 'pending' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (
+                                                confirm(
+                                                    'Êtes-vous sûr de vouloir annuler cette commande ?',
+                                                )
+                                            ) {
+                                                router.post(
+                                                    route(
+                                                        'buyer.orders.cancel',
+                                                        o.id,
+                                                    ),
+                                                );
+                                            }
+                                        }}
+                                        className="rounded-sm border border-rose-500 bg-rose-50 px-3 py-1 text-sm text-rose-700 transition hover:bg-rose-100"
+                                    >
+                                        Annuler
+                                    </button>
+                                )}
+                                <Badge
+                                    className={`rounded-none font-normal ${statusColor[o.status]}`}
+                                >
+                                    {o.status}
+                                </Badge>
+                            </div>
                         </div>
                         <div className="space-y-3 p-5">
                             {o.items.map((it, i) => (
@@ -70,7 +95,7 @@ const Orders = ({ orders }: { orders: PaginatedData<Order> }) => {
                         <div className="flex items-center justify-between border-t border-ink/10 px-5 py-4">
                             <span className="text-sm text-ink-soft">Total</span>
                             <span className="font-display text-xl text-ink">
-                                {142 + 'total'}{' '}
+                                {Number(o.total_amount).toLocaleString('fr-FR')}{' '}
                                 <span className="text-xs">MAD</span>
                             </span>
                         </div>

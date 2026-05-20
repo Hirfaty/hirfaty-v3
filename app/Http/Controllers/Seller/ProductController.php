@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -43,8 +44,7 @@ class ProductController extends Controller
     {
         return Inertia::render('seller/products/create', [
             'categories' => Category::whereNull('parent_id')->get(),
-        ]
-        );
+        ]);
     }
 
     /**
@@ -81,8 +81,11 @@ class ProductController extends Controller
                 'category_id' => $data['category_id'],
                 'status' => 'pending_review',
             ]);
+
+
             $this->uploadMedia($product, $request);
         });
+
 
         return redirect()->route('seller.products.index')->with(
             'success', 'Product submitted for review. We\'ll notify you once it\'s approved.'
@@ -140,6 +143,7 @@ class ProductController extends Controller
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
             'stock' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
+            // delivery options removed — shipping via Amana
             'media' => ['nullable', 'array'],
             'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
             'deleted_media' => ['nullable', 'array'],
@@ -148,13 +152,21 @@ class ProductController extends Controller
 
         DB::transaction(function () use ($data, $request, $product) {
             $product->update([
-                ...$data,
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'base_price' => $data['base_price'],
+                'sale_price' => $data['sale_price'] ?? null,
+                'stock' => $data['stock'],
+                'category_id' => $data['category_id'],
                 'slug' => Str::slug($data['name']).'-'.Str::random(5),
                 'status' => 'pending_review', // ← resubmit for review on edit
                 'rejection_reason' => null,             // ← clear old rejection
                 'reviewed_by' => null,
                 'reviewed_at' => null,
+                
             ]);
+
+            // no-op: delivery options table removed
 
             if (! empty($data['deleted_media'])) {
                 $toDelete = $product->media()->whereIn('id', $data['deleted_media'])->get();
@@ -199,16 +211,23 @@ class ProductController extends Controller
 
         $existingCount = $product->images()->count();
 
+       
         foreach ($request->file('media') as $index => $file) {
             $isVideo = str_starts_with($file->getMimeType(), 'video');
             $folder = 'products/'.$product->id;
-            $path = $file->store($folder, 'public');
+            // $path = $file->store($folder, 'public');
+            $path = $file->store($folder, [
+                'disk' => config('filesystems.default'),
+                'visibility' => 'public',
+            ]);
+  
 
             $product->media()->create([
                 'type' => $isVideo ? 'video' : 'image',
                 'path' => $path,
-                'url' => Storage::url($path),
-                'disk' => 'public',
+                // 'url' => Storage::url($path),
+                'url' => Storage::disk(config('filesystems.default'))->url($path),
+                'disk' => config('filesystems.default'),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize(),
                 'order' => $existingCount + $index,

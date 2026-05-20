@@ -143,7 +143,7 @@ test('checkout store creates grouped orders and clears cart', function () {
     ]);
 
     $response->assertRedirect(route('products.index'));
-    $response->assertSessionHas('success', '2 order(s) placed successfully!');
+    $response->assertSessionHas('success', '2 commande(s) passée(s) avec succès !');
 
     expect(Order::count())->toBe(2);
     expect(OrderItem::count())->toBe(2);
@@ -155,4 +155,43 @@ test('checkout store creates grouped orders and clears cart', function () {
 
     Notification::assertSentTo($storeA->user, NewOrderReceived::class);
     Notification::assertSentTo($storeB->user, NewOrderReceived::class);
+});
+
+test('checkout store applies 20% commission and leaves seller pending payout at 180 for a 200 product with 20 shipping', function () {
+    Notification::fake();
+
+    $buyer = createBuyer();
+    $city = City::create(['name' => 'Fes', 'region' => 'Fes-Meknes']);
+    $store = createStoreWithSeller('Omega');
+    $product = createProductForStore($store, 'Handcrafted Tray', 200.00, 10);
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create([
+        'cart_id' => $cart->id,
+        'product_id' => $product->id,
+        'quantity' => 1,
+    ]);
+
+    $response = $this->actingAs($buyer)->post(route('checkout.store'), [
+        'shipping_address' => '99 Artisan Lane',
+        'city_id' => $city->id,
+        'notes' => 'Please handle with care',
+    ]);
+
+    $response->assertRedirect(route('products.index'));
+    $response->assertSessionHas('success', '1 commande(s) passée(s) avec succès !');
+
+    expect(Order::count())->toBe(1);
+    expect(Earning::count())->toBe(1);
+
+    $order = Order::first();
+    $earning = Earning::first();
+
+    expect((float) $order->platform_fee)->toBe(40.0);
+    expect((float) $order->amana_fee)->toBe(20.0);
+    expect((float) $order->seller_earnings)->toBe(180.0);
+
+    expect((float) $earning->platform_fee)->toBe(40.0);
+    expect((float) $earning->amana_fee)->toBe(20.0);
+    expect((float) $earning->net_amount)->toBe(180.0);
 });

@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { LogOut, Package, PlusCircle, Store } from 'lucide-react';
+import { LogOut, Package, PlusCircle, Store, Settings } from 'lucide-react';
 import { ShoppingBag } from 'lucide-react';
 import {
     Sidebar,
@@ -15,6 +15,10 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 
+const dashboardItems = [
+    { title: 'Tableau de bord', url: '/seller/dashboard', icon: Store },
+];
+
 const catalogueItems = [
     { title: 'Produits', url: '/seller/products', icon: Package },
     {
@@ -26,6 +30,10 @@ const catalogueItems = [
 
 const salesItems = [
     { title: 'Commandes', url: '/seller/orders', icon: ShoppingBag },
+];
+
+const settingsItems = [
+    { title: 'Paramètres', url: '/seller/settings', icon: Settings },
 ];
 
 export function SellerSidebar() {
@@ -61,6 +69,45 @@ export function SellerSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
+                <SidebarGroup className="p-0 px-1">
+                    <SidebarGroupLabel>Catalogue</SidebarGroupLabel>
+                    <SidebarGroupContent className="p-0">
+                        <SidebarMenu className="rounded-none p-0">
+                            {dashboardItems.map((item) => (
+                                <SidebarMenuItem key={item.url}>
+                                    {(() => {
+                                        const active = isActive(item.url);
+
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    className="rounded-none flex items-center gap-2"
+                                                    href={item.url}
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
                 <SidebarGroup>
                     <SidebarGroupLabel>Catalogue</SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -76,12 +123,12 @@ export function SellerSidebar() {
                                                 isActive={active}
                                                 className={
                                                     active
-                                                        ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
                                                         : undefined
                                                 }
                                             >
                                                 <Link
-                                                    className="flex items-center gap-2"
+                                                    className="rounded-none flex items-center gap-2"
                                                     href={item.url}
                                                 >
                                                     <item.icon className="h-4 w-4" />
@@ -116,13 +163,52 @@ export function SellerSidebar() {
                                                 isActive={active}
                                                 className={
                                                     active
-                                                        ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
                                                         : undefined
                                                 }
                                             >
                                                 <Link
                                                     href={item.url}
-                                                    className="flex items-center gap-2"
+                                                    className="rounded-none flex items-center gap-2"
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                    {!collapsed && (
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    )}
+                                                </Link>
+                                            </SidebarMenuButton>
+                                        );
+                                    })()}
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup>
+                    <SidebarGroupLabel>Compte</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {settingsItems.map((item) => (
+                                <SidebarMenuItem key={item.url}>
+                                    {(() => {
+                                        const active = isActive(item.url);
+
+                                        return (
+                                            <SidebarMenuButton
+                                                asChild
+                                                isActive={active}
+                                                className={
+                                                    active
+                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
+                                                        : undefined
+                                                }
+                                            >
+                                                <Link
+                                                    href={item.url}
+                                                    className="rounded-none flex items-center gap-2"
                                                 >
                                                     <item.icon className="h-4 w-4" />
                                                     {!collapsed && (

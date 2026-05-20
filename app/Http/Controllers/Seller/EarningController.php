@@ -15,9 +15,9 @@ class EarningController extends Controller
         $earnings = $store->earnings()->with(['order.buyer', 'order.items.product'])->latest()->paginate(20);
 
         $summary = [
-            'total_earnings' => $store->earnings()->where('status', 'paid_out')->sum('net_amount'),
-            'available_earnings' => $store->earnings()->where('status', 'available')->sum('net_amount'),
-            'pending_earnings' => $store->earnings()->where('status', 'pending')->sum('net_amount'),
+            'total_earnings' => (float) $store->earnings()->where('status', 'paid_out')->sum('net_amount'),
+            'available_earnings' => (float) $store->earnings()->where('status', 'available')->sum('net_amount'),
+            'pending_earnings' => (float) $store->earnings()->where('status', 'pending')->sum('net_amount'),
         ];
 
         return Inertia::render('seller/earnings/index', [
