@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import SellerSidebar from '@/components/SellerSidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 
 export default function SellerLayout({ children }: { children: ReactNode }) {
     return (

@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'cart' => 'Panier',
+    'checkout' => 'Commander',
+    'orders' => 'Mes commandes',
+    'wishlist' => 'Liste de souhaits',
+    'account' => 'Mon compte',
+    'continue_shopping' => 'Continuer mes achats',
+    'add_to_cart' => 'Ajouter au panier',
+    'out_of_stock' => 'Rupture de stock',
+    'in_stock' => 'En stock',
+    'quantity' => 'Quantité',
+    'subtotal' => 'Sous-total',
+    'shipping' => 'Livraison',
+    'total' => 'Total',
+    'empty_cart' => 'Votre panier est vide.',
+    'empty_wishlist' => 'Votre liste de souhaits est vide.',
+    'no_orders' => 'Vous n\'avez pas encore de commande.',
+    'order_number' => 'Commande n°',
+    'order_date' => 'Date de commande',
+    'order_status' => 'Statut',
+    'sold_by' => 'Vendu par',
+    'place_order' => 'Passer la commande',
+    'delivery_address' => 'Adresse de livraison',
+];

@@ -3,7 +3,7 @@ import { ArrowLeft, ShieldCheck, Truck, AlertCircle } from 'lucide-react';
 import React from 'react';
 import { toast } from 'sonner';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 import { Separator } from '@/components/ui/separator';
 import { Cart, CartItem, City, Product, Store } from '@/types';
 

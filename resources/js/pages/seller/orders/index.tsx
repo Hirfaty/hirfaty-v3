@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Eye, Search, ShoppingBag } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +61,38 @@ export default function SellerOrders({
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
         'all',
     );
+    const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+    const statusActions: Record<
+        OrderStatus,
+        Array<{ label: string; status: OrderStatus }>
+    > = {
+        pending: [
+            { label: 'Confirmer', status: 'confirmed' },
+            { label: 'Annuler', status: 'cancelled' },
+        ],
+        confirmed: [
+            { label: 'Expédier', status: 'shipped' },
+            { label: 'Annuler', status: 'cancelled' },
+        ],
+        shipped: [],
+        delivered: [],
+        cancelled: [],
+    };
+
+    const changeOrderStatus = (orderId: number, status: OrderStatus) => {
+        setActionLoading(orderId);
+
+        router.patch(
+            route('seller.orders.status', orderId),
+            { status },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onFinish: () => setActionLoading(null),
+            },
+        );
+    };
 
     const filteredOrders = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -220,23 +252,51 @@ export default function SellerOrders({
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center justify-end">
-                                                <Button
-                                                    asChild
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-8 w-8"
-                                                    title="Voir détail"
-                                                >
-                                                    <Link
-                                                        href={route(
-                                                            'seller.orders.show',
-                                                            o.id,
-                                                        )}
+                                            <div className="flex flex-col items-end gap-2">
+                                                <div className="flex items-center justify-end">
+                                                    <Button
+                                                        asChild
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-8 w-8"
+                                                        title="Voir détail"
                                                     >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
+                                                        <Link
+                                                            href={route(
+                                                                'seller.orders.show',
+                                                                o.id,
+                                                            )}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
+                                                </div>
+
+                                                {statusActions[o.status].length > 0 && (
+                                                    <div className="flex flex-wrap justify-end gap-2">
+                                                        {statusActions[o.status].map(
+                                                            (action) => (
+                                                                <Button
+                                                                    key={action.status}
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    disabled={
+                                                                        actionLoading ===
+                                                                        o.id
+                                                                    }
+                                                                    onClick={() =>
+                                                                        changeOrderStatus(
+                                                                            o.id,
+                                                                            action.status,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {action.label}
+                                                                </Button>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

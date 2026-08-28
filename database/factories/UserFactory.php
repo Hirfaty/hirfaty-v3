@@ -35,7 +35,20 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
             'role' => 'buyer',
+            'terms_accepted' => true,
+            'terms_accepted_at' => now(),
         ];
+    }
+
+    /**
+     * Indicate that the model has not yet accepted the terms of use.
+     */
+    public function withoutAcceptedTerms(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'terms_accepted' => false,
+            'terms_accepted_at' => null,
+        ]);
     }
 
     /**

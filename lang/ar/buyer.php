@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'cart' => 'السلة',
+    'checkout' => 'إتمام الطلب',
+    'orders' => 'طلباتي',
+    'wishlist' => 'قائمة الرغبات',
+    'account' => 'حسابي',
+    'continue_shopping' => 'متابعة التسوق',
+    'add_to_cart' => 'أضف إلى السلة',
+    'out_of_stock' => 'نفد من المخزون',
+    'in_stock' => 'متوفر',
+    'quantity' => 'الكمية',
+    'subtotal' => 'المجموع الفرعي',
+    'shipping' => 'التوصيل',
+    'total' => 'المجموع',
+    'empty_cart' => 'سلتك فارغة.',
+    'empty_wishlist' => 'قائمة رغباتك فارغة.',
+    'no_orders' => 'ليس لديك أي طلب بعد.',
+    'order_number' => 'رقم الطلب',
+    'order_date' => 'تاريخ الطلب',
+    'order_status' => 'الحالة',
+    'sold_by' => 'يباع بواسطة',
+    'place_order' => 'تأكيد الطلب',
+    'delivery_address' => 'عنوان التوصيل',
+];

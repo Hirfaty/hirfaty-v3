@@ -61,7 +61,7 @@ const Index = ({
     };
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
+        <div className="min-h-full p-6 md:p-10">
             <Head title="Order Management" />
 
             <div className="mx-auto max-w-7xl">

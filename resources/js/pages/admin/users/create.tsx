@@ -4,6 +4,7 @@ import { Head, useForm } from '@inertiajs/react';
 import {
     ArrowRight,
     CheckCircle2,
+    Copy,
     Plus,
     Trash2,
     Upload,
@@ -29,6 +30,8 @@ const Create = ({
 }: PageProps & { cities: City[]; categories: Category[] }) => {
     const [step, setStep] = useState<'user' | 'products' | 'success'>('user');
     const [storeId, setStoreId] = useState<number | null>(null);
+    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+    const [isSubmittingUser, setIsSubmittingUser] = useState(false);
 
     // ── Step 1: User & Store Form ──────────────────────────────
     const userForm = useForm({
@@ -58,27 +61,16 @@ const Create = ({
     ]);
     const [isSubmittingProducts, setIsSubmittingProducts] = useState(false);
 
-    const handleUserSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        userForm.post(route('admin.users.store'), {
-            onSuccess: (page) => {
-                const response = page.props.flash as any;
-                // Since the controller returns JSON, Inertia might wrap it or we might need to handle it via axios if we want pure data.
-                // However, the controller is returning response()->json().
-                // Let's use axios for the wizard steps to have better control over the data flow.
-            },
-            onError: () => toast.error('Please fix the errors below.'),
-        });
-    };
-
-    // Alternative: Use Axios for better wizard data handling
     const submitUserStep = async () => {
+        userForm.clearErrors();
+        setIsSubmittingUser(true);
         try {
             const response = await axios.post(
                 route('admin.users.store'),
                 userForm.data,
             );
             if (response.data.user_id) {
+                setInviteUrl(response.data.invite_url);
                 if (userForm.data.role === 'seller') {
                     setStoreId(response.data.store_id);
                     setStep('products');
@@ -92,7 +84,17 @@ const Create = ({
                 userForm.setError(error.response.data.errors);
             }
             toast.error('Failed to create user.');
+        } finally {
+            setIsSubmittingUser(false);
         }
+    };
+
+    const copyInviteLink = () => {
+        if (!inviteUrl) {
+            return;
+        }
+        navigator.clipboard.writeText(inviteUrl);
+        toast.success('Invite link copied to clipboard.');
     };
 
     const addProductField = () => {
@@ -150,16 +152,18 @@ const Create = ({
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setStep('success');
-            toast.success('All products published successfully.');
+            toast.success(
+                'Products saved as drafts. The seller can finish and submit them for review.',
+            );
         } catch (error) {
-            toast.error('Failed to publish products.');
+            toast.error('Failed to save products.');
         } finally {
             setIsSubmittingProducts(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
+        <div className="min-h-full p-6 md:p-10">
             <Head title="Onboard Artisan" />
 
             <div className="mx-auto max-w-4xl">
@@ -458,20 +462,23 @@ const Create = ({
 
                             <div className="mt-12 flex items-center justify-between border-t border-ink/5 pt-8">
                                 <div className="max-w-[200px] text-[10px] leading-tight text-ink-soft">
-                                    Credentials will be auto-generated and sent
-                                    to the user's electronic mail.
+                                    A set-password link will be generated for
+                                    this account — you'll be able to copy and
+                                    send it yourself.
                                 </div>
                                 <button
                                     onClick={submitUserStep}
                                     disabled={
-                                        userForm.processing ||
+                                        isSubmittingUser ||
                                         !userForm.data.email
                                     }
                                     className="group flex items-center gap-3 bg-ink px-8 py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
                                 >
-                                    {userForm.processing
+                                    {isSubmittingUser
                                         ? 'Synchronizing...'
-                                        : 'Proceed to Next Step'}
+                                        : userForm.data.role === 'seller'
+                                          ? 'Proceed to Next Step'
+                                          : 'Create Account'}
                                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                                 </button>
                             </div>
@@ -717,14 +724,32 @@ const Create = ({
                         <div className="animate-in py-12 text-center duration-700 fade-in zoom-in">
                             <CheckCircle2 className="mx-auto mb-8 h-20 w-20 text-terracotta" />
                             <h2 className="h-editorial text-4xl text-ink">
-                                Artisan Successfully{' '}
-                                <span className="italic">Onboarded</span>
+                                Account Successfully{' '}
+                                <span className="italic">Created</span>
                             </h2>
                             <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-ink-soft">
-                                The account is active. The artisan has received
-                                their credentials via email and can now manage
-                                their store directly.
+                                The account is active. Share the link below so
+                                they can set their own password.
                             </p>
+
+                            {inviteUrl && (
+                                <div className="mx-auto mt-8 flex max-w-xl items-center gap-2 border border-ink/10 bg-cream/30 p-2 pl-4">
+                                    <input
+                                        readOnly
+                                        value={inviteUrl}
+                                        onFocus={(e) => e.target.select()}
+                                        className="flex-1 truncate bg-transparent text-sm text-ink focus:outline-none"
+                                    />
+                                    <button
+                                        onClick={copyInviteLink}
+                                        className="flex shrink-0 items-center gap-2 bg-ink px-4 py-3 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
+                                    >
+                                        <Copy className="h-3.5 w-3.5" />
+                                        Copy
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="mt-12 flex justify-center gap-4">
                                 <button
                                     onClick={() =>

@@ -2,7 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Search, SlidersHorizontal, Star } from 'lucide-react';
 import { useState } from 'react';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 import type { PaginatedData, Category } from '@/types';
 import { Product } from '@/types';
 import type { BuyerProductResource } from '@/types/extended_models';
@@ -55,8 +55,8 @@ const Index = ({
     // ─── Load more — append next page data ───────────────────────
     const loadMore = () => {
         if (!products.next_page_url) {
-return;
-}
+            return;
+        }
 
         router.get(
             products.next_page_url,

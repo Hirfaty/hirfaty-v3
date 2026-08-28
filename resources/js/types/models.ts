@@ -46,6 +46,7 @@ export interface Media {
 }
 
 export type ProductStatus =
+    | 'draft'
     | 'published'
     | 'archived'
     | 'rejected'

@@ -86,7 +86,7 @@ const Index = ({
     const children_list = categories.filter((c) => c.parent_id);
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
+        <div className="min-h-full p-6 md:p-10">
             <Head title="Manage Categories" />
 
             <div className="mx-auto max-w-7xl">

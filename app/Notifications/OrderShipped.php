@@ -4,10 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OrderShipped extends Notification
+class OrderShipped extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -29,21 +30,22 @@ class OrderShipped extends Notification
         return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
     public function toMail(object $notifiable): MailMessage
     {
+        $locale = $notifiable->locale ?? 'fr';
+
+        $subjects = [
+            'fr' => "Votre commande #{$this->order->id} est en route — Hirfaty",
+            'ar' => "طلبك #{$this->order->id} في الطريق إليك — حرفتي",
+            'en' => "Your order #{$this->order->id} is on its way — Hirfaty",
+        ];
 
         return (new MailMessage)
-            ->subject("Your order #{$this->order->id} is on its way — Hirfaty")
-            ->greeting("Hello {$notifiable->first_name}!")
-            ->line("Your order #{$this->order->id} has been shipped via Amana.")
-            ->line("**Store:** {$this->order->store->store_name}")
-            ->line("**Tracking number:** {$this->order->tracking_number}")
-            ->line("**Shipping address:** {$this->order->shipping_address}")
-            ->action('Track your order on Amana', 'https://www.amana.ma')
-            ->line('Thank you for shopping on Hirfaty!');
+            ->subject($subjects[$locale] ?? $subjects['fr'])
+            ->view("emails.buyer.order-status.shipped.{$locale}", [
+                'order' => $this->order,
+                'user'  => $notifiable,
+            ]);
     }
 
     /**

@@ -1,5 +1,6 @@
-﻿import { Link } from '@inertiajs/react';
-import { ArrowLeft, Pencil, Package, AlertCircle } from 'lucide-react';
+﻿import { Link, router } from '@inertiajs/react';
+import { ArrowLeft, Pencil, Package, AlertCircle, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import SellerLayout from '@/layouts/seller/layout';
 import type { Category, Media, Product, ProductStatus } from '@/types';
 
 const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
+    draft: 'Brouillon',
     published: 'Publié',
     archived: 'Archivé',
     rejected: 'Rejeté',
@@ -15,6 +17,7 @@ const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
 };
 
 const PRODUCT_STATUS_CLASSNAME: Record<ProductStatus, string> = {
+    draft: 'bg-slate-500/10 text-slate-700 border-slate-500/30',
     published: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
     archived: 'bg-slate-500/10 text-slate-700 border-slate-500/30',
     rejected: 'bg-rose-500/10 text-rose-700 border-rose-500/30',
@@ -76,11 +79,43 @@ function SellerProductPreview({
                     <h1 className="mt-4 font-display text-4xl leading-tight md:text-5xl lg:text-6xl">
                         {product.name}
                     </h1>
-                    <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
-                        {product.description || 'Aucune description disponible pour ce produit.'}
-                    </p>
+                    <div className="mt-4 max-w-2xl prose prose-sm dark:prose-invert leading-relaxed text-muted-foreground">
+                        {product.description ? (
+                            <div
+                                dangerouslySetInnerHTML={{
+                                    __html: product.description,
+                                }}
+                            />
+                        ) : (
+                            'Aucune description disponible pour ce produit.'
+                        )}
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
+                    {product.status === 'draft' && (
+                        <Button
+                            variant="outline"
+                            className="h-11 gap-2 rounded-xl"
+                            onClick={() => {
+                                router.patch(
+                                    route(
+                                        'seller.products.submit',
+                                        product.id,
+                                    ),
+                                    undefined,
+                                    {
+                                        onSuccess: () =>
+                                            toast.success(
+                                                'Produit soumis pour révision',
+                                            ),
+                                    },
+                                );
+                            }}
+                        >
+                            <Send className="h-4 w-4" />
+                            Soumettre pour révision
+                        </Button>
+                    )}
                     <Button asChild variant="outline" className="h-11 gap-2 rounded-xl">
                         <Link href={route('seller.products.edit', product.id)}>
                             <Pencil className="h-4 w-4" />
@@ -89,6 +124,19 @@ function SellerProductPreview({
                     </Button>
                 </div>
             </div>
+
+            {product.status === 'draft' && (
+                <div className="mb-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-sm text-amber-800">
+                    <div className="mb-3 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="font-semibold">Brouillon</span>
+                    </div>
+                    <p>
+                        Ce produit n'est pas encore visible sur le marché.
+                        Soumettez-le pour révision une fois qu'il est prêt.
+                    </p>
+                </div>
+            )}
 
             {product.status === 'rejected' && (
                 <div className="mb-8 rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
@@ -228,9 +276,17 @@ function SellerProductPreview({
                                 <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                                     Description
                                 </p>
-                                <p className="mt-3 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-                                    {product.description || 'Aucune description renseignée.'}
-                                </p>
+                                <div className="mt-3 prose prose-sm dark:prose-invert max-w-none leading-relaxed text-muted-foreground">
+                                    {product.description ? (
+                                        <div
+                                            dangerouslySetInnerHTML={{
+                                                __html: product.description,
+                                            }}
+                                        />
+                                    ) : (
+                                        'Aucune description renseignée.'
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

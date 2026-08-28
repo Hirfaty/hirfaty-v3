@@ -37,6 +37,7 @@ import type {
 const TABS = ['All', 'New', 'Flagged'] as const;
 
 const statusPill: Record<ProductStatus, string> = {
+    draft: 'bg-slate-100 text-slate-800',
     pending_review: 'bg-amber-100 text-amber-800',
     published: 'bg-emerald-100 text-emerald-800',
     rejected: 'bg-rose-100 text-rose-800',
@@ -44,6 +45,7 @@ const statusPill: Record<ProductStatus, string> = {
 };
 
 const statusLabel: Record<ProductStatus, string> = {
+    draft: 'Draft',
     pending_review: 'Review',
     published: 'Approved',
     rejected: 'Rejected',
@@ -399,9 +401,17 @@ return 'Flagged';
                                         <p className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
                                             Product Summary
                                         </p>
-                                        <p className="mt-2 text-[13px] leading-relaxed text-ink">
-                                            {selected.description}
-                                        </p>
+                                        <div className="mt-2 prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed text-ink line-clamp-3">
+                                            {selected.description ? (
+                                                <div
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: selected.description,
+                                                    }}
+                                                />
+                                            ) : (
+                                                'No description provided.'
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">
@@ -449,7 +459,21 @@ return 'Flagged';
                                         </div>
                                     </div>
 
-                                    {selected.status === 'pending_review' ? (
+                                    {selected.status === 'draft' ? (
+                                        <div className="space-y-2">
+                                            <div className="rounded-lg bg-cream p-3 text-[12px] text-ink-soft">
+                                                Draft added during onboarding.
+                                                Not yet submitted for review.
+                                            </div>
+                                            <button
+                                                onClick={approve}
+                                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-terracotta-deep text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+                                            >
+                                                <CircleCheck className="text-[18px]" />
+                                                Publish Draft
+                                            </button>
+                                        </div>
+                                    ) : selected.status === 'pending_review' ? (
                                         <div className="space-y-2">
                                             <button
                                                 onClick={approve}

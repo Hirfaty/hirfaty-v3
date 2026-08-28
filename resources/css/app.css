@@ -1,10 +1,64 @@
 @import 'tailwindcss';
+@plugin '@tailwindcss/typography';
 @import 'tw-animate-css';
+
+/* Tiptap Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+    color: var(--color-muted-foreground);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    opacity: 0.5;
+}
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 12px);
+    --radius-4xl: calc(var(--radius) + 16px);
+
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* brand tokens */
+    --color-sand: var(--sand);
+    --color-clay: var(--clay);
+    --color-ember: var(--ember);
+    --color-bark: var(--bark);
+    --color-ivory: var(--ivory);
+    --color-ink: var(--ink);
+    --color-butter: var(--butter);
+    --color-indigo-deep: var(--indigo-deep);
+}
 
 @theme {
     /* Brand Fonts */
@@ -81,10 +135,40 @@
             transform: translateY(0);
         }
     }
+    @keyframes float-drift {
+        0%,
+        100% {
+            transform: translate(0, 0);
+        }
+        50% {
+            transform: translate(8px, -16px);
+        }
+    }
+    @keyframes marquee-scroll {
+        from {
+            transform: translateX(0);
+        }
+        to {
+            transform: translateX(-50%);
+        }
+    }
+    @keyframes pop-in {
+        from {
+            opacity: 0;
+            transform: scale(0.85);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
 
     --animate-accordion-down: accordion-down 0.2s ease-out;
     --animate-accordion-up: accordion-up 0.2s ease-out;
     --animate-fade-up: fade-up 0.5s ease-out both;
+    --animate-float-drift: float-drift 7s ease-in-out infinite;
+    --animate-marquee-scroll: marquee-scroll 26s linear infinite;
+    --animate-pop-in: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 
     /* Base Container Config (Variables only) */
     --container-center: true;
@@ -103,40 +187,37 @@
 }
 
 :root {
-    /* --cream: oklch(96.38% 0.015 84.75);
-     */
-    --cream: oklch(0.99 0 0);
-    --cream-deep: oklch(90% 0.04 32);
-    --paper: oklch(97% 0.01 38);
-    --ink: oklch(28.48% 0.053 252.6);
-    --ink-soft: oklch(35% 0.04 232);
-    --terracotta: oklch(67.89% 0.184 41.23);
-    --terracotta-deep: oklch(58.28% 0.184 36.18);
-    --olive: oklch(38% 0.05 70);
-    --clay: oklch(78% 0.06 22);
-    --sand: oklch(84% 0.05 34);
-    --line: oklch(82% 0.03 32);
-
-    --background: var(--cream);
-    --foreground: var(--ink);
-    --border: var(--line);
-    --input: var(--line);
-    --ring: var(--terracotta);
-    --primary: var(--terracotta);
-    --primary-foreground: var(--paper);
-    --secondary: var(--cream-deep);
-    --secondary-foreground: var(--ink);
-    --muted: var(--cream-deep);
-    --muted-foreground: var(--ink-soft);
-    --accent: var(--clay);
-    --accent-foreground: var(--ink);
-    --destructive: oklch(55% 0.22 25);
-    --destructive-foreground: var(--paper);
-    --popover: var(--paper);
-    --popover-foreground: var(--ink);
-    --card: var(--paper);
-    --card-foreground: var(--ink);
     --radius: 0.5rem;
+
+    /* raw brand palette */
+    --ivory: oklch(0.958 0.019 88); /* #F7F1E5 */
+    --sand: oklch(0.744 0.048 68); /* #CBAA8C */
+    --clay: oklch(0.446 0.093 47); /* #82472A */
+    --ember: oklch(0.578 0.238 28.5); /* #ED1815 */
+    --bark: oklch(0.386 0.043 64); /* #5D4429 */
+    --butter: oklch(0.905 0.056 87);
+    --ink: oklch(0.246 0.024 60);
+    --indigo-deep: oklch(0.318 0.078 268);
+
+    --background: var(--ivory);
+    --foreground: var(--ink);
+    --card: oklch(0.978 0.012 88);
+    --card-foreground: var(--ink);
+    --popover: var(--ivory);
+    --popover-foreground: var(--ink);
+    --primary: var(--clay);
+    --primary-foreground: oklch(0.978 0.012 88);
+    --secondary: var(--sand);
+    --secondary-foreground: var(--ink);
+    --muted: oklch(0.925 0.024 84);
+    --muted-foreground: oklch(0.505 0.032 62);
+    --accent: var(--ember);
+    --accent-foreground: oklch(0.978 0.012 88);
+    --destructive: var(--ember);
+    --destructive-foreground: oklch(0.978 0.012 88);
+    --border: oklch(0.878 0.026 82);
+    --input: oklch(0.878 0.026 82);
+    --ring: var(--clay);
 }
 
 .dark {
@@ -151,14 +232,19 @@
 
 @layer base {
     * {
-        @apply border-border;
-    }
-    body {
-        @apply bg-background font-sans text-foreground antialiased;
+        border-color: var(--color-border);
     }
 
-    label {
-        @apply mb-2 block text-[11px] tracking-[0.18em] text-ink-soft uppercase;
+    body {
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+        background: var(--clay);
+        color: var(--ivory);
     }
 }
 
@@ -169,6 +255,48 @@
 }
 .font-arabic {
     font-family: 'Noto Naskh Arabic', serif;
+}
+
+/*
+ * Arabic typography.
+ * Fraunces (font-display / .h-editorial) and Inter carry no Arabic glyphs, so
+ * Arabic used to fall back to a default face and get synthetically obliqued —
+ * Arabic script is never italicised. Swap in Naskh, kill the fake italic, and
+ * relax the very tight display leading so diacritics aren't clipped.
+ */
+[lang='ar'] body,
+[dir='rtl'] body {
+    font-family:
+        'Noto Naskh Arabic', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+[lang='ar'] .font-display,
+[lang='ar'] .h-editorial,
+[dir='rtl'] .font-display,
+[dir='rtl'] .h-editorial {
+    font-family: 'Noto Naskh Arabic', 'Fraunces', serif;
+    letter-spacing: normal;
+}
+
+[lang='ar'] .h-editorial,
+[dir='rtl'] .h-editorial {
+    line-height: 1.4;
+}
+
+/* Arabic is never italic — neutralise both real and synthetic obliquing. */
+[lang='ar'] .italic,
+[dir='rtl'] .italic,
+[lang='ar'] .font-display,
+[dir='rtl'] .font-display,
+[lang='ar'] .h-editorial,
+[dir='rtl'] .h-editorial {
+    font-style: normal;
+}
+
+/* The eyebrow's wide Latin tracking looks broken in Arabic. */
+[lang='ar'] .eyebrow,
+[dir='rtl'] .eyebrow {
+    letter-spacing: 0.06em;
 }
 
 .h-editorial {
@@ -272,4 +400,100 @@
         black 90%,
         transparent
     );
+}
+
+/*
+ * Swipe-fill hover: a colored circle grows from the button's bottom-left
+ * corner toward the top-right, standing in for a flat background hover.
+ * The color itself is set per use-site via the --swipe-bg custom property.
+ */
+.btn-swipe {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+.btn-swipe::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: -20%;
+    bottom: -160%;
+    width: 55%;
+    aspect-ratio: 1 / 1;
+    border-radius: 9999px;
+    background: var(--swipe-bg, currentColor);
+    transform: scale(0);
+    transform-origin: bottom left;
+    transition: transform 0.55s cubic-bezier(0.65, 0, 0.35, 1);
+    pointer-events: none;
+}
+.btn-swipe:hover::before,
+.btn-swipe:focus-visible::before {
+    transform: scale(8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+    .btn-swipe::before {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ---- Organic / asymmetric shape system ---- */
+
+@utility shape-hero {
+    border-radius: 45% 0 0 45% / 42% 0 0 42%;
+}
+
+@utility shape-hero-sm {
+    border-radius: 120px 24px 24px 120px;
+}
+
+@utility shape-tile-a {
+    border-radius: 50% 8px 30% 8px;
+}
+
+@utility shape-tile-b {
+    border-radius: 50% 8px 30% 8px;
+}
+
+@utility shape-tile-c {
+    border-radius: 50% 8px 30% 8px;
+}
+
+@utility shape-tile-d {
+    border-radius: 50% 8px 30% 8px;
+}
+
+@utility shape-media-a {
+    border-radius: 80px 6px 6px 6px;
+}
+
+@utility shape-media-b {
+    border-radius: 6px 80px 6px 6px;
+}
+
+@utility shape-panel {
+    border-radius: 18px 18px 18px 90px;
+}
+
+@utility eyebrow {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.6875rem;
+    font-weight: 500;
+}
+
+@utility display-title {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    line-height: 0.95;
 }

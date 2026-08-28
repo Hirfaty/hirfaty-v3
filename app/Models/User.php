@@ -19,6 +19,7 @@ use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Override;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
@@ -29,6 +30,8 @@ use Override;
  * @property string|null $avatar
  * @property string|null $bio
  * @property int $is_banned
+ * @property bool $terms_accepted
+ * @property CarbonImmutable|null $terms_accepted_at
  * @property string $email
  * @property CarbonImmutable|null $email_verified_at
  * @property string $password
@@ -67,12 +70,12 @@ use Override;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale'])]
+#[Fillable(['email', 'name', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements AuthMustVerifyEmail
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
 
     /**
      * Get the attributes that should be cast.
@@ -85,6 +88,8 @@ class User extends Authenticatable implements AuthMustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'terms_accepted' => 'boolean',
+            'terms_accepted_at' => 'datetime',
         ];
     }
 
@@ -106,11 +111,11 @@ class User extends Authenticatable implements AuthMustVerifyEmail
 
     public function sendEmailVerificationNotification()
     {
-        switch($this->role) {
-            case "seller":
+        switch ($this->role) {
+            case 'seller':
                 $this->notify(new SellerVerifyEmail);
                 break;
-            case "buyer":
+            case 'buyer':
                 $this->notify(new BuyerVerifyEmail);
                 break;
             default:

@@ -100,6 +100,11 @@ class ProductController extends Controller
         ]);
     }
 
+    public function toggleWishlist(Product $product)
+    {
+        return $this->scoring->toggleWishlist($product);
+    }
+
     private function recordView(int $productId): void
     {
         $alreadyViewed = ProductView::where('product_id', $productId)

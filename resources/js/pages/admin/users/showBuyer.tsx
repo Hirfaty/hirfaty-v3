@@ -8,6 +8,7 @@ import {
     UserCheck,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { InviteLinkButton } from '@/components/admin/invite-link-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -96,6 +97,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <InviteLinkButton userId={user.id} />
                     <Button
                         variant={user.is_banned ? 'outline' : 'destructive'}
                         className="rounded-none"

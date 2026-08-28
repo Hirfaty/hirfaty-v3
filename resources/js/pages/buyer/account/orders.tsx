@@ -1,6 +1,8 @@
 import React from 'react';
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
+import { Package, ShoppingBag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import BuyerLayout from '@/layouts/buyer/layout';
 import type { Order, OrderStatus, PaginatedData } from '@/types';
 
@@ -28,80 +30,109 @@ const Orders = ({ orders }: { orders: PaginatedData<Order> }) => {
             <h2 className="mb-5 font-display text-2xl text-ink">
                 Mes commandes
             </h2>
-            <div className="space-y-4">
-                {orders.data.map((o) => (
-                    <article
-                        key={o.id}
-                        className="border border-ink/15 bg-paper"
-                    >
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-5 py-4">
-                            <div>
-                                <p className="font-display text-ink">#{o.id}</p>
-                                <p className="text-xs text-ink-soft">
-                                    Passée le {formatOrderDate(o.created_at)}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {o.status === 'pending' && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (
-                                                confirm(
-                                                    'Êtes-vous sûr de vouloir annuler cette commande ?',
-                                                )
-                                            ) {
-                                                router.post(
-                                                    route(
-                                                        'buyer.orders.cancel',
-                                                        o.id,
-                                                    ),
-                                                );
-                                            }
-                                        }}
-                                        className="rounded-sm border border-rose-500 bg-rose-50 px-3 py-1 text-sm text-rose-700 transition hover:bg-rose-100"
-                                    >
-                                        Annuler
-                                    </button>
-                                )}
-                                <Badge
-                                    className={`rounded-none font-normal ${statusColor[o.status]}`}
-                                >
-                                    {o.status}
-                                </Badge>
-                            </div>
-                        </div>
-                        <div className="space-y-3 p-5">
-                            {o.items.map((it, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-4"
-                                >
-                                    {/* <div className="relative h-14 w-14 shrink-0 overflow-hidden">
-                            <WarmFill variant={it.variant} className="absolute inset-0" />
-                          </div> */}
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate font-display text-sm text-ink">
-                                            {it.product.name}
-                                        </p>
-                                        <p className="text-xs text-ink-soft">
-                                            par {it.product?.store?.store_name}{' '}
-                                            · qté {it.quantity}
-                                        </p>
-                                    </div>
+
+            {orders.data.length > 0 ? (
+                <div className="space-y-4">
+                    {orders.data.map((o) => (
+                        <article
+                            key={o.id}
+                            className="border border-ink/15 bg-paper"
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-5 py-4">
+                                <div>
+                                    <p className="font-display text-ink">
+                                        #{o.id}
+                                    </p>
+                                    <p className="text-xs text-ink-soft">
+                                        Passée le{' '}
+                                        {formatOrderDate(o.created_at)}
+                                    </p>
                                 </div>
-                            ))}
-                        </div>
-                        <div className="flex items-center justify-between border-t border-ink/10 px-5 py-4">
-                            <span className="text-sm text-ink-soft">Total</span>
-                            <span className="font-display text-xl text-ink">
-                                {Number(o.total_amount).toLocaleString('fr-FR')}{' '}
-                                <span className="text-xs">MAD</span>
-                            </span>
-                        </div>
-                    </article>
-                ))}
-            </div>
+                                <div className="flex items-center gap-3">
+                                    {o.status === 'pending' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (
+                                                    confirm(
+                                                        'Êtes-vous sûr de vouloir annuler cette commande ?',
+                                                    )
+                                                ) {
+                                                    router.post(
+                                                        route(
+                                                            'buyer.orders.cancel',
+                                                            o.id,
+                                                        ),
+                                                    );
+                                                }
+                                            }}
+                                            className="rounded-sm border border-rose-500 bg-rose-50 px-3 py-1 text-sm text-rose-700 transition hover:bg-rose-100"
+                                        >
+                                            Annuler
+                                        </button>
+                                    )}
+                                    <Badge
+                                        className={`rounded-none font-normal ${statusColor[o.status]}`}
+                                    >
+                                        {o.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                            <div className="space-y-3 p-5">
+                                {o.items.map((it, i) => (
+                                    <div
+                                        key={i}
+                                        className="flex items-center gap-4"
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-display text-sm text-ink">
+                                                {it.product.name}
+                                            </p>
+                                            <p className="text-xs text-ink-soft">
+                                                par{' '}
+                                                {it.product?.store?.store_name}{' '}
+                                                · qté {it.quantity}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex items-center justify-between border-t border-ink/10 px-5 py-4">
+                                <span className="text-sm text-ink-soft">
+                                    Total
+                                </span>
+                                <span className="font-display text-xl text-ink">
+                                    {Number(o.total_amount).toLocaleString(
+                                        'fr-FR',
+                                    )}{' '}
+                                    <span className="text-xs">MAD</span>
+                                </span>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center border border-dashed border-ink/10 bg-paper/50 py-16 text-center">
+                    <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-cream-deep/60">
+                        <Package
+                            className="h-8 w-8 text-ink/20"
+                            strokeWidth={1}
+                        />
+                    </div>
+                    <h3 className="font-display text-xl text-ink">
+                        Vous n'avez pas encore de commandes
+                    </h3>
+                    <p className="mt-2 max-w-xs text-sm text-ink-soft">
+                        Vos pièces artisanales préférées n'attendent que vous.
+                    </p>
+                    <Link href="/products" className="mt-6">
+                        <Button className="rounded-none bg-ink px-8 text-cream hover:bg-terracotta">
+                            <ShoppingBag className="mr-2 h-4 w-4" />
+                            Commencer vos achats
+                        </Button>
+                    </Link>
+                </div>
+            )}
         </section>
     );
 };

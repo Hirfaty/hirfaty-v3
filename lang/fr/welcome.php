@@ -48,4 +48,20 @@ return [
     'categories.accessories.ar' => 'إكسسوارات',
     'categories.home.ar' => 'بيت ومطبخ',
     'categories.terroir.ar' => 'منتجات الأرض',
+
+    'stamp' => 'FAIT MAIN · ARTISANAT MAROCAIN ·',
+
+    'crafts.pottery' => 'Poterie',
+    'crafts.zellige' => 'Zellige',
+    'crafts.weaving' => 'Tissage',
+    'crafts.leather' => 'Maroquinerie',
+    'crafts.jewelry' => 'Bijoux',
+    'crafts.spices' => 'Épices',
+    'crafts.wood' => 'Bois sculpté',
+    'crafts.embroidery' => 'Broderie',
+
+    'alt.hero_main' => 'Mains d\'artisan façonnant la poterie',
+    'alt.hero_zellige' => 'Motif zellige marocain',
+    'alt.hero_textile' => 'Textile tissé main',
+    'alt.hero_spice' => 'Épices marocaines',
 ];

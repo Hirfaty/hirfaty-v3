@@ -1,95 +1,51 @@
 <?php
-
 namespace App\Models;
 
+use Astrotomic\Translatable\Contracts\Translatable as TranslatableContract;
+use Astrotomic\Translatable\Translatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Product extends Model
+class Product extends Model implements TranslatableContract
 {
+    use Translatable;
+
+    public $translatedAttributes = ['name', 'slug', 'description'];
+
     protected $fillable = [
-        'store_id', 'category_id', 'name', 'slug',
-        'description', 'base_price', 'sale_price',
-        'stock', 'status', 'average_rating',
-        'rejection_reason', 'reviewed_by', 'reviewed_at',
+        'store_id', 'category_id', 'sku',
+        'base_price', 'sale_price', 'professional_price', 'professional_sale_price',
+        'stock', 'min_order_qty_professional',
+        'visibility', 'status', 'has_variants',
+        'weight', 'lead_time_days',
     ];
 
-    protected $casts = [
-        'base_price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
-        'average_rating' => 'decimal:2',
-    ];
-
-    public function store()
+    public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
     }
 
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function media()
+    public function variants(): HasMany
     {
-        return $this->morphMany(Media::class, 'mediable')->orderBy('order');
+        return $this->hasMany(ProductVariant::class);
     }
 
-    public function images()
+    public function images(): HasMany
     {
-        return $this->morphMany(Media::class, 'mediable')
-            ->where('type', 'image')
-            ->orderBy('order');
+        return $this->hasMany(Media::class);
     }
 
-    public function videos()
+    // Price resolution helpers
+    public function priceFor(string $customerType): ?float
     {
-        return $this->morphMany(Media::class, 'mediable')
-            ->where('type', 'video');
+        return $customerType === 'professional'
+            ? ($this->professional_sale_price ?? $this->professional_price)
+            : ($this->sale_price ?? $this->base_price);
     }
-
-    public function wishlists()
-    {
-        return $this->hasMany(Wishlist::class);
-    }
-
-    public function views()
-    {
-        return $this->hasMany(ProductView::class);
-    }
-
-    public function orderItems()
-    {
-        return $this->hasMany(OrderItem::class);
-    }
-
-    public function isPendingReview(): bool
-    {
-        return $this->status === 'pending_review';
-    }
-
-    public function isPublished(): bool
-    {
-        return $this->status === 'published';
-    }
-
-    public function isRejected(): bool
-    {
-        return $this->status === 'rejected';
-    }
-
-    public function isArchived(): bool
-    {
-        return $this->status === 'archived';
-    }
-
-    public function reviewer()
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
-    }
-
-    // public function deliveryOptions()
-    // {
-    //     return $this->belongsToMany(DeliveryOption::class, 'product_delivery_option')
-    //             ->withPivot('custom_price');
-    // }
 }

@@ -1,29 +1,17 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { initializeTheme } from '@/hooks/use-appearance';
 import { CartProvider } from '@/contexts/CartContext';
-import AppLayout from '@/layouts/app-layout';
-import AuthLayout from '@/layouts/auth-layout';
-import SettingsLayout from '@/layouts/settings/layout';
+import { initializeTheme } from '@/hooks/use-appearance';
+import { initLocaleDirection } from '@/lib/locale-direction';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    layout: (name) => {
-        // switch (true) {
-        //     case name === 'welcome':
-        //         return null;
-        //     case name.startsWith('auth/'):
-        //         return AuthLayout;
-        //     case name.startsWith('settings/'):
-        //         return [AppLayout, SettingsLayout];
-        //     default:
-        //         return AppLayout;
-        // }
-        return null;
-    },
+    // Pages import and wrap their own layouts, so there is no automatic
+    // per-page layout resolution here.
+    layout: () => null,
     strictMode: true,
     withApp(app) {
         return (
@@ -42,3 +30,6 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+// Keep <html lang>/<html dir> correct when the locale changes mid-session.
+initLocaleDirection();

@@ -8,74 +8,168 @@ use App\Models\City;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
-use App\Notifications\WelcomeUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
-
     public function create()
     {
         return Inertia::render('admin/users/create', [
-            'cities'     => City::orderBy('name', 'asc')->get(),
+            'cities' => City::orderBy('name', 'asc')->get(),
             'categories' => Category::whereNull('parent_id')->get(),
         ]);
     }
 
     public function store(Request $request)
     {
+        if ($request->input('step') === 'product') {
+            return $this->storeProducts($request);
+        }
+
         $data = $request->validate([
-            'first_name'  => ['required', 'string', 'max:255'],
-            'last_name'   => ['required', 'string', 'max:255'],
-            'email'       => ['required', 'email', 'unique:users,email'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
             'phone_number' => ['nullable', 'string', 'unique:users,phone_number'],
-            'role'        => ['required', 'in:seller,buyer'],
-            'store_name'  => ['required_if:role,seller', 'nullable', 'string', 'unique:stores,store_name'],
+            'role' => ['required', 'in:seller,buyer'],
+            'store_name' => ['required_if:role,seller', 'nullable', 'string', 'unique:stores,store_name'],
             'category_id' => ['required_if:role,seller', 'nullable', 'exists:categories,id'],
-            'city_id'     => ['required_if:role,seller', 'nullable', 'exists:cities,id'],
+            'city_id' => ['required_if:role,seller', 'nullable', 'exists:cities,id'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $plainPassword = config('auth.default_password', Str::random(10));
-
         $user = User::create([
-            'first_name'   => $data['first_name'],
-            'last_name'    => $data['last_name'],
-            'email'        => $data['email'],
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'email' => $data['email'],
             'phone_number' => $data['phone_number'] ?? null,
-            'role'         => $data['role'],
-            'password'     => Hash::make($plainPassword),
+            'role' => $data['role'],
+            'password' => Hash::make(Str::random(40)),
             'email_verified_at' => now(),
         ]);
 
+        $store = null;
+
         if ($data['role'] === 'seller') {
-            Store::create([
-                'user_id'     => $user->id,
-                'store_name'  => $data['store_name'],
-                'slug'        => Str::slug($data['store_name']) . '-' . Str::random(5),
+            $store = Store::create([
+                'user_id' => $user->id,
+                'store_name' => $data['store_name'],
+                'slug' => Str::slug($data['store_name']).'-'.Str::random(5),
                 'category_id' => $data['category_id'],
-                'city_id'     => $data['city_id'],
+                'city_id' => $data['city_id'],
                 'description' => $data['description'] ?? null,
             ]);
+        }
 
-            try {
-                $user->notify(new WelcomeUser($plainPassword));
-            } catch (\Exception $e) {
-                \Log::warning("Welcome email failed for user {$user->id}: " . $e->getMessage());
+        return response()->json([
+            'user_id' => $user->id,
+            'store_id' => $store?->id,
+            'invite_url' => $this->generateInviteUrl($user),
+        ]);
+    }
+
+    /**
+     * Generate (or regenerate) a link that lets a user set their own password.
+     */
+    private function generateInviteUrl(User $user): string
+    {
+        $token = Password::createToken($user);
+
+        return url(route('password.reset', [
+            'token' => $token,
+            'email' => $user->email,
+        ], false));
+    }
+
+    /**
+     * Get a fresh, copyable set-password link for an existing user (admin can fetch this anytime).
+     */
+    public function inviteLink(User $user)
+    {
+        return response()->json([
+            'invite_url' => $this->generateInviteUrl($user),
+        ]);
+    }
+
+    /**
+     * Second step of the onboarding wizard: add initial products (saved as drafts) for a newly created store.
+     */
+    private function storeProducts(Request $request)
+    {
+        $data = $request->validate([
+            'store_id' => ['required', 'exists:stores,id'],
+            'products' => ['required', 'array', 'min:1'],
+            'products.*.name' => ['required', 'string', 'max:255'],
+            'products.*.description' => ['nullable', 'string'],
+            'products.*.base_price' => ['required', 'numeric', 'min:0'],
+            'products.*.sale_price' => ['nullable', 'numeric', 'min:0', 'lt:products.*.base_price'],
+            'products.*.stock' => ['required', 'integer', 'min:0'],
+            'products.*.category_id' => ['required', 'exists:categories,id'],
+            'products.*.media' => ['nullable', 'array', 'max:5'],
+            'products.*.media.*' => [
+                'file',
+                'mimes:jpg,jpeg,png,webp,mp4,mov',
+                function ($attribute, $value, $fail) {
+                    $isVideo = str_starts_with($value->getMimeType(), 'video');
+                    $maxSize = $isVideo ? 51200 : 5120; // 50MB for video, 5MB for image
+                    if ($value->getSize() > $maxSize * 1024) {
+                        $fail($isVideo
+                            ? 'La vidéo ne doit pas dépasser 50 Mo.'
+                            : "L'image ne doit pas dépasser 5 Mo.");
+                    }
+                },
+            ],
+        ]);
+
+        $store = Store::findOrFail($data['store_id']);
+
+        foreach ($data['products'] as $index => $productData) {
+            $product = $store->products()->create([
+                'name' => $productData['name'],
+                'slug' => Str::slug($productData['name']).'-'.Str::random(5),
+                'description' => $productData['description'] ?? null,
+                'base_price' => $productData['base_price'],
+                'sale_price' => $productData['sale_price'] ?? null,
+                'stock' => $productData['stock'],
+                'category_id' => $productData['category_id'],
+                'status' => 'draft',
+            ]);
+
+            $files = $request->file("products.{$index}.media", []);
+
+            foreach ($files as $mediaIndex => $file) {
+                $isVideo = str_starts_with($file->getMimeType(), 'video');
+                $path = $file->store('products/'.$product->id, [
+                    'disk' => config('filesystems.default'),
+                    'visibility' => 'public',
+                ]);
+
+                $product->media()->create([
+                    'type' => $isVideo ? 'video' : 'image',
+                    'path' => $path,
+                    'url' => Storage::disk(config('filesystems.default'))->url($path),
+                    'disk' => config('filesystems.default'),
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'order' => $mediaIndex,
+                ]);
             }
         }
 
-        return redirect()->route('admin.users.show', $user)->with('success', 'Utilisateur créé avec succès.');
+        return response()->json(['success' => true]);
     }
 
     public function index(Request $request)
     {
         $query = User::query()
             ->where('role', '!=', 'super_admin')
+            // Needed so the list can link straight to "create a product for this seller".
+            ->with('store:id,user_id')
             ->withCount([
                 'orders',
                 'store',

@@ -31,8 +31,8 @@ const overviewItems = [
 const moderationItems = [
     { title: 'Produits', url: '/admin/products', icon: Package },
     { title: 'Utilisateurs', url: '/admin/users', icon: Users },
-    { title: 'Orders', url: '/admin/orders', icon: Package },
     { title: 'Create User', url: '/admin/users/create', icon: Users },
+    { title: 'Orders', url: '/admin/orders', icon: Package },
     { title: 'Catégories', url: '/admin/categories', icon: ChartBarIcon },
     { title: 'Villes', url: '/admin/cities', icon: MapPin },
 ];

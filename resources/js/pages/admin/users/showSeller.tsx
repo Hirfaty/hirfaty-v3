@@ -11,6 +11,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { InviteLinkButton } from '@/components/admin/invite-link-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -141,6 +142,7 @@ const ShowSeller = ({
                         <Package className="h-4 w-4" />
                         Ajouter un produit
                     </Link>
+                    <InviteLinkButton userId={user.id} />
                     <Button
                         variant={user.is_banned ? 'outline' : 'destructive'}
                         className="rounded-none"

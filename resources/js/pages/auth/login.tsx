@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 import WarmFill from '@/components/WarmFill';
 import { store } from '@/routes/login';
 
@@ -21,8 +21,8 @@ const Login = () => {
         setTouched(true);
 
         if (!canSubmit) {
-return;
-}
+            return;
+        }
 
         // No backend yet — route to browse as a placeholder.
         window.location.href = '/browse';

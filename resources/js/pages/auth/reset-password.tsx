@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 import WarmFill from '@/components/WarmFill';
 import { update } from '@/routes/password';
 import { Input } from '@/components/ui/input';

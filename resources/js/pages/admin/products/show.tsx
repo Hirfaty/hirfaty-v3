@@ -31,6 +31,7 @@ import type {
 } from '@/types';
 
 const statusPill: Record<ProductStatus, string> = {
+    draft: 'bg-slate-100 text-slate-800',
     pending_review: 'bg-amber-100 text-amber-800',
     published: 'bg-emerald-100 text-emerald-800',
     rejected: 'bg-rose-100 text-rose-800',
@@ -38,6 +39,7 @@ const statusPill: Record<ProductStatus, string> = {
 };
 
 const statusLabel: Record<ProductStatus, string> = {
+    draft: 'Draft',
     pending_review: 'Pending Review',
     published: 'Published',
     rejected: 'Rejected',
@@ -233,10 +235,17 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                 <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
                                     Description
                                 </h3>
-                                <p className="mt-2 leading-relaxed text-foreground">
-                                    {product.description ||
-                                        'No description provided.'}
-                                </p>
+                                <div className="mt-2 prose prose-sm dark:prose-invert max-w-none leading-relaxed text-foreground">
+                                    {product.description ? (
+                                        <div
+                                            dangerouslySetInnerHTML={{
+                                                __html: product.description,
+                                            }}
+                                        />
+                                    ) : (
+                                        'No description provided.'
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-6">
@@ -418,6 +427,17 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                             </h2>
                         </div>
                         <div className="space-y-3 p-6">
+                            {product.status === 'draft' && (
+                                <Button
+                                    onClick={approve}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={processing}
+                                >
+                                    <CircleCheck className="mr-2 h-4 w-4" />
+                                    Publish Draft
+                                </Button>
+                            )}
+
                             {product.status === 'pending_review' && (
                                 <>
                                     <Button

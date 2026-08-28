@@ -10,13 +10,13 @@ import {
     Plus,
     Play,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
+import SiteHeader from '@/components/site/SiteHeader';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGuestCart } from '@/hooks/useGuestCart';
-import type { Media} from '@/types';
+import type { Media } from '@/types';
 import { Category, Product, Store } from '@/types';
 import type { BuyerProductResource } from '@/types/extended_models';
 
@@ -55,6 +55,11 @@ const ProductDetail = ({
     const [qty, setQty] = useState(1);
     const [wished, setWished] = useState(inWishlist);
 
+    // Sync state with props when they change (e.g., after a toggle)
+    useEffect(() => {
+        setWished(inWishlist);
+    }, [inWishlist]);
+
     const active = media[activeIdx];
     const onSale =
         product.sale_price &&
@@ -88,6 +93,28 @@ const ProductDetail = ({
             });
             alert('Added to cart! Login to checkout.');
         }
+    };
+
+    const handleToggleWishlist = () => {
+        // if (!auth.user) {
+        //     router.get(route('login'));
+        //     return;
+        // }
+
+        // // Optimistic update
+        // setWished(!wished);
+
+        router.post(
+            route('products.wishlist', product.id),
+            {},
+            {
+                preserveScroll: true,
+                onError: () => {
+                    // Revert on error
+                    setWished(inWishlist);
+                },
+            },
+        );
     };
 
     const goToCart = () => {
@@ -236,12 +263,21 @@ const ProductDetail = ({
                         )}
                     </p>
 
-                    {/* Description */}
-                    {product.description && (
-                        <p className="mt-6 leading-relaxed text-ink-soft">
-                            {product.description}
-                        </p>
-                    )}
+                    {/* Short Info Highlights */}
+                    <div className="mt-8 grid grid-cols-2 gap-4 border-y border-ink/10 py-6 text-xs text-ink-soft">
+                        <div className="flex items-start gap-2">
+                            <Truck className="mt-0.5 h-4 w-4 text-ink" />
+                            <span>
+                                Livraison Amana sous 3–7 jours partout au Maroc.
+                            </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <ShieldCheck className="mt-0.5 h-4 w-4 text-ink" />
+                            <span>
+                                Pièce authentique, garantie de l'atelier.
+                            </span>
+                        </div>
+                    </div>
 
                     {/* Quantity + actions */}
                     <div className="mt-8 space-y-4">
@@ -283,18 +319,17 @@ const ProductDetail = ({
                             <Button
                                 disabled={product.stock === 0}
                                 onClick={inCart ? goToCart : handleAddToCart}
-                                className="h-12 flex-1 rounded-none bg-ink text-cream hover:bg-terracotta"
+                                className="h-12 flex-1 rounded-none bg-ink text-cream transition-all hover:bg-terracotta active:scale-[0.98]"
                             >
                                 <ShoppingBag className="me-2 h-4 w-4" />
-
                                 {inCart
                                     ? 'Passer au paiement'
                                     : 'Ajouter au panier'}
                             </Button>
                             <Button
                                 variant="outline"
-                                onClick={() => setWished((w) => !w)}
-                                className={`h-12 rounded-none border-ink ${
+                                onClick={handleToggleWishlist}
+                                className={`h-12 rounded-none border-ink transition-all active:scale-[0.98] ${
                                     wished ? 'bg-ink text-cream' : 'text-ink'
                                 }`}
                             >
@@ -311,120 +346,149 @@ const ProductDetail = ({
                             </Button>
                         </div>
                     </div>
-
-                    {/* Trust strip */}
-                    <div className="mt-10 grid grid-cols-2 gap-4 border-t border-ink/10 pt-6 text-xs text-ink-soft">
-                        <div className="flex items-start gap-2">
-                            <Truck className="mt-0.5 h-4 w-4 text-ink" />
-                            <span>
-                                Livraison Amana sous 3–7 jours partout au Maroc.
-                            </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <ShieldCheck className="mt-0.5 h-4 w-4 text-ink" />
-                            <span>
-                                Pièce authentique, garantie de l'atelier.
-                            </span>
-                        </div>
-                    </div>
                 </div>
             </section>
 
             {/* Tabs: details + reviews */}
             <section className="container pb-20">
-                <Tabs defaultValue="reviews" className="w-full">
-                    <TabsList className="h-auto w-full justify-start gap-6 rounded-none border-b border-ink/15 bg-transparent p-0">
+                <Tabs defaultValue="story" className="w-full">
+                    <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-ink/15 bg-transparent p-0">
+                        <TabsTrigger
+                            value="story"
+                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase transition-all data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:font-bold data-[state=active]:text-ink data-[state=active]:shadow-none"
+                        >
+                            L'histoire
+                        </TabsTrigger>
                         <TabsTrigger
                             value="reviews"
-                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase transition-all data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:font-bold data-[state=active]:text-ink data-[state=active]:shadow-none"
                         >
                             Avis ({mockReviews.length})
                         </TabsTrigger>
                         <TabsTrigger
                             value="atelier"
-                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase transition-all data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:font-bold data-[state=active]:text-ink data-[state=active]:shadow-none"
                         >
                             L'atelier
                         </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="reviews" className="mt-8">
-                        <div className="grid grid-cols-12 gap-8">
+                    <TabsContent
+                        value="story"
+                        className="mt-12 animate-in duration-500 fade-in slide-in-from-bottom-2"
+                    >
+                        <div className="max-w-3xl">
+                            <p className="eyebrow mb-4">L'âme de cette pièce</p>
+                            <div
+                                className="prose prose-lg max-w-none font-serif leading-relaxed text-ink/80 dark:prose-invert"
+                                dangerouslySetInnerHTML={{
+                                    __html:
+                                        product.description ||
+                                        "Aucune description détaillée n'est disponible pour cette pièce.",
+                                }}
+                            />
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent
+                        value="reviews"
+                        className="mt-12 animate-in duration-500 fade-in slide-in-from-bottom-2"
+                    >
+                        <div className="grid grid-cols-12 gap-12">
                             {/* Rating summary */}
-                            <div className="col-span-12 md:col-span-3">
-                                <p className="font-display text-6xl leading-none text-ink">
-                                    {rating.toFixed(1)}
-                                </p>
-                                <div className="mt-2 flex gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((n) => (
-                                        <Star
-                                            key={n}
-                                            className={`h-4 w-4 ${
-                                                n <= Math.round(rating)
-                                                    ? 'fill-terracotta text-terracotta'
-                                                    : 'text-ink/20'
-                                            }`}
-                                            strokeWidth={1.5}
-                                        />
-                                    ))}
+                            <div className="col-span-12 md:col-span-4">
+                                <div className="border border-ink/10 bg-white/50 p-8 text-center">
+                                    <p className="font-display text-7xl leading-none text-ink">
+                                        {rating.toFixed(1)}
+                                    </p>
+                                    <div className="mt-4 flex justify-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((n) => (
+                                            <Star
+                                                key={n}
+                                                className={`h-5 w-5 ${
+                                                    n <= Math.round(rating)
+                                                        ? 'fill-terracotta text-terracotta'
+                                                        : 'text-ink/15'
+                                                }`}
+                                                strokeWidth={1.5}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="mt-3 text-xs tracking-widest text-ink-soft uppercase">
+                                        Sur {mockReviews.length} avis clients
+                                    </p>
                                 </div>
-                                <p className="mt-2 text-xs text-ink-soft">
-                                    basé sur {mockReviews.length} avis
-                                </p>
                             </div>
 
                             {/* Review list */}
-                            <ul className="col-span-12 divide-y divide-ink/10 md:col-span-9">
-                                {mockReviews.map((r) => (
-                                    <li key={r.id} className="py-5 first:pt-0">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <p className="font-display text-lg text-ink">
-                                                {r.author}
+                            <ul className="col-span-12 divide-y divide-ink/10 md:col-span-8">
+                                {mockReviews.length > 0 ? (
+                                    mockReviews.map((r) => (
+                                        <li
+                                            key={r.id}
+                                            className="py-8 first:pt-0"
+                                        >
+                                            <div className="flex items-center justify-between gap-4">
+                                                <p className="font-display text-xl text-ink">
+                                                    {r.author}
+                                                </p>
+                                                <span className="text-xs text-ink-soft">
+                                                    {r.date}
+                                                </span>
+                                            </div>
+                                            <div className="mt-1 flex gap-0.5">
+                                                {[1, 2, 3, 4, 5].map((n) => (
+                                                    <Star
+                                                        key={n}
+                                                        className={`h-3.5 w-3.5 ${
+                                                            n <= r.rating
+                                                                ? 'fill-terracotta text-terracotta'
+                                                                : 'text-ink/20'
+                                                        }`}
+                                                        strokeWidth={1.5}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <p className="mt-3 leading-relaxed text-ink/70">
+                                                {r.body}
                                             </p>
-                                            <span className="text-xs text-ink-soft">
-                                                {r.date}
-                                            </span>
-                                        </div>
-                                        <div className="mt-1 flex gap-0.5">
-                                            {[1, 2, 3, 4, 5].map((n) => (
-                                                <Star
-                                                    key={n}
-                                                    className={`h-3.5 w-3.5 ${
-                                                        n <= r.rating
-                                                            ? 'fill-terracotta text-terracotta'
-                                                            : 'text-ink/20'
-                                                    }`}
-                                                    strokeWidth={1.5}
-                                                />
-                                            ))}
-                                        </div>
-                                        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                                            {r.body}
-                                        </p>
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="py-12 text-center text-ink-soft italic">
+                                        Aucun avis pour le moment. Soyez le
+                                        premier à partager votre expérience.
                                     </li>
-                                ))}
+                                )}
                             </ul>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="atelier" className="mt-8 max-w-2xl">
-                        <p className="eyebrow mb-2">
-                            {product.store.store_name}
-                        </p>
-                        <h3 className="mb-3 font-display text-2xl text-ink">
-                            {product.store.city_name &&
-                                ` · ${product.store.city_name}`}
-                        </h3>
-                        <p className="leading-relaxed text-ink-soft">
-                            {product.store.description ??
-                                "Cet atelier n'a pas encore rédigé sa présentation."}
-                        </p>
-                        <Link
-                            href={`/seller/${product.store.slug}`}
-                            className="link-underline mt-4 inline-block text-ink"
-                        >
-                            Voir la boutique →
-                        </Link>
+                    <TabsContent
+                        value="atelier"
+                        className="mt-12 animate-in duration-500 fade-in slide-in-from-bottom-2"
+                    >
+                        <div className="max-w-2xl">
+                            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full border border-ink/10 bg-white font-display text-2xl text-ink shadow-sm">
+                                {product.store.store_name.charAt(0)}
+                            </div>
+                            <p className="eyebrow mb-2">
+                                {product.store.store_name}
+                            </p>
+                            <h3 className="mb-4 font-display text-3xl text-ink">
+                                L'artisan de {product.store.city_name}
+                            </h3>
+                            <p className="text-lg leading-relaxed text-ink/70">
+                                {product.store.description ??
+                                    "Cet atelier n'a pas encore rédigé sa présentation."}
+                            </p>
+                            <Link
+                                href={`/seller/${product.store.slug}`}
+                                className="link-underline mt-8 inline-block font-medium text-ink"
+                            >
+                                Visiter la boutique complète →
+                            </Link>
+                        </div>
                     </TabsContent>
                 </Tabs>
             </section>

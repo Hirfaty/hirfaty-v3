@@ -15,12 +15,12 @@ return new class extends Migration
             $table->string('first_name')->nullable()->after('name');
             $table->string('last_name')->nullable()->after('first_name');
             $table->string('phone_number')->unique()->nullable()->after('last_name');
-            $table->enum('role', ['super_admin', 'seller', 'buyer'])->default('buyer')->after('phone_number');
-            $table->string('avatar')->nullable()->after('role');
+            $table->string('avatar')->nullable()->after('phone_number');
             $table->text('bio')->nullable()->after('avatar');
             $table->boolean('is_banned')->default(false)->after('bio');
-            // $table->string('two_factor_secret')->nullable();
             $table->boolean('two_factor_enabled')->default(false);
+            $table->boolean('terms_accepted')->default(false)->after('phone_number');
+            $table->timestamp('terms_accepted_at')->nullable()->after('terms_accepted');
         });
     }
 

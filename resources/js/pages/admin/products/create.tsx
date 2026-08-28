@@ -1,8 +1,11 @@
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowRight, ImageUp, Package, Send, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { RichEditor } from '@/components/rich-editor';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, PageProps } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 interface Props extends PageProps {
     categories: Category[];
@@ -17,8 +20,44 @@ interface Props extends PageProps {
     };
 }
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
+const inputClass =
+    'w-full rounded-lg border border-ink/15 bg-paper px-3.5 py-2.5 text-sm text-ink transition-colors placeholder:text-ink-soft/50 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 focus:outline-none';
+
+/** Label + optional required marker + helper text + error, as in the reference layout. */
+function Field({
+    label,
+    required,
+    hint,
+    error,
+    children,
+}: {
+    label: string;
+    required?: boolean;
+    hint?: string;
+    error?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <label className="mb-1.5 block text-sm font-medium tracking-normal text-ink normal-case">
+                {label}
+                {required && <span className="ms-0.5 text-destructive">*</span>}
+            </label>
+            {children}
+            {error ? (
+                <p className="mt-1.5 text-xs text-destructive">{error}</p>
+            ) : hint ? (
+                <p className="mt-1.5 text-xs text-ink-soft">{hint}</p>
+            ) : null}
+        </div>
+    );
+}
+
 const AdminProductCreate = ({ categories, store }: Props) => {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         store_id: store?.id ?? '',
         name: '',
         description: '',
@@ -27,15 +66,44 @@ const AdminProductCreate = ({ categories, store }: Props) => {
         sale_price: '',
         stock: 1,
         media: [] as File[],
+        status: 'published',
     });
 
-    const handleMedia = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files) return;
+    const [dragging, setDragging] = useState(false);
+    const fileInput = useRef<HTMLInputElement>(null);
 
-        const newFiles = Array.from(files);
-        setData('media', [...data.media, ...newFiles]);
-        event.target.value = '';
+    const addFiles = (files: FileList | null) => {
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        const valid: File[] = [];
+        const tooLarge: string[] = [];
+
+        Array.from(files).forEach((f) => {
+            const isVideo = f.type.startsWith('video/');
+            const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+
+            if (f.size > limit) {
+                tooLarge.push(
+                    `${f.name} (${isVideo ? 'Vidéo > 50Mo' : 'Image > 5Mo'})`,
+                );
+            } else {
+                valid.push(f);
+            }
+        });
+
+        if (tooLarge.length > 0) {
+            toast.error('Fichiers trop volumineux', {
+                description: tooLarge.join(', '),
+            });
+        }
+
+        if (valid.length === 0) {
+            return;
+        }
+
+        setData('media', [...data.media, ...valid]);
     };
 
     const removeMediaFile = (index: number) => {
@@ -45,249 +113,259 @@ const AdminProductCreate = ({ categories, store }: Props) => {
         );
     };
 
+    // Two submit buttons, one form: the button picks the status it saves with.
+    const submitAs = (status: 'draft' | 'published') => {
+        transform((current) => ({ ...current, status }));
+        post(route('admin.products.store'), { forceFormData: true });
+    };
+
+    const backHref = store?.user
+        ? route('admin.users.show', store.user.id)
+        : '/admin/products';
+
     return (
-        <div className="mx-auto max-w-5xl p-6 md:p-8">
+        <div className="min-h-full p-6 md:p-10">
             <Head title="Créer un produit admin" />
 
-            <Link
-                href={
-                    store?.user
-                        ? route('admin.users.show', store.user.id)
-                        : '/admin/products'
-                }
-                className="mb-8 inline-flex items-center gap-2 text-sm text-ink-soft transition-colors hover:text-ink"
-            >
-                <ArrowLeft className="h-4 w-4" /> Retour
-            </Link>
-
-            <div className="rounded-3xl border border-ink/10 bg-paper p-8 shadow-sm">
-                <div className="mb-8">
-                    <p className="text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
-                        Admin product flow
-                    </p>
-                    <h1 className="mt-4 text-4xl font-semibold text-ink">
-                        {store
-                            ? `Create product for ${store.store_name}`
-                            : 'Create a new product'}
-                    </h1>
-                    {store?.user && (
-                        <p className="mt-2 text-sm text-ink-soft">
-                            Seller: {store.user.first_name}{' '}
-                            {store.user.last_name}
-                        </p>
-                    )}
-                </div>
-
-                {!store ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-sm text-amber-900">
-                        <p className="font-semibold">
-                            Aucun store sélectionné.
-                        </p>
-                        <p className="mt-2">
-                            Sélectionnez d'abord un vendeur depuis la fiche
-                            utilisateur, puis relancez cette page avec{' '}
-                            <code>?store_id=...</code>.
-                        </p>
+            <div className="mx-auto max-w-2xl">
+                <div className="rounded-2xl border border-ink/10 bg-paper p-5 shadow-[0_2px_12px_rgba(28,33,40,0.06)] md:p-6">
+                    {/* Header */}
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-terracotta/10">
+                                <Package className="h-4 w-4 text-terracotta" />
+                            </div>
+                            <div>
+                                <h1 className="font-display text-xl leading-tight text-ink">
+                                    {store
+                                        ? `Create product for ${store.store_name}`
+                                        : 'Create a new product'}
+                                </h1>
+                                <p className="mt-1 text-sm text-ink-soft">
+                                    {store?.user
+                                        ? `Seller: ${store.user.first_name} ${store.user.last_name}`
+                                        : 'Add a new product to a seller store.'}
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href={backHref}
+                            aria-label="Fermer"
+                            className="rounded-md p-1.5 text-ink-soft transition-colors hover:bg-cream-deep/50 hover:text-ink"
+                        >
+                            <X className="h-4 w-4" />
+                        </Link>
                     </div>
-                ) : (
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            post(route('admin.products.store'), {
-                                forceFormData: true,
-                            });
-                        }}
-                        className="space-y-8"
-                    >
-                        <input type="hidden" value={data.store_id} />
 
-                        <div className="grid gap-6 md:grid-cols-2">
-                            <div>
-                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Product Name
-                                </label>
-                                <input
-                                    value={data.name}
-                                    onChange={(event) =>
-                                        setData('name', event.target.value)
-                                    }
-                                    className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                />
-                                {errors.name && (
-                                    <p className="mt-2 text-[10px] text-rose-600">
-                                        {errors.name}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Category
-                                </label>
-                                <select
-                                    value={data.category_id}
-                                    onChange={(event) =>
-                                        setData(
-                                            'category_id',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                >
-                                    {categories.map((category) => (
-                                        <option
-                                            key={category.id}
-                                            value={category.id}
-                                        >
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errors.category_id && (
-                                    <p className="mt-2 text-[10px] text-rose-600">
-                                        {errors.category_id}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                Description
-                            </label>
-                            <textarea
-                                rows={5}
-                                value={data.description}
-                                onChange={(event) =>
-                                    setData('description', event.target.value)
-                                }
-                                className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                            />
-                            {errors.description && (
-                                <p className="mt-2 text-[10px] text-rose-600">
-                                    {errors.description}
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="grid gap-6 md:grid-cols-3">
-                            <div>
-                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Base Price
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.base_price}
-                                    onChange={(event) =>
-                                        setData(
-                                            'base_price',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                />
-                                {errors.base_price && (
-                                    <p className="mt-2 text-[10px] text-rose-600">
-                                        {errors.base_price}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Sale Price
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={data.sale_price}
-                                    onChange={(event) =>
-                                        setData(
-                                            'sale_price',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                />
-                                {errors.sale_price && (
-                                    <p className="mt-2 text-[10px] text-rose-600">
-                                        {errors.sale_price}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Stock
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={data.stock}
-                                    onChange={(event) =>
-                                        setData(
-                                            'stock',
-                                            Number(event.target.value),
-                                        )
-                                    }
-                                    className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                />
-                                {errors.stock && (
-                                    <p className="mt-2 text-[10px] text-rose-600">
-                                        {errors.stock}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                Media
-                            </label>
-                            <input
-                                type="file"
-                                multiple
-                                accept="image/*,video/*"
-                                onChange={handleMedia}
-                                className="block w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                            />
-                            <p className="mt-2 text-[10px] text-ink-soft">
-                                Add one or more images/videos. Selected files
-                                will be uploaded together.
+                    {!store ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+                            <p className="font-semibold">
+                                Aucun store sélectionné.
                             </p>
-                            {errors.media && (
-                                <p className="mt-2 text-[10px] text-rose-600">
-                                    {errors.media}
-                                </p>
-                            )}
-                            {errors['media.0'] && (
-                                <p className="mt-2 text-[10px] text-rose-600">
-                                    {errors['media.0']}
-                                </p>
-                            )}
+                            <p className="mt-2">
+                                Sélectionnez d'abord un vendeur depuis la fiche
+                                utilisateur, puis relancez cette page avec{' '}
+                                <code>?store_id=...</code>.
+                            </p>
+                        </div>
+                    ) : (
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                submitAs('published');
+                            }}
+                        >
+                            {/* Inner panel holding the fields */}
+                            <div className="space-y-5 rounded-xl border border-ink/10 bg-cream/40 p-5">
+                                <Field
+                                    label="Product Name"
+                                    required
+                                    hint="Give your product a short and clear name."
+                                    error={errors.name}
+                                >
+                                    <input
+                                        value={data.name}
+                                        onChange={(e) =>
+                                            setData('name', e.target.value)
+                                        }
+                                        placeholder="Tajine émaillé de Fès"
+                                        className={inputClass}
+                                    />
+                                </Field>
 
-                            {data.media.length > 0 && (
-                                <div className="mt-4 rounded-2xl border border-ink/10 bg-cream/50 p-4">
-                                    <div className="mb-3 text-xs font-bold tracking-widest text-ink/40 uppercase">
-                                        Selected Media ({data.media.length})
-                                    </div>
-                                    <div className="grid gap-2">
-                                        {data.media.map((file, index) => (
-                                            <div
-                                                key={`${file.name}-${index}`}
-                                                className="flex items-center justify-between rounded-2xl border border-ink/10 bg-white px-3 py-3 text-sm"
+                                <Field
+                                    label="Category"
+                                    required
+                                    hint="Pick the trade this piece belongs to."
+                                    error={errors.category_id}
+                                >
+                                    <select
+                                        value={data.category_id}
+                                        onChange={(e) =>
+                                            setData(
+                                                'category_id',
+                                                Number(e.target.value),
+                                            )
+                                        }
+                                        className={inputClass}
+                                    >
+                                        {categories.map((category) => (
+                                            <option
+                                                key={category.id}
+                                                value={category.id}
                                             >
-                                                <div className="min-w-0 overflow-hidden">
-                                                    <p className="truncate font-medium text-ink">
+                                                {category.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </Field>
+
+                                <Field
+                                    label="Description"
+                                    hint="Tell the story behind the piece — materials, technique, origin."
+                                    error={errors.description}
+                                >
+                                    <RichEditor
+                                        value={data.description}
+                                        onChange={(html) =>
+                                            setData('description', html)
+                                        }
+                                    />
+                                </Field>
+
+                                <div className="grid gap-5 sm:grid-cols-3">
+                                    <Field
+                                        label="Base Price"
+                                        required
+                                        hint="In MAD."
+                                        error={errors.base_price}
+                                    >
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={data.base_price}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'base_price',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="0.00"
+                                            className={inputClass}
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="Sale Price"
+                                        hint="Optional, below base."
+                                        error={errors.sale_price}
+                                    >
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={data.sale_price}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'sale_price',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="0.00"
+                                            className={inputClass}
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="Stock"
+                                        required
+                                        hint="Units available."
+                                        error={errors.stock}
+                                    >
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={data.stock}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'stock',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            className={inputClass}
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Media dropzone */}
+                                <Field
+                                    label="Media"
+                                    hint="Add up to 5 images or videos. Used to represent the product across the marketplace. Images up to 5 Mo, videos up to 50 Mo."
+                                    error={errors.media ?? errors['media.0']}
+                                >
+                                    <div
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            setDragging(true);
+                                        }}
+                                        onDragLeave={() => setDragging(false)}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            setDragging(false);
+                                            addFiles(e.dataTransfer.files);
+                                        }}
+                                        className={`flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${
+                                            dragging
+                                                ? 'border-terracotta bg-terracotta/5'
+                                                : 'border-ink/20 bg-paper'
+                                        }`}
+                                    >
+                                        <ImageUp
+                                            className="h-6 w-6 text-ink-soft"
+                                            strokeWidth={1.5}
+                                        />
+                                        <p className="mt-3 text-sm text-ink-soft">
+                                            Drop your images here, or
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                fileInput.current?.click()
+                                            }
+                                            className="mt-2 rounded-lg border border-ink/15 bg-paper px-3.5 py-1.5 text-sm font-medium text-ink shadow-[0_1px_2px_rgba(28,33,40,0.05)] transition-colors hover:bg-cream-deep/40"
+                                        >
+                                            Click to browse
+                                        </button>
+                                        <input
+                                            ref={fileInput}
+                                            type="file"
+                                            multiple
+                                            accept="image/*,video/*"
+                                            onChange={(e) => {
+                                                addFiles(e.target.files);
+                                                e.target.value = '';
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </div>
+                                </Field>
+
+                                {data.media.length > 0 && (
+                                    <ul className="space-y-2">
+                                        {data.media.map((file, index) => (
+                                            <li
+                                                key={`${file.name}-${index}`}
+                                                className="flex items-center justify-between gap-3 rounded-lg border border-ink/10 bg-paper px-3 py-2.5"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink">
                                                         {file.name}
                                                     </p>
-                                                    <p className="text-[10px] text-ink-soft">
+                                                    <p className="text-xs text-ink-soft">
                                                         {file.type ||
                                                             'unknown type'}{' '}
-                                                        •{' '}
+                                                        ·{' '}
                                                         {Math.round(
                                                             file.size / 1024,
                                                         )}{' '}
@@ -299,33 +377,50 @@ const AdminProductCreate = ({ categories, store }: Props) => {
                                                     onClick={() =>
                                                         removeMediaFile(index)
                                                     }
-                                                    className="text-[10px] tracking-widest text-rose-600 uppercase hover:text-rose-800"
+                                                    aria-label={`Retirer ${file.name}`}
+                                                    className="shrink-0 rounded-md p-1.5 text-ink-soft transition-colors hover:bg-cream-deep/50 hover:text-destructive"
                                                 >
-                                                    Remove
+                                                    <X className="h-4 w-4" />
                                                 </button>
-                                            </div>
+                                            </li>
                                         ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="text-sm text-ink-soft">
-                                The new product will be created on behalf of
-                                this seller and published immediately.
+                                    </ul>
+                                )}
                             </div>
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-xs font-bold tracking-widest text-cream uppercase transition hover:bg-terracotta disabled:opacity-50"
-                            >
-                                {processing ? 'Saving...' : 'Create product'}
-                                <ArrowRight className="h-4 w-4" />
-                            </button>
-                        </div>
-                    </form>
-                )}
+
+                            {/* Actions sit outside the panel, as in the reference */}
+                            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+                                <button
+                                    type="button"
+                                    disabled={processing}
+                                    onClick={() => submitAs('draft')}
+                                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-cream-deep/60 px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-cream-deep disabled:opacity-50"
+                                >
+                                    Save as draft
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="btn-swipe inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-terracotta px-5 py-2.5 text-sm font-medium text-cream transition-colors duration-300 disabled:opacity-50 [--swipe-bg:var(--ink)]"
+                                >
+                                    {processing ? (
+                                        'Saving...'
+                                    ) : (
+                                        <>
+                                            Publish product
+                                            <ArrowRight className="h-4 w-4" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-soft">
+                                <Send className="h-3 w-3" />
+                                A draft stays hidden until it is published.
+                            </p>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

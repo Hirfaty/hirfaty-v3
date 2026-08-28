@@ -71,30 +71,47 @@ class ProductController extends Controller
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
             'stock' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
+            // The admin chooses on submit: keep it back as a draft, or publish now.
+            'status' => ['required', 'in:draft,published'],
             'media' => ['nullable', 'array', 'max:5'],
-            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:51200'],
+            'media.*' => [
+                'file',
+                'mimes:jpg,jpeg,png,webp,mp4,mov',
+                function ($attribute, $value, $fail) {
+                    $isVideo = str_starts_with($value->getMimeType(), 'video');
+                    $maxSize = $isVideo ? 51200 : 5120; // 50MB for video, 5MB for image
+                    if ($value->getSize() > $maxSize * 1024) {
+                        $fail($isVideo
+                            ? 'The video must not exceed 50MB.'
+                            : 'The image must not exceed 5MB.');
+                    }
+                },
+            ],
         ]);
 
         $store = Store::findOrFail($data['store_id']);
+        $isPublished = $data['status'] === 'published';
 
-        DB::transaction(function () use ($data, $request, $store) {
+        DB::transaction(function () use ($data, $request, $store, $isPublished) {
             $product = $store->products()->create([
                 'name' => $data['name'],
-                'slug' => Str::slug($data['name']) . '-' . Str::random(5),
+                'slug' => Str::slug($data['name']).'-'.Str::random(5),
                 'description' => $data['description'] ?? null,
                 'base_price' => $data['base_price'],
                 'sale_price' => $data['sale_price'] ?? null,
                 'stock' => $data['stock'],
                 'category_id' => $data['category_id'],
-                'status' => 'published',
-                'reviewed_by' => Auth::id(),
-                'reviewed_at' => now(),
+                'status' => $data['status'],
+                // A draft has not been reviewed yet — only stamp the reviewer
+                // when the admin publishes straight away.
+                'reviewed_by' => $isPublished ? Auth::id() : null,
+                'reviewed_at' => $isPublished ? now() : null,
             ]);
 
             if ($request->hasFile('media')) {
                 foreach ($request->file('media') as $index => $file) {
                     $isVideo = str_starts_with($file->getMimeType(), 'video');
-                    $folder = 'products/' . $product->id;
+                    $folder = 'products/'.$product->id;
                     $path = $file->store($folder, [
                         'disk' => config('filesystems.default'),
                         'visibility' => 'public',
@@ -113,7 +130,12 @@ class ProductController extends Controller
             }
         });
 
-        return redirect()->route('admin.users.show', $store->user)->with('success', 'Product created pour le seller.');
+        return redirect()->route('admin.users.show', $store->user)->with(
+            'success',
+            $isPublished
+                ? 'Product created and published for the seller.'
+                : 'Product saved as a draft for the seller.'
+        );
     }
 
     public function show(Product $product)
