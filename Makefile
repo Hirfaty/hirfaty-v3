@@ -14,7 +14,7 @@ reset:
 # so the stack survives a reboot; day-to-day use is `make prod-*`.
 
 COMPOSE = docker compose -f docker-compose.prod.yml
-DOMAIN ?= hirfaty.com
+DOMAIN ?= init.hirfaty.com
 CERT_EMAIL ?= creati.maroc@gmail.com
 
 .PHONY: reset prod-build prod-up prod-down prod-restart prod-logs prod-ps \
@@ -64,9 +64,10 @@ prod-deploy:
 
 # One-time TLS bootstrap: app must already be serving HTTP (`make prod-up`)
 # so certbot can complete the HTTP-01 challenge via the shared webroot.
+# DOMAIN is a single subdomain (init.hirfaty.com) — no "www." variant.
 prod-cert-init:
 	$(COMPOSE) run --rm certbot certonly --webroot -w /var/www/certbot \
-		-d $(DOMAIN) -d www.$(DOMAIN) \
+		-d $(DOMAIN) \
 		--email $(CERT_EMAIL) --agree-tos --no-eff-email
 	$(COMPOSE) restart app
 
