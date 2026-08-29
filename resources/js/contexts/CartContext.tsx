@@ -1,10 +1,5 @@
-import React, {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    ReactNode,
-} from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CART_KEY = 'hirfaty_guest_cart';
 
@@ -32,6 +27,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<GuestCartItem[]>(() => {
         try {
             const raw = localStorage.getItem(CART_KEY);
+
             return raw ? JSON.parse(raw) : [];
         } catch {
             return [];
@@ -45,6 +41,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const addItem = (item: GuestCartItem) => {
         setItems((prev) => {
             const existing = prev.find((i) => i.product_id === item.product_id);
+
             if (existing) {
                 return prev.map((i) =>
                     i.product_id === item.product_id
@@ -93,8 +90,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
 export function useGuestCart() {
     const context = useContext(CartContext);
+
     if (!context) {
         throw new Error('useGuestCart must be used within a CartProvider');
     }
+
     return context;
 }

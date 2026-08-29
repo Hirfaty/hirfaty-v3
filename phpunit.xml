@@ -26,6 +26,14 @@
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
+        <!--
+          Tests must stay off real infrastructure regardless of the
+          developer's local .env — media tests call Storage::fake('public'),
+          and controllers resolve their disk via config('filesystems.default'),
+          so the default has to be 'public' here or a fake('public') silently
+          stops intercepting once .env picks a different default (e.g. seaweedfs).
+        -->
+        <env name="FILESYSTEM_DISK" value="public"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

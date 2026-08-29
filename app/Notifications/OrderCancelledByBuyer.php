@@ -12,11 +12,12 @@ class OrderCancelledByBuyer extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Order $order) {
-        
-    }
+    public function __construct(public Order $order) {}
 
-    public function via(object $notifiable): array { return ['mail']; }
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
 
     public function toMail($notifiable): MailMessage
     {
@@ -32,7 +33,7 @@ class OrderCancelledByBuyer extends Notification implements ShouldQueue
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.seller.order.cancelled-by-buyer.{$locale}", [
                 'order' => $this->order,
-                'user'  => $notifiable,
+                'user' => $notifiable,
             ]);
     }
 }

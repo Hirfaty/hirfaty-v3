@@ -14,6 +14,7 @@
 .env
 .env.backup
 .env.production
+/docker/seaweedfs/s3-config.json
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

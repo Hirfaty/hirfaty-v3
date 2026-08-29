@@ -1,6 +1,5 @@
-﻿import { Link, router } from '@inertiajs/react';
-import { ArrowLeft, Pencil, Package, AlertCircle, Send } from 'lucide-react';
-import { toast } from 'sonner';
+﻿import { Link } from '@inertiajs/react';
+import { ArrowLeft, Pencil, Package, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +48,9 @@ function SellerProductPreview({
           )
         : 0;
 
-    const formattedBasePrice = Number(product.base_price).toLocaleString('fr-FR');
+    const formattedBasePrice = Number(product.base_price).toLocaleString(
+        'fr-FR',
+    );
     const formattedSalePrice = product.sale_price
         ? Number(product.sale_price).toLocaleString('fr-FR')
         : null;
@@ -79,44 +80,17 @@ function SellerProductPreview({
                     <h1 className="mt-4 font-display text-4xl leading-tight md:text-5xl lg:text-6xl">
                         {product.name}
                     </h1>
-                    <div className="mt-4 max-w-2xl prose prose-sm dark:prose-invert leading-relaxed text-muted-foreground">
-                        {product.description ? (
-                            <div
-                                dangerouslySetInnerHTML={{
-                                    __html: product.description,
-                                }}
-                            />
-                        ) : (
-                            'Aucune description disponible pour ce produit.'
-                        )}
-                    </div>
+                    <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
+                        {product.description ||
+                            'Aucune description disponible pour ce produit.'}
+                    </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    {product.status === 'draft' && (
-                        <Button
-                            variant="outline"
-                            className="h-11 gap-2 rounded-xl"
-                            onClick={() => {
-                                router.patch(
-                                    route(
-                                        'seller.products.submit',
-                                        product.id,
-                                    ),
-                                    undefined,
-                                    {
-                                        onSuccess: () =>
-                                            toast.success(
-                                                'Produit soumis pour révision',
-                                            ),
-                                    },
-                                );
-                            }}
-                        >
-                            <Send className="h-4 w-4" />
-                            Soumettre pour révision
-                        </Button>
-                    )}
-                    <Button asChild variant="outline" className="h-11 gap-2 rounded-xl">
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-11 gap-2 rounded-xl"
+                    >
                         <Link href={route('seller.products.edit', product.id)}>
                             <Pencil className="h-4 w-4" />
                             Modifier
@@ -124,19 +98,6 @@ function SellerProductPreview({
                     </Button>
                 </div>
             </div>
-
-            {product.status === 'draft' && (
-                <div className="mb-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-sm text-amber-800">
-                    <div className="mb-3 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="font-semibold">Brouillon</span>
-                    </div>
-                    <p>
-                        Ce produit n'est pas encore visible sur le marché.
-                        Soumettez-le pour révision une fois qu'il est prêt.
-                    </p>
-                </div>
-            )}
 
             {product.status === 'rejected' && (
                 <div className="mb-8 rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
@@ -221,7 +182,8 @@ function SellerProductPreview({
                                         Catégorie
                                     </p>
                                     <p className="mt-2 text-sm text-foreground">
-                                        {product.category?.name || 'Sans catégorie'}
+                                        {product.category?.translated_name ||
+                                            'Sans catégorie'}
                                     </p>
                                 </div>
                                 <div>
@@ -232,7 +194,9 @@ function SellerProductPreview({
                                         {product.stock > 0 ? (
                                             `${product.stock} en stock`
                                         ) : (
-                                            <span className="text-destructive">Rupture de stock</span>
+                                            <span className="text-destructive">
+                                                Rupture de stock
+                                            </span>
                                         )}
                                     </p>
                                 </div>
@@ -245,7 +209,8 @@ function SellerProductPreview({
                                     </p>
                                     <div className="mt-2 flex items-center gap-3">
                                         <span className="font-display text-3xl tabular-nums">
-                                            {formattedSalePrice || formattedBasePrice}{' '}
+                                            {formattedSalePrice ||
+                                                formattedBasePrice}{' '}
                                             <span className="text-base text-muted-foreground">
                                                 MAD
                                             </span>
@@ -276,17 +241,10 @@ function SellerProductPreview({
                                 <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                                     Description
                                 </p>
-                                <div className="mt-3 prose prose-sm dark:prose-invert max-w-none leading-relaxed text-muted-foreground">
-                                    {product.description ? (
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: product.description,
-                                            }}
-                                        />
-                                    ) : (
-                                        'Aucune description renseignée.'
-                                    )}
-                                </div>
+                                <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+                                    {product.description ||
+                                        'Aucune description renseignée.'}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
@@ -295,47 +253,65 @@ function SellerProductPreview({
                 <aside className="space-y-6">
                     <Card className="rounded-2xl border border-border bg-card/50 p-6">
                         <CardHeader className="p-0">
-                            <CardTitle className="font-display text-xl">Statistiques rapides</CardTitle>
+                            <CardTitle className="font-display text-xl">
+                                Statistiques rapides
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-6">
                             <div className="flex justify-between text-sm text-muted-foreground">
                                 <span>Vues totales</span>
-                                <span className="font-semibold tabular-nums">{stats.total_views}</span>
+                                <span className="font-semibold tabular-nums">
+                                    {stats.total_views}
+                                </span>
                             </div>
                             <div className="flex justify-between text-sm text-muted-foreground">
                                 <span>Ajouté aux favoris</span>
-                                <span className="font-semibold tabular-nums">{stats.total_wishlists}</span>
+                                <span className="font-semibold tabular-nums">
+                                    {stats.total_wishlists}
+                                </span>
                             </div>
                             <div className="flex justify-between text-sm text-muted-foreground">
                                 <span>Quantité vendue</span>
-                                <span className="font-semibold tabular-nums">{stats.total_orders}</span>
+                                <span className="font-semibold tabular-nums">
+                                    {stats.total_orders}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card className="rounded-2xl border border-border bg-card/50 p-6">
                         <CardHeader className="p-0">
-                            <CardTitle className="font-display text-xl">Aperçu rapide</CardTitle>
+                            <CardTitle className="font-display text-xl">
+                                Aperçu rapide
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-6 text-sm text-muted-foreground">
                             <div className="flex items-center justify-between">
                                 <span>ID du produit</span>
-                                <span className="font-mono text-xs">#{product.id}</span>
+                                <span className="font-mono text-xs">
+                                    #{product.id}
+                                </span>
                             </div>
                             <Separator />
                             <div className="flex items-center justify-between">
                                 <span>Prix de base</span>
-                                <span className="tabular-nums">{formattedBasePrice} MAD</span>
+                                <span className="tabular-nums">
+                                    {formattedBasePrice} MAD
+                                </span>
                             </div>
                             <Separator />
                             <div className="flex items-center justify-between">
                                 <span>Stock disponible</span>
-                                <span className="tabular-nums">{product.stock}</span>
+                                <span className="tabular-nums">
+                                    {product.stock}
+                                </span>
                             </div>
                             <Separator />
                             <div className="flex items-center justify-between">
                                 <span>Catégorie</span>
-                                <span className="text-right">{product.category?.name || '—'}</span>
+                                <span className="text-right">
+                                    {product.category?.translated_name || '—'}
+                                </span>
                             </div>
                         </CardContent>
                     </Card>

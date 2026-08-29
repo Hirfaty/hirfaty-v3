@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\BuyerCartResource;
 use App\Models\Cart;
 use App\Models\CartItem;
 use Auth;
@@ -15,11 +14,9 @@ class CartController extends Controller
     public function show()
     {
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
-        $cart->load(['items.product.images', 'items.product.store.city']);
+        $cart->load(['items.product.images', 'items.product.store']);
 
-        return Inertia::render('buyer/cart', [
-            'cart' => new BuyerCartResource($cart),
-        ]);
+        return Inertia::render('buyer/cart', ['cart' => $cart]);
     }
 
     public function add(Request $request)
@@ -58,7 +55,7 @@ class CartController extends Controller
 
     public function remove(CartItem $cartItem)
     {
-        CartItem::destroy($cartItem->getKey());
+        $cartItem->delete();
 
         return back()->with('success', 'Item removed.');
     }

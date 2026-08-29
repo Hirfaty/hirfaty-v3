@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Notifications\OrderCancelled;
 use App\Notifications\OrderConfirmed;
 use App\Notifications\OrderShipped;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class OrderController extends Controller
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,shipped,cancelled'],
             'tracking_number' => ['required_if:status,shipped', 'nullable', 'string'],
-            'cancellation_reason'  => ['required_if:status,cancelled', 'nullable', 'string', 'max:500']
+            'cancellation_reason' => ['required_if:status,cancelled', 'nullable', 'string', 'max:500'],
         ]);
 
         // Guard against going backwards
@@ -102,10 +103,10 @@ class OrderController extends Controller
 
         try {
             match ($data['status']) {
-                    'confirmed' => $order->buyer->notify(new OrderConfirmed($order)),
-                    'shipped' => $order->buyer->notify(new OrderShipped($order)),
-                    'cancelled' => $order->buyer->notify(new \App\Notifications\OrderCancelled($order)),
-                    default => null,
+                'confirmed' => $order->buyer->notify(new OrderConfirmed($order)),
+                'shipped' => $order->buyer->notify(new OrderShipped($order)),
+                'cancelled' => $order->buyer->notify(new OrderCancelled($order)),
+                default => null,
             };
         } catch (\Exception $e) {
             // Log the error but don't fail the request
@@ -118,14 +119,14 @@ class OrderController extends Controller
     private function cancellationReasons(): array
     {
         return [
-            'out_of_stock'     => 'Product is no longer available',
-            'pricing_error'    => 'Pricing error on the listing',
-            'unable_to_fulfill'=> 'Unable to fulfill this order',
-            'buyer_request'    => 'Cancelled at buyer\'s request',
-            'other'            => 'Other reason',
-            'wrong_address'    => 'Address is incorrect or incomplete',
-            'unreachable'      => 'Buyer was unreachable after multiple attempts',
-            'refused'          => 'Buyer refused the package',
+            'out_of_stock' => 'Product is no longer available',
+            'pricing_error' => 'Pricing error on the listing',
+            'unable_to_fulfill' => 'Unable to fulfill this order',
+            'buyer_request' => 'Cancelled at buyer\'s request',
+            'other' => 'Other reason',
+            'wrong_address' => 'Address is incorrect or incomplete',
+            'unreachable' => 'Buyer was unreachable after multiple attempts',
+            'refused' => 'Buyer refused the package',
         ];
     }
 

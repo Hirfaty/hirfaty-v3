@@ -28,7 +28,6 @@ class StoreSetupController extends Controller
 
     public function store(Request $request)
     {
-        
 
         $data = $request->validate([
             'store_name' => ['required', 'string', 'max:255', 'unique:stores'],
@@ -43,7 +42,6 @@ class StoreSetupController extends Controller
                 'store' => 'You already have a store.',
             ]);
         }
-
 
         Store::create([
             ...$data,

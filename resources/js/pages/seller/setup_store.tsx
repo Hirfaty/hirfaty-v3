@@ -2,7 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import { useMemo } from 'react';
 import InputError from '@/components/input-error';
-import SiteHeader from '@/components/site/SiteHeader';
+import SiteHeader from '@/components/SiteHeader';
 import { Checkbox as CustomCheckbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 

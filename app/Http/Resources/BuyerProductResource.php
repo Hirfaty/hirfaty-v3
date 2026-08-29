@@ -33,7 +33,7 @@ class BuyerProductResource extends JsonResource
                 'slug' => $this->store?->slug,
                 'description' => $this->store?->description,
                 'store_name' => $this->store?->store_name,
-                "city_name" => $this->store?->city->name,
+                'city_name' => $this->store?->city->name,
             ],
 
             'images' => $this->images,

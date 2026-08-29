@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            // Per-locale names, e.g. {"fr": "Poterie", "ar": "...", "en": "Pottery"}.
+            // Categories are a small set read on nearly every product screen, so
+            // translations live inline rather than in a joined table.
+            $table->json('name');
+            // One canonical slug across locales — it is the URL key.
             $table->string('slug')->unique();
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->string('icon')->nullable();

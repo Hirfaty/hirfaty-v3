@@ -41,7 +41,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
             'terms_accepted' => true,
             'terms_accepted_at' => now(),
-            'locale' => session('locale', 'fr')
+            'locale' => session('locale', 'fr'),
         ]);
     }
 }

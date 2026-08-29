@@ -1,12 +1,13 @@
-import { useState, type ReactNode } from 'react';
 import { Head, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import SellerLayout from '@/layouts/seller/layout';
-import { User } from '@/types/auth';
-import { Category, City, Store } from '@/types';
+import type { Category, City, Store } from '@/types';
+import type { User } from '@/types/auth';
 
 interface SellerSettingsProps {
     user: User & { store: Store };
@@ -241,7 +242,7 @@ export default function SellerSettings({
                                                     key={category.id}
                                                     value={category.id}
                                                 >
-                                                    {category.name}
+                                                    {category.translated_name}
                                                 </option>
                                             ))}
                                         </select>

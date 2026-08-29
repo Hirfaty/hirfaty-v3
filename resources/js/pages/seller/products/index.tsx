@@ -11,8 +11,6 @@ import {
     CheckCircle2,
     Clock,
     Search,
-    Send,
-    FileEdit,
     X,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
@@ -46,9 +44,10 @@ const statusConfig: Record<
     ProductStatus,
     { label: string; icon: any; className: string }
 > = {
+    // Created by an admin and not yet completed; invisible in the storefront.
     draft: {
         label: 'Brouillon',
-        icon: FileEdit,
+        icon: Archive,
         className: 'bg-slate-50 text-slate-700 border-slate-200',
     },
     published: {
@@ -84,7 +83,6 @@ function Index({ products }: ProductProps) {
     );
 
     const statuses: ProductStatus[] = [
-        'draft',
         'published',
         'pending_review',
         'rejected',
@@ -96,16 +94,6 @@ function Index({ products }: ProductProps) {
             onSuccess: () => {
                 toast.success('Produit supprimé', {
                     description: `« ${name} » a été retiré de votre catalogue.`,
-                });
-            },
-        });
-    };
-
-    const handleSubmit = (id: number, name: string) => {
-        router.patch(route('seller.products.submit', id), undefined, {
-            onSuccess: () => {
-                toast.success('Produit soumis pour révision', {
-                    description: `« ${name} » sera visible une fois approuvé.`,
                 });
             },
         });
@@ -359,22 +347,6 @@ function Index({ products }: ProductProps) {
                                         </TableCell>
                                         <TableCell className="pr-6">
                                             <div className="flex items-center justify-end gap-1">
-                                                {p.status === 'draft' && (
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className="h-9 w-9 rounded-lg transition-colors hover:bg-primary/10 hover:text-primary"
-                                                        title="Soumettre pour révision"
-                                                        onClick={() =>
-                                                            handleSubmit(
-                                                                p.id,
-                                                                p.name,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Send className="h-4 w-4" />
-                                                    </Button>
-                                                )}
                                                 <Button
                                                     asChild
                                                     size="icon"

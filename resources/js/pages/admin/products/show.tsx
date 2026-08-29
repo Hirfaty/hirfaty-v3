@@ -1,12 +1,9 @@
 import { Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
-    CheckCircle,
     CircleCheck,
     CircleX,
-    Eye,
-    Images,
-    Package,
+    Pencil,
     PlayCircle,
     SquareArrowOutUpRight,
     X,
@@ -14,9 +11,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -26,24 +21,25 @@ import type {
     OrderItem,
     Product,
     ProductStatus,
+    ProductVariant,
     Store,
     User,
 } from '@/types';
 
-const statusPill: Record<ProductStatus, string> = {
-    draft: 'bg-slate-100 text-slate-800',
-    pending_review: 'bg-amber-100 text-amber-800',
-    published: 'bg-emerald-100 text-emerald-800',
-    rejected: 'bg-rose-100 text-rose-800',
-    archived: 'bg-slate-100 text-slate-800',
+const STATUS_BADGE: Record<ProductStatus, string> = {
+    draft: 'bg-slate-100 text-slate-700',
+    pending_review: 'bg-amber-100 text-amber-700',
+    published: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-rose-100 text-rose-700',
+    archived: 'bg-slate-100 text-slate-700',
 };
 
-const statusLabel: Record<ProductStatus, string> = {
-    draft: 'Draft',
-    pending_review: 'Pending Review',
-    published: 'Published',
-    rejected: 'Rejected',
-    archived: 'Archived',
+const STATUS_LABEL: Record<ProductStatus, string> = {
+    draft: 'Brouillon',
+    pending_review: 'En attente',
+    published: 'Publié',
+    rejected: 'Rejeté',
+    archived: 'Archivé',
 };
 
 const REJECTION_REASONS = [
@@ -62,12 +58,47 @@ interface AdminProductShowProps {
         store: Store & { user: User };
         category: Category;
         media: Media[];
-        order_items: (OrderItem & Order)[];
+        // The controller always eager-loads orderItems.order for this page,
+        // so `order` is guaranteed here even though it's optional on the
+        // base OrderItem type.
+        order_items: (OrderItem & { order: Order })[];
+        variants: ProductVariant[];
     };
 }
 
+/** Small bordered card, the base unit this whole page is built from. */
+function Card({
+    title,
+    subtitle,
+    children,
+}: {
+    title: string;
+    subtitle?: ReactNode;
+    children: ReactNode;
+}) {
+    return (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="border-b border-border px-5 py-4">
+                <h2 className="text-sm font-semibold text-ink">{title}</h2>
+                {subtitle && (
+                    <p className="mt-0.5 text-xs text-ink-soft">{subtitle}</p>
+                )}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div>
+            <p className="text-xs font-medium text-ink-soft">{label}</p>
+            <div className="mt-1 text-sm text-ink">{children}</div>
+        </div>
+    );
+}
+
 function AdminProductShow({ product }: AdminProductShowProps) {
-    console.log(product);
     const [mediaOpen, setMediaOpen] = useState(false);
     const [mediaIndex, setMediaIndex] = useState(0);
 
@@ -103,379 +134,357 @@ function AdminProductShow({ product }: AdminProductShowProps) {
     );
 
     return (
-        <div className="mx-auto max-w-[1200px] p-6 md:p-8">
-            {/* Header */}
-            <div className="mb-8 flex items-center justify-between">
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            {/* ── Header ───────────────────────────────────── */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Link
-                        href="/admin/products"
-                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        href={route('admin.products.index')}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:bg-muted hover:text-ink"
                     >
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground">
+                        <h1 className="text-2xl font-semibold tracking-tight text-ink">
                             {product.name}
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Product #{product.id} • Submitted{' '}
+                        <p className="text-sm text-ink-soft">
+                            #{product.id} · Soumis le{' '}
                             {formatDate(product.created_at)}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Badge className={statusPill[product.status]}>
-                        {statusLabel[product.status]}
-                    </Badge>
+                <div className="flex items-center gap-2.5">
+                    <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[product.status]}`}
+                    >
+                        {STATUS_LABEL[product.status]}
+                    </span>
+                    <Link
+                        href={route('admin.products.edit', product.id)}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:bg-muted hover:text-ink"
+                        title="Modifier"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Link>
                     <Link
                         href={`/products/${product.slug}`}
                         target="_blank"
-                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        title="View on storefront"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:bg-muted hover:text-ink"
+                        title="Voir sur le site"
                     >
                         <SquareArrowOutUpRight className="h-4 w-4" />
                     </Link>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-                {/* Main Content */}
-                <div className="space-y-8 lg:col-span-2">
-                    {/* Media Gallery */}
-                    <div className="rounded-lg border border-border bg-card">
-                        <div className="border-b border-border p-6">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Media Gallery
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {images.length} images • {videos.length} videos
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                {/* ── Main column ──────────────────────────── */}
+                <div className="space-y-6 lg:col-span-2">
+                    <Card
+                        title="Galerie"
+                        subtitle={`${images.length} image${images.length > 1 ? 's' : ''} · ${videos.length} vidéo${videos.length > 1 ? 's' : ''}`}
+                    >
+                        {images.length === 0 && videos.length === 0 ? (
+                            <p className="p-5 text-sm text-ink-soft">
+                                Aucun média ajouté.
                             </p>
-                        </div>
-
-                        {images.length > 0 && (
-                            <div className="p-6">
-                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                                    {images.map((media, index) => (
-                                        <div
-                                            key={media.id}
-                                            className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-border bg-muted"
-                                            onClick={() => {
-                                                setMediaIndex(index);
-                                                setMediaOpen(true);
-                                            }}
-                                        >
-                                            <img
-                                                src={media.url}
-                                                alt={`Product image ${index + 1}`}
-                                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                            />
-                                            <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
-                                            <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                                                <div className="flex gap-1">
-                                                    <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-foreground backdrop-blur">
-                                                        <ZoomIn className="h-4 w-4" />
-                                                    </button>
+                        ) : (
+                            <>
+                                {images.length > 0 && (
+                                    <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 md:grid-cols-4">
+                                        {images.map((media, index) => (
+                                            <button
+                                                key={media.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setMediaIndex(index);
+                                                    setMediaOpen(true);
+                                                }}
+                                                className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+                                            >
+                                                <img
+                                                    src={media.url}
+                                                    alt=""
+                                                    className="h-full w-full object-cover transition group-hover:scale-105"
+                                                />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-ink/0 opacity-0 transition group-hover:bg-ink/20 group-hover:opacity-100">
+                                                    <ZoomIn className="h-5 w-5 text-white" />
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {videos.length > 0 && (
-                            <div className="border-t border-border p-6">
-                                <h3 className="mb-4 text-sm font-medium text-foreground">
-                                    Videos
-                                </h3>
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    {videos.map((media, index) => (
-                                        <div
-                                            key={media.id}
-                                            className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg border border-border bg-muted"
-                                            onClick={() => {
-                                                setMediaIndex(
-                                                    images.length + index,
-                                                );
-                                                setMediaOpen(true);
-                                            }}
-                                        >
-                                            <video
-                                                src={media.url}
-                                                className="h-full w-full object-cover"
-                                                muted
-                                                onMouseEnter={(e) =>
-                                                    e.currentTarget.play()
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    e.currentTarget.pause()
-                                                }
-                                            />
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-foreground">
-                                                    <PlayCircle className="h-6 w-6" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Product Details */}
-                    <div className="rounded-lg border border-border bg-card">
-                        <div className="border-b border-border p-6">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Product Details
-                            </h2>
-                        </div>
-                        <div className="space-y-6 p-6">
-                            <div>
-                                <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                    Description
-                                </h3>
-                                <div className="mt-2 prose prose-sm dark:prose-invert max-w-none leading-relaxed text-foreground">
-                                    {product.description ? (
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: product.description,
-                                            }}
-                                        />
-                                    ) : (
-                                        'No description provided.'
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                        Category
-                                    </h3>
-                                    <p className="mt-2 text-foreground">
-                                        {product.category?.name ||
-                                            'Uncategorized'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                        Stock
-                                    </h3>
-                                    <p className="mt-2 text-foreground">
-                                        {product.stock} units
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                        Base Price
-                                    </h3>
-                                    <p className="mt-2 text-2xl font-bold text-foreground">
-                                        {product.base_price} MAD
-                                    </p>
-                                </div>
-                                {product.sale_price && (
-                                    <div>
-                                        <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                            Sale Price
-                                        </h3>
-                                        <p className="mt-2 text-2xl font-bold text-terracotta">
-                                            {product.sale_price} MAD
-                                        </p>
+                                            </button>
+                                        ))}
                                     </div>
+                                )}
+
+                                {videos.length > 0 && (
+                                    <div className="grid grid-cols-1 gap-3 border-t border-border p-5 sm:grid-cols-2">
+                                        {videos.map((media, index) => (
+                                            <button
+                                                key={media.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setMediaIndex(
+                                                        images.length + index,
+                                                    );
+                                                    setMediaOpen(true);
+                                                }}
+                                                className="group relative aspect-video overflow-hidden rounded-lg border border-border bg-muted"
+                                            >
+                                                <video
+                                                    src={media.url}
+                                                    className="h-full w-full object-cover"
+                                                    muted
+                                                    onMouseEnter={(e) =>
+                                                        e.currentTarget.play()
+                                                    }
+                                                    onMouseLeave={(e) =>
+                                                        e.currentTarget.pause()
+                                                    }
+                                                />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-ink/20">
+                                                    <PlayCircle className="h-8 w-8 text-white" />
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </Card>
+
+                    <Card title="Détails du produit">
+                        <div className="space-y-5 p-5">
+                            <Field label="Description">
+                                <p className="leading-relaxed">
+                                    {product.description ||
+                                        'Aucune description fournie.'}
+                                </p>
+                            </Field>
+
+                            <div className="grid grid-cols-2 gap-5">
+                                <Field label="Catégorie">
+                                    {product.category?.translated_name ||
+                                        'Non catégorisé'}
+                                </Field>
+                                <Field label="Stock">
+                                    {product.has_variants ? (
+                                        <>
+                                            {product.variants.reduce(
+                                                (sum, v) => sum + v.stock,
+                                                0,
+                                            )}{' '}
+                                            unités{' '}
+                                            <span className="text-xs text-ink-soft">
+                                                (réparties sur{' '}
+                                                {product.variants.length}{' '}
+                                                déclinaison
+                                                {product.variants.length > 1
+                                                    ? 's'
+                                                    : ''}
+                                                )
+                                            </span>
+                                        </>
+                                    ) : (
+                                        `${product.stock} unités`
+                                    )}
+                                </Field>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-5">
+                                <Field label="Prix de base">
+                                    <span className="text-xl font-semibold text-ink">
+                                        {product.base_price} MAD
+                                    </span>
+                                </Field>
+                                {product.sale_price && (
+                                    <Field label="Prix promo">
+                                        <span className="text-xl font-semibold text-terracotta">
+                                            {product.sale_price} MAD
+                                        </span>
+                                    </Field>
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </Card>
 
-                    {/* Order History */}
-                    {product.order_items.length > 0 && (
-                        <div className="rounded-lg border border-border bg-card">
-                            <div className="border-b border-border p-6">
-                                <h2 className="text-lg font-semibold text-foreground">
-                                    Order History
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    {product.order_items.length} orders •{' '}
-                                    {totalSales} units sold •{' '}
-                                    {totalRevenue.toFixed(2)} MAD revenue
-                                </p>
+                    {product.variants.length > 0 && (
+                        <Card
+                            title="Déclinaisons"
+                            subtitle={`${product.variants.length} déclinaison${product.variants.length > 1 ? 's' : ''}`}
+                        >
+                            <div className="divide-y divide-border">
+                                {product.variants.map((variant) => (
+                                    <div
+                                        key={variant.id}
+                                        className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+                                    >
+                                        <div className="flex flex-wrap items-center gap-2.5">
+                                            {(variant.media?.length ?? 0) >
+                                                0 && (
+                                                <div className="flex -space-x-2">
+                                                    {variant.media!.map((m) => (
+                                                        <img
+                                                            key={m.id}
+                                                            src={m.url}
+                                                            alt=""
+                                                            className="h-8 w-8 shrink-0 rounded-full border-2 border-card object-cover"
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {variant.options.map((option) => (
+                                                <span
+                                                    key={option.id}
+                                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-ink"
+                                                >
+                                                    {option.type === 'color' &&
+                                                        option.color_hex && (
+                                                            <span
+                                                                className="h-3 w-3 shrink-0 rounded-full border border-black/10"
+                                                                style={{
+                                                                    background:
+                                                                        option.color_hex,
+                                                                }}
+                                                            />
+                                                        )}
+                                                    {option.value}
+                                                </span>
+                                            ))}
+                                            {variant.sku && (
+                                                <span className="text-xs text-ink-soft">
+                                                    SKU: {variant.sku}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <span className="text-ink-soft">
+                                                {variant.stock} unités
+                                            </span>
+                                            <span className="font-medium text-ink">
+                                                {variant.price_override
+                                                    ? `${variant.price_override} MAD`
+                                                    : 'Prix hérité'}
+                                            </span>
+                                            {!variant.is_active && (
+                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                                    Inactive
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                        </Card>
+                    )}
+
+                    {product.order_items.length > 0 && (
+                        <Card
+                            title="Historique des commandes"
+                            subtitle={`${product.order_items.length} commande${product.order_items.length > 1 ? 's' : ''} · ${totalSales} unité${totalSales > 1 ? 's' : ''} vendue${totalSales > 1 ? 's' : ''} · ${totalRevenue.toFixed(2)} MAD de revenus`}
+                        >
                             <div className="divide-y divide-border">
                                 {product.order_items
                                     .slice(0, 10)
                                     .map((item) => (
-                                        <div key={item.id} className="p-6">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="font-medium text-foreground">
-                                                        Order #{item.order.id}
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {formatDate(
-                                                            item.order
-                                                                .created_at,
-                                                        )}{' '}
-                                                        • {item.quantity} units
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-medium text-foreground">
-                                                        {(
-                                                            parseFloat(
-                                                                item.unit_price,
-                                                            ) * item.quantity
-                                                        ).toFixed(2)}{' '}
-                                                        MAD
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {item.unit_price} MAD
-                                                        each
-                                                    </p>
-                                                </div>
+                                        <div
+                                            key={item.id}
+                                            className="flex items-center justify-between px-5 py-4"
+                                        >
+                                            <div>
+                                                <p className="text-sm font-medium text-ink">
+                                                    Commande #{item.order.id}
+                                                </p>
+                                                <p className="text-xs text-ink-soft">
+                                                    {formatDate(
+                                                        item.order.created_at,
+                                                    )}{' '}
+                                                    · {item.quantity} unités
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-medium text-ink">
+                                                    {(
+                                                        parseFloat(
+                                                            item.unit_price,
+                                                        ) * item.quantity
+                                                    ).toFixed(2)}{' '}
+                                                    MAD
+                                                </p>
+                                                <p className="text-xs text-ink-soft">
+                                                    {item.unit_price} MAD /
+                                                    unité
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
                             </div>
-                        </div>
+                        </Card>
                     )}
                 </div>
 
-                {/* Sidebar */}
+                {/* ── Sidebar ──────────────────────────────── */}
                 <div className="space-y-6">
-                    {/* Store Information */}
-                    <div className="rounded-lg border border-border bg-card">
-                        <div className="border-b border-border p-6">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Store Information
-                            </h2>
-                        </div>
-                        <div className="space-y-4 p-6">
-                            <div>
-                                <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                    Store Name
-                                </h3>
-                                <p className="mt-1 text-foreground">
-                                    {product.store.store_name}
-                                </p>
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                    Owner
-                                </h3>
-                                <p className="mt-1 text-foreground">
+                    <Card title="Boutique">
+                        <div className="space-y-4 p-5">
+                            <Field label="Nom">
+                                {product.store.store_name}
+                            </Field>
+                            <Field label="Propriétaire">
+                                <p>
                                     {product.store.user.first_name}{' '}
                                     {product.store.user.last_name}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs text-ink-soft">
                                     {product.store.user.email}
                                 </p>
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                    City
-                                </h3>
-                                <p className="mt-1 text-foreground">
-                                    {product.store.city?.name ||
-                                        'Not specified'}
-                                </p>
-                            </div>
+                            </Field>
+                            <Field label="Ville">
+                                {product.store.city?.name || 'Non renseignée'}
+                            </Field>
                         </div>
-                    </div>
+                    </Card>
 
-                    {/* Review Information */}
                     {(product.status === 'rejected' || product.reviewed_at) && (
-                        <div className="rounded-lg border border-border bg-card">
-                            <div className="border-b border-border p-6">
-                                <h2 className="text-lg font-semibold text-foreground">
-                                    Review Information
-                                </h2>
-                            </div>
-                            <div className="space-y-4 p-6">
+                        <Card title="Modération">
+                            <div className="space-y-4 p-5">
                                 {product.reviewed_at && (
-                                    <div>
-                                        <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                            Reviewed At
-                                        </h3>
-                                        <p className="mt-1 text-foreground">
-                                            {formatDate(product.reviewed_at)}
-                                        </p>
-                                    </div>
+                                    <Field label="Examiné le">
+                                        {formatDate(product.reviewed_at)}
+                                    </Field>
                                 )}
                                 {product.rejection_reason && (
-                                    <div>
-                                        <h3 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                            Rejection Reason
-                                        </h3>
-                                        <p className="mt-1 text-foreground">
-                                            {product.rejection_reason}
-                                        </p>
-                                    </div>
+                                    <Field label="Motif de rejet">
+                                        {product.rejection_reason}
+                                    </Field>
                                 )}
                             </div>
-                        </div>
+                        </Card>
                     )}
 
-                    {/* Actions */}
-                    <div className="rounded-lg border border-border bg-card">
-                        <div className="border-b border-border p-6">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Actions
-                            </h2>
-                        </div>
-                        <div className="space-y-3 p-6">
-                            {product.status === 'draft' && (
-                                <Button
-                                    onClick={approve}
-                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
-                                    disabled={processing}
-                                >
-                                    <CircleCheck className="mr-2 h-4 w-4" />
-                                    Publish Draft
-                                </Button>
-                            )}
-
+                    <Card title="Actions">
+                        <div className="space-y-3 p-5">
                             {product.status === 'pending_review' && (
                                 <>
-                                    <Button
+                                    <button
                                         onClick={approve}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700"
                                         disabled={processing}
+                                        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink text-sm font-semibold text-white transition hover:bg-ink/90 disabled:opacity-50"
                                     >
-                                        <CircleCheck className="mr-2 h-4 w-4" />
-                                        Approve Product
-                                    </Button>
-                                    <Button
+                                        <CircleCheck className="h-4 w-4" />
+                                        Approuver
+                                    </button>
+                                    <button
                                         onClick={reject}
-                                        variant="outline"
-                                        className="w-full"
                                         disabled={processing}
+                                        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-semibold text-ink transition hover:bg-muted disabled:opacity-50"
                                     >
-                                        <CircleX className="mr-2 h-4 w-4" />
-                                        Reject Product
-                                    </Button>
-                                </>
-                            )}
+                                        <CircleX className="h-4 w-4" />
+                                        Rejeter
+                                    </button>
 
-                            {product.status === 'published' && (
-                                <Button
-                                    onClick={archive}
-                                    variant="outline"
-                                    className="w-full"
-                                    disabled={processing}
-                                >
-                                    Archive Product
-                                </Button>
-                            )}
-
-                            {product.status === 'pending_review' && (
-                                <div className="space-y-3 border-t border-border pt-3">
-                                    <div>
-                                        <label className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                                            Rejection Reason
+                                    <div className="border-t border-border pt-3">
+                                        <label className="text-xs font-medium text-ink-soft">
+                                            Motif de rejet
                                         </label>
                                         <select
                                             value={data.rejection_reason}
@@ -485,7 +494,7 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                                     e.target.value,
                                                 )
                                             }
-                                            className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                                            className="mt-2 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink shadow-sm focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                                         >
                                             {REJECTION_REASONS.map((reason) => (
                                                 <option
@@ -497,36 +506,73 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                             ))}
                                         </select>
                                     </div>
+                                </>
+                            )}
+
+                            {product.status === 'published' && (
+                                <button
+                                    onClick={archive}
+                                    disabled={processing}
+                                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-semibold text-ink transition hover:bg-muted disabled:opacity-50"
+                                >
+                                    Archiver
+                                </button>
+                            )}
+
+                            {product.status === 'draft' && (
+                                <div className="rounded-lg bg-muted/60 p-3 text-sm text-ink-soft">
+                                    Ce produit est un brouillon. Complétez-le
+                                    depuis la fiche d'édition pour le publier.
                                 </div>
                             )}
+
+                            {(product.status === 'archived' ||
+                                product.status === 'rejected') && (
+                                <p className="text-sm text-ink-soft">
+                                    Aucune action disponible pour un produit{' '}
+                                    {STATUS_LABEL[product.status].toLowerCase()}
+                                    .
+                                </p>
+                            )}
+
+                            <Link
+                                href={route('admin.products.edit', product.id)}
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-medium text-ink transition hover:bg-muted"
+                            >
+                                <Pencil className="h-4 w-4" />
+                                Modifier le produit
+                            </Link>
                         </div>
-                    </div>
+                    </Card>
                 </div>
             </div>
 
-            {/* Media Modal */}
+            {/* ── Media lightbox ──────────────────────────── */}
             <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
                 <DialogContent className="max-w-4xl">
+                    <DialogTitle className="sr-only">
+                        {product.name} — média {mediaIndex + 1}
+                    </DialogTitle>
                     {product.media[mediaIndex] && (
                         <div className="relative">
                             {product.media[mediaIndex].type === 'image' ? (
                                 <img
                                     src={product.media[mediaIndex].url}
-                                    alt={`Product media ${mediaIndex + 1}`}
-                                    className="h-auto w-full"
+                                    alt=""
+                                    className="h-auto w-full rounded-lg"
                                 />
                             ) : (
                                 <video
                                     src={product.media[mediaIndex].url}
                                     controls
-                                    className="h-auto w-full"
+                                    className="h-auto w-full rounded-lg"
                                 />
                             )}
                             <button
                                 onClick={() => setMediaOpen(false)}
-                                className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                                className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
                             >
-                                <X className="h-5 w-5" />
+                                <X className="h-4 w-4" />
                             </button>
                         </div>
                     )}

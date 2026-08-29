@@ -9,11 +9,9 @@ import {
     History,
     AlertCircle,
     Check,
-    Send,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { RichEditor } from '@/components/rich-editor';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,6 +34,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import SellerLayout from '@/layouts/seller/layout';
 import { cn } from '@/lib/utils';
 import type { Category, Product } from '@/types';
@@ -114,16 +113,6 @@ function SellerProductEdit({
         });
     };
 
-    const submit = () => {
-        router.patch(route('seller.products.submit', product.id), undefined, {
-            onSuccess: () => {
-                toast.success('Produit soumis pour révision', {
-                    description: `« ${product.name} » sera visible une fois approuvé.`,
-                });
-            },
-        });
-    };
-
     return (
         <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
             <div className="mb-8 flex items-center justify-between">
@@ -159,21 +148,6 @@ function SellerProductEdit({
                 <h1 className="mt-4 font-display text-4xl leading-tight md:text-5xl lg:text-6xl">
                     Peaufiner <br /> {product.name}
                 </h1>
-                {product.status === 'draft' && (
-                    <div className="mt-6 flex items-start gap-3 border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-800">
-                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                        <div>
-                            <p className="font-bold">
-                                Ce produit est en brouillon.
-                            </p>
-                            <p className="mt-1 opacity-90">
-                                Il n'est visible ni sur le marché ni par
-                                l'équipe de modération tant qu'il n'est pas
-                                soumis pour révision.
-                            </p>
-                        </div>
-                    </div>
-                )}
                 {product.status === 'rejected' && (
                     <div className="mt-6 flex items-start gap-3 border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -234,11 +208,14 @@ function SellerProductEdit({
                                 >
                                     Description & Histoire
                                 </Label>
-                                <RichEditor
+                                <Textarea
+                                    id="desc"
+                                    rows={8}
                                     value={data.description}
-                                    onChange={(html) =>
-                                        setData('description', html)
+                                    onChange={(e) =>
+                                        setData('description', e.target.value)
                                     }
+                                    className="resize-none border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                 />
                                 {errors.description && (
                                     <p className="text-xs font-medium text-destructive">
@@ -267,7 +244,7 @@ function SellerProductEdit({
                                                     key={c.id}
                                                     value={String(c.id)}
                                                 >
-                                                    {c.name}
+                                                    {c.translated_name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -420,17 +397,6 @@ function SellerProductEdit({
                                     ? 'Enregistrement...'
                                     : 'Enregistrer'}
                             </Button>
-
-                            {product.status === 'draft' && (
-                                <Button
-                                    variant="outline"
-                                    onClick={submit}
-                                    className="h-12 w-full gap-2"
-                                >
-                                    <Send className="h-4 w-4" />
-                                    Soumettre pour révision
-                                </Button>
-                            )}
 
                             <Button
                                 variant="outline"

@@ -1,51 +1,170 @@
 <?php
+
 namespace App\Models;
 
-use Astrotomic\Translatable\Contracts\Translatable as TranslatableContract;
-use Astrotomic\Translatable\Translatable;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Product extends Model implements TranslatableContract
+class Product extends Model
 {
-    use Translatable;
+    /** Audience whose price list applies to a normal (retail) buyer. */
+    public const AUDIENCE_INDIVIDUAL = 'individual';
 
-    public $translatedAttributes = ['name', 'slug', 'description'];
+    /** Audience whose price list applies to a bulk/professional buyer. */
+    public const AUDIENCE_PROFESSIONAL = 'professional';
 
     protected $fillable = [
-        'store_id', 'category_id', 'sku',
-        'base_price', 'sale_price', 'professional_price', 'professional_sale_price',
+        'store_id', 'category_id', 'name', 'slug', 'sku',
+        'description', 'base_price', 'sale_price',
+        'professional_price', 'professional_sale_price',
         'stock', 'min_order_qty_professional',
-        'visibility', 'status', 'has_variants',
-        'weight', 'lead_time_days',
+        'visibility', 'has_variants',
+        'status', 'average_rating',
+        'rejection_reason', 'reviewed_by', 'reviewed_at',
     ];
 
-    public function store(): BelongsTo
+    protected $casts = [
+        'base_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'professional_price' => 'decimal:2',
+        'professional_sale_price' => 'decimal:2',
+        'average_rating' => 'decimal:2',
+        'has_variants' => 'boolean',
+    ];
+
+    public function store()
     {
         return $this->belongsTo(Store::class);
     }
 
-    public function category(): BelongsTo
+    public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function variants(): HasMany
+    public function media()
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->morphMany(Media::class, 'mediable')->orderBy('order');
     }
 
-    public function images(): HasMany
+    public function images()
     {
-        return $this->hasMany(Media::class);
+        return $this->morphMany(Media::class, 'mediable')
+            ->where('type', 'image')
+            ->orderBy('order');
     }
 
-    // Price resolution helpers
-    public function priceFor(string $customerType): ?float
+    public function videos()
     {
-        return $customerType === 'professional'
-            ? ($this->professional_sale_price ?? $this->professional_price)
-            : ($this->sale_price ?? $this->base_price);
+        return $this->morphMany(Media::class, 'mediable')
+            ->where('type', 'video');
     }
+
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('position');
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * Map a user to the price list that applies to them. Guests and normal
+     * buyers get retail pricing; only professional buyers get the pro list.
+     */
+    public static function audienceFor(?User $user): string
+    {
+        return $user?->isProfessionalBuyer()
+            ? self::AUDIENCE_PROFESSIONAL
+            : self::AUDIENCE_INDIVIDUAL;
+    }
+
+    /**
+     * Effective unit price for an audience, preferring an active sale price.
+     *
+     * Professional pricing is optional — a product sold only at retail falls
+     * back to the normal price rather than returning null and breaking totals.
+     */
+    public function priceFor(string $audience = self::AUDIENCE_INDIVIDUAL): ?float
+    {
+        if ($audience === self::AUDIENCE_PROFESSIONAL) {
+            $pro = $this->professional_sale_price ?? $this->professional_price;
+
+            if ($pro !== null) {
+                return (float) $pro;
+            }
+        }
+
+        $retail = $this->sale_price ?? $this->base_price;
+
+        return $retail === null ? null : (float) $retail;
+    }
+
+    /**
+     * Minimum quantity this audience must order in one go.
+     */
+    public function minOrderQtyFor(string $audience = self::AUDIENCE_INDIVIDUAL): int
+    {
+        return $audience === self::AUDIENCE_PROFESSIONAL
+            ? max(1, (int) $this->min_order_qty_professional)
+            : 1;
+    }
+
+    /**
+     * Whether this product may be shown to the given audience at all.
+     */
+    public function isVisibleTo(string $audience = self::AUDIENCE_INDIVIDUAL): bool
+    {
+        return $this->visibility === 'both' || $this->visibility === $audience;
+    }
+
+    public function views()
+    {
+        return $this->hasMany(ProductView::class);
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Parked by the admin with incomplete details; never shown in the storefront.
+     */
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->status === 'pending_review';
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->status === 'published';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === 'archived';
+    }
+
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    // public function deliveryOptions()
+    // {
+    //     return $this->belongsToMany(DeliveryOption::class, 'product_delivery_option')
+    //             ->withPivot('custom_price');
+    // }
 }

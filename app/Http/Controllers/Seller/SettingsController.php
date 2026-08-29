@@ -13,56 +13,57 @@ use Inertia\Inertia;
 
 class SettingsController extends Controller
 {
-    public function index() {
+    public function index()
+    {
         $user = auth()->user()->load('store');
 
-        return Inertia::render("seller/settings/index", [
-            'user'       => $user,
+        return Inertia::render('seller/settings/index', [
+            'user' => $user,
             'categories' => Category::whereNull('parent_id')->get(),
-            'cities'     => City::orderBy('name')->get(),
+            'cities' => City::orderBy('name')->get(),
         ]);
     }
 
-    public function updateProfile(Request $request) {
+    public function updateProfile(Request $request)
+    {
         $user = auth()->user();
 
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
-            'last_name'  => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'phone_number' => ['nullable', 'string', Rule::unique('users', 'phone_number')->ignore($user->id)],
-            'bio'        => ['nullable', 'string', 'max:500'],
+            'bio' => ['nullable', 'string', 'max:500'],
         ]);
 
         $user->update([
             'first_name' => $data['first_name'],
-            'last_name'  => $data['last_name'],
-            'name'       => $data['first_name'] . ' ' . $data['last_name'],
+            'last_name' => $data['last_name'],
+            'name' => $data['first_name'].' '.$data['last_name'],
             'phone_number' => $data['phone_number'] ?? null,
-            'bio'        => $data['bio'] ?? null
+            'bio' => $data['bio'] ?? null,
         ]);
 
         return back()->with('success', 'Profile updated.');
     }
 
-        // ── Store info ───────────────────────────────────────────
+    // ── Store info ───────────────────────────────────────────
     public function updateStore(Request $request)
     {
         $store = auth()->user()->store;
 
         $data = $request->validate([
-            'store_name'  => ['required', 'string', 'max:255', Rule::unique('stores', 'store_name')->ignore($store->id)],
+            'store_name' => ['required', 'string', 'max:255', Rule::unique('stores', 'store_name')->ignore($store->id)],
             'description' => ['nullable', 'string', 'max:1000'],
             'category_id' => ['required', 'exists:categories,id'],
-            'city_id'     => ['required', 'exists:cities,id'],
-            ]
+            'city_id' => ['required', 'exists:cities,id'],
+        ]
         );
 
-
         $store->update([
-            'store_name'  => $data['store_name'],
+            'store_name' => $data['store_name'],
             'description' => $data['description'] ?? null,
             'category_id' => $data['category_id'],
-            'city_id'     => $data['city_id']
+            'city_id' => $data['city_id'],
         ]);
 
         return back()->with('success', 'Store updated.');
@@ -89,7 +90,7 @@ class SettingsController extends Controller
 
         $request->validate([
             'current_password' => ['required', 'string', 'current_password'],
-            'password'         => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ]);
 
         $user->update([

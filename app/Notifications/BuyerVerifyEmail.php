@@ -4,7 +4,6 @@ namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -35,7 +34,7 @@ class BuyerVerifyEmail extends VerifyEmail
      */
     public function toMail($notifiable): MailMessage
     {
-        $url    = $this->verificationUrl($notifiable);
+        $url = $this->verificationUrl($notifiable);
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
@@ -45,12 +44,12 @@ class BuyerVerifyEmail extends VerifyEmail
         ];
 
         return (new MailMessage)
-                ->subject($subjects[$locale] ?? $subjects['fr'])
-                ->view("emails.buyer.verify.{$locale}", [
-                            'url'  => $url,
-                            'user' => $notifiable,
-                ]);
-    }        
+            ->subject($subjects[$locale] ?? $subjects['fr'])
+            ->view("emails.buyer.verify.{$locale}", [
+                'url' => $url,
+                'user' => $notifiable,
+            ]);
+    }
 
     /**
      * Get the array representation of the notification.

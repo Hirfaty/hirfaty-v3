@@ -16,40 +16,50 @@ test('super admin can view categories', function () {
     $response->assertOk();
 });
 
+// Category names are stored per locale — see CategoryTranslationTest for the
+// translation behaviour itself.
 test('super admin can create a category', function () {
     $admin = User::factory()->create(['role' => 'super_admin']);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->post(route('admin.categories.store'), [
-            'name' => 'Test Category',
+            'name' => ['fr' => 'Catégorie test', 'ar' => 'فئة', 'en' => 'Test Category'],
             'icon' => '🧶',
         ]);
 
     $response->assertRedirect();
-    $this->assertDatabaseHas('categories', ['name' => 'Test Category']);
+
+    expect(Category::firstWhere('slug', 'categorie-test'))->not->toBeNull();
 });
 
 test('super admin can update a category', function () {
     $admin = User::factory()->create(['role' => 'super_admin']);
-    $category = Category::create(['name' => 'Old Name', 'slug' => 'old-name']);
+    $category = Category::create([
+        'name' => ['fr' => 'Ancien', 'ar' => 'قديم', 'en' => 'Old Name'],
+        'slug' => 'old-name',
+    ]);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->patch(route('admin.categories.update', $category), [
-            'name' => 'New Name',
+            'name' => ['fr' => 'Nouveau', 'ar' => 'جديد', 'en' => 'New Name'],
         ]);
 
     $response->assertRedirect();
-    $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => 'New Name']);
+
+    expect($category->refresh()->nameFor('en'))->toBe('New Name');
 });
 
 test('super admin can delete a category', function () {
     $admin = User::factory()->create(['role' => 'super_admin']);
-    $category = Category::create(['name' => 'To Delete', 'slug' => 'to-delete']);
+    $category = Category::create([
+        'name' => ['fr' => 'À supprimer', 'ar' => 'حذف', 'en' => 'To Delete'],
+        'slug' => 'to-delete',
+    ]);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->delete(route('admin.categories.destroy', $category));
 
     $response->assertRedirect();
@@ -69,7 +79,7 @@ test('super admin can create a city', function () {
     $admin = User::factory()->create(['role' => 'super_admin']);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->post(route('admin.cities.store'), [
             'name' => 'Marrakech',
             'region' => 'Marrakech-Safi',
@@ -84,7 +94,7 @@ test('super admin can update a city', function () {
     $city = City::create(['name' => 'Old City']);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->patch(route('admin.cities.update', $city), [
             'name' => 'New City',
         ]);
@@ -98,7 +108,7 @@ test('super admin can delete a city', function () {
     $city = City::create(['name' => 'To Delete']);
 
     $response = $this->actingAs($admin)
-        ->withoutMiddleware()
+
         ->delete(route('admin.cities.destroy', $city));
 
     $response->assertRedirect();

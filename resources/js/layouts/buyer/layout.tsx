@@ -1,4 +1,4 @@
-import { router, usePage, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import {
     Package,
     Heart,
@@ -11,33 +11,16 @@ import {
     Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import SiteHeader from '@/components/site/SiteHeader';
+import { useState } from 'react';
+import SiteHeader from '@/components/SiteHeader';
 import { Separator } from '@/components/ui/separator';
 
 type Tab = 'overview' | 'orders' | 'wishlist' | 'addresses' | 'profile';
 
-const tabs: {
-    id: Tab;
-    label: string;
-    icon: typeof Package;
-    url: string;
-    routeName?: string;
-}[] = [
+const tabs: { id: Tab; label: string; icon: typeof Package; url: string }[] = [
     { id: 'overview', label: 'Aperçu', icon: UserIcon, url: '/overview' },
-    {
-        id: 'orders',
-        label: 'Commandes',
-        icon: Package,
-        url: '/orders',
-        routeName: 'buyer.account.orders.index',
-    },
-    {
-        id: 'wishlist',
-        label: 'Coups de cœur',
-        icon: Heart,
-        url: '/wishlist',
-        routeName: 'wishlist.index',
-    },
+    { id: 'orders', label: 'Commandes', icon: Package, url: '/orders' },
+    { id: 'wishlist', label: 'Coups de cœur', icon: Heart, url: '/wishlists' },
     { id: 'addresses', label: 'Adresses', icon: MapPin, url: '/addresses' },
     { id: 'profile', label: 'Profil', icon: UserIcon, url: '/profile' },
 ];
@@ -46,15 +29,8 @@ const handleLogout = () => {
     router.post(route('logout'));
 };
 
-export default function BuyerLayout({ children }: { children: ReactNode }) {
-    const { url, props } = usePage();
-    const { auth } = props as {
-        auth: { user: { first_name: string; last_name: string } | null };
-    };
-
-    const greetingName = auth.user
-        ? `${auth.user.first_name} ${auth.user.last_name}`
-        : 'cher artisan';
+export default function SellerLayout({ children }: { children: ReactNode }) {
+    const [tab, setTab] = useState<Tab>('overview');
 
     return (
         <div className="paper-grain min-h-screen bg-cream">
@@ -63,7 +39,7 @@ export default function BuyerLayout({ children }: { children: ReactNode }) {
             <section className="container pt-12 pb-8">
                 <p className="eyebrow mb-3">Mon espace</p>
                 <h1 className="h-editorial text-5xl text-ink md:text-6xl">
-                    Bonjour {greetingName},{' '}
+                    Bonjour [Salma],{' '}
                     <span className="text-terracotta italic">
                         bienvenue chez vous
                     </span>
@@ -81,24 +57,25 @@ export default function BuyerLayout({ children }: { children: ReactNode }) {
                     <div className="border border-ink/15 bg-paper lg:sticky lg:top-6">
                         <div className="flex items-center gap-3 border-b border-ink/10 px-5 py-5">
                             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-terracotta/15 font-display text-lg text-terracotta">
-                                {auth.user ? auth.user.first_name[0] : 'A'}
+                                SB
                             </div>
                             <div className="leading-tight">
                                 <p className="font-display text-ink">
-                                    {greetingName}
+                                    Salma Bennani
+                                </p>
+                                <p className="text-xs text-ink-soft">
+                                    salma@exemple.ma
                                 </p>
                             </div>
                         </div>
                         <nav className="p-2">
                             {tabs.map((t) => {
-                                const active = t.routeName
-                                    ? route().current(t.routeName)
-                                    : url.startsWith(t.url);
+                                const active = tab === t.id;
 
                                 return (
-                                    <Link
+                                    <button
                                         key={t.id}
-                                        href={t.url}
+                                        onClick={() => setTab(t.id)}
                                         className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
                                             active
                                                 ? 'bg-ink text-cream'
@@ -110,7 +87,7 @@ export default function BuyerLayout({ children }: { children: ReactNode }) {
                                             strokeWidth={1.5}
                                         />
                                         {t.label}
-                                    </Link>
+                                    </button>
                                 );
                             })}
                             <Separator className="my-2 bg-ink/10" />

@@ -13,6 +13,6 @@ class DeliveryOption extends Model
     public function products()
     {
         return $this->belongsToMany(Product::class, 'product_delivery_option')
-                    ->withPivot('custom_price');
+            ->withPivot('custom_price');
     }
 }

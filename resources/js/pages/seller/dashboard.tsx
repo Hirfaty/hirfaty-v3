@@ -31,6 +31,7 @@
 // );
 
 import { Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
     BarChart3,
     TrendingUp,
@@ -41,9 +42,8 @@ import {
     CheckCircle2,
     Clock,
 } from 'lucide-react';
-import SellerLayout from '@/layouts/seller/layout';
-import { Head } from '@inertiajs/react';
 import { useEffect } from 'react';
+import SellerLayout from '@/layouts/seller/layout';
 
 interface Store {
     id: number;

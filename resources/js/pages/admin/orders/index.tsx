@@ -1,5 +1,3 @@
-import AdminLayout from '@/layouts/admin/layout';
-import type { Order, PageProps } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowUpRight,
@@ -8,7 +6,10 @@ import {
     Search,
     ShoppingBag,
 } from 'lucide-react';
-import { ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import AdminLayout from '@/layouts/admin/layout';
+import type { Order, PageProps } from '@/types';
 
 const Index = ({
     orders,
@@ -61,13 +62,13 @@ const Index = ({
     };
 
     return (
-        <div className="min-h-full p-6 md:p-10">
+        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
             <Head title="Order Management" />
 
             <div className="mx-auto max-w-7xl">
                 <header className="mb-12 flex flex-wrap items-end justify-between gap-6">
                     <div>
-                        <p className="font-sans text-xs font-medium uppercase tracking-[0.2em] text-ink-soft">
+                        <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
                             Logistics Oversight
                         </p>
                         <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
@@ -85,7 +86,7 @@ const Index = ({
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Search ID, Tracking, Artisan..."
-                                className="w-full border border-ink/10 bg-white py-3 pr-4 pl-12 text-xs font-medium uppercase tracking-widest focus:border-terracotta focus:outline-none"
+                                className="w-full border border-ink/10 bg-white py-3 pr-4 pl-12 text-xs font-medium tracking-widest uppercase focus:border-terracotta focus:outline-none"
                             />
                         </form>
 
@@ -100,7 +101,7 @@ const Index = ({
                                 <button
                                     key={s.id}
                                     onClick={() => handleStatusFilter(s.id)}
-                                    className={`border px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                    className={`border px-4 py-3 text-[10px] font-bold tracking-widest uppercase transition-all ${
                                         filters.status === s.id
                                             ? 'border-ink bg-ink text-cream'
                                             : 'border-ink/10 bg-white text-ink-soft hover:border-ink'
@@ -113,23 +114,23 @@ const Index = ({
                     </div>
                 </header>
 
-                <div className="border border-ink/5 bg-white shadow-sm overflow-hidden">
+                <div className="overflow-hidden border border-ink/5 bg-white shadow-sm">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-ink/5 bg-ink/[0.02]">
-                                <th className="px-8 py-5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                <th className="px-8 py-5 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                     Order Sequence
                                 </th>
-                                <th className="px-8 py-5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                <th className="px-8 py-5 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                     Entity Relationship
                                 </th>
-                                <th className="px-8 py-5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                <th className="px-8 py-5 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                     Financial Impact
                                 </th>
-                                <th className="px-8 py-5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                <th className="px-8 py-5 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                     Status
                                 </th>
-                                <th className="px-8 py-5 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40"></th>
+                                <th className="px-8 py-5 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-ink/5 text-sm">
@@ -142,7 +143,7 @@ const Index = ({
                                         <p className="font-sans text-xs font-bold text-ink">
                                             #{order.id}
                                         </p>
-                                        <p className="mt-1 text-[10px] text-ink-soft uppercase tracking-wider">
+                                        <p className="mt-1 text-[10px] tracking-wider text-ink-soft uppercase">
                                             {new Date(
                                                 order.created_at as string,
                                             ).toLocaleDateString()}
@@ -154,7 +155,7 @@ const Index = ({
                                                 {order.buyer?.first_name}{' '}
                                                 {order.buyer?.last_name}
                                             </span>
-                                            <span className="mt-1 text-[10px] text-ink-soft uppercase tracking-widest flex items-center gap-1.5">
+                                            <span className="mt-1 flex items-center gap-1.5 text-[10px] tracking-widest text-ink-soft uppercase">
                                                 <ShoppingBag className="h-2.5 w-2.5" />
                                                 {order.store?.store_name}
                                             </span>
@@ -165,18 +166,23 @@ const Index = ({
                                             {new Intl.NumberFormat('fr-MA', {
                                                 style: 'currency',
                                                 currency: 'MAD',
-                                            }).format(Number(order.total_amount))}
+                                            }).format(
+                                                Number(order.total_amount),
+                                            )}
                                         </p>
-                                        <p className="mt-1 text-[10px] text-ink-soft uppercase tracking-wider">
-                                            Net: {new Intl.NumberFormat('fr-MA', {
+                                        <p className="mt-1 text-[10px] tracking-wider text-ink-soft uppercase">
+                                            Net:{' '}
+                                            {new Intl.NumberFormat('fr-MA', {
                                                 style: 'currency',
                                                 currency: 'MAD',
-                                            }).format(Number(order.seller_earnings))}
+                                            }).format(
+                                                Number(order.seller_earnings),
+                                            )}
                                         </p>
                                     </td>
                                     <td className="px-8 py-6">
                                         <span
-                                            className={`inline-block rounded-full px-3 py-1 text-[8px] font-bold uppercase tracking-widest ${getStatusColor(
+                                            className={`inline-block rounded-full px-3 py-1 text-[8px] font-bold tracking-widest uppercase ${getStatusColor(
                                                 order.status,
                                             )}`}
                                         >
@@ -205,7 +211,7 @@ const Index = ({
                             <p className="h-editorial text-xl text-ink">
                                 No records found
                             </p>
-                            <p className="mt-2 text-xs text-ink-soft uppercase tracking-widest">
+                            <p className="mt-2 text-xs tracking-widest text-ink-soft uppercase">
                                 Adjust filters to broaden your search
                             </p>
                         </div>
@@ -219,7 +225,7 @@ const Index = ({
                             <Link
                                 key={i}
                                 href={link.url}
-                                className={`border px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                                className={`border px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all ${
                                     link.active
                                         ? 'border-ink bg-ink text-cream'
                                         : 'border-ink/10 bg-white text-ink-soft hover:border-ink'

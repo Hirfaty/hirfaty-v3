@@ -1,0 +1,45 @@
+services:
+  # Postgres for the app database. Data persists in the named volume below
+  # across restarts; wipe it with `docker compose down -v`. Matches the
+  # DB_* vars in .env (DB_CONNECTION=pgsql).
+  db:
+    image: postgres:16-alpine
+    container_name: hirfaty-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-hirfaty}
+      POSTGRES_USER: ${DB_USERNAME:-hirfaty}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hirfaty}
+    ports:
+      - '${DB_PORT:-5433}:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-hirfaty} -d ${DB_DATABASE:-hirfaty}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Local SeaweedFS for media storage (product images/videos, shop
+  # logo/banner). Exposes an S3-compatible gateway on :8333 — see
+  # config/filesystems.php's "seaweedfs" disk. Data persists in the named
+  # volume below across restarts; wipe it with `docker compose down -v`.
+  seaweedfs:
+    image: chrislusf/seaweedfs
+    container_name: hirfaty-seaweedfs
+    command: >
+      server -s3 -s3.config=/etc/seaweedfs/s3-config.json -dir=/data
+      -master.volumeSizeLimitMB=1024
+    ports:
+      - '9333:9333' # master
+      - '8080:8080' # volume
+      - '8888:8888' # filer
+      - '8333:8333' # S3 gateway
+    volumes:
+      - seaweedfs_data:/data
+      - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  seaweedfs_data:

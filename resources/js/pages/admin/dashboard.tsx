@@ -1,17 +1,17 @@
-import AdminLayout from '@/layouts/admin/layout';
-import type { PageProps, Product, User } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
-    Activity,
     ArrowUpRight,
-    CheckCircle,
+    CheckCircle2,
+    Clock,
     LayoutGrid,
+    MapPin,
     Package,
     Settings,
     ShoppingBag,
     Users,
+    Wallet,
 } from 'lucide-react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
     Area,
     AreaChart,
@@ -21,6 +21,11 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import HealthPanel from '@/components/admin/health-panel';
+import type { HealthReport } from '@/components/admin/health-panel';
+import AdminLayout from '@/layouts/admin/layout';
+import { formatDate } from '@/lib/utils';
+import type { PageProps, Product, User, UserRole } from '@/types';
 
 interface DashboardStats {
     total_orders: number;
@@ -43,341 +48,476 @@ interface SalesTrend {
     month: string;
 }
 
+const ROLE_LABEL: Record<UserRole, string> = {
+    buyer: 'Acheteur',
+    professional_buyer: 'Acheteur pro',
+    seller: 'Vendeur',
+    super_admin: 'Administrateur',
+};
+
+const ROLE_BADGE: Record<UserRole, string> = {
+    buyer: 'bg-slate-100 text-slate-700',
+    professional_buyer: 'bg-violet-100 text-violet-700',
+    seller: 'bg-emerald-100 text-emerald-700',
+    super_admin: 'bg-amber-100 text-amber-700',
+};
+
+// SVG color strings, not Tailwind classes — Recharts writes these straight
+// onto <stop>/<Area> attributes, so they must match the design tokens'
+// actual oklch() values (resources/css/app.css) rather than a class name.
+const CHART_TERRACOTTA = 'oklch(63% 0.17 41)';
+const CHART_INK = 'oklch(21% 0.02 255)';
+
+/** Small bordered card, the base unit this whole page is built from. */
+function Card({
+    title,
+    icon: Icon,
+    action,
+    children,
+}: {
+    title?: string;
+    icon?: typeof Package;
+    action?: ReactNode;
+    children: ReactNode;
+}) {
+    return (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            {title && (
+                <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                        {Icon && <Icon className="h-4 w-4 text-ink-soft" />}
+                        <h2 className="text-sm font-semibold text-ink">
+                            {title}
+                        </h2>
+                    </div>
+                    {action}
+                </div>
+            )}
+            {children}
+        </div>
+    );
+}
+
+function Stat({
+    label,
+    value,
+    icon: Icon,
+    tone = 'default',
+    href,
+}: {
+    label: string;
+    value: string | number;
+    icon: typeof Package;
+    tone?: 'default' | 'positive' | 'warning';
+    href?: string;
+}) {
+    const toneClass = {
+        default: 'text-ink',
+        positive: 'text-emerald-700',
+        warning: 'text-amber-700',
+    }[tone];
+
+    const content = (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-ink/20">
+            <div className="flex items-center gap-2 text-xs font-medium text-ink-soft">
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+            </div>
+            <p className={`mt-2 text-xl font-semibold ${toneClass}`}>
+                {value}
+            </p>
+        </div>
+    );
+
+    return href ? <Link href={href}>{content}</Link> : content;
+}
+
 const AdminDashboard = ({
     stats,
     latestUsers,
     pendingProducts,
     salesTrend,
+    health,
 }: PageProps & {
     stats: DashboardStats;
     latestUsers: User[];
     pendingProducts: Product[];
     salesTrend: SalesTrend[];
+    health: HealthReport;
 }) => {
-    const formatCurrency = (amount: number) => 
+    const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('fr-MA', {
             style: 'currency',
             currency: 'MAD',
         }).format(amount);
 
-    const kpiCards = [
-        {
-            label: 'Global Revenue',
-            value: formatCurrency(stats.total_revenue),
-            icon: ShoppingBag,
-            trend: '+12.5%',
-            color: 'text-terracotta',
-        },
-        {
-            label: 'Platform Net (Fees)',
-            value: formatCurrency(stats.total_platform_fees),
-            icon: Activity,
-            trend: 'Profit Margin',
-            color: 'text-ink',
-        },
-        {
-            label: 'Pending Payouts',
-            value: formatCurrency(stats.pending_payouts),
-            icon: Package,
-            trend: 'Action Required',
-            color: 'text-terracotta',
-        },
-        {
-            label: 'Total Paid Out',
-            value: formatCurrency(stats.total_paid_out),
-            icon: CheckCircle,
-            trend: 'Liquidity flow',
-            color: 'text-ink',
-        },
-    ];
-
     return (
-        <div className="min-h-full p-6 md:p-10">
-            <Head title="Admin Dashboard" />
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title="Tableau de bord" />
 
-            <div className="mx-auto max-w-7xl">
-                <header className="mb-10 flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                        <p className="font-sans text-xs font-medium uppercase tracking-[0.2em] text-ink-soft">
-                            Financial Command
-                        </p>
-                        <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
-                            Command <span className="italic">Center</span>
-                        </h1>
-                    </div>
-                    <div className="flex gap-3">
-                        <Link
-                            href="/admin/payouts"
-                            className="bg-ink px-6 py-3 text-xs font-bold uppercase tracking-widest text-cream hover:bg-terracotta transition-colors"
-                        >
-                            Manage Payouts
-                        </Link>
-                    </div>
-                </header>
+            {/* ── Header ───────────────────────────────────── */}
+            <header>
+                <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                    Tableau de bord
+                </h1>
+                <p className="mt-1 text-sm text-ink-soft">
+                    Vue d'ensemble de l'activité de la marketplace.
+                </p>
+            </header>
 
-                {/* ── KPI Grid ── */}
-                <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {kpiCards.map((card, i) => (
-                        <div
-                            key={i}
-                            className="border border-ink/5 bg-white p-8 shadow-sm transition-transform hover:-translate-y-1"
-                        >
-                            <div className="mb-4 flex items-center justify-between">
-                                <card.icon className={`h-5 w-5 ${card.color}`} />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-ink/30">
-                                    {card.trend}
+            {/* ── Financials ───────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat
+                    label="Chiffre d'affaires"
+                    value={formatCurrency(stats.total_revenue)}
+                    icon={ShoppingBag}
+                />
+                <Stat
+                    label="Frais de plateforme"
+                    value={formatCurrency(stats.total_platform_fees)}
+                    icon={Wallet}
+                />
+                <Stat
+                    label="Paiements en attente"
+                    value={formatCurrency(stats.pending_payouts)}
+                    icon={Clock}
+                    tone="warning"
+                />
+                <Stat
+                    label="Total versé"
+                    value={formatCurrency(stats.total_paid_out)}
+                    icon={CheckCircle2}
+                    tone="positive"
+                />
+            </div>
+
+            {/* ── Activity ─────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <Stat
+                    label="Commandes"
+                    value={stats.total_orders}
+                    icon={Package}
+                />
+                <Stat
+                    label="Vendeurs"
+                    value={stats.total_sellers}
+                    icon={Users}
+                    href={route('admin.users.index', { role: 'seller' })}
+                />
+                <Stat
+                    label="Acheteurs"
+                    value={stats.total_buyers}
+                    icon={Users}
+                    href={route('admin.users.index', { role: 'buyer' })}
+                />
+                <Stat
+                    label="Produits en attente"
+                    value={stats.pending_products}
+                    icon={Clock}
+                    tone={stats.pending_products > 0 ? 'warning' : 'default'}
+                    href={route('admin.products.index', {
+                        status: 'pending_review',
+                    })}
+                />
+            </div>
+
+            {/* ── Seller balances ──────────────────────────── */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Stat
+                    label="Solde vendeurs en transit"
+                    value={formatCurrency(stats.seller_balance_pending)}
+                    icon={Clock}
+                    tone="warning"
+                />
+                <Stat
+                    label="Gains vendeurs réclamables"
+                    value={formatCurrency(stats.seller_balance_available)}
+                    icon={CheckCircle2}
+                    tone="positive"
+                />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                {/* ── Sales trend chart ──────────────────────── */}
+                <div className="lg:col-span-8">
+                    <Card title="Évolution des ventes">
+                        <div className="flex items-center gap-4 border-b border-border px-5 py-3">
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-terracotta" />
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Brut
                                 </span>
                             </div>
-                            <p className="font-sans text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                {card.label}
-                            </p>
-                            <p className="h-editorial mt-1 text-3xl text-ink">
-                                {card.value}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* ── Secondary Stats: Seller Balances ── */}
-                <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <div className="flex items-center gap-6 border border-ink/5 bg-white p-6 shadow-sm">
-                        <div className="flex h-12 w-12 items-center justify-center bg-cream/50 text-ink-soft">
-                            <Users className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Artisan Base</p>
-                            <p className="font-sans text-lg font-bold text-ink">{stats.total_sellers} Shops</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6 border border-ink/5 bg-white p-6 shadow-sm">
-                        <div className="flex h-12 w-12 items-center justify-center bg-cream/50 text-terracotta">
-                            <Activity className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">In-Transit Balance</p>
-                            <p className="font-sans text-lg font-bold text-ink">{formatCurrency(stats.seller_balance_pending)}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6 border border-ink/5 bg-white p-6 shadow-sm">
-                        <div className="flex h-12 w-12 items-center justify-center bg-cream/50 text-ink">
-                            <CheckCircle className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Claimable Earnings</p>
-                            <p className="font-sans text-lg font-bold text-ink">{formatCurrency(stats.seller_balance_available)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-12 gap-10">
-                    {/* ── Performance Chart ── */}
-                    <div className="col-span-12 lg:col-span-8">
-                        <div className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <div className="mb-8 flex items-center justify-between">
-                                <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-ink">
-                                    Revenue vs Commission
-                                </h3>
-                                <div className="flex gap-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-2 w-2 rounded-full bg-terracotta" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                            Gross
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-2 w-2 rounded-full bg-ink" />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                            Platform
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={salesTrend}>
-                                        <defs>
-                                            <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#A84C2E" stopOpacity={0.1}/>
-                                                <stop offset="95%" stopColor="#A84C2E" stopOpacity={0}/>
-                                            </linearGradient>
-                                            <linearGradient id="colorComm" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#121212" stopOpacity={0.1}/>
-                                                <stop offset="95%" stopColor="#121212" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f1f1" />
-                                        <XAxis dataKey="month" axisLine={false} tickLine={false} style={{ fontSize: '10px', fontFamily: 'Inter', fill: '#999' }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px', fontFamily: 'Inter', fill: '#999' }} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#121212', border: 'none', borderRadius: '0px', color: '#F9F7F2', fontSize: '12px' }}
-                                            itemStyle={{ color: '#F9F7F2' }}
-                                        />
-                                        <Area type="monotone" dataKey="total" stroke="#A84C2E" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
-                                        <Area type="monotone" dataKey="commission" stroke="#121212" strokeWidth={2} fillOpacity={1} fill="url(#colorComm)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-ink" />
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Commission plateforme
+                                </span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* ── Quick Tools ── */}
-                    <div className="col-span-12 lg:col-span-4">
-                        <div className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-ink mb-6">
-                                Administrative Tools
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Link
-                                    href="/admin/categories"
-                                    className="flex flex-col items-center justify-center gap-3 border border-ink/5 bg-cream/10 p-6 text-center transition-colors hover:border-terracotta hover:bg-cream/20"
-                                >
-                                    <LayoutGrid className="h-6 w-6 text-ink/40" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                        Taxonomy
-                                    </span>
-                                </Link>
-                                <Link
-                                    href="/admin/cities"
-                                    className="flex flex-col items-center justify-center gap-3 border border-ink/5 bg-cream/10 p-6 text-center transition-colors hover:border-terracotta hover:bg-cream/20"
-                                >
-                                    <ShoppingBag className="h-6 w-6 text-ink/40" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                        Logistics
-                                    </span>
-                                </Link>
-                                <Link
-                                    href="/admin/users"
-                                    className="flex flex-col items-center justify-center gap-3 border border-ink/5 bg-cream/10 p-6 text-center transition-colors hover:border-terracotta hover:bg-cream/20"
-                                >
-                                    <Users className="h-6 w-6 text-ink/40" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                        Audience
-                                    </span>
-                                </Link>
-                                <Link
-                                    href="/settings"
-                                    className="flex flex-col items-center justify-center gap-3 border border-ink/5 bg-cream/10 p-6 text-center transition-colors hover:border-terracotta hover:bg-cream/20"
-                                >
-                                    <Settings className="h-6 w-6 text-ink/40" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                        Config
-                                    </span>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-10 grid grid-cols-12 gap-10">
-                    {/* ── Pending Approvals ── */}
-                    <div className="col-span-12 lg:col-span-6">
-                        <div className="border border-ink/5 bg-white shadow-sm">
-                            <div className="flex items-center justify-between border-b border-ink/5 p-6">
-                                <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-ink">
-                                    Awaiting Approval
-                                </h3>
-                                <Link
-                                    href="/admin/products"
-                                    className="text-[10px] font-bold uppercase tracking-widest text-terracotta hover:text-ink"
-                                >
-                                    View All
-                                </Link>
-                            </div>
-                            <div className="divide-y divide-ink/5">
-                                {pendingProducts.length > 0 ? (
-                                    pendingProducts.map((product) => (
-                                        <div
-                                            key={product.id}
-                                            className="flex items-center justify-between p-6 hover:bg-cream/5"
+                        <div className="h-[300px] w-full p-5">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={salesTrend}>
+                                    <defs>
+                                        <linearGradient
+                                            id="colorTotal"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1"
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 bg-cream/50 overflow-hidden border border-ink/5">
-                                                    {product.media?.[0] && (
-                                                        <img
-                                                            src={product.media[0].url}
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-ink">
-                                                        {product.name}
-                                                    </p>
-                                                    <p className="text-[10px] text-ink-soft uppercase tracking-wider">
-                                                        By {product.store?.store_name}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Link
-                                                href={`/admin/products/${product.id}`}
-                                                className="p-2 text-ink-soft hover:text-ink"
-                                            >
-                                                <ArrowUpRight className="h-4 w-4" />
-                                            </Link>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-10 text-center text-[10px] font-bold uppercase tracking-widest text-ink-soft">
-                                        All inventory is up to date
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ── Latest Users ── */}
-                    <div className="col-span-12 lg:col-span-6">
-                        <div className="border border-ink/5 bg-white shadow-sm">
-                            <div className="flex items-center justify-between border-b border-ink/5 p-6">
-                                <h3 className="font-sans text-xs font-bold uppercase tracking-widest text-ink">
-                                    Latest Registrations
-                                </h3>
-                                <Link
-                                    href="/admin/users"
-                                    className="text-[10px] font-bold uppercase tracking-widest text-terracotta hover:text-ink"
-                                >
-                                    Directory
-                                </Link>
-                            </div>
-                            <div className="divide-y divide-ink/5">
-                                {latestUsers.map((user) => (
-                                    <div
-                                        key={user.id}
-                                        className="flex items-center justify-between p-6 hover:bg-cream/5"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex h-10 w-10 items-center justify-center bg-cream text-[10px] font-bold text-ink-soft uppercase border border-ink/5">
-                                                {user.first_name[0]}
-                                                {user.last_name[0]}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-ink">
-                                                    {user.first_name} {user.last_name}
-                                                </p>
-                                                <p className="text-[10px] text-ink-soft uppercase tracking-wider">
-                                                    {user.role} — Joined{' '}
-                                                    {new Date(
-                                                        user.created_at as string,
-                                                    ).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div
-                                            className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest ${
-                                                user.role === 'seller'
-                                                    ? 'bg-terracotta/10 text-terracotta'
-                                                    : 'bg-ink/5 text-ink-soft'
-                                            }`}
+                                            <stop
+                                                offset="5%"
+                                                stopColor={CHART_TERRACOTTA}
+                                                stopOpacity={0.15}
+                                            />
+                                            <stop
+                                                offset="95%"
+                                                stopColor={CHART_TERRACOTTA}
+                                                stopOpacity={0}
+                                            />
+                                        </linearGradient>
+                                        <linearGradient
+                                            id="colorComm"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1"
                                         >
-                                            {user.role}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                            <stop
+                                                offset="5%"
+                                                stopColor={CHART_INK}
+                                                stopOpacity={0.15}
+                                            />
+                                            <stop
+                                                offset="95%"
+                                                stopColor={CHART_INK}
+                                                stopOpacity={0}
+                                            />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid
+                                        vertical={false}
+                                        strokeDasharray="3 3"
+                                        stroke="oklch(91% 0.004 255)"
+                                    />
+                                    <XAxis
+                                        dataKey="month"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        style={{
+                                            fontSize: '11px',
+                                            fontFamily: 'Inter',
+                                            fill: 'oklch(52% 0.015 255)',
+                                        }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        style={{
+                                            fontSize: '11px',
+                                            fontFamily: 'Inter',
+                                            fill: 'oklch(52% 0.015 255)',
+                                        }}
+                                    />
+                                    <Tooltip
+                                        formatter={(value) =>
+                                            formatCurrency(Number(value))
+                                        }
+                                        contentStyle={{
+                                            backgroundColor: CHART_INK,
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontSize: '12px',
+                                        }}
+                                        itemStyle={{ color: '#fff' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="total"
+                                        name="Brut"
+                                        stroke={CHART_TERRACOTTA}
+                                        strokeWidth={2}
+                                        fillOpacity={1}
+                                        fill="url(#colorTotal)"
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="commission"
+                                        name="Commission"
+                                        stroke={CHART_INK}
+                                        strokeWidth={2}
+                                        fillOpacity={1}
+                                        fill="url(#colorComm)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
-                    </div>
+                    </Card>
+                </div>
+
+                {/* ── Quick tools ────────────────────────────── */}
+                <div className="lg:col-span-4">
+                    <Card title="Outils">
+                        <div className="grid grid-cols-2 gap-3 p-5">
+                            <Link
+                                href={route('admin.categories.index')}
+                                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-5 text-center transition hover:border-ink/30 hover:bg-muted/50"
+                            >
+                                <LayoutGrid className="h-5 w-5 text-ink-soft" />
+                                <span className="text-xs font-medium text-ink">
+                                    Catégories
+                                </span>
+                            </Link>
+                            <Link
+                                href={route('admin.cities.index')}
+                                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-5 text-center transition hover:border-ink/30 hover:bg-muted/50"
+                            >
+                                <MapPin className="h-5 w-5 text-ink-soft" />
+                                <span className="text-xs font-medium text-ink">
+                                    Villes
+                                </span>
+                            </Link>
+                            <Link
+                                href={route('admin.users.index')}
+                                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-5 text-center transition hover:border-ink/30 hover:bg-muted/50"
+                            >
+                                <Users className="h-5 w-5 text-ink-soft" />
+                                <span className="text-xs font-medium text-ink">
+                                    Utilisateurs
+                                </span>
+                            </Link>
+                            <Link
+                                href="/settings"
+                                className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-5 text-center transition hover:border-ink/30 hover:bg-muted/50"
+                            >
+                                <Settings className="h-5 w-5 text-ink-soft" />
+                                <span className="text-xs font-medium text-ink">
+                                    Paramètres
+                                </span>
+                            </Link>
+                        </div>
+                    </Card>
                 </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* ── Pending approvals ──────────────────────── */}
+                <Card
+                    title="En attente d'approbation"
+                    icon={Clock}
+                    action={
+                        <Link
+                            href={route('admin.products.index', {
+                                status: 'pending_review',
+                            })}
+                            className="text-xs font-medium text-ink-soft transition hover:text-ink"
+                        >
+                            Voir tout
+                        </Link>
+                    }
+                >
+                    <div className="divide-y divide-border">
+                        {pendingProducts.length > 0 ? (
+                            pendingProducts.map((product) => (
+                                <Link
+                                    key={product.id}
+                                    href={route(
+                                        'admin.products.show',
+                                        product.id,
+                                    )}
+                                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-muted/40"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                                            {product.media?.[0] && (
+                                                <img
+                                                    src={product.media[0].url}
+                                                    alt=""
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-ink">
+                                                {product.name}
+                                            </p>
+                                            <p className="truncate text-xs text-ink-soft">
+                                                {product.store?.store_name}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-soft" />
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-sm text-ink-soft">
+                                Aucun produit en attente — tout est à jour.
+                            </div>
+                        )}
+                    </div>
+                </Card>
+
+                {/* ── Latest registrations ───────────────────── */}
+                <Card
+                    title="Derniers inscrits"
+                    icon={Users}
+                    action={
+                        <Link
+                            href={route('admin.users.index')}
+                            className="text-xs font-medium text-ink-soft transition hover:text-ink"
+                        >
+                            Annuaire
+                        </Link>
+                    }
+                >
+                    <div className="divide-y divide-border">
+                        {latestUsers.length > 0 ? (
+                            latestUsers.map((user) => (
+                                <Link
+                                    key={user.id}
+                                    href={route(
+                                        'admin.users.show',
+                                        user.id,
+                                    )}
+                                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-muted/40"
+                                >
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-ink-soft">
+                                            {user.first_name[0]}
+                                            {user.last_name[0]}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-ink">
+                                                {user.first_name}{' '}
+                                                {user.last_name}
+                                            </p>
+                                            <p className="truncate text-xs text-ink-soft">
+                                                Inscrit le{' '}
+                                                {formatDate(user.created_at)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span
+                                        className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[user.role]}`}
+                                    >
+                                        {ROLE_LABEL[user.role]}
+                                    </span>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-sm text-ink-soft">
+                                Aucun utilisateur inscrit récemment.
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            </div>
+
+            {/* ── System health ────────────────────────────── */}
+            <HealthPanel report={health} />
         </div>
     );
 };

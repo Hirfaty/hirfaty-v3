@@ -33,7 +33,7 @@ class NewOrderReceived extends Notification implements ShouldQueue
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.seller.order.new.{$locale}", [
                 'order' => $this->order,
-                'user'  => $notifiable,
+                'user' => $notifiable,
             ]);
     }
 }

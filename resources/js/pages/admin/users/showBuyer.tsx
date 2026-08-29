@@ -2,13 +2,15 @@ import { Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     Ban,
+    Calendar,
+    CheckCircle2,
     Mail,
-    MapPin,
+    Phone,
     ShoppingBag,
     UserCheck,
+    Wallet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { InviteLinkButton } from '@/components/admin/invite-link-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,12 +38,12 @@ interface Props {
     totalSpent: number;
 }
 
-const statusPill: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-emerald-100 text-emerald-800',
-    cancelled: 'bg-rose-100 text-rose-800',
+const STATUS_BADGE: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    shipped: 'bg-violet-100 text-violet-700',
+    delivered: 'bg-emerald-100 text-emerald-700',
+    cancelled: 'bg-rose-100 text-rose-700',
 };
 
 const formatMAD = (value: number) =>
@@ -50,10 +52,55 @@ const formatMAD = (value: number) =>
         currency: 'MAD',
     }).format(value);
 
+/** Small bordered card, the base unit this whole page is built from. */
+function Card({
+    title,
+    icon: Icon,
+    children,
+}: {
+    title?: string;
+    icon?: typeof ShoppingBag;
+    children: ReactNode;
+}) {
+    return (
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            {title && (
+                <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+                    {Icon && <Icon className="h-4 w-4 text-ink-soft" />}
+                    <h2 className="text-sm font-semibold text-ink">{title}</h2>
+                </div>
+            )}
+            {children}
+        </div>
+    );
+}
+
+/** One tile in the top KPI row. */
+function Stat({
+    label,
+    value,
+    icon: Icon,
+    tone = 'default',
+}: {
+    label: string;
+    value: string | number;
+    icon: typeof ShoppingBag;
+    tone?: 'default' | 'positive';
+}) {
+    const toneClass = tone === 'positive' ? 'text-emerald-700' : 'text-ink';
+
+    return (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-medium text-ink-soft">
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+            </div>
+            <p className={`mt-2 text-xl font-semibold ${toneClass}`}>{value}</p>
+        </div>
+    );
+}
+
 const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
-    // console.log('orders: ', orderStats);
-    // console.log('orders: ', user);
-    // console.log('tts: ', totalSpent);
     const handleBan = () => {
         if (
             confirm(
@@ -65,42 +112,45 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
     };
 
     return (
-        <div className="flex flex-col gap-8 p-6 md:p-8">
-            <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <div>
-                    <Link
-                        href={route('admin.users.index')}
-                        className="mb-2 flex items-center gap-2 text-sm text-ink-soft hover:text-ink"
-                    >
-                        <ArrowLeft className="h-4 w-4" /> Retour aux
-                        utilisateurs
-                    </Link>
-                    <div className="flex items-center gap-4">
-                        <h1 className="h-editorial text-4xl text-ink md:text-5xl">
-                            {user.first_name} {user.last_name}
-                        </h1>
-                        <Badge variant="secondary" className="rounded-none">
-                            Acheteur
-                        </Badge>
-                        {user.is_banned && (
-                            <Badge
-                                variant="destructive"
-                                className="rounded-none"
-                            >
-                                Bloqué
-                            </Badge>
-                        )}
-                    </div>
-                    <p className="mt-2 text-ink-soft">
-                        Membre depuis le {formatDate(user.created_at)}
-                    </p>
-                </div>
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            {/* ── Header ───────────────────────────────────── */}
+            <div>
+                <Link
+                    href={route('admin.users.index')}
+                    className="mb-3 inline-flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Retour aux utilisateurs
+                </Link>
 
-                <div className="flex items-center gap-3">
-                    <InviteLinkButton userId={user.id} />
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                                {user.first_name} {user.last_name}
+                            </h1>
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                {user.role === 'professional_buyer'
+                                    ? 'Acheteur pro'
+                                    : 'Acheteur'}
+                            </span>
+                            {user.is_banned && (
+                                <Badge
+                                    variant="destructive"
+                                    className="rounded-full"
+                                >
+                                    Bloqué
+                                </Badge>
+                            )}
+                        </div>
+                        <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-soft">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Membre depuis le {formatDate(user.created_at)}
+                        </p>
+                    </div>
+
                     <Button
                         variant={user.is_banned ? 'outline' : 'destructive'}
-                        className="rounded-none"
+                        className="rounded-lg"
                         onClick={handleBan}
                     >
                         {user.is_banned ? (
@@ -114,105 +164,74 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                         )}
                     </Button>
                 </div>
-            </header>
+            </div>
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-                {/* Buyer Stats & Info */}
-                <aside className="space-y-6 lg:col-span-4">
-                    <div className="border border-ink/10 bg-paper p-6">
-                        <p className="eyebrow mb-6 text-xs">
-                            Informations Profil
-                        </p>
-                        <div className="space-y-4 text-sm">
+            {/* ── KPI row ──────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat
+                    label="Dépenses totales"
+                    value={formatMAD(totalSpent)}
+                    icon={Wallet}
+                />
+                <Stat
+                    label="Commandes"
+                    value={orderStats.total}
+                    icon={ShoppingBag}
+                />
+                <Stat
+                    label="Livrées"
+                    value={orderStats.delivered}
+                    icon={CheckCircle2}
+                    tone="positive"
+                />
+                <Stat
+                    label="Annulées"
+                    value={orderStats.cancelled}
+                    icon={Ban}
+                />
+            </div>
+
+            {/* ── Body ─────────────────────────────────────── */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                <aside className="lg:col-span-4">
+                    <Card title="Contact">
+                        <div className="space-y-4 p-5 text-sm">
                             <div className="flex items-start gap-3">
-                                <Mail className="mt-0.5 h-4 w-4 text-ink-soft" />
-                                <div>
-                                    <p className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
+                                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
+                                <div className="min-w-0">
+                                    <p className="text-xs text-ink-soft">
                                         Email
                                     </p>
-                                    <p className="text-ink">{user.email}</p>
+                                    <p className="truncate text-ink">
+                                        {user.email}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
-                                <MapPin className="mt-0.5 h-4 w-4 text-ink-soft" />
+                                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
                                 <div>
-                                    <p className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
-                                        Localisation
+                                    <p className="text-xs text-ink-soft">
+                                        Téléphone
                                     </p>
                                     <p className="text-ink">
-                                        {user.phone_number ||
-                                            'Téléphone non renseigné'}
+                                        {user.phone_number || 'N/A'}
                                     </p>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="border border-ink/10 bg-paper p-6">
-                        <p className="eyebrow mb-6 text-xs">Activité d'achat</p>
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-10 w-10 items-center justify-center bg-cream">
-                                    <ShoppingBag className="h-5 w-5 text-ink" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
-                                        Dépenses totales
-                                    </p>
-                                    <p className="font-display text-xl text-ink">
-                                        {formatMAD(totalSpent)}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 border-t border-ink/5 pt-4">
-                                <div>
-                                    <p className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
-                                        Commandes
-                                    </p>
-                                    <p className="font-display text-lg text-ink">
-                                        {orderStats.total}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
-                                        Livrées
-                                    </p>
-                                    <p className="font-display text-lg text-emerald-700">
-                                        {orderStats.delivered}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    </Card>
                 </aside>
 
-                {/* Order History */}
-                <div className="space-y-8 lg:col-span-8">
-                    <div className="overflow-hidden border border-ink/10 bg-paper">
-                        <div className="flex items-center justify-between border-b border-ink/10 bg-cream/50 px-6 py-4">
-                            <div className="flex items-center gap-2">
-                                <ShoppingBag className="h-4 w-4 text-ink" />
-                                <h3 className="font-display text-lg text-ink">
-                                    Historique des commandes
-                                </h3>
-                            </div>
-                        </div>
+                <div className="lg:col-span-8">
+                    <Card title="Historique des commandes" icon={ShoppingBag}>
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="text-[10px] font-bold tracking-widest uppercase">
-                                        ID
-                                    </TableHead>
-                                    <TableHead className="text-[10px] font-bold tracking-widest uppercase">
-                                        Boutique
-                                    </TableHead>
-                                    <TableHead className="text-[10px] font-bold tracking-widest uppercase">
-                                        Montant
-                                    </TableHead>
-                                    <TableHead className="text-[10px] font-bold tracking-widest uppercase">
-                                        Statut
-                                    </TableHead>
-                                    <TableHead className="text-right text-[10px] font-bold tracking-widest uppercase">
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Boutique</TableHead>
+                                    <TableHead>Montant</TableHead>
+                                    <TableHead>Statut</TableHead>
+                                    <TableHead className="text-right">
                                         Date
                                     </TableHead>
                                 </TableRow>
@@ -222,7 +241,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                     <TableRow>
                                         <TableCell
                                             colSpan={5}
-                                            className="h-32 text-center text-ink-soft italic"
+                                            className="h-32 text-center text-ink-soft"
                                         >
                                             Cet utilisateur n'a pas encore passé
                                             de commande.
@@ -231,29 +250,29 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                 ) : (
                                     user.orders.map((order) => (
                                         <TableRow key={order.id}>
-                                            <TableCell className="font-mono text-xs">
+                                            <TableCell className="font-mono text-xs text-ink-soft">
                                                 #{order.id}
                                             </TableCell>
                                             <TableCell className="text-sm">
                                                 <Link
-                                                    className="underline"
                                                     href={`/store/${order.store.slug}`}
+                                                    className="font-medium text-ink transition hover:underline"
                                                 >
                                                     {order.store?.store_name ||
                                                         'N/A'}
                                                 </Link>
                                             </TableCell>
-                                            <TableCell className="font-display text-ink">
+                                            <TableCell className="text-sm font-medium text-ink">
                                                 {formatMAD(
                                                     Number(order.total_amount),
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge
-                                                    className={`rounded-none border-none ${statusPill[order.status]}`}
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[order.status] ?? 'bg-muted text-ink-soft'}`}
                                                 >
                                                     {order.status}
-                                                </Badge>
+                                                </span>
                                             </TableCell>
                                             <TableCell className="text-right text-xs text-ink-soft">
                                                 {formatDate(order.created_at)}
@@ -263,25 +282,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                 )}
                             </TableBody>
                         </Table>
-                    </div>
-
-                    <div className="border border-dashed border-ink/10 bg-cream/30 p-6">
-                        <div className="flex items-start gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center border border-ink/10 bg-paper">
-                                <span className="text-xl">✍️</span>
-                            </div>
-                            <div>
-                                <h4 className="mb-1 font-display text-base text-ink">
-                                    Note Administrative
-                                </h4>
-                                <p className="text-xs leading-relaxed text-ink-soft">
-                                    Utilisateur identifié comme acheteur
-                                    régulier. Pas d'incidents de paiement
-                                    signalés. Profil complété à 80%.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    </Card>
                 </div>
             </div>
         </div>

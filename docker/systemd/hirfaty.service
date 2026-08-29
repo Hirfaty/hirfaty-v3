@@ -1,0 +1,26 @@
+# Install once on the VPS:
+#   sudo cp docker/systemd/hirfaty.service /etc/systemd/system/hirfaty.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hirfaty
+#
+# Individual containers already restart on crash via `restart: unless-stopped`
+# in docker-compose.prod.yml; this unit's job is only to bring the stack back
+# after a host reboot and to give you `systemctl start/stop/status hirfaty`.
+# Edit WorkingDirectory if the app isn't checked out at /opt/hirfaty.
+
+[Unit]
+Description=Hirfaty production stack (docker compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/hirfaty
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

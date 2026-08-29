@@ -110,7 +110,7 @@ class CheckoutService
                 try {
                     $cart->user->notify(new OrderPlaced($order));
                 } catch (\Exception $e) {
-                    \Log::warning("Buyer notification failed for order {$order->id}: " . $e->getMessage());
+                    \Log::warning("Buyer notification failed for order {$order->id}: ".$e->getMessage());
                 }
 
                 $orders[] = $order;

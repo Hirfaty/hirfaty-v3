@@ -38,17 +38,16 @@ class ProductRejected extends Notification implements ShouldQueue
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
-            'fr' => "Votre produit nécessite des modifications — Hirfaty",
-            'ar' => "منتجك يحتاج إلى تعديلات — حرفتي",
-            'en' => "Your product needs changes — Hirfaty",
+            'fr' => 'Votre produit nécessite des modifications — Hirfaty',
+            'ar' => 'منتجك يحتاج إلى تعديلات — حرفتي',
+            'en' => 'Your product needs changes — Hirfaty',
         ];
-
 
         return (new MailMessage)
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.seller.product.rejected.{$locale}", [
                 'product' => $this->product,
-                'user'    => $notifiable,
+                'user' => $notifiable,
             ]);
     }
 

@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\VerifyEmail;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class SellerVerifyEmail extends VerifyEmail
@@ -22,7 +20,7 @@ class SellerVerifyEmail extends VerifyEmail
         return (new MailMessage)
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.seller.verify.{$locale}", [
-                'url'  => $url,
+                'url' => $url,
                 'user' => $notifiable,
             ]);
     }

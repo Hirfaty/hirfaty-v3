@@ -1,774 +1,799 @@
-import AdminLayout from '@/layouts/admin/layout';
-import type { Category, City, PageProps } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
+    ArrowLeft,
     ArrowRight,
-    CheckCircle2,
-    Copy,
-    Plus,
-    Trash2,
-    Upload,
-    UserPlus,
+    Building2,
+    Check,
+    Loader2,
+    Palette,
+    ShoppingBag,
+    Store as StoreIcon,
+    User as UserIcon,
+    Users,
 } from 'lucide-react';
-import { ReactNode, useState } from 'react';
-import { toast } from 'sonner';
-import axios from 'axios';
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import SingleImageInput from '@/components/admin/single-image-input';
+import AdminLayout from '@/layouts/admin/layout';
+import type { Category, City, PageProps, StoreType } from '@/types';
 
-interface ProductForm {
-    name: string;
+type Role = 'seller' | 'buyer' | 'professional_buyer';
+
+/** Steps differ per role: only sellers get the shop step. */
+type StepId = 'role' | 'identity' | 'shop' | 'review';
+
+const ROLES: {
+    value: Role;
+    label: string;
     description: string;
-    base_price: string;
-    sale_price: string;
-    stock: string;
+    icon: typeof UserIcon;
+}[] = [
+    {
+        value: 'seller',
+        label: 'Vendeur',
+        description:
+            'Un artisan qui vend sur la plateforme. Une boutique lui est créée.',
+        icon: StoreIcon,
+    },
+    {
+        value: 'buyer',
+        label: 'Acheteur',
+        description: 'Un client particulier qui achète à l’unité.',
+        icon: UserIcon,
+    },
+    {
+        value: 'professional_buyer',
+        label: 'Acheteur professionnel',
+        description:
+            'Achète en gros et voit les tarifs professionnels réservés.',
+        icon: ShoppingBag,
+    },
+];
+
+const STORE_TYPES: {
+    value: StoreType;
+    label: string;
+    icon: typeof UserIcon;
+}[] = [
+    { value: 'artist', label: 'Artiste', icon: Palette },
+    { value: 'company', label: 'Entreprise', icon: Building2 },
+    { value: 'cooperative', label: 'Coopérative', icon: Users },
+];
+
+const INPUT =
+    'w-full rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/70 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10';
+const LABEL = 'mb-1.5 block text-sm font-medium text-ink';
+const ERROR = 'mt-1.5 text-xs text-red-600';
+
+/** A labelled field with its validation message. */
+function Field({
+    label,
+    error,
+    children,
+    hint,
+}: {
+    label: string;
+    error?: string;
+    hint?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <label className={LABEL}>{label}</label>
+            {children}
+            {hint && !error && (
+                <p className="mt-1.5 text-xs text-ink-soft">{hint}</p>
+            )}
+            {error && <p className={ERROR}>{error}</p>}
+        </div>
+    );
+}
+
+/**
+ * Object URL for a picked file, recreated when the file changes and revoked
+ * on cleanup so review-step thumbnails don't leak blob URLs.
+ *
+ * Derived via useMemo rather than state-synced-via-effect: the URL is a
+ * pure function of `file`, so the effect below only needs to *revoke* the
+ * previous URL on change/unmount — it never writes state.
+ */
+function useObjectUrl(file: File | null): string | null {
+    const url = useMemo(
+        () => (file ? URL.createObjectURL(file) : null),
+        [file],
+    );
+
+    useEffect(() => {
+        return () => {
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        };
+    }, [url]);
+
+    return url;
+}
+
+/** Read-only key/value line used on the review step. */
+function Summary({ label, value }: { label: string; value?: string | null }) {
+    return (
+        <div className="flex items-start justify-between gap-6 py-2.5">
+            <dt className="text-sm text-ink-soft">{label}</dt>
+            <dd className="text-right text-sm font-medium text-ink">
+                {value?.trim() ? (
+                    value
+                ) : (
+                    <span className="text-ink-soft/70">—</span>
+                )}
+            </dd>
+        </div>
+    );
+}
+
+/**
+ * Select values arrive from the DOM as strings but are seeded from numeric ids,
+ * so the id fields are widened explicitly rather than inferred.
+ */
+interface UserWizardForm {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    role: Role;
+    store_name: string;
+    store_type: StoreType;
     category_id: number | string;
-    media: File[];
+    city_id: number | string;
+    description: string;
+    logo: File | null;
+    banner: File | null;
 }
 
 const Create = ({
     cities,
     categories,
 }: PageProps & { cities: City[]; categories: Category[] }) => {
-    const [step, setStep] = useState<'user' | 'products' | 'success'>('user');
-    const [storeId, setStoreId] = useState<number | null>(null);
-    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-    const [isSubmittingUser, setIsSubmittingUser] = useState(false);
-
-    // ── Step 1: User & Store Form ──────────────────────────────
-    const userForm = useForm({
-        step: 'user',
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone_number: '',
-        role: 'seller' as 'buyer' | 'seller',
-        store_name: '',
-        category_id: categories[0]?.id ?? '',
-        city_id: cities[0]?.id ?? '',
-        description: '',
-    });
-
-    // ── Step 2: Products Management ───────────────────────────
-    const [products, setProducts] = useState<ProductForm[]>([
+    const { data, setData, post, processing, errors } = useForm<UserWizardForm>(
         {
-            name: '',
-            description: '',
-            base_price: '',
-            sale_price: '',
-            stock: '10',
+            first_name: '',
+            last_name: '',
+            email: '',
+            phone_number: '',
+            role: 'seller',
+            store_name: '',
+            store_type: 'artist',
             category_id: categories[0]?.id ?? '',
-            media: [],
+            city_id: cities[0]?.id ?? '',
+            description: '',
+            logo: null,
+            banner: null,
         },
-    ]);
-    const [isSubmittingProducts, setIsSubmittingProducts] = useState(false);
+    );
 
-    const submitUserStep = async () => {
-        userForm.clearErrors();
-        setIsSubmittingUser(true);
-        try {
-            const response = await axios.post(
-                route('admin.users.store'),
-                userForm.data,
-            );
-            if (response.data.user_id) {
-                setInviteUrl(response.data.invite_url);
-                if (userForm.data.role === 'seller') {
-                    setStoreId(response.data.store_id);
-                    setStep('products');
-                    toast.success('Seller account created. Now add products.');
-                } else {
-                    setStep('success');
+    const isSeller = data.role === 'seller';
+
+    // Sellers get an extra shop step; buyers skip straight to review.
+    const steps: { id: StepId; label: string }[] = [
+        { id: 'role', label: 'Rôle' },
+        { id: 'identity', label: 'Informations' },
+        ...(isSeller ? [{ id: 'shop' as StepId, label: 'Boutique' }] : []),
+        { id: 'review', label: 'Vérification' },
+    ];
+
+    const [stepIndex, setStepIndex] = useState(0);
+    // Clamp: switching from seller to buyer removes a step.
+    const currentIndex = Math.min(stepIndex, steps.length - 1);
+    const current = steps[currentIndex].id;
+
+    // Client-side gate so the CEO can't reach review with empty fields.
+    const identityComplete =
+        data.first_name.trim() !== '' &&
+        data.last_name.trim() !== '' &&
+        data.email.trim() !== '' &&
+        data.phone_number.trim() !== '';
+
+    const shopComplete =
+        data.store_name.trim() !== '' &&
+        data.city_id !== '' &&
+        data.category_id !== '';
+
+    const canContinue =
+        current === 'role' ||
+        (current === 'identity' && identityComplete) ||
+        (current === 'shop' && shopComplete) ||
+        current === 'review';
+
+    const go = (delta: number) =>
+        setStepIndex((i) => Math.min(Math.max(i + delta, 0), steps.length - 1));
+
+    const submit = () => {
+        post(route('admin.users.store'), {
+            onError: (errs) => {
+                // Send the admin back to the step that actually failed.
+                const identityFields = [
+                    'first_name',
+                    'last_name',
+                    'email',
+                    'phone_number',
+                    'role',
+                ];
+                const shopFields = [
+                    'store_name',
+                    'store_type',
+                    'city_id',
+                    'category_id',
+                    'description',
+                    'logo',
+                    'banner',
+                ];
+                const bad = Object.keys(errs);
+
+                if (bad.some((f) => identityFields.includes(f))) {
+                    setStepIndex(1);
+                } else if (
+                    isSeller &&
+                    bad.some((f) => shopFields.includes(f))
+                ) {
+                    setStepIndex(2);
                 }
-            }
-        } catch (error: any) {
-            if (error.response?.data?.errors) {
-                userForm.setError(error.response.data.errors);
-            }
-            toast.error('Failed to create user.');
-        } finally {
-            setIsSubmittingUser(false);
-        }
-    };
-
-    const copyInviteLink = () => {
-        if (!inviteUrl) {
-            return;
-        }
-        navigator.clipboard.writeText(inviteUrl);
-        toast.success('Invite link copied to clipboard.');
-    };
-
-    const addProductField = () => {
-        setProducts([
-            ...products,
-            {
-                name: '',
-                description: '',
-                base_price: '',
-                sale_price: '',
-                stock: '10',
-                category_id: categories[0]?.id ?? '',
-                media: [],
             },
-        ]);
-    };
-
-    const removeProductField = (index: number) => {
-        setProducts(products.filter((_, i) => i !== index));
-    };
-
-    const updateProduct = (
-        index: number,
-        field: keyof ProductForm,
-        value: any,
-    ) => {
-        const newProducts = [...products];
-        newProducts[index] = { ...newProducts[index], [field]: value };
-        setProducts(newProducts);
-    };
-
-    const submitProducts = async () => {
-        setIsSubmittingProducts(true);
-        const formData = new FormData();
-        formData.append('step', 'product');
-        formData.append('store_id', String(storeId));
-
-        products.forEach((p, i) => {
-            formData.append(`products[${i}][name]`, p.name);
-            formData.append(`products[${i}][description]`, p.description);
-            formData.append(`products[${i}][base_price]`, p.base_price);
-            formData.append(`products[${i}][sale_price]`, p.sale_price);
-            formData.append(`products[${i}][stock]`, p.stock);
-            formData.append(
-                `products[${i}][category_id]`,
-                String(p.category_id),
-            );
-            p.media.forEach((file, mIndex) => {
-                formData.append(`products[${i}][media][${mIndex}]`, file);
-            });
         });
-
-        try {
-            await axios.post(route('admin.users.store'), formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            setStep('success');
-            toast.success(
-                'Products saved as drafts. The seller can finish and submit them for review.',
-            );
-        } catch (error) {
-            toast.error('Failed to save products.');
-        } finally {
-            setIsSubmittingProducts(false);
-        }
     };
+
+    const cityName = cities.find(
+        (c) => String(c.id) === String(data.city_id),
+    )?.name;
+    const categoryName = categories.find(
+        (c) => String(c.id) === String(data.category_id),
+    )?.translated_name;
+    const roleLabel = ROLES.find((r) => r.value === data.role)?.label;
+    const storeTypeLabel = STORE_TYPES.find(
+        (t) => t.value === data.store_type,
+    )?.label;
+    const bannerPreview = useObjectUrl(data.banner);
+    const logoPreview = useObjectUrl(data.logo);
 
     return (
-        <div className="min-h-full p-6 md:p-10">
-            <Head title="Onboard Artisan" />
+        <div className="min-h-screen px-6 py-10">
+            <Head title="Nouvel utilisateur" />
 
-            <div className="mx-auto max-w-4xl">
-                <header className="mb-12 text-center">
-                    <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
-                        Platform Expansion
-                    </p>
-                    <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
-                        {step === 'user' ? (
-                            <>
-                                Create New <span className="italic">User</span>
-                            </>
-                        ) : step === 'products' ? (
-                            <>
-                                Initial{' '}
-                                <span className="italic">Inventory</span>
-                            </>
-                        ) : (
-                            <>
-                                Onboarding{' '}
-                                <span className="italic">Complete</span>
-                            </>
-                        )}
+            <div className="mx-auto max-w-5xl">
+                <Link
+                    href={route('admin.users.index')}
+                    className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
+                >
+                    <ArrowLeft className="h-4 w-4" /> Retour aux utilisateurs
+                </Link>
+
+                <header className="mb-8">
+                    <h1 className="text-3xl font-semibold tracking-tight text-ink">
+                        Créer un utilisateur
                     </h1>
-
-                    {/* Progress Indicator */}
-                    <div className="mt-8 flex justify-center gap-4">
-                        {[
-                            { id: 'user', label: 'Identity' },
-                            { id: 'products', label: 'Inventory' },
-                            { id: 'success', label: 'Finalize' },
-                        ].map((s, i) => (
-                            <div key={s.id} className="flex items-center gap-4">
-                                <div
-                                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                                        step === s.id
-                                            ? 'bg-ink text-cream'
-                                            : 'bg-ink/5 text-ink-soft'
-                                    }`}
-                                >
-                                    {i + 1}
-                                </div>
-                                <span
-                                    className={`text-[10px] font-bold tracking-widest uppercase ${
-                                        step === s.id
-                                            ? 'text-ink'
-                                            : 'text-ink-soft'
-                                    }`}
-                                >
-                                    {s.label}
-                                </span>
-                                {i < 2 && (
-                                    <div className="h-px w-8 bg-ink/10" />
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                    <p className="mt-1.5 text-sm text-ink-soft">
+                        Renseignez les informations étape par étape, puis
+                        validez le récapitulatif.
+                    </p>
                 </header>
 
-                <div className="border border-ink/5 bg-white p-8 shadow-sm md:p-12">
-                    {/* ── STEP 1: USER DETAILS ── */}
-                    {step === 'user' && (
-                        <div className="animate-in duration-500 fade-in slide-in-from-bottom-4">
-                            <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-                                <div className="space-y-6">
-                                    <h2 className="font-sans text-xs font-bold tracking-widest text-ink-soft uppercase">
-                                        Personal Credentials
+                <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+                    {/* ── Stepper ─────────────────────────────── */}
+                    <nav aria-label="Progression" className="lg:pt-2">
+                        <ol className="space-y-1">
+                            {steps.map((s, i) => {
+                                const done = i < currentIndex;
+                                const active = i === currentIndex;
+
+                                return (
+                                    <li key={s.id}>
+                                        <button
+                                            type="button"
+                                            // Only allow jumping back, never skipping ahead.
+                                            disabled={i > currentIndex}
+                                            onClick={() => setStepIndex(i)}
+                                            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${
+                                                active
+                                                    ? 'bg-ink text-white shadow-sm'
+                                                    : done
+                                                      ? 'text-ink hover:bg-muted/60'
+                                                      : 'text-ink-soft/70'
+                                            }`}
+                                        >
+                                            <span
+                                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                                                    active
+                                                        ? 'bg-card text-ink'
+                                                        : done
+                                                          ? 'bg-emerald-600 text-white'
+                                                          : 'bg-muted text-ink-soft'
+                                                }`}
+                                            >
+                                                {done ? (
+                                                    <Check className="h-3.5 w-3.5" />
+                                                ) : (
+                                                    i + 1
+                                                )}
+                                            </span>
+                                            <span className="text-sm font-medium">
+                                                {s.label}
+                                            </span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                    </nav>
+
+                    {/* ── Step panel ──────────────────────────── */}
+                    <div className="rounded-xl border border-border bg-card shadow-sm">
+                        <div className="p-6 md:p-8">
+                            {/* Step 1 — role */}
+                            {current === 'role' && (
+                                <section>
+                                    <h2 className="text-lg font-semibold text-ink">
+                                        Quel type de compte ?
                                     </h2>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                First Name
-                                            </label>
+                                    <p className="mt-1 text-sm text-ink-soft">
+                                        Ce choix détermine les étapes suivantes.
+                                    </p>
+
+                                    <div className="mt-6 space-y-3">
+                                        {ROLES.map((r) => {
+                                            const Icon = r.icon;
+                                            const selected =
+                                                data.role === r.value;
+
+                                            return (
+                                                <button
+                                                    key={r.value}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setData('role', r.value)
+                                                    }
+                                                    className={`flex w-full items-start gap-4 rounded-xl border p-4 text-left transition ${
+                                                        selected
+                                                            ? 'border-ink bg-muted/40 ring-2 ring-ink/10'
+                                                            : 'hover:bg-muted/40/60 border-border hover:border-border'
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                                                            selected
+                                                                ? 'bg-ink text-white'
+                                                                : 'bg-muted text-ink-soft'
+                                                        }`}
+                                                    >
+                                                        <Icon className="h-5 w-5" />
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block text-sm font-semibold text-ink">
+                                                            {r.label}
+                                                        </span>
+                                                        <span className="mt-0.5 block text-sm text-ink-soft">
+                                                            {r.description}
+                                                        </span>
+                                                    </span>
+                                                    {selected && (
+                                                        <Check className="h-5 w-5 shrink-0 text-ink" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {errors.role && (
+                                        <p className={ERROR}>{errors.role}</p>
+                                    )}
+                                </section>
+                            )}
+
+                            {/* Step 2 — identity */}
+                            {current === 'identity' && (
+                                <section>
+                                    <h2 className="text-lg font-semibold text-ink">
+                                        Informations personnelles
+                                    </h2>
+                                    <p className="mt-1 text-sm text-ink-soft">
+                                        Coordonnées du titulaire du compte.
+                                    </p>
+
+                                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                                        <Field
+                                            label="Prénom"
+                                            error={errors.first_name}
+                                        >
                                             <input
-                                                value={userForm.data.first_name}
+                                                autoFocus
+                                                value={data.first_name}
                                                 onChange={(e) =>
-                                                    userForm.setData(
+                                                    setData(
                                                         'first_name',
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
+                                                placeholder="Hassan"
+                                                className={INPUT}
                                             />
-                                            {userForm.errors.first_name && (
-                                                <p className="mt-1 text-[10px] text-terracotta uppercase">
-                                                    {userForm.errors.first_name}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                Last Name
-                                            </label>
+                                        </Field>
+
+                                        <Field
+                                            label="Nom"
+                                            error={errors.last_name}
+                                        >
                                             <input
-                                                value={userForm.data.last_name}
+                                                value={data.last_name}
                                                 onChange={(e) =>
-                                                    userForm.setData(
+                                                    setData(
                                                         'last_name',
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
+                                                placeholder="Alaoui"
+                                                className={INPUT}
                                             />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                            Electronic Mail
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={userForm.data.email}
-                                            onChange={(e) =>
-                                                userForm.setData(
-                                                    'email',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                        />
-                                        {userForm.errors.email && (
-                                            <p className="mt-1 text-[10px] text-terracotta uppercase">
-                                                {userForm.errors.email}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                            Phone Number
-                                        </label>
-                                        <input
-                                            value={userForm.data.phone_number}
-                                            onChange={(e) =>
-                                                userForm.setData(
-                                                    'phone_number',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="mb-3 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                            Role Designation
-                                        </label>
-                                        <div className="flex gap-2">
-                                            {(['buyer', 'seller'] as const).map(
-                                                (r) => (
-                                                    <button
-                                                        key={r}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            userForm.setData(
-                                                                'role',
-                                                                r,
-                                                            )
-                                                        }
-                                                        className={`flex-1 border px-4 py-3 text-[10px] font-bold tracking-widest uppercase transition-all ${
-                                                            userForm.data
-                                                                .role === r
-                                                                ? 'border-ink bg-ink text-cream'
-                                                                : 'border-ink/10 text-ink-soft hover:border-ink'
-                                                        }`}
-                                                    >
-                                                        {r}
-                                                    </button>
-                                                ),
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+                                        </Field>
 
-                                <div className="space-y-6">
-                                    {userForm.data.role === 'seller' ? (
-                                        <>
-                                            <h2 className="font-sans text-xs font-bold tracking-widest text-ink-soft uppercase">
-                                                Store Identity
-                                            </h2>
-                                            <div>
-                                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                    Artisan Shop Name
-                                                </label>
+                                        <Field
+                                            label="Email"
+                                            error={errors.email}
+                                        >
+                                            <input
+                                                type="email"
+                                                value={data.email}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'email',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="hassan@exemple.ma"
+                                                className={INPUT}
+                                            />
+                                        </Field>
+
+                                        <Field
+                                            label="Téléphone"
+                                            error={errors.phone_number}
+                                        >
+                                            <input
+                                                value={data.phone_number}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'phone_number',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="0612345678"
+                                                className={INPUT}
+                                            />
+                                        </Field>
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Step 3 — shop (sellers only) */}
+                            {current === 'shop' && (
+                                <section>
+                                    <h2 className="text-lg font-semibold text-ink">
+                                        La boutique
+                                    </h2>
+                                    <p className="mt-1 text-sm text-ink-soft">
+                                        Ces informations apparaîtront sur la
+                                        fiche publique de l’artisan.
+                                    </p>
+
+                                    <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <Field
+                                                label="Nom de la boutique"
+                                                error={errors.store_name}
+                                            >
                                                 <input
-                                                    value={
-                                                        userForm.data.store_name
-                                                    }
+                                                    autoFocus
+                                                    value={data.store_name}
                                                     onChange={(e) =>
-                                                        userForm.setData(
+                                                        setData(
                                                             'store_name',
                                                             e.target.value,
                                                         )
                                                     }
-                                                    className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
+                                                    placeholder="Poterie de Safi"
+                                                    className={INPUT}
                                                 />
-                                                {userForm.errors.store_name && (
-                                                    <p className="mt-1 text-[10px] text-terracotta uppercase">
-                                                        {
-                                                            userForm.errors
-                                                                .store_name
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                        Trade Category
-                                                    </label>
-                                                    <select
-                                                        value={
-                                                            userForm.data
-                                                                .category_id
-                                                        }
-                                                        onChange={(e) =>
-                                                            userForm.setData(
-                                                                'category_id',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                                    >
-                                                        {categories.map((c) => (
-                                                            <option
-                                                                key={c.id}
-                                                                value={c.id}
+                                            </Field>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <Field
+                                                label="Type de vendeur"
+                                                error={errors.store_type}
+                                            >
+                                                <div className="flex flex-col gap-2 sm:flex-row">
+                                                    {STORE_TYPES.map((t) => {
+                                                        const Icon = t.icon;
+                                                        const selected =
+                                                            data.store_type ===
+                                                            t.value;
+
+                                                        return (
+                                                            <button
+                                                                key={t.value}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setData(
+                                                                        'store_type',
+                                                                        t.value,
+                                                                    )
+                                                                }
+                                                                className={`flex flex-1 items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium transition ${
+                                                                    selected
+                                                                        ? 'border-ink bg-ink text-white'
+                                                                        : 'border-border text-ink-soft hover:border-ink/30 hover:text-ink'
+                                                                }`}
                                                             >
-                                                                {c.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                                <Icon className="h-4 w-4" />
+                                                                {t.label}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
-                                                <div>
-                                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                        City Hub
-                                                    </label>
-                                                    <select
-                                                        value={
-                                                            userForm.data
-                                                                .city_id
-                                                        }
-                                                        onChange={(e) =>
-                                                            userForm.setData(
-                                                                'city_id',
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
+                                            </Field>
+                                        </div>
+
+                                        <Field
+                                            label="Ville"
+                                            error={errors.city_id}
+                                        >
+                                            <select
+                                                value={data.city_id}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'city_id',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className={INPUT}
+                                            >
+                                                {cities.map((c) => (
+                                                    <option
+                                                        key={c.id}
+                                                        value={c.id}
                                                     >
-                                                        {cities.map((c) => (
-                                                            <option
-                                                                key={c.id}
-                                                                value={c.id}
-                                                            >
-                                                                {c.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                    Artisan Story
-                                                </label>
+                                                        {c.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </Field>
+
+                                        <Field
+                                            label="Type de produits"
+                                            error={errors.category_id}
+                                            hint="Catégorie principale vendue par l’artisan."
+                                        >
+                                            <select
+                                                value={data.category_id}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'category_id',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className={INPUT}
+                                            >
+                                                {categories.map((c) => (
+                                                    <option
+                                                        key={c.id}
+                                                        value={c.id}
+                                                    >
+                                                        {/* name is a per-locale object; never render it raw */}
+                                                        {c.translated_name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </Field>
+
+                                        <div className="sm:col-span-2">
+                                            <Field
+                                                label="Description (optionnel)"
+                                                error={errors.description}
+                                            >
                                                 <textarea
                                                     rows={4}
-                                                    value={
-                                                        userForm.data
-                                                            .description
-                                                    }
+                                                    value={data.description}
                                                     onChange={(e) =>
-                                                        userForm.setData(
+                                                        setData(
                                                             'description',
                                                             e.target.value,
                                                         )
                                                     }
-                                                    className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
+                                                    placeholder="Atelier familial spécialisé dans la poterie émaillée…"
+                                                    className={INPUT}
                                                 />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex h-full flex-col justify-center rounded-lg border border-dashed border-ink/5 bg-cream/20 p-8 text-center">
-                                            <UserPlus className="mx-auto mb-4 h-12 w-12 text-ink/20" />
-                                            <p className="h-editorial text-xl text-ink">
-                                                Standard Buyer Profile
-                                            </p>
-                                            <p className="mt-2 text-xs leading-relaxed text-ink-soft">
-                                                Buyers can browse the
-                                                marketplace, manage their cart,
-                                                and track orders instantly. No
-                                                store details required.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="mt-12 flex items-center justify-between border-t border-ink/5 pt-8">
-                                <div className="max-w-[200px] text-[10px] leading-tight text-ink-soft">
-                                    A set-password link will be generated for
-                                    this account — you'll be able to copy and
-                                    send it yourself.
-                                </div>
-                                <button
-                                    onClick={submitUserStep}
-                                    disabled={
-                                        isSubmittingUser ||
-                                        !userForm.data.email
-                                    }
-                                    className="group flex items-center gap-3 bg-ink px-8 py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
-                                >
-                                    {isSubmittingUser
-                                        ? 'Synchronizing...'
-                                        : userForm.data.role === 'seller'
-                                          ? 'Proceed to Next Step'
-                                          : 'Create Account'}
-                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ── STEP 2: PRODUCT SELECTION ── */}
-                    {step === 'products' && (
-                        <div className="animate-in duration-500 fade-in slide-in-from-bottom-4">
-                            <div className="mb-10 flex items-end justify-between">
-                                <div>
-                                    <h2 className="font-sans text-xs font-bold tracking-widest text-ink-soft uppercase">
-                                        Initial Catalog
-                                    </h2>
-                                    <p className="h-editorial mt-1 text-2xl text-ink">
-                                        Showcase the Artisan's{' '}
-                                        <span className="italic">Work</span>
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={addProductField}
-                                    className="flex items-center gap-2 border border-ink/10 bg-white px-4 py-2 text-[10px] font-bold tracking-widest text-ink uppercase transition-colors hover:bg-ink hover:text-cream"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    Add Another Product
-                                </button>
-                            </div>
-
-                            <div className="space-y-8">
-                                {products.map((p, index) => (
-                                    <div
-                                        key={index}
-                                        className="relative border border-ink/10 bg-cream/5 p-6 md:p-8"
-                                    >
-                                        <button
-                                            onClick={() =>
-                                                removeProductField(index)
-                                            }
-                                            disabled={products.length === 1}
-                                            className="absolute top-4 right-4 p-2 text-ink-soft hover:text-terracotta disabled:opacity-0"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-
-                                        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
-                                            {/* Media Upload */}
-                                            <div className="md:col-span-4">
-                                                <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                    Product Visuals
-                                                </label>
-                                                <div className="group relative flex aspect-square flex-col items-center justify-center border border-ink/10 bg-white transition-colors hover:border-terracotta">
-                                                    {p.media.length > 0 ? (
-                                                        <div className="grid h-full w-full grid-cols-2 gap-1 p-1">
-                                                            {p.media.map(
-                                                                (f, mi) => (
-                                                                    <div
-                                                                        key={mi}
-                                                                        className="h-full w-full overflow-hidden bg-cream/50"
-                                                                    >
-                                                                        <img
-                                                                            src={URL.createObjectURL(
-                                                                                f,
-                                                                            )}
-                                                                            className="h-full w-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                ),
-                                                            )}
-                                                            <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-ink/60 opacity-0 transition-opacity group-hover:opacity-100">
-                                                                <Upload className="h-6 w-6 text-cream" />
-                                                                <input
-                                                                    type="file"
-                                                                    multiple
-                                                                    className="hidden"
-                                                                    onChange={(
-                                                                        e,
-                                                                    ) => {
-                                                                        if (
-                                                                            e
-                                                                                .target
-                                                                                .files
-                                                                        ) {
-                                                                            updateProduct(
-                                                                                index,
-                                                                                'media',
-                                                                                [
-                                                                                    ...p.media,
-                                                                                    ...Array.from(
-                                                                                        e
-                                                                                            .target
-                                                                                            .files,
-                                                                                    ),
-                                                                                ],
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
-                                                        </div>
-                                                    ) : (
-                                                        <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center">
-                                                            <Upload className="mb-2 h-6 w-6 text-ink/20" />
-                                                            <span className="text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                                Upload Images
-                                                            </span>
-                                                            <input
-                                                                type="file"
-                                                                multiple
-                                                                className="hidden"
-                                                                onChange={(
-                                                                    e,
-                                                                ) => {
-                                                                    if (
-                                                                        e.target
-                                                                            .files
-                                                                    ) {
-                                                                        updateProduct(
-                                                                            index,
-                                                                            'media',
-                                                                            Array.from(
-                                                                                e
-                                                                                    .target
-                                                                                    .files,
-                                                                            ),
-                                                                        );
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </label>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Details */}
-                                            <div className="space-y-4 md:col-span-8">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="col-span-2">
-                                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                            Product Name
-                                                        </label>
-                                                        <input
-                                                            value={p.name}
-                                                            onChange={(e) =>
-                                                                updateProduct(
-                                                                    index,
-                                                                    'name',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="w-full border border-ink/10 bg-white px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                            Base Price (DH)
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={p.base_price}
-                                                            onChange={(e) =>
-                                                                updateProduct(
-                                                                    index,
-                                                                    'base_price',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="w-full border border-ink/10 bg-white px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                            Stock Level
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            value={p.stock}
-                                                            onChange={(e) =>
-                                                                updateProduct(
-                                                                    index,
-                                                                    'stock',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="w-full border border-ink/10 bg-white px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                            Description
-                                                        </label>
-                                                        <textarea
-                                                            rows={2}
-                                                            value={
-                                                                p.description
-                                                            }
-                                                            onChange={(e) =>
-                                                                updateProduct(
-                                                                    index,
-                                                                    'description',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            className="w-full border border-ink/10 bg-white px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            </Field>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
 
-                            <div className="mt-12 flex items-center justify-between border-t border-ink/5 pt-8">
-                                <button
-                                    onClick={() => setStep('success')}
-                                    className="text-xs font-bold tracking-widest text-ink-soft uppercase hover:text-ink"
-                                >
-                                    Skip for now
-                                </button>
-                                <button
-                                    onClick={submitProducts}
-                                    disabled={
-                                        isSubmittingProducts ||
-                                        products.some((p) => !p.name)
-                                    }
-                                    className="group flex items-center gap-3 bg-ink px-8 py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
-                                >
-                                    {isSubmittingProducts
-                                        ? 'Publishing Catalog...'
-                                        : 'Complete Onboarding'}
-                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                                    {/* ── Visual identity ──────────────── */}
+                                    <div className="mt-8 border-t border-border pt-6">
+                                        <h3 className="text-sm font-semibold text-ink">
+                                            Identité visuelle
+                                        </h3>
+                                        <p className="mt-1 text-xs text-ink-soft">
+                                            Optionnel — peut être ajouté plus
+                                            tard. La bannière habille l’en-tête
+                                            de la boutique, la photo sert
+                                            d’avatar.
+                                        </p>
 
-                    {/* ── STEP 3: SUCCESS ── */}
-                    {step === 'success' && (
-                        <div className="animate-in py-12 text-center duration-700 fade-in zoom-in">
-                            <CheckCircle2 className="mx-auto mb-8 h-20 w-20 text-terracotta" />
-                            <h2 className="h-editorial text-4xl text-ink">
-                                Account Successfully{' '}
-                                <span className="italic">Created</span>
-                            </h2>
-                            <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-ink-soft">
-                                The account is active. Share the link below so
-                                they can set their own password.
-                            </p>
-
-                            {inviteUrl && (
-                                <div className="mx-auto mt-8 flex max-w-xl items-center gap-2 border border-ink/10 bg-cream/30 p-2 pl-4">
-                                    <input
-                                        readOnly
-                                        value={inviteUrl}
-                                        onFocus={(e) => e.target.select()}
-                                        className="flex-1 truncate bg-transparent text-sm text-ink focus:outline-none"
-                                    />
-                                    <button
-                                        onClick={copyInviteLink}
-                                        className="flex shrink-0 items-center gap-2 bg-ink px-4 py-3 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
-                                    >
-                                        <Copy className="h-3.5 w-3.5" />
-                                        Copy
-                                    </button>
-                                </div>
+                                        <div className="mt-4 space-y-5">
+                                            <SingleImageInput
+                                                label="Bannière"
+                                                aspect="wide"
+                                                value={data.banner}
+                                                onChange={(file) =>
+                                                    setData('banner', file)
+                                                }
+                                                error={errors.banner}
+                                            />
+                                            <SingleImageInput
+                                                label="Photo de la boutique"
+                                                aspect="square"
+                                                value={data.logo}
+                                                onChange={(file) =>
+                                                    setData('logo', file)
+                                                }
+                                                error={errors.logo}
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
                             )}
 
-                            <div className="mt-12 flex justify-center gap-4">
-                                <button
-                                    onClick={() =>
-                                        (window.location.href =
-                                            route('admin.users.index'))
-                                    }
-                                    className="bg-ink px-8 py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
-                                >
-                                    View Users Directory
-                                </button>
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="border border-ink/10 px-8 py-4 text-xs font-bold tracking-widest text-ink uppercase transition-colors hover:bg-ink/5"
-                                >
-                                    Add Another Artisan
-                                </button>
-                            </div>
+                            {/* Step 4 — review */}
+                            {current === 'review' && (
+                                <section>
+                                    <h2 className="text-lg font-semibold text-ink">
+                                        Vérification
+                                    </h2>
+                                    <p className="mt-1 text-sm text-ink-soft">
+                                        Relisez avant de créer le compte.
+                                    </p>
+
+                                    <div className="mt-6 space-y-6">
+                                        <div className="bg-muted/40/60 rounded-xl border border-border p-5">
+                                            <h3 className="mb-2 text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                                Compte
+                                            </h3>
+                                            <dl className="divide-y divide-border">
+                                                <Summary
+                                                    label="Rôle"
+                                                    value={roleLabel}
+                                                />
+                                                <Summary
+                                                    label="Prénom"
+                                                    value={data.first_name}
+                                                />
+                                                <Summary
+                                                    label="Nom"
+                                                    value={data.last_name}
+                                                />
+                                                <Summary
+                                                    label="Email"
+                                                    value={data.email}
+                                                />
+                                                <Summary
+                                                    label="Téléphone"
+                                                    value={data.phone_number}
+                                                />
+                                            </dl>
+                                        </div>
+
+                                        {isSeller && (
+                                            <div className="bg-muted/40/60 rounded-xl border border-border p-5">
+                                                <h3 className="mb-2 text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                                    Boutique
+                                                </h3>
+                                                <dl className="divide-y divide-border">
+                                                    <Summary
+                                                        label="Nom"
+                                                        value={data.store_name}
+                                                    />
+                                                    <Summary
+                                                        label="Type de vendeur"
+                                                        value={storeTypeLabel}
+                                                    />
+                                                    <Summary
+                                                        label="Ville"
+                                                        value={cityName}
+                                                    />
+                                                    <Summary
+                                                        label="Type de produits"
+                                                        value={categoryName}
+                                                    />
+                                                    <Summary
+                                                        label="Description"
+                                                        value={data.description}
+                                                    />
+                                                </dl>
+
+                                                {(bannerPreview ||
+                                                    logoPreview) && (
+                                                    <div className="mt-4 flex gap-3 border-t border-border pt-4">
+                                                        {bannerPreview && (
+                                                            <img
+                                                                src={
+                                                                    bannerPreview
+                                                                }
+                                                                alt="Bannière"
+                                                                className="h-16 flex-1 rounded-lg object-cover"
+                                                            />
+                                                        )}
+                                                        {logoPreview && (
+                                                            <img
+                                                                src={
+                                                                    logoPreview
+                                                                }
+                                                                alt="Photo"
+                                                                className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {Object.keys(errors).length > 0 && (
+                                            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                Certaines informations sont
+                                                invalides. Revenez à l’étape
+                                                concernée pour les corriger.
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            )}
                         </div>
-                    )}
+
+                        {/* ── Footer nav ──────────────────────── */}
+                        <div className="bg-muted/40/60 flex items-center justify-between gap-4 border-t border-border px-6 py-4 md:px-8">
+                            <button
+                                type="button"
+                                onClick={() => go(-1)}
+                                disabled={currentIndex === 0 || processing}
+                                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition hover:text-ink disabled:invisible"
+                            >
+                                <ArrowLeft className="h-4 w-4" /> Précédent
+                            </button>
+
+                            <span className="text-xs text-ink-soft/70">
+                                Étape {currentIndex + 1} sur {steps.length}
+                            </span>
+
+                            {current === 'review' ? (
+                                <button
+                                    type="button"
+                                    onClick={submit}
+                                    disabled={processing}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90 disabled:opacity-60"
+                                >
+                                    {processing && (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    )}
+                                    {processing
+                                        ? 'Création…'
+                                        : 'Créer le compte'}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => go(1)}
+                                    disabled={!canContinue}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Continuer
+                                    <ArrowRight className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

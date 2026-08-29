@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\EnsureStoreIsSetup;
-use App\Http\Middleware\EnsureTermsAccepted;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RoleMiddleware;
@@ -23,7 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'store.setup' => EnsureStoreIsSetup::class,
-            'terms.accepted' => EnsureTermsAccepted::class,
         ]);
 
         $middleware->web(append: [

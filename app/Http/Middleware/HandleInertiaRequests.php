@@ -77,27 +77,27 @@ class HandleInertiaRequests extends Middleware
             return ['items' => [], 'count' => 0, 'subtotal' => 0];
         }
 
-        // $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-        // $cart->load(['items.product.store']);
+        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
+        $cart->load(['items.product.store']);
 
-        // $items = $cart->items->map(function ($item) {
-        //     $unit = (float) ($item->product?->sale_price ?: $item->product?->base_price ?: 0);
-        //     $qty = (int) $item->quantity;
+        $items = $cart->items->map(function ($item) {
+            $unit = (float) ($item->product?->sale_price ?: $item->product?->base_price ?: 0);
+            $qty = (int) $item->quantity;
 
-        //     return [
-        //         'id' => $item->id,
-        //         'name' => $item->product?->name ?? 'Produit',
-        //         'seller' => $item->product?->store?->store_name ?? '',
-        //         'qty' => $qty,
-        //         'price' => $unit,
-        //         'line_total' => $unit * $qty,
-        //     ];
-        // })->values()->all();
+            return [
+                'id' => $item->id,
+                'name' => $item->product?->name ?? 'Produit',
+                'seller' => $item->product?->store?->store_name ?? '',
+                'qty' => $qty,
+                'price' => $unit,
+                'line_total' => $unit * $qty,
+            ];
+        })->values()->all();
 
         return [
-            // 'items' => $items,
-            // 'count' => collect($items)->sum('qty'),
-            // 'subtotal' => collect($items)->sum('line_total'),
+            'items' => $items,
+            'count' => collect($items)->sum('qty'),
+            'subtotal' => collect($items)->sum('line_total'),
         ];
     }
 }

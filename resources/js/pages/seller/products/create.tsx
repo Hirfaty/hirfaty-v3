@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { RichEditor } from '@/components/rich-editor';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -27,8 +27,9 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import SellerLayout from '@/layouts/seller/layout';
+import { validateMediaFile } from '@/lib/media-limits';
 import { cn } from '@/lib/utils';
 import type { Category } from '@/types';
 
@@ -76,11 +77,7 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
                 e.name = 'Nom requis';
             }
 
-            // Simple check for empty description, considering it might contain HTML tags
-            const plainDescription = data.description
-                .replace(/<[^>]*>/g, '')
-                .trim();
-            if (!plainDescription) {
+            if (!data.description.trim()) {
                 e.description = 'Description requise';
             }
 
@@ -133,39 +130,41 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
     };
     const back = () => setStep((s) => Math.max(1, s - 1));
 
-    const handleImages = (files: FileList | null) => {
+    const handleImages = async (files: FileList | null) => {
         if (!files) {
             return;
         }
 
-        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-        const validFiles: File[] = [];
-        const tooLargeFiles: string[] = [];
+        const picked = Array.from(files).slice(0, 5 - images.length);
+        const results = await Promise.all(
+            picked.map(async (file) => ({
+                file,
+                rejection: await validateMediaFile(file),
+            })),
+        );
 
-        Array.from(files).forEach((f) => {
-            if (f.size > MAX_SIZE) {
-                tooLargeFiles.push(f.name);
-            } else {
-                validFiles.push(f);
-            }
-        });
+        const rejectionMessages = results
+            .filter((r) => r.rejection)
+            .map((r) => r.rejection!);
 
-        if (tooLargeFiles.length > 0) {
-            toast.error('Images trop volumineuses', {
-                description: `Certaines images dépassent 5Mo : ${tooLargeFiles.join(', ')}`,
-            });
-        }
+        setStepErrors((e) => ({
+            ...e,
+            images: rejectionMessages.join(' '),
+        }));
 
-        if (validFiles.length === 0) return;
-
-        const newOnes: MediaItem[] = validFiles
-            .slice(0, 5 - images.length)
-            .map((f) => ({
+        const newOnes: MediaItem[] = results
+            .filter((r) => !r.rejection)
+            .map(({ file: f }) => ({
                 id: crypto.randomUUID(),
                 name: f.name,
                 url: URL.createObjectURL(f),
                 file: f,
             }));
+
+        if (newOnes.length === 0) {
+            return;
+        }
+
         setImages((prev) => {
             const updated = [...prev, ...newOnes];
             setData('media', [
@@ -175,7 +174,6 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
 
             return updated;
         });
-        setStepErrors((e) => ({ ...e, images: '' }));
     };
 
     const removeImage = (id: string) =>
@@ -189,18 +187,17 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
             return updated;
         });
 
-    const handleVideo = (files: FileList | null) => {
+    const handleVideo = async (files: FileList | null) => {
         if (!files || !files[0]) {
             return;
         }
 
-        const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
         const selected = files[0];
+        const rejection = await validateMediaFile(selected);
 
-        if (selected.size > MAX_VIDEO_SIZE) {
-            toast.error('Vidéo trop volumineuse', {
-                description: 'La vidéo ne doit pas dépasser 50Mo.',
-            });
+        setStepErrors((e) => ({ ...e, video: rejection ?? '' }));
+
+        if (rejection) {
             return;
         }
 
@@ -341,61 +338,64 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
             <main className="min-h-[400px] border border-border bg-card/50 p-6 md:p-10">
                 {step === 1 && (
                     <section className="animate-in space-y-8 duration-500 fade-in slide-in-from-bottom-4">
-                        <div className="flex flex-col space-y-6">
-                            <div className="space-y-2">
-                                <Label
-                                    htmlFor="name"
-                                    className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
-                                >
-                                    Nom du produit
-                                </Label>
-                                <Input
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) =>
-                                        setData('name', e.target.value)
-                                    }
-                                    placeholder="Ex. Tajine émaillé de Safi"
-                                    className="h-12 border-border/60 bg-background/50 focus-visible:ring-primary/20"
-                                />
-                                {(stepErrors.name || serverErrors.name) && (
-                                    <p className="text-xs font-medium text-destructive">
-                                        {stepErrors.name || serverErrors.name}
-                                    </p>
-                                )}
-                            </div>
+                        <div className="grid gap-8 md:grid-cols-2">
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label
+                                        htmlFor="name"
+                                        className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+                                    >
+                                        Nom du produit
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={data.name}
+                                        onChange={(e) =>
+                                            setData('name', e.target.value)
+                                        }
+                                        placeholder="Ex. Tajine émaillé de Safi"
+                                        className="h-12 border-border/60 bg-background/50 focus-visible:ring-primary/20"
+                                    />
+                                    {(stepErrors.name || serverErrors.name) && (
+                                        <p className="text-xs font-medium text-destructive">
+                                            {stepErrors.name ||
+                                                serverErrors.name}
+                                        </p>
+                                    )}
+                                </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                                    Catégorie
-                                </Label>
-                                <Select
-                                    value={data.category_id}
-                                    onValueChange={(value) =>
-                                        setData('category_id', value)
-                                    }
-                                >
-                                    <SelectTrigger className="h-12 border-border/60 bg-background/50 focus:ring-primary/20">
-                                        <SelectValue placeholder="Choisir une catégorie" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((c) => (
-                                            <SelectItem
-                                                key={c.id}
-                                                value={String(c.id)}
-                                            >
-                                                {c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {(stepErrors.category_id ||
-                                    serverErrors.category_id) && (
-                                    <p className="text-xs font-medium text-destructive">
-                                        {stepErrors.category_id ||
-                                            serverErrors.category_id}
-                                    </p>
-                                )}
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                                        Catégorie
+                                    </Label>
+                                    <Select
+                                        value={data.category_id}
+                                        onValueChange={(value) =>
+                                            setData('category_id', value)
+                                        }
+                                    >
+                                        <SelectTrigger className="h-12 border-border/60 bg-background/50 focus:ring-primary/20">
+                                            <SelectValue placeholder="Choisir une catégorie" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map((c) => (
+                                                <SelectItem
+                                                    key={c.id}
+                                                    value={String(c.id)}
+                                                >
+                                                    {c.translated_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {(stepErrors.category_id ||
+                                        serverErrors.category_id) && (
+                                        <p className="text-xs font-medium text-destructive">
+                                            {stepErrors.category_id ||
+                                                serverErrors.category_id}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -405,11 +405,15 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
                                 >
                                     Histoire & Description
                                 </Label>
-                                <RichEditor
+                                <Textarea
+                                    id="desc"
+                                    rows={8}
                                     value={data.description}
-                                    onChange={(html) =>
-                                        setData('description', html)
+                                    onChange={(e) =>
+                                        setData('description', e.target.value)
                                     }
+                                    placeholder="Racontez l'histoire derrière cette pièce, les matériaux utilisés, les dimensions..."
+                                    className="resize-none border-border/60 bg-background/50 focus-visible:ring-primary/20"
                                 />
                                 {(stepErrors.description ||
                                     serverErrors.description) && (
@@ -433,7 +437,8 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
                                         Téléversez jusqu'à 5 photos haute
-                                        résolution (max 5Mo par image).
+                                        résolution. 5 Mo max par image
+                                        (4096x4096px).
                                     </p>
                                 </div>
                                 <span className="text-xs font-medium text-muted-foreground tabular-nums">
@@ -546,6 +551,11 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
                                         }
                                     />
                                 </label>
+                            )}
+                            {stepErrors.video && (
+                                <p className="mt-4 text-xs font-medium text-destructive">
+                                    {stepErrors.video}
+                                </p>
                             )}
                         </div>
                     </section>
@@ -770,23 +780,15 @@ function SellerProductNew({ categories }: { categories: Category[] }) {
                                                 (c) =>
                                                     String(c.id) ===
                                                     data.category_id,
-                                            )?.name || '—'}
+                                            )?.translated_name || '—'}
                                         </dd>
                                     </div>
                                     <div className="flex flex-col gap-1">
                                         <dt className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                                             Histoire
                                         </dt>
-                                        <dd className="prose prose-sm max-w-none leading-relaxed text-muted-foreground dark:prose-invert">
-                                            {data.description ? (
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: data.description,
-                                                    }}
-                                                />
-                                            ) : (
-                                                '—'
-                                            )}
+                                        <dd className="leading-relaxed whitespace-pre-line text-muted-foreground">
+                                            {data.description || '—'}
                                         </dd>
                                     </div>
                                 </dl>

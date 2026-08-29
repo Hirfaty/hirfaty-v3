@@ -19,7 +19,6 @@ use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Override;
-use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
@@ -30,8 +29,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $avatar
  * @property string|null $bio
  * @property int $is_banned
- * @property bool $terms_accepted
- * @property CarbonImmutable|null $terms_accepted_at
  * @property string $email
  * @property CarbonImmutable|null $email_verified_at
  * @property string $password
@@ -70,12 +67,15 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['email', 'name', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
+// `email_verified_at` is fillable so admin-created users can be pre-verified.
+// Safe because no public endpoint mass-assigns raw request input into User —
+// registration (Actions\Fortify\CreateNewUser) whitelists fields explicitly.
+#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements AuthMustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasRoles;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -88,8 +88,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
-            'terms_accepted' => 'boolean',
-            'terms_accepted_at' => 'datetime',
         ];
     }
 
@@ -99,9 +97,20 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
+    /**
+     * True for both buyer kinds — use this for "can shop at all" checks.
+     */
     public function isBuyer(): bool
     {
-        return $this->role === 'buyer';
+        return in_array($this->role, ['buyer', 'professional_buyer'], true);
+    }
+
+    /**
+     * Buys in bulk and is billed from the professional price list.
+     */
+    public function isProfessionalBuyer(): bool
+    {
+        return $this->role === 'professional_buyer';
     }
 
     public function isSeller(): bool
@@ -132,6 +141,16 @@ class User extends Authenticatable
     public function store()
     {
         return $this->hasOne(Store::class);
+    }
+
+    /**
+     * A seller's products, reached through their store. Lets the admin list
+     * query a per-user product count with a single withCount('products')
+     * instead of a subquery or an N+1 loop.
+     */
+    public function products()
+    {
+        return $this->hasManyThrough(Product::class, Store::class);
     }
 
     public function orders()

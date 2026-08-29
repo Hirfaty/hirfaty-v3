@@ -10,69 +10,101 @@ use Inertia\Inertia;
 
 class CategoryController extends Controller
 {
-    public function index() {
+    public function index()
+    {
         $categories = Category::withCount(['products', 'stores'])
-                      ->with('parent')
-                      ->latest()
-                      ->get();
+            ->with('parent')
+            ->latest()
+            ->get();
 
         return Inertia::render('admin/categories/index', [
             'categories' => $categories,
-            'parents'    => Category::whereNull('parent_id')->get(),
+            'parents' => Category::whereNull('parent_id')->get(),
+            'locales' => Category::LOCALES,
         ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name'      => ['required', 'string', 'max:255', 'unique:categories,name'],
-            'parent_id' => ['nullable', 'exists:categories,id'],
-            'icon'      => ['nullable', 'string', 'max:50'],
-        ]);
+        $data = $request->validate($this->rules());
 
         Category::create([
-            'name'      => $data['name'],
-            'slug'      => Str::slug($data['name']),
+            'name' => $data['name'],
+            // The slug is the URL key, so it is derived once from the French
+            // name and never changes per locale.
+            'slug' => $this->uniqueSlug($data['name'][Category::FALLBACK_LOCALE]),
             'parent_id' => $data['parent_id'] ?? null,
-            'icon'      => $data['icon'] ?? null,
+            'icon' => $data['icon'] ?? null,
         ]);
 
-        return back()->with('success', "Category \"{$data['name']}\" created.");
+        return back()->with('success', "Category \"{$data['name'][Category::FALLBACK_LOCALE]}\" created.");
     }
 
     public function update(Request $request, Category $category)
     {
-        $data = $request->validate([
-            'name'      => ['required', 'string', 'max:255', "unique:categories,name,{$category->id}"],
-            'parent_id' => ['nullable', 'exists:categories,id'],
-            'icon'      => ['nullable', 'string', 'max:50'],
-        ]);
+        $data = $request->validate($this->rules());
 
         // Prevent setting itself as parent
         if (isset($data['parent_id']) && $data['parent_id'] == $category->id) {
             return back()->withErrors(['parent_id' => 'A category cannot be its own parent.']);
         }
 
+        // Slug intentionally left untouched — changing it would break existing
+        // links to the category.
         $category->update([
-            'name'      => $data['name'],
-            'slug'      => Str::slug($data['name']),
+            'name' => $data['name'],
             'parent_id' => $data['parent_id'] ?? null,
-            'icon'      => $data['icon'] ?? null,
+            'icon' => $data['icon'] ?? null,
         ]);
 
-        return back()->with('success', "Category updated.");
+        return back()->with('success', 'Category updated.');
+    }
+
+    /**
+     * Every locale is required so the storefront never falls back to another
+     * language mid-page.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function rules(): array
+    {
+        $rules = [
+            'parent_id' => ['nullable', 'exists:categories,id'],
+            'icon' => ['nullable', 'string', 'max:50'],
+            'name' => ['required', 'array'],
+        ];
+
+        foreach (Category::LOCALES as $locale) {
+            $rules["name.{$locale}"] = ['required', 'string', 'max:255'];
+        }
+
+        return $rules;
+    }
+
+    private function uniqueSlug(string $from): string
+    {
+        $base = Str::slug($from);
+        $slug = $base;
+        $i = 2;
+
+        while (Category::where('slug', $slug)->exists()) {
+            $slug = "{$base}-{$i}";
+            $i++;
+        }
+
+        return $slug;
     }
 
     public function destroy(Category $category)
     {
         if ($category->products()->count() > 0 || $category->stores()->count() > 0) {
             return back()->withErrors([
-                'delete' => "Cannot delete \"{$category->name}\" — it has products or stores attached.",
+                'delete' => "Cannot delete \"{$category->nameFor()}\" — it has products or stores attached.",
             ]);
         }
 
         $category->delete();
 
-        return back()->with('success', "Category deleted.");
+        return back()->with('success', 'Category deleted.');
     }
 }

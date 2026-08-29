@@ -5,16 +5,16 @@ import {
     ChevronRight,
     EllipsisVertical,
     Eye,
-    PackagePlus,
-    Plus,
+    Loader2,
+    Package,
     Search,
     Trash2,
     UserCheck,
-    // Users, UserPlus — re-add these when the stat cards below are restored.
+    Users,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
-import CopyInviteLinkButton from '@/components/admin/copy-invite-link-button';
+import { useEffect, useRef, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -22,14 +22,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -40,209 +32,210 @@ import {
 } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
-import type { PaginatedData, User } from '@/types';
+import type { PaginatedData, StoreType, User, UserRole } from '@/types';
 
-/** The list eager-loads each seller's store so we can link to "add a product for them". */
-type UserRow = User & { store?: { id: number } | null };
+type UserRow = User & {
+    products_count: number;
+    store: {
+        store_name: string;
+        type: StoreType;
+        city: { name: string } | null;
+    } | null;
+};
 
 interface Props {
     users: PaginatedData<UserRow>;
     totalUsers: number;
-    newUsersThisWeek: number;
+    roleCounts: Record<'buyer' | 'professional_buyer' | 'seller', number>;
     filters: {
         search?: string;
         role?: string;
-        banned?: string;
     };
 }
 
-const roleLabels: Record<string, string> = {
+const ROLE_LABEL: Record<UserRole, string> = {
     buyer: 'Acheteur',
+    professional_buyer: 'Acheteur pro',
     seller: 'Vendeur',
     super_admin: 'Administrateur',
 };
 
-/** Soft-tinted role pills, in the brand palette rather than default shadcn variants. */
-const rolePill: Record<string, string> = {
-    buyer: 'bg-ink/[0.06] text-ink',
-    seller: 'bg-terracotta/10 text-terracotta-deep',
-    super_admin: 'bg-olive/10 text-olive',
+const ROLE_BADGE: Record<UserRole, string> = {
+    buyer: 'bg-slate-100 text-slate-700',
+    professional_buyer: 'bg-violet-100 text-violet-700',
+    seller: 'bg-emerald-100 text-emerald-700',
+    super_admin: 'bg-amber-100 text-amber-700',
 };
 
-const roleDot: Record<string, string> = {
-    buyer: 'bg-ink/50',
-    seller: 'bg-terracotta',
-    super_admin: 'bg-olive',
+const STORE_TYPE_LABEL: Record<StoreType, string> = {
+    artist: 'Artiste',
+    company: 'Entreprise',
+    cooperative: 'Coopérative',
 };
-
-const roleAvatar: Record<string, string> = {
-    buyer: 'bg-ink text-cream',
-    seller: 'bg-terracotta text-cream',
-    super_admin: 'bg-olive text-cream',
-};
-
-function initials(user: User) {
-    return `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase();
-}
 
 export default function UsersIndex({
     users,
-    // totalUsers, newUsersThisWeek — still sent by the controller, surfaced
-    // again when the stat cards below are restored.
+    totalUsers,
+    roleCounts,
     filters,
 }: Props) {
-    const [search, setSearch] = useState(filters.search || '');
+    const [search, setSearch] = useState(filters.search ?? '');
+    const [searching, setSearching] = useState(false);
+    // Skip the debounced effect's own request on first render — otherwise
+    // landing on the page with ?search= already set fires a redundant fetch.
+    const isFirstRender = useRef(true);
 
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+
+            return;
+        }
+
+        setSearching(true);
+        // Short debounce: instant enough to feel live without a request per
+        // keystroke while the admin is still typing a name.
         const timer = setTimeout(() => {
-            if (search !== (filters.search || '')) {
-                router.get(
-                    route('admin.users.index'),
-                    { ...filters, search, page: 1 },
-                    { preserveState: true, replace: true },
-                );
-            }
-        }, 500);
+            router.get(
+                route('admin.users.index'),
+                { ...filters, search: search || undefined, page: 1 },
+                {
+                    preserveState: true,
+                    replace: true,
+                    onFinish: () => setSearching(false),
+                },
+            );
+        }, 300);
 
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
 
-    const handleRoleChange = (role: string) => {
+    const setRole = (role: string | null) => {
         router.get(
             route('admin.users.index'),
-            { ...filters, role: role === 'all' ? undefined : role, page: 1 },
+            { ...filters, role: role ?? undefined, page: 1 },
             { preserveState: true },
         );
     };
 
-    const handleBan = (user: UserRow) => {
+    const handleBan = (user: User) => {
         if (
             confirm(
-                `Voulez-vous ${user.is_banned ? 'débloquer' : 'bloquer'} cet utilisateur ?`,
+                `Voulez-vous ${user.is_banned ? 'débloquer' : 'bloquer'} ${user.first_name} ${user.last_name} ?`,
             )
         ) {
-            router.patch(route('admin.users.ban', user.id));
+            router.patch(route('admin.users.ban', user.id), undefined, {
+                preserveScroll: true,
+            });
         }
     };
 
-    const handleDelete = (user: UserRow) => {
+    const handleDelete = (user: User) => {
         if (
             confirm(
-                'Voulez-vous vraiment supprimer cet utilisateur ? Cette action est irréversible.',
+                `Supprimer définitivement ${user.first_name} ${user.last_name} ? Cette action est irréversible.`,
             )
         ) {
-            router.delete(route('admin.users.destroy', user.id));
+            router.delete(route('admin.users.destroy', user.id), {
+                preserveScroll: true,
+            });
         }
     };
+
+    const activeRole = filters.role ?? null;
+    const tabs: { value: string | null; label: string; count: number }[] = [
+        { value: null, label: 'Tous', count: totalUsers },
+        { value: 'seller', label: 'Vendeurs', count: roleCounts.seller },
+        { value: 'buyer', label: 'Acheteurs', count: roleCounts.buyer },
+        {
+            value: 'professional_buyer',
+            label: 'Acheteurs pro',
+            count: roleCounts.professional_buyer,
+        },
+    ];
 
     return (
-        <div className="flex flex-col gap-8 p-6 md:p-8">
-            <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="h-editorial text-4xl text-ink md:text-5xl">
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
                         Utilisateurs
                     </h1>
-                    <p className="mt-2 text-ink-soft">
-                        Gérez les membres de la plateforme et leurs accès.
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {totalUsers} utilisateur
+                        {totalUsers > 1 ? 's' : ''} au total.
                     </p>
                 </div>
-                <Button asChild className="w-fit gap-2">
-                    <Link href={route('admin.users.create')}>
-                        <Plus className="h-4 w-4" />
-                        Nouvel utilisateur
-                    </Link>
-                </Button>
+                <Link
+                    href={route('admin.users.create')}
+                    className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
+                >
+                    <Users className="h-4 w-4" />
+                    Nouvel utilisateur
+                </Link>
             </header>
 
-            {/*
-                Stat cards (Total utilisateurs / Nouveaux 7j) temporarily hidden.
-                Re-add the `Users` and `UserPlus` icon imports and the
-                `totalUsers` / `newUsersThisWeek` props above to restore.
+            {/* ── Role filter tabs ─────────────────────────── */}
+            <div className="flex flex-wrap gap-2">
+                {tabs.map((tab) => {
+                    const active = activeRole === tab.value;
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="flex items-center gap-4 rounded-lg border border-ink/10 bg-paper p-6">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cream">
-                            <Users className="h-5 w-5 text-ink" />
-                        </div>
-                        <div>
-                            <p className="eyebrow text-xs">Total Utilisateurs</p>
-                            <p className="font-display text-2xl text-ink">{totalUsers}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4 rounded-lg border border-ink/10 bg-paper p-6">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-terracotta/10">
-                            <UserPlus className="h-5 w-5 text-terracotta" />
-                        </div>
-                        <div>
-                            <p className="eyebrow text-xs">Nouveaux (7j)</p>
-                            <p className="font-display text-2xl text-ink">{newUsersThisWeek}</p>
-                        </div>
-                    </div>
-                </div>
-            */}
-
-            {/* Everything — toolbar, table, pagination — lives in one card. */}
-            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-[0_1px_2px_rgba(28,33,40,0.04)]">
-                {/* Toolbar */}
-                <div className="flex flex-col gap-4 border-b border-ink/10 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-baseline gap-2.5">
-                        <h2 className="font-display text-lg text-ink">
-                            Tous les utilisateurs
-                        </h2>
-                        <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 text-xs font-medium text-ink-soft">
-                            {users.total}
-                        </span>
-                    </div>
-
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <div className="relative sm:w-72">
-                            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
-                            <Input
-                                placeholder="Rechercher un utilisateur..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="h-9 border-ink/10 bg-cream/40 pl-9"
-                            />
-                        </div>
-
-                        <Select
-                            value={filters.role || 'all'}
-                            onValueChange={handleRoleChange}
+                    return (
+                        <button
+                            key={tab.label}
+                            type="button"
+                            onClick={() => setRole(tab.value)}
+                            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition ${
+                                active
+                                    ? 'border-ink bg-ink text-white'
+                                    : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
+                            }`}
                         >
-                            <SelectTrigger className="h-9 w-full border-ink/10 bg-cream/40 sm:w-[160px]">
-                                <SelectValue placeholder="Rôle" />
-                            </SelectTrigger>
-                            <SelectContent className="border-ink/10">
-                                <SelectItem value="all">
-                                    Tous les rôles
-                                </SelectItem>
-                                <SelectItem value="buyer">Acheteurs</SelectItem>
-                                <SelectItem value="seller">Vendeurs</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+                            {tab.label}
+                            <span
+                                className={`rounded-full px-1.5 py-0.5 text-xs ${
+                                    active
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-muted text-ink-soft'
+                                }`}
+                            >
+                                {tab.count}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
 
-                {/* Table */}
+            {/* ── Search ───────────────────────────────────── */}
+            <div className="relative max-w-md">
+                {searching ? (
+                    <Loader2 className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin text-ink-soft/50" />
+                ) : (
+                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                )}
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Nom, téléphone, ou boutique…"
+                    className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                />
+            </div>
+
+            {/* ── Table ────────────────────────────────────── */}
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-ink/10 bg-cream/40 hover:bg-cream/40">
-                            <TableHead className="h-11 px-5 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                Utilisateur
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead>Nom</TableHead>
+                            <TableHead>Email &amp; téléphone</TableHead>
+                            <TableHead>Rôle</TableHead>
+                            <TableHead>Boutique</TableHead>
+                            <TableHead>Inscription</TableHead>
+                            <TableHead className="text-right">
+                                Produits
                             </TableHead>
-                            <TableHead className="h-11 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                Téléphone
-                            </TableHead>
-                            <TableHead className="h-11 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                Rôle
-                            </TableHead>
-                            <TableHead className="h-11 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                Statut
-                            </TableHead>
-                            <TableHead className="h-11 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                Inscription
-                            </TableHead>
-                            <TableHead className="h-11 px-5 text-right text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
+                            <TableHead className="text-right">
                                 Actions
                             </TableHead>
                         </TableRow>
@@ -251,159 +244,146 @@ export default function UsersIndex({
                         {users.data.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={6}
+                                    colSpan={7}
                                     className="h-32 text-center text-ink-soft"
                                 >
-                                    Aucun utilisateur trouvé.
+                                    Aucun utilisateur ne correspond à cette
+                                    recherche.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             users.data.map((user) => (
                                 <TableRow
                                     key={user.id}
-                                    className="border-ink/[0.07] transition-colors duration-200 hover:bg-cream/50"
+                                    className={
+                                        user.is_banned ? 'bg-red-50/40' : ''
+                                    }
                                 >
-                                    {/* Identity — avatar + name + email stacked */}
-                                    <TableCell className="px-5 py-3.5">
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-xs ${roleAvatar[user.role as string] || 'bg-ink-soft text-cream'}`}
-                                            >
-                                                {initials(user)}
-                                            </div>
-                                            <div className="flex min-w-0 flex-col">
-                                                <span className="truncate font-medium text-ink">
-                                                    {user.first_name}{' '}
-                                                    {user.last_name}
-                                                </span>
-                                                <span className="truncate text-xs text-ink-soft">
-                                                    {user.email}
-                                                </span>
-                                            </div>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-ink">
+                                                {user.first_name}{' '}
+                                                {user.last_name}
+                                            </span>
+                                            {user.is_banned ? (
+                                                <Badge
+                                                    variant="destructive"
+                                                    className="text-[10px]"
+                                                >
+                                                    Bloqué
+                                                </Badge>
+                                            ) : (
+                                                <></>
+                                            )}
                                         </div>
                                     </TableCell>
-
-                                    <TableCell className="text-sm text-ink-soft">
-                                        {user.phone_number || '—'}
+                                    <TableCell>
+                                        <div className="flex flex-col text-sm">
+                                            <span className="text-ink">
+                                                {user.email}
+                                            </span>
+                                            <span className="text-ink-soft">
+                                                {user.phone_number || '—'}
+                                            </span>
+                                        </div>
                                     </TableCell>
-
                                     <TableCell>
                                         <span
-                                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${rolePill[user.role as string] || 'bg-ink/[0.06] text-ink-soft'}`}
+                                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[user.role]}`}
                                         >
-                                            <span
-                                                className={`h-1.5 w-1.5 rounded-full ${roleDot[user.role as string] || 'bg-ink/40'}`}
-                                            />
-                                            {roleLabels[user.role as string] ||
-                                                (user.role as string)}
+                                            {ROLE_LABEL[user.role]}
                                         </span>
                                     </TableCell>
-
                                     <TableCell>
-                                        {user.is_banned ? (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                                                Bloqué
+                                        {user.store ? (
+                                            <div className="flex flex-col text-sm">
+                                                <span className="font-medium text-ink">
+                                                    {user.store.store_name}
+                                                </span>
+                                                <span className="text-xs text-ink-soft">
+                                                    {
+                                                        STORE_TYPE_LABEL[
+                                                            user.store.type
+                                                        ]
+                                                    }
+                                                    {user.store.city &&
+                                                        ` · ${user.store.city.name}`}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-ink-soft/60">
+                                                —
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-ink-soft">
+                                        {formatDate(user.created_at)}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {user.role === 'seller' ? (
+                                            <span className="inline-flex items-center gap-1.5 text-sm text-ink">
+                                                <Package className="h-3.5 w-3.5 text-ink-soft" />
+                                                {user.products_count}
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-olive/10 px-2.5 py-1 text-xs font-medium text-olive">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-olive" />
-                                                Actif
+                                            <span className="text-sm text-ink-soft/60">
+                                                —
                                             </span>
                                         )}
                                     </TableCell>
-
-                                    <TableCell className="text-sm text-ink-soft">
-                                        {formatDate(
-                                            user.created_at || user.updated_at,
-                                        )}
-                                    </TableCell>
-
-                                    <TableCell className="px-5 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            {user.role === 'seller' &&
-                                                user.store && (
-                                                    <Button
-                                                        asChild
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                        title="Ajouter un produit pour ce vendeur"
-                                                    >
-                                                        <Link
-                                                            href={route(
-                                                                'admin.products.create',
-                                                                {
-                                                                    store_id:
-                                                                        user
-                                                                            .store
-                                                                            .id,
-                                                                },
-                                                            )}
-                                                        >
-                                                            <PackagePlus className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                            <CopyInviteLinkButton
-                                                userId={user.id}
-                                            />
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <EllipsisVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent
-                                                    align="end"
-                                                    className="border-ink/10"
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
                                                 >
-                                                    <DropdownMenuItem asChild>
-                                                        <Link
-                                                            href={route(
-                                                                'admin.users.show',
-                                                                user.id,
-                                                            )}
-                                                            className="flex items-center gap-2"
-                                                        >
-                                                            <Eye className="h-4 w-4" />{' '}
-                                                            Voir le profil
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleBan(user)
-                                                        }
-                                                        className="flex items-center gap-2 text-terracotta"
-                                                    >
-                                                        {user.is_banned ? (
-                                                            <>
-                                                                <UserCheck className="h-4 w-4" />{' '}
-                                                                Débloquer
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Ban className="h-4 w-4" />{' '}
-                                                                Bloquer
-                                                            </>
+                                                    <EllipsisVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={route(
+                                                            'admin.users.show',
+                                                            user.id,
                                                         )}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleDelete(user)
-                                                        }
-                                                        className="flex items-center gap-2 text-destructive"
+                                                        className="flex items-center gap-2"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />{' '}
-                                                        Supprimer
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
+                                                        <Eye className="h-4 w-4" />
+                                                        Voir le profil
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleBan(user)
+                                                    }
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    {user.is_banned ? (
+                                                        <>
+                                                            <UserCheck className="h-4 w-4" />
+                                                            Débloquer
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Ban className="h-4 w-4" />
+                                                            Bloquer
+                                                        </>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleDelete(user)
+                                                    }
+                                                    className="flex items-center gap-2 text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    Supprimer
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -411,25 +391,17 @@ export default function UsersIndex({
                     </TableBody>
                 </Table>
 
-                {/* Pagination footer */}
+                {/* ── Pagination ───────────────────────────── */}
                 {users.last_page > 1 && (
-                    <div className="flex flex-col gap-3 border-t border-ink/10 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center justify-between border-t border-border px-5 py-3.5">
                         <p className="text-xs text-ink-soft">
-                            Affichage de{' '}
-                            <span className="font-medium text-ink">
-                                {users.from}–{users.to}
-                            </span>{' '}
-                            sur{' '}
-                            <span className="font-medium text-ink">
-                                {users.total}
-                            </span>{' '}
-                            utilisateurs
+                            {users.from}–{users.to} sur {users.total}
                         </p>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8 border-ink/10"
+                                className="h-8 w-8"
                                 disabled={!users.prev_page_url}
                                 onClick={() =>
                                     router.get(users.prev_page_url!, filters, {
@@ -448,7 +420,7 @@ export default function UsersIndex({
                                             link.active ? 'default' : 'ghost'
                                         }
                                         size="sm"
-                                        className={`h-8 w-8 ${link.active ? 'bg-ink text-cream' : 'text-ink-soft'}`}
+                                        className="h-8 w-8"
                                         onClick={() =>
                                             link.url &&
                                             router.get(link.url, filters, {
@@ -462,7 +434,7 @@ export default function UsersIndex({
                             <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8 border-ink/10"
+                                className="h-8 w-8"
                                 disabled={!users.next_page_url}
                                 onClick={() =>
                                     router.get(users.next_page_url!, filters, {

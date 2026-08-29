@@ -1,0 +1,13 @@
+# Paired with hirfaty-cert-renew.timer. Install both:
+#   sudo cp docker/systemd/hirfaty-cert-renew.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hirfaty-cert-renew.timer
+
+[Unit]
+Description=Renew Hirfaty TLS certificate
+After=hirfaty.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/hirfaty
+ExecStart=/usr/bin/make prod-cert-renew

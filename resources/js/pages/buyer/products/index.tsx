@@ -2,7 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Search, SlidersHorizontal, Star } from 'lucide-react';
 import { useState } from 'react';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/site/SiteHeader';
+import SiteHeader from '@/components/SiteHeader';
 import type { PaginatedData, Category } from '@/types';
 import { Product } from '@/types';
 import type { BuyerProductResource } from '@/types/extended_models';
@@ -142,7 +142,7 @@ const Index = ({
                                         : 'text-ink/75 hover:text-ink'
                                 }`}
                             >
-                                {c.name}
+                                {c.translated_name}
                             </button>
                         ))}
                     </div>
@@ -306,7 +306,7 @@ const Index = ({
                                         <span
                                             className={`h-3.5 w-3.5 border border-ink/40 ${catId === String(c.id) ? 'border-ink bg-ink' : 'bg-transparent'}`}
                                         />
-                                        {c.name}
+                                        {c.translated_name}
                                     </button>
                                 </li>
                             ))}
@@ -415,7 +415,14 @@ const Index = ({
                                             <p className="text-[11px] tracking-[0.18em] text-ink-soft uppercase">
                                                 {p.store.store_name}
                                                 {p.category && (
-                                                    <> · {p.category.name}</>
+                                                    <>
+                                                        {' '}
+                                                        ·{' '}
+                                                        {
+                                                            p.category
+                                                                .translated_name
+                                                        }
+                                                    </>
                                                 )}
                                             </p>
                                             <div className="mt-1 flex items-start justify-between gap-3">

@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\DeliveryOption;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DeliveryOptionSeeder extends Seeder
@@ -16,10 +15,10 @@ class DeliveryOptionSeeder extends Seeder
         DeliveryOption::firstOrCreate(
             ['slug' => 'amana'],
             [
-                'name'        => 'Amana',
+                'name' => 'Amana',
                 'description' => 'Livraison partout au Maroc via Amana.',
-                'price'       => 20.00,
-                'is_active'   => true,
+                'price' => 20.00,
+                'is_active' => true,
             ]
         );
     }

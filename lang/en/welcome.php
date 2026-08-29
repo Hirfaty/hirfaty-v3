@@ -2,12 +2,9 @@
 
 return [
     'hero_eyebrow' => 'Souk · Hirfaty Edition',
-    // The hero headline is rendered as four lines; `hero_emphasis` is the
-    // italic terracotta line, so keep the evocative phrase in that slot.
-    'hero_title' => 'Moroccan craft,',
-    'hero_subtitle' => 'straight from',
-    'hero_emphasis' => 'the hands',
-    'hero_cta' => 'that make it.',
+    'hero_title' => 'Moroccan craft',
+    'hero_subtitle' => 'direct from the hands',
+    'hero_emphasis' => 'that create it.',
     'market_button' => 'Explore the market',
     'artisan_cta' => "You're an artisan? Open a shop →",
 
@@ -50,20 +47,4 @@ return [
     'categories.accessories.ar' => 'إكسسوارات',
     'categories.home.ar' => 'بيت ومطبخ',
     'categories.terroir.ar' => 'منتجات الأرض',
-
-    'stamp' => 'HANDMADE · MOROCCAN CRAFT ·',
-
-    'crafts.pottery' => 'Pottery',
-    'crafts.zellige' => 'Zellige',
-    'crafts.weaving' => 'Weaving',
-    'crafts.leather' => 'Leatherwork',
-    'crafts.jewelry' => 'Jewellery',
-    'crafts.spices' => 'Spices',
-    'crafts.wood' => 'Wood carving',
-    'crafts.embroidery' => 'Embroidery',
-
-    'alt.hero_main' => 'Artisan hands shaping pottery',
-    'alt.hero_zellige' => 'Moroccan zellige pattern',
-    'alt.hero_textile' => 'Hand-woven textile',
-    'alt.hero_spice' => 'Moroccan spices',
 ];

@@ -3,9 +3,10 @@ import { ArrowLeft, ShieldCheck, Truck, AlertCircle } from 'lucide-react';
 import React from 'react';
 import { toast } from 'sonner';
 import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/site/SiteHeader';
+import SiteHeader from '@/components/SiteHeader';
 import { Separator } from '@/components/ui/separator';
-import { Cart, CartItem, City, Product, Store } from '@/types';
+import type { Cart, CartItem, City, Product } from '@/types';
+import { Store } from '@/types';
 
 const PLATFORM_FEE_PERCENT = 0.2;
 const AMANA_FEE = 20;

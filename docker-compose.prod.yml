@@ -1,0 +1,89 @@
+# Production stack for the Debian VPS: app (nginx + php-fpm), a queue worker,
+# the Laravel scheduler, Postgres, SeaweedFS, and a certbot helper for TLS.
+# Run via the `prod-*` Makefile targets, e.g. `make prod-up`.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: hirfaty-app:latest
+    container_name: hirfaty-app
+    env_file: .env
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot
+    depends_on:
+      db:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    restart: unless-stopped
+
+  queue:
+    image: hirfaty-app:latest
+    container_name: hirfaty-queue
+    env_file: .env
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: ['php', 'artisan', 'queue:work', '--tries=3', '--max-time=3600', '--sleep=3']
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    image: hirfaty-app:latest
+    container_name: hirfaty-scheduler
+    env_file: .env
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: ['sh', '-c', 'while true; do php artisan schedule:run --no-interaction; sleep 60; done']
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: hirfaty-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-hirfaty}
+      POSTGRES_USER: ${DB_USERNAME:-hirfaty}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hirfaty}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-hirfaty} -d ${DB_DATABASE:-hirfaty}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  seaweedfs:
+    image: chrislusf/seaweedfs
+    container_name: hirfaty-seaweedfs
+    command: >
+      server -s3 -s3.config=/etc/seaweedfs/s3-config.json -dir=/data
+      -master.volumeSizeLimitMB=1024
+    volumes:
+      - seaweedfs_data:/data
+      - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
+    restart: unless-stopped
+
+  # One-off container for issuing/renewing the TLS cert. Not started by
+  # `up`; invoked directly by `make prod-cert-init` / `make prod-cert-renew`.
+  certbot:
+    image: certbot/certbot
+    container_name: hirfaty-certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    profiles: ['tools']
+
+volumes:
+  db_data:
+  seaweedfs_data:
+  certbot_certs:
+  certbot_webroot:

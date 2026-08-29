@@ -1,10 +1,10 @@
 <?php
 
+use App\Models\Category;
 use App\Models\City;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\User;
-use App\Models\Category;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -12,10 +12,10 @@ uses(RefreshDatabase::class);
 
 test('super admin can view an order', function () {
     $admin = User::factory()->create(['role' => 'super_admin']);
-    
+
     $city = City::create(['name' => 'Casablanca']);
     $category = Category::create(['name' => 'Poterie', 'slug' => 'poterie']);
-    
+
     $seller = User::factory()->create(['role' => 'seller']);
     $store = Store::create([
         'user_id' => $seller->id,
@@ -24,9 +24,9 @@ test('super admin can view an order', function () {
         'store_name' => 'Test Store',
         'slug' => 'test-store',
     ]);
-    
+
     $buyer = User::factory()->create(['role' => 'buyer']);
-    
+
     $order = Order::create([
         'buyer_id' => $buyer->id,
         'store_id' => $store->id,
@@ -47,7 +47,7 @@ test('super admin can view an order', function () {
         ->component('admin/orders/show')
         ->has('order', fn (Assert $page) => $page
             ->where('id', $order->id)
-            ->where('total_amount', "100.00")
+            ->where('total_amount', '100.00')
             ->has('buyer')
             ->has('store')
             ->has('items')
@@ -59,10 +59,10 @@ test('super admin can view an order', function () {
 
 test('sellers cannot view orders via admin route', function () {
     $seller = User::factory()->create(['role' => 'seller']);
-    
+
     $city = City::create(['name' => 'Casablanca']);
     $category = Category::create(['name' => 'Poterie', 'slug' => 'poterie']);
-    
+
     $otherSeller = User::factory()->create(['role' => 'seller']);
     $store = Store::create([
         'user_id' => $otherSeller->id,
@@ -71,9 +71,9 @@ test('sellers cannot view orders via admin route', function () {
         'store_name' => 'Test Store',
         'slug' => 'test-store',
     ]);
-    
+
     $buyer = User::factory()->create(['role' => 'buyer']);
-    
+
     $order = Order::create([
         'buyer_id' => $buyer->id,
         'store_id' => $store->id,

@@ -43,11 +43,9 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 
 ## Internationalization (ar / fr / en, with RTL)
 
-- Translations live in `lang/<locale>/{common,seller,buyer,admin,header,welcome}.php` as **flat** PHP arrays whose keys may contain dots (`'how_it_works.step1.title' => '…'`) — **not** nested arrays. `useTranslation()` (`resources/js/hooks/use-translation.tsx`) splits a key once on the first dot to pick the file, then does a flat lookup on the remainder. A genuinely nested array will therefore never resolve, and `t()` silently renders the raw key onto the page.
-- `HandleInertiaRequests::getTranslations()` has a hardcoded file list; a new `lang/<locale>/<file>.php` is ignored until it is added there, and a missing file is skipped silently.
-- All three locales must define the same keys. `tests/Feature/TranslationCompletenessTest.php` enforces that (plus no empty values, and that the middleware's file list matches) — run it after touching `lang/`.
-- Locale is stored in the session (`SetLocale` middleware) and switched via `POST /locale/{locale}`. Arabic sets `direction: 'rtl'`; account for RTL when doing layout work.
-- RTL plumbing: the Blade shell sets `<html lang>`/`<html dir>` on full page loads only. A locale switch is an Inertia visit that redirects back to the *same* URL, which Inertia treats as a history replace — so it skips its `navigate` event. `resources/js/lib/locale-direction.ts` listens on both `navigate` and `success` to keep those attributes in sync. Arabic also relies on the `[lang='ar']` / `[dir='rtl']` overrides in `app.css`: Fraunces and Inter carry no Arabic glyphs, and Arabic must never be italicised.
+- Translations live in `lang/<locale>/{common,seller,buyer,header,welcome}.php` as **flat** PHP arrays whose keys may contain dots (`'how_it_works.step1.title' => '…'`) — **not** nested arrays. `useTranslation()` (`resources/js/hooks/use-translation.tsx`) splits a key once on the first dot to pick the file, then does a flat lookup on the remainder. A genuinely nested array will therefore never resolve, and `t()` silently renders the raw key onto the page.
+- `HandleInertiaRequests::getTranslations()` has a hardcoded file list; a new `lang/<locale>/<file>.php` is ignored until it is added there, and a missing file is skipped silently. All three locales must define the same keys.
+- Locale is stored in the session (`SetLocale` middleware) and switched via `POST /locale/{locale}`. Arabic sets `direction: 'rtl'`; account for RTL when doing layout work. Arabic also relies on the `[lang='ar']` / `[dir='rtl']` overrides in `app.css`: Fraunces and Inter carry no Arabic glyphs, and Arabic must never be italicised.
 
 ## Cart & checkout
 
@@ -61,10 +59,9 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 
 ## Conventions to follow
 
-- **API responses:** shape data for the frontend with `App\Http\Resources\*` (`BuyerProductResource`, `BuyerCartResource`, etc.) rather than passing raw models into Inertia props.
+- **API responses:** shape data for the frontend with `App\Http\Resources\*` (`BuyerProductResource`, etc.) rather than passing raw models into Inertia props.
 - **Notifications & emails:** user-facing mail is queued `Notification` classes in `app/Notifications/`; Blade email templates live under `resources/views/emails/`. `routes/email-previews.php` exposes preview routes for them. Because mail is queued, the queue listener (part of `composer dev`) must run to actually send.
 - **Business logic** that spans models goes in `app/Services/` (`CheckoutService`, `ProductScoringService`), not controllers.
-- **UI primitives** are shadcn/ui in `resources/js/components/ui/`; compose these rather than adding new component libraries. The rich text editor is TipTap (`resources/js/components/rich-editor.tsx`).
+- **UI primitives** are shadcn/ui in `resources/js/components/ui/`; compose these rather than adding new component libraries.
 - React Compiler is enabled (`babel-plugin-react-compiler` in `vite.config.ts`) — avoid manual `useMemo`/`useCallback` micro-optimizations that fight it.
-- create a test for each feature we build
-- at the end of any changes, list at end all the files you changed or added and why with some highlights
+- any code in in controller should be organized inside services folder

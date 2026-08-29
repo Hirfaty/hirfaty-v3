@@ -89,7 +89,7 @@ export function SellerSidebar() {
                                                 }
                                             >
                                                 <Link
-                                                    className="rounded-none flex items-center gap-2"
+                                                    className="flex items-center gap-2 rounded-none"
                                                     href={item.url}
                                                 >
                                                     <item.icon className="h-4 w-4" />
@@ -128,7 +128,7 @@ export function SellerSidebar() {
                                                 }
                                             >
                                                 <Link
-                                                    className="rounded-none flex items-center gap-2"
+                                                    className="flex items-center gap-2 rounded-none"
                                                     href={item.url}
                                                 >
                                                     <item.icon className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function SellerSidebar() {
                                             >
                                                 <Link
                                                     href={item.url}
-                                                    className="rounded-none flex items-center gap-2"
+                                                    className="flex items-center gap-2 rounded-none"
                                                 >
                                                     <item.icon className="h-4 w-4" />
                                                     {!collapsed && (
@@ -208,7 +208,7 @@ export function SellerSidebar() {
                                             >
                                                 <Link
                                                     href={item.url}
-                                                    className="rounded-none flex items-center gap-2"
+                                                    className="flex items-center gap-2 rounded-none"
                                                 >
                                                     <item.icon className="h-4 w-4" />
                                                     {!collapsed && (

@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
-import SiteHeader from '@/components/site/SiteHeader';
+import SiteHeader from '@/components/SiteHeader';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

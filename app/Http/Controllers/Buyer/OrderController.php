@@ -36,7 +36,8 @@ class OrderController extends Controller
         ]);
     }
 
-    public function cancel(Request $request, Order $order) {
+    public function cancel(Request $request, Order $order)
+    {
         if ($order->buyer_id !== Auth::id()) {
             abort(403);
         }
@@ -54,7 +55,7 @@ class OrderController extends Controller
         try {
             $order->store->user->notify(new OrderCancelledByBuyer($order));
         } catch (\Exception $e) {
-            \Log::warning("Failed to notify seller of cancellation: " . $e->getMessage());
+            \Log::warning('Failed to notify seller of cancellation: '.$e->getMessage());
         }
 
         foreach ($order->items as $item) {

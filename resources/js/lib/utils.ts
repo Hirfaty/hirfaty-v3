@@ -11,17 +11,20 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
     return typeof url === 'string' ? url : url.url;
 }
 
-export function formatDate(date: string | Date | null | undefined, locale: string = 'fr-MA') {
+export function formatDate(
+    date: string | Date | null | undefined,
+    locale: string = 'fr-MA',
+) {
     if (!date) {
-return 'N/A';
-}
-    
+        return 'N/A';
+    }
+
     const d = typeof date === 'string' ? new Date(date) : date;
-    
+
     // Check if valid date
     if (isNaN(d.getTime())) {
-return 'N/A';
-}
+        return 'N/A';
+    }
 
     return new Intl.DateTimeFormat(locale, {
         day: 'numeric',

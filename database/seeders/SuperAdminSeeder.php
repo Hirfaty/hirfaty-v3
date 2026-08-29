@@ -13,6 +13,7 @@ class SuperAdminSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'admin@hirfaty.test'],
             [
+                // No `name` column — it was split into first_name/last_name.
                 'first_name' => 'Super',
                 'last_name' => 'Admin',
                 'phone_number' => '0600000000',

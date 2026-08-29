@@ -1,8 +1,7 @@
-import AdminLayout from '@/layouts/admin/layout';
-import { Category, PageProps } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Edit3, Plus, Trash2 } from 'lucide-react';
-import { ReactNode, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Bar,
     BarChart,
@@ -12,6 +11,8 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import AdminLayout from '@/layouts/admin/layout';
+import type { Category, CategoryLocale, PageProps } from '@/types';
 
 interface CategoryWithCounts extends Category {
     products_count: number;
@@ -19,18 +20,29 @@ interface CategoryWithCounts extends Category {
     parent?: Category | null;
 }
 
+/** Labels for the per-locale name inputs. */
+const LOCALE_LABELS: Record<CategoryLocale, string> = {
+    fr: 'Français',
+    ar: 'العربية',
+    en: 'English',
+};
+
+const EMPTY_NAME: Record<CategoryLocale, string> = { fr: '', ar: '', en: '' };
+
 const Index = ({
     categories,
     parents,
+    locales,
 }: PageProps & {
     categories: CategoryWithCounts[];
     parents: Category[];
+    locales: CategoryLocale[];
 }) => {
     const [editingId, setEditingId] = useState<number | null>(null);
 
     // ── Create form ───────────────────────────────────────────
     const createForm = useForm({
-        name: '',
+        name: { ...EMPTY_NAME },
         parent_id: '' as string | number,
         icon: '',
     });
@@ -43,7 +55,7 @@ const Index = ({
 
     // ── Edit form ─────────────────────────────────────────────
     const editForm = useForm({
-        name: '',
+        name: { ...EMPTY_NAME },
         parent_id: '' as string | number,
         icon: '',
     });
@@ -51,7 +63,9 @@ const Index = ({
     const startEdit = (cat: Category) => {
         setEditingId(cat.id);
         editForm.setData({
-            name: cat.name,
+            // Spread over the empty shape so a locale missing from older rows
+            // still renders a (blank) input instead of an uncontrolled one.
+            name: { ...EMPTY_NAME, ...cat.name },
             parent_id: cat.parent_id ?? '',
             icon: cat.icon ?? '',
         });
@@ -76,7 +90,7 @@ const Index = ({
             .sort((a, b) => (b.products_count ?? 0) - (a.products_count ?? 0))
             .slice(0, 10)
             .map((c) => ({
-                name: c.name,
+                name: c.translated_name,
                 count: c.products_count,
             }));
     }, [categories]);
@@ -86,12 +100,12 @@ const Index = ({
     const children_list = categories.filter((c) => c.parent_id);
 
     return (
-        <div className="min-h-full p-6 md:p-10">
+        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
             <Head title="Manage Categories" />
 
             <div className="mx-auto max-w-7xl">
                 <header className="mb-12">
-                    <p className="font-sans text-xs font-medium uppercase tracking-[0.2em] text-ink-soft">
+                    <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
                         Inventory Architecture
                     </p>
                     <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
@@ -102,7 +116,7 @@ const Index = ({
                 {/* ── Analytics Section ── */}
                 {chartData.length > 0 && (
                     <section className="mb-12 border border-ink/5 bg-white p-8 shadow-sm">
-                        <h2 className="font-sans text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                        <h2 className="font-sans text-xs font-semibold tracking-wider text-ink-soft uppercase">
                             Product Distribution
                         </h2>
                         <div className="mt-8 h-[300px] w-full">
@@ -160,16 +174,16 @@ const Index = ({
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-ink/5 bg-ink/[0.02]">
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Label
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Hierarchy
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Impact
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Actions
                                             </th>
                                         </tr>
@@ -189,20 +203,56 @@ const Index = ({
                                                         className="px-6 py-4"
                                                     >
                                                         <div className="flex flex-wrap items-center gap-4">
-                                                            <input
-                                                                value={
-                                                                    editForm
-                                                                        .data
-                                                                        .name
-                                                                }
-                                                                onChange={(e) =>
-                                                                    editForm.setData(
-                                                                        'name',
-                                                                        e.target.value,
-                                                                    )
-                                                                }
-                                                                className="flex-1 min-w-[200px] border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
-                                                            />
+                                                            {locales.map(
+                                                                (loc) => (
+                                                                    <div
+                                                                        key={
+                                                                            loc
+                                                                        }
+                                                                        className="min-w-[180px] flex-1"
+                                                                    >
+                                                                        <label className="mb-1 block text-[9px] font-bold tracking-widest text-ink/40 uppercase">
+                                                                            {
+                                                                                LOCALE_LABELS[
+                                                                                    loc
+                                                                                ]
+                                                                            }
+                                                                        </label>
+                                                                        <input
+                                                                            dir={
+                                                                                loc ===
+                                                                                'ar'
+                                                                                    ? 'rtl'
+                                                                                    : 'ltr'
+                                                                            }
+                                                                            value={
+                                                                                editForm
+                                                                                    .data
+                                                                                    .name[
+                                                                                    loc
+                                                                                ] ??
+                                                                                ''
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                editForm.setData(
+                                                                                    'name',
+                                                                                    {
+                                                                                        ...editForm
+                                                                                            .data
+                                                                                            .name,
+                                                                                        [loc]: e
+                                                                                            .target
+                                                                                            .value,
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                            className="w-full border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
+                                                                        />
+                                                                    </div>
+                                                                ),
+                                                            )}
                                                             <select
                                                                 value={
                                                                     editForm
@@ -212,7 +262,8 @@ const Index = ({
                                                                 onChange={(e) =>
                                                                     editForm.setData(
                                                                         'parent_id',
-                                                                        e.target.value,
+                                                                        e.target
+                                                                            .value,
                                                                     )
                                                                 }
                                                                 className="border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
@@ -237,7 +288,7 @@ const Index = ({
                                                                                 }
                                                                             >
                                                                                 {
-                                                                                    p.name
+                                                                                    p.translated_name
                                                                                 }
                                                                             </option>
                                                                         ),
@@ -286,10 +337,10 @@ const Index = ({
                                                                         className={`text-sm ${cat.parent_id ? 'text-ink/70' : 'font-medium text-ink'}`}
                                                                     >
                                                                         {
-                                                                            cat.name
+                                                                            cat.translated_name
                                                                         }
                                                                     </p>
-                                                                    <p className="text-[10px] text-ink-soft uppercase tracking-wider">
+                                                                    <p className="text-[10px] tracking-wider text-ink-soft uppercase">
                                                                         {
                                                                             cat.slug
                                                                         }
@@ -301,12 +352,13 @@ const Index = ({
                                                             {cat.parent ? (
                                                                 <span className="inline-flex items-center gap-1.5 bg-ink/[0.03] px-2 py-0.5 text-[10px] font-medium text-ink-soft">
                                                                     {
-                                                                        cat.parent
-                                                                            .name
+                                                                        cat
+                                                                            .parent
+                                                                            .translated_name
                                                                     }
                                                                 </span>
                                                             ) : (
-                                                                <span className="text-[10px] font-semibold text-terracotta uppercase tracking-widest">
+                                                                <span className="text-[10px] font-semibold tracking-widest text-terracotta uppercase">
                                                                     Root
                                                                 </span>
                                                             )}
@@ -351,7 +403,7 @@ const Index = ({
                                                                     onClick={() =>
                                                                         handleDelete(
                                                                             cat.id,
-                                                                            cat.name,
+                                                                            cat.translated_name,
                                                                         )
                                                                     }
                                                                     className="p-1.5 text-ink-soft hover:bg-terracotta hover:text-cream"
@@ -377,30 +429,54 @@ const Index = ({
                                 New <span className="italic">Category</span>
                             </h3>
                             <div className="space-y-6">
-                                <div>
-                                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-ink/40">
-                                        Nominal Label
+                                <div className="space-y-4">
+                                    <label className="block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
+                                        Nominal Label — all languages required
                                     </label>
-                                    <input
-                                        value={createForm.data.name}
-                                        onChange={(e) =>
-                                            createForm.setData(
-                                                'name',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. Handmade Carpets"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none placeholder:text-ink/20"
-                                    />
-                                    {createForm.errors.name && (
-                                        <p className="mt-2 text-[10px] text-terracotta uppercase tracking-wider">
-                                            {createForm.errors.name}
-                                        </p>
-                                    )}
+                                    {locales.map((loc) => (
+                                        <div key={loc}>
+                                            <span className="mb-1 block text-[9px] font-semibold tracking-widest text-ink/30 uppercase">
+                                                {LOCALE_LABELS[loc]}
+                                            </span>
+                                            <input
+                                                dir={
+                                                    loc === 'ar' ? 'rtl' : 'ltr'
+                                                }
+                                                value={
+                                                    createForm.data.name[loc] ??
+                                                    ''
+                                                }
+                                                onChange={(e) =>
+                                                    createForm.setData('name', {
+                                                        ...createForm.data.name,
+                                                        [loc]: e.target.value,
+                                                    })
+                                                }
+                                                placeholder={
+                                                    loc === 'ar'
+                                                        ? 'مثال: سجاد يدوي'
+                                                        : 'e.g. Handmade Carpets'
+                                                }
+                                                className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
+                                            />
+                                            {/* Laravel reports per-locale errors as name.fr, name.ar, ... */}
+                                            {createForm.errors[
+                                                `name.${loc}` as keyof typeof createForm.errors
+                                            ] && (
+                                                <p className="mt-1 text-[10px] tracking-wider text-terracotta uppercase">
+                                                    {
+                                                        createForm.errors[
+                                                            `name.${loc}` as keyof typeof createForm.errors
+                                                        ]
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                         Hierarchy Placement
                                     </label>
                                     <select
@@ -418,14 +494,14 @@ const Index = ({
                                         </option>
                                         {parents.map((p) => (
                                             <option key={p.id} value={p.id}>
-                                                {p.name}
+                                                {p.translated_name}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                         Visual Icon
                                     </label>
                                     <input
@@ -437,7 +513,7 @@ const Index = ({
                                             )
                                         }
                                         placeholder="🧶"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none placeholder:text-ink/20"
+                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
                                     />
                                 </div>
 
@@ -445,9 +521,13 @@ const Index = ({
                                     onClick={handleCreate}
                                     disabled={
                                         createForm.processing ||
-                                        !createForm.data.name
+                                        // Every locale must be filled before the
+                                        // server will accept the category.
+                                        !locales.every((loc) =>
+                                            createForm.data.name[loc]?.trim(),
+                                        )
                                     }
-                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold uppercase tracking-widest text-cream transition-colors hover:bg-terracotta disabled:opacity-50"
+                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
                                 >
                                     <Plus className="h-4 w-4" />
                                     {createForm.processing

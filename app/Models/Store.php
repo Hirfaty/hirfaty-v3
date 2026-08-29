@@ -10,9 +10,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $user_id
  * @property int|null $category_id
  * @property int|null $city_id
+ * @property string $type One of TYPES: artist, company or cooperative.
  * @property string $store_name
  * @property string $slug
  * @property string|null $description
+ * @property string|null $logo Public URL of the shop's square photo.
+ * @property string|null $banner Public URL of the shop's cover image.
  * @property string $status
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -31,6 +34,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereSlug($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereStatus($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereStoreName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Store whereUserId($value)
  *
@@ -38,8 +42,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Store extends Model
 {
+    /** How the seller behind the shop is legally organised. */
+    public const TYPES = ['artist', 'company', 'cooperative'];
+
     protected $fillable = [
-        'user_id', 'category_id', 'city_id', 'store_name', 'slug',
+        'user_id', 'category_id', 'city_id', 'type', 'store_name', 'slug',
         'description', 'logo', 'banner', 'status',
         'submitted_at', 'approved_at', 'approved_by', 'rejection_reason',
     ];
@@ -48,6 +55,21 @@ class Store extends Model
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
     ];
+
+    public function isArtist(): bool
+    {
+        return $this->type === 'artist';
+    }
+
+    public function isCompany(): bool
+    {
+        return $this->type === 'company';
+    }
+
+    public function isCooperative(): bool
+    {
+        return $this->type === 'cooperative';
+    }
 
     // Relationships
     public function user()

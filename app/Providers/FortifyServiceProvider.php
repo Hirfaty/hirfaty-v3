@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
-use App\Http\Responses\LoginResponse;
+use App\Http\Responses\LoginResponse as CustomLoginResponse;
 use App\Http\Responses\VerifyEmailResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -16,7 +16,6 @@ use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as ContractsLoginResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
-use App\Http\Responses\LoginResponse as CustomLoginResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {

@@ -38,16 +38,16 @@ class ProductApproved extends Notification implements ShouldQueue
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
-            'fr' => "Votre produit est en ligne — Hirfaty",
-            'ar' => "منتجك أصبح متاحاً الآن — حرفتي",
-            'en' => "Your product is now live — Hirfaty",
+            'fr' => 'Votre produit est en ligne — Hirfaty',
+            'ar' => 'منتجك أصبح متاحاً الآن — حرفتي',
+            'en' => 'Your product is now live — Hirfaty',
         ];
 
         return (new MailMessage)
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.seller.product.approved.{$locale}", [
                 'product' => $this->product,
-                'user'    => $notifiable,
+                'user' => $notifiable,
             ]);
 
     }

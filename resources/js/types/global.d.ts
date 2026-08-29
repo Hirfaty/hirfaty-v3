@@ -1,4 +1,8 @@
-import type { Config, RouteParam, RouteParamsWithQueryOverload } from 'ziggy-js';
+import type {
+    Config,
+    RouteParam,
+    RouteParamsWithQueryOverload,
+} from 'ziggy-js';
 import type { Auth } from '@/types/auth';
 
 declare module '@inertiajs/core' {

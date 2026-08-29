@@ -5,8 +5,6 @@ use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\CheckoutController;
 use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
-use App\Http\Controllers\Buyer\WishlistController;
-use App\Http\Controllers\LegalController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
@@ -21,18 +19,8 @@ Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
-Route::middleware(['auth', 'verified', 'terms.accepted', 'store.setup'])->group(function () {
+Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
-
-// Legal — public content pages
-Route::get('/terms', [LegalController::class, 'terms'])->name('terms.show');
-Route::get('/privacy', [LegalController::class, 'privacy'])->name('privacy.show');
-
-// Terms acceptance gate — anyone EnsureTermsAccepted redirects here
-Route::middleware('auth')->group(function () {
-    Route::get('/accept-terms', [LegalController::class, 'acceptShow'])->name('terms.accept');
-    Route::post('/accept-terms', [LegalController::class, 'acceptStore'])->name('terms.accept.store');
 });
 
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
@@ -48,7 +36,7 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
 })->middleware(['auth', 'signed'])->name('verification.verify');
 
 // Super Admin
-Route::middleware(['auth', 'verified', 'terms.accepted', 'role:super_admin'])
+Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -73,12 +61,13 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:super_admin'])
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
-        Route::post('/users/{user}/invite-link', [Admin\UserController::class, 'inviteLink'])->name('users.invite-link');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
-        // `create` must stay above `{product}`, otherwise "create" is matched as a product id.
+        // `create` must stay above `{product}`, otherwise "create" is matched as an id.
         Route::get('/products/create', [Admin\ProductController::class, 'create'])->name('products.create');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
+        Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');
+        Route::post('/products/{product}', [Admin\ProductController::class, 'update'])->name('products.update');
         Route::get('/products/{product}', [Admin\ProductController::class, 'show'])->name('products.show');
         Route::patch('/products/{product}/approve', [Admin\ProductController::class, 'approve'])->name('products.approve');
         Route::patch('/products/{product}/reject', [Admin\ProductController::class, 'reject'])->name('products.reject');
@@ -118,7 +107,7 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:super_admin'])
     });
 
 // Seller
-Route::middleware(['auth', 'verified', 'terms.accepted', 'role:seller'])
+Route::middleware(['auth', 'verified', 'role:seller'])
     ->prefix('seller')
     ->name('seller.')
     ->group(function () {
@@ -127,7 +116,7 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:seller'])
         Route::post('/setup-store', [StoreSetupController::class, 'store']);
     });
 
-Route::middleware(['auth', 'verified', 'terms.accepted', 'role:seller', 'store.setup'])
+Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
     ->prefix('seller')
     ->name('seller.')
     ->group(function () {
@@ -138,7 +127,6 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:seller', 'store.s
 
         // Products
         Route::resource('products', ProductController::class);
-        Route::patch('products/{product}/submit', [ProductController::class, 'submitForReview'])->name('products.submit');
 
         // Orders
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
@@ -149,12 +137,13 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:seller', 'store.s
         Route::get('earnings', [EarningController::class, 'index'])->name('earnings.index');
     });
 
-Route::middleware(['auth', 'terms.accepted'])->group(function () {
+Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/wishlist', [BuyerProductController::class, 'toggleWishlist'])->name('products.wishlist');
 });
 
-// Buyer
-Route::middleware(['auth', 'verified', 'terms.accepted', 'role:buyer'])->group(function () {
+// Buyer — both normal and professional buyers shop through these routes;
+// only the prices they are shown differ.
+Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(function () {
     Route::get('/cart', [CartController::class, 'show'])->name('cart.show');
     Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
     Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
@@ -163,8 +152,6 @@ Route::middleware(['auth', 'verified', 'terms.accepted', 'role:buyer'])->group(f
 
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-
-    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
 
     Route::get('/orders', [BuyerOrderController::class, 'index'])->name('buyer.account.orders.index');
     Route::get('/orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');

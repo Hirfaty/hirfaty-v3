@@ -1,24 +1,36 @@
 import type { User } from './auth';
 
+/** How the seller behind a shop is legally organised. */
+export type StoreType = 'artist' | 'company' | 'cooperative';
+
 export interface Store {
     id: number;
     user_id: number;
     category_id: number | null;
     city_id: number | null;
+    type: StoreType;
     city: City;
     user: User;
     store_name: string;
     slug: string;
     description: string | null;
+    /** Public URL of the shop's square photo. */
     logo: string | null;
+    /** Public URL of the shop's cover image. */
     banner: string | null;
     created_at: string;
     updated_at: string;
 }
 
+/** Locales a category name is stored in. */
+export type CategoryLocale = 'fr' | 'ar' | 'en';
+
 export interface Category {
     id: number;
-    name: string;
+    /** Per-locale names, e.g. { fr: 'Poterie', ar: '...', en: 'Pottery' }. */
+    name: Record<CategoryLocale, string>;
+    /** Name resolved for the active locale; appended server-side. */
+    translated_name: string;
     slug: string;
     parent_id: number | null;
     icon: string | null;
@@ -52,16 +64,55 @@ export type ProductStatus =
     | 'rejected'
     | 'pending_review';
 
+/** Which audience a product is sold to. */
+export type ProductVisibility = 'individual' | 'professional' | 'both';
+
+/** How a variant option is captured in the admin UI. */
+export type VariantOptionType = 'color' | 'size' | 'other';
+
+/** One option on a variant, e.g. { name: 'Couleur', value: 'Rouge' }. */
+export interface ProductVariantOption {
+    id: number;
+    product_variant_id: number;
+    type: VariantOptionType;
+    name: string;
+    value: string;
+    /** #rrggbb swatch; only set when type is 'color'. */
+    color_hex: string | null;
+}
+
+export interface ProductVariant {
+    id: number;
+    product_id: number;
+    sku: string | null;
+    stock: number;
+    /** Null means "inherit the product's retail price". */
+    price_override: string | null;
+    /** Null means "inherit the product's professional price". */
+    professional_price_override: string | null;
+    position: number;
+    is_active: boolean;
+    options: ProductVariantOption[];
+    media?: Media[];
+}
+
 export interface Product {
     id: number;
     store_id: number;
     category_id: number | null;
     name: string;
     slug: string;
+    sku: string | null;
     description: string | null;
     base_price: string;
     sale_price: string | null;
+    /** Professional (bulk) price list; null when sold at retail only. */
+    professional_price: string | null;
+    professional_sale_price: string | null;
     stock: number;
+    min_order_qty_professional: number;
+    visibility: ProductVisibility;
+    has_variants: boolean;
     status: ProductStatus;
     average_rating: string;
     created_at: string;
@@ -73,6 +124,7 @@ export interface Product {
     images: Media[];
     videos: Media[];
     media?: Media[];
+    variants?: ProductVariant[];
     category: Category | null;
     delivery_options?: DeliveryOption[];
 }

@@ -30,22 +30,21 @@ class OrderConfirmed extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    /**
+     * Get the mail representation of the notification.
+     */
     public function toMail(object $notifiable): MailMessage
     {
-        $locale = $notifiable->locale ?? 'fr';
-
-        $subjects = [
-            'fr' => "Votre commande #{$this->order->id} est confirmée — Hirfaty",
-            'ar' => "تم تأكيد طلبك #{$this->order->id} — حرفتي",
-            'en' => "Your order #{$this->order->id} is confirmed — Hirfaty",
-        ];
-
         return (new MailMessage)
-            ->subject($subjects[$locale] ?? $subjects['fr'])
-            ->view("emails.buyer.order-status.confirmed.{$locale}", [
-                'order' => $this->order,
-                'user'  => $notifiable,
-            ]);
+            ->subject("Your order #{ $this->order->id} has been confirmed — Hirfaty")
+            ->greeting("Hello {$notifiable->first_name}!")
+            ->line("Great news! Your order #{$this->order->id} has been confirmed by the seller.")
+            ->line("**Store:** {$this->order->store->store_name}")
+            ->line("**Total:** {$this->order->total_amount} MAD")
+            ->line("**Shipping address:** {$this->order->shipping_address}")
+            ->line('The seller is now preparing your order. You will receive another email once it is shipped.')
+            ->action('View your order', url("/orders/{$this->order->id}"))
+            ->line('Thank you for shopping on Hirfaty!');
     }
 
     /**

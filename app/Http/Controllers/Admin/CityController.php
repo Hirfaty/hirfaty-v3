@@ -23,12 +23,12 @@ class CityController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'   => ['required', 'string', 'max:255', 'unique:cities,name'],
+            'name' => ['required', 'string', 'max:255', 'unique:cities,name'],
             'region' => ['nullable', 'string', 'max:255'],
         ]);
 
         City::create([
-            'name'   => $data['name'],
+            'name' => $data['name'],
             'region' => $data['region'] ?? null,
         ]);
 
@@ -38,16 +38,16 @@ class CityController extends Controller
     public function update(Request $request, City $city)
     {
         $data = $request->validate([
-            'name'   => ['required', 'string', 'max:255', "unique:cities,name,{$city->id}"],
+            'name' => ['required', 'string', 'max:255', "unique:cities,name,{$city->id}"],
             'region' => ['nullable', 'string', 'max:255'],
         ]);
 
         $city->update([
-            'name'   => $data['name'],
+            'name' => $data['name'],
             'region' => $data['region'] ?? null,
         ]);
 
-        return back()->with('success', "City records updated.");
+        return back()->with('success', 'City records updated.');
     }
 
     public function destroy(City $city)
@@ -60,6 +60,6 @@ class CityController extends Controller
 
         $city->delete();
 
-        return back()->with('success', "City deleted.");
+        return back()->with('success', 'City deleted.');
     }
 }

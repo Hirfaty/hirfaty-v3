@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Rules\ValidProductMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -59,19 +60,7 @@ class ProductController extends Controller
             'stock' => ['required', 'integer', 'min:0'],
             'category_id' => ['required', 'exists:categories,id'],
             'media' => ['nullable', 'array', 'max:5'],
-            'media.*' => [
-                'file',
-                'mimes:jpg,jpeg,png,webp,mp4,mov',
-                function ($attribute, $value, $fail) {
-                    $isVideo = str_starts_with($value->getMimeType(), 'video');
-                    $maxSize = $isVideo ? 51200 : 5120; // 50MB for video, 5MB for image
-                    if ($value->getSize() > $maxSize * 1024) {
-                        $fail($isVideo
-                            ? 'La vidéo ne doit pas dépasser 50 Mo.'
-                            : "L'image ne doit pas dépasser 5 Mo.");
-                    }
-                },
-            ],
+            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', new ValidProductMedia],
         ]);
 
         $user = $request->user();
@@ -154,19 +143,7 @@ class ProductController extends Controller
             'category_id' => ['required', 'exists:categories,id'],
             // delivery options removed — shipping via Amana
             'media' => ['nullable', 'array'],
-            'media.*' => [
-                'file',
-                'mimes:jpg,jpeg,png,webp,mp4,mov',
-                function ($attribute, $value, $fail) {
-                    $isVideo = str_starts_with($value->getMimeType(), 'video');
-                    $maxSize = $isVideo ? 51200 : 5120; // 50MB for video, 5MB for image
-                    if ($value->getSize() > $maxSize * 1024) {
-                        $fail($isVideo
-                            ? 'La vidéo ne doit pas dépasser 50 Mo.'
-                            : "L'image ne doit pas dépasser 5 Mo.");
-                    }
-                },
-            ],
+            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov', new ValidProductMedia],
             'deleted_media' => ['nullable', 'array'],
             'deleted_media.*' => ['integer'],
         ]);
@@ -180,7 +157,7 @@ class ProductController extends Controller
                 'stock' => $data['stock'],
                 'category_id' => $data['category_id'],
                 'slug' => Str::slug($data['name']).'-'.Str::random(5),
-                'status' => $product->isDraft() ? 'draft' : 'pending_review', // ← drafts stay drafts, otherwise resubmit for review
+                'status' => 'pending_review', // ← resubmit for review on edit
                 'rejection_reason' => null,             // ← clear old rejection
                 'reviewed_by' => null,
                 'reviewed_at' => null,
@@ -202,23 +179,6 @@ class ProductController extends Controller
 
         return redirect()->route('seller.products.index')
             ->with('success', 'Product resubmitted for review.');
-    }
-
-    /**
-     * Submit a draft product for admin review.
-     */
-    public function submitForReview(Product $product)
-    {
-        $this->authorizeProduct($product);
-
-        if (! $product->isDraft()) {
-            return back()->withErrors(['status' => 'Only draft products can be submitted for review.']);
-        }
-
-        $product->update(['status' => 'pending_review']);
-
-        return redirect()->route('seller.products.index')
-            ->with('success', 'Product submitted for review. We\'ll notify you once it\'s approved.');
     }
 
     /**

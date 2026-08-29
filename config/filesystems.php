@@ -60,6 +60,31 @@ return [
             'report' => false,
         ],
 
+        /*
+         * SeaweedFS exposes an S3-compatible gateway, so it reuses the s3
+         * driver. Two settings differ from AWS and matter:
+         *  - `endpoint` must point at the SeaweedFS S3 gateway (default :8333)
+         *  - path-style addressing is required; SeaweedFS does not serve
+         *    virtual-host style buckets (bucket.host/key)
+         *
+         * Switch over with FILESYSTEM_DISK=seaweedfs — no code changes needed,
+         * because uploads resolve the default disk at runtime.
+         */
+        'seaweedfs' => [
+            'driver' => 's3',
+            'key' => env('SEAWEEDFS_ACCESS_KEY_ID'),
+            'secret' => env('SEAWEEDFS_SECRET_ACCESS_KEY'),
+            'region' => env('SEAWEEDFS_REGION', 'us-east-1'),
+            'bucket' => env('SEAWEEDFS_BUCKET', 'hirfaty'),
+            // Public base URL used to build image links — typically a filer or
+            // CDN in front of SeaweedFS.
+            'url' => env('SEAWEEDFS_URL'),
+            'endpoint' => env('SEAWEEDFS_ENDPOINT', 'http://127.0.0.1:8333'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*
@@ -76,6 +101,5 @@ return [
     'links' => [
         public_path('storage') => storage_path('app/public'),
     ],
-
 
 ];

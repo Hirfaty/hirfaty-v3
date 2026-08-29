@@ -1,8 +1,7 @@
-import AdminLayout from '@/layouts/admin/layout';
-import { City, PageProps } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Edit3, MapPin, Plus, Trash2 } from 'lucide-react';
-import { ReactNode, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Bar,
     BarChart,
@@ -12,6 +11,8 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import AdminLayout from '@/layouts/admin/layout';
+import type { City, PageProps } from '@/types';
 
 interface CityWithCounts extends City {
     stores_count: number;
@@ -76,12 +77,12 @@ const Index = ({
     }, [cities]);
 
     return (
-        <div className="min-h-full p-6 md:p-10">
+        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
             <Head title="Manage Cities" />
 
             <div className="mx-auto max-w-7xl">
                 <header className="mb-12">
-                    <p className="font-sans text-xs font-medium uppercase tracking-[0.2em] text-ink-soft">
+                    <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
                         Geographic Infrastructure
                     </p>
                     <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
@@ -92,7 +93,7 @@ const Index = ({
                 {/* ── Analytics Section ── */}
                 {chartData.length > 0 && (
                     <section className="mb-12 border border-ink/5 bg-white p-8 shadow-sm">
-                        <h2 className="font-sans text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                        <h2 className="font-sans text-xs font-semibold tracking-wider text-ink-soft uppercase">
                             Store Distribution by City
                         </h2>
                         <div className="mt-8 h-[300px] w-full">
@@ -150,16 +151,16 @@ const Index = ({
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-ink/5 bg-ink/[0.02]">
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 City Label
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Regional Context
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Activity
                                             </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                                 Actions
                                             </th>
                                         </tr>
@@ -185,10 +186,11 @@ const Index = ({
                                                                 onChange={(e) =>
                                                                     editForm.setData(
                                                                         'name',
-                                                                        e.target.value,
+                                                                        e.target
+                                                                            .value,
                                                                     )
                                                                 }
-                                                                className="flex-1 min-w-[200px] border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
+                                                                className="min-w-[200px] flex-1 border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
                                                             />
                                                             <input
                                                                 value={
@@ -199,7 +201,8 @@ const Index = ({
                                                                 onChange={(e) =>
                                                                     editForm.setData(
                                                                         'region',
-                                                                        e.target.value,
+                                                                        e.target
+                                                                            .value,
                                                                     )
                                                                 }
                                                                 placeholder="Region"
@@ -249,7 +252,7 @@ const Index = ({
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <span className="text-[10px] font-semibold text-terracotta uppercase tracking-widest">
+                                                            <span className="text-[10px] font-semibold tracking-widest text-terracotta uppercase">
                                                                 {city.region ??
                                                                     'Undefined'}
                                                             </span>
@@ -327,7 +330,7 @@ const Index = ({
                             </h3>
                             <div className="space-y-6">
                                 <div>
-                                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                         City Name
                                     </label>
                                     <input
@@ -339,17 +342,17 @@ const Index = ({
                                             )
                                         }
                                         placeholder="e.g. Marrakech"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none placeholder:text-ink/20"
+                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
                                     />
                                     {createForm.errors.name && (
-                                        <p className="mt-2 text-[10px] text-terracotta uppercase tracking-wider">
+                                        <p className="mt-2 text-[10px] tracking-wider text-terracotta uppercase">
                                             {createForm.errors.name}
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-ink/40">
+                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
                                         Regional Identity
                                     </label>
                                     <input
@@ -361,7 +364,7 @@ const Index = ({
                                             )
                                         }
                                         placeholder="e.g. Marrakech-Safi"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none placeholder:text-ink/20"
+                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
                                     />
                                 </div>
 
@@ -371,7 +374,7 @@ const Index = ({
                                         createForm.processing ||
                                         !createForm.data.name
                                     }
-                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold uppercase tracking-widest text-cream transition-colors hover:bg-terracotta disabled:opacity-50"
+                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
                                 >
                                     <Plus className="h-4 w-4" />
                                     {createForm.processing

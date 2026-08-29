@@ -1,28 +1,15 @@
 import { Link, router, useForm } from '@inertiajs/react';
 import {
-    CheckCircle,
-    ChevronLeft,
-    ChevronRight,
     CircleCheck,
-    CirclePlay,
     CircleX,
     Eye,
-    History,
-    Images,
-    Library,
+    Loader2,
     Package,
-    Play,
-    PlayCircle,
     Search,
-    SortAscIcon,
     SquareArrowOutUpRight,
-    Verified,
-    ZoomIn,
 } from 'lucide-react';
-import type { ReactNode} from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { WarmFill } from '@/components/WarmFill';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -34,22 +21,20 @@ import type {
     ProductStatus,
 } from '@/types';
 
-const TABS = ['All', 'New', 'Flagged'] as const;
-
-const statusPill: Record<ProductStatus, string> = {
-    draft: 'bg-slate-100 text-slate-800',
-    pending_review: 'bg-amber-100 text-amber-800',
-    published: 'bg-emerald-100 text-emerald-800',
-    rejected: 'bg-rose-100 text-rose-800',
-    archived: 'bg-rose-100 text-rose-800',
+const STATUS_BADGE: Record<ProductStatus, string> = {
+    draft: 'bg-slate-100 text-slate-700',
+    pending_review: 'bg-amber-100 text-amber-700',
+    published: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-rose-100 text-rose-700',
+    archived: 'bg-slate-100 text-slate-700',
 };
 
-const statusLabel: Record<ProductStatus, string> = {
-    draft: 'Draft',
-    pending_review: 'Review',
-    published: 'Approved',
-    rejected: 'Rejected',
-    archived: 'Archived',
+const STATUS_LABEL: Record<ProductStatus, string> = {
+    draft: 'Brouillon',
+    pending_review: 'En attente',
+    published: 'Publié',
+    rejected: 'Rejeté',
+    archived: 'Archivé',
 };
 
 export const REJECTION_REASONS = [
@@ -71,176 +56,227 @@ interface AdminProductsProps {
         category_id?: string;
         status?: string;
     };
-    pending_count: number;
+    totalProducts: number;
+    statusCounts: Record<ProductStatus, number>;
 }
 
 function AdminProducts({
     products,
     categories,
     filters,
-    pending_count,
+    totalProducts,
+    statusCounts,
 }: AdminProductsProps) {
-    const [mediaOpen, setMediaOpen] = useState(false);
-    const [mediaIndex, setMediaIndex] = useState(0);
-    const [selectedId, setSelectedId] = useState<number | null>(
-        products.data.find((p) => p.status === 'pending_review')?.id ??
-            products.data[0]?.id ??
-            null,
-    );
-
+    const [rawSelectedId, setSelectedId] = useState<number | null>(null);
     const [note, setNote] = useState('');
-    const [search, setSearch] = useState(filters.search || '');
+    const [search, setSearch] = useState(filters.search ?? '');
+    const [searching, setSearching] = useState(false);
+    // Skip the debounced effect's own request on first render — otherwise
+    // landing with ?search= already set fires a redundant fetch.
+    const isFirstRender = useRef(true);
 
-    const { data, setData, patch, processing } = useForm<{
-        rejection_reason: string;
-    }>({
+    const { data, setData, patch } = useForm<{ rejection_reason: string }>({
         rejection_reason: REJECTION_REASONS[0],
     });
 
-    useEffect(() => {
-        if (!selectedId && products.data.length > 0) {
-            setSelectedId(products.data[0].id);
-        } else if (
-            selectedId &&
-            !products.data.find((p) => p.id === selectedId)
+    // Derived, not synced via effect: whenever the page's product list
+    // changes (filter, search, pagination), fall back to the first pending
+    // review — or just the first row — without a setState-in-effect render pass.
+    const selectedId = useMemo(() => {
+        if (
+            rawSelectedId !== null &&
+            products.data.some((p) => p.id === rawSelectedId)
         ) {
-            setSelectedId(products.data[0]?.id ?? null);
+            return rawSelectedId;
         }
-    }, [products.data]);
 
-    const tab = useMemo(() => {
-        if (filters.status === 'pending_review') {
-return 'New';
-}
+        return (
+            products.data.find((p) => p.status === 'pending_review')?.id ??
+            products.data[0]?.id ??
+            null
+        );
+    }, [rawSelectedId, products.data]);
 
-        if (filters.status === 'rejected') {
-return 'Flagged';
-}
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
 
-        return 'All';
-    }, [filters.status]);
+            return;
+        }
 
-    const handleTabChange = (t: (typeof TABS)[number]) => {
-        const status =
-            t === 'New'
-                ? 'pending_review'
-                : t === 'Flagged'
-                  ? 'rejected'
-                  : undefined;
+        setSearching(true);
+        const timer = setTimeout(() => {
+            router.get(
+                route('admin.products.index'),
+                { ...filters, search: search || undefined, page: 1 },
+                {
+                    preserveState: true,
+                    replace: true,
+                    onFinish: () => setSearching(false),
+                },
+            );
+        }, 300);
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
+
+    const setStatus = (status: string | null) => {
         router.get(
             route('admin.products.index'),
-            { ...filters, status, page: 1 },
-            { preserveState: true, replace: true },
+            { ...filters, status: status ?? undefined, page: 1 },
+            { preserveState: true },
         );
     };
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
+    const setCategory = (categoryId: string) => {
         router.get(
             route('admin.products.index'),
-            { ...filters, search, page: 1 },
-            { preserveState: true, replace: true },
+            { ...filters, category_id: categoryId || undefined, page: 1 },
+            { preserveState: true },
         );
     };
+
+    const tabs = useMemo(
+        () =>
+            [
+                { value: null, label: 'Tous', count: totalProducts },
+                {
+                    value: 'pending_review',
+                    label: 'En attente',
+                    count: statusCounts.pending_review,
+                },
+                {
+                    value: 'published',
+                    label: 'Publiés',
+                    count: statusCounts.published,
+                },
+                {
+                    value: 'draft',
+                    label: 'Brouillons',
+                    count: statusCounts.draft,
+                },
+                {
+                    value: 'rejected',
+                    label: 'Rejetés',
+                    count: statusCounts.rejected,
+                },
+                {
+                    value: 'archived',
+                    label: 'Archivés',
+                    count: statusCounts.archived,
+                },
+            ] as const,
+        [totalProducts, statusCounts],
+    );
 
     const selected: (Product & { media: Media[] }) | undefined =
         products.data.find((p) => p.id === selectedId);
-    const pendingCount = products.total; // Using total from pagination if filtered by 'New'
 
     const approve = () => {
-        router.patch(route('admin.products.approve', selected?.id));
+        if (selected) {
+            router.patch(route('admin.products.approve', selected.id));
+        }
     };
     const reject = () => {
-        patch(route('admin.products.reject', selected?.id));
+        if (selected) {
+            patch(route('admin.products.reject', selected.id));
+        }
     };
 
     return (
-        <div
-            className="mx-auto max-w-[1400px] p-6 md:p-8"
-            style={{ fontFamily: 'Inter, sans-serif' }}
-        >
-            {/* Title */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <h1 className="h-editorial text-[30px] font-semibold">
-                        Product Approvals
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                        Produits
                     </h1>
                     <p className="mt-1 text-sm text-ink-soft">
-                        <span className="font-semibold text-primary">
-                            {pending_count} Pending Approvals
-                        </span>
-                        <span className="mx-2">•</span>Across{' '}
-                        {categories.length}
-                        categories
+                        {totalProducts} produit
+                        {totalProducts > 1 ? 's' : ''} · {categories.length}{' '}
+                        catégorie{categories.length > 1 ? 's' : ''}
                     </p>
                 </div>
+            </header>
+
+            {/* ── Status tabs ──────────────────────────────── */}
+            <div className="flex flex-wrap gap-2">
+                {tabs.map((tab) => {
+                    const active = (filters.status ?? null) === tab.value;
+
+                    return (
+                        <button
+                            key={tab.label}
+                            type="button"
+                            onClick={() => setStatus(tab.value)}
+                            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition ${
+                                active
+                                    ? 'border-ink bg-ink text-white'
+                                    : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
+                            }`}
+                        >
+                            {tab.label}
+                            <span
+                                className={`rounded-full px-1.5 py-0.5 text-xs ${
+                                    active
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-muted text-ink-soft'
+                                }`}
+                            >
+                                {tab.count}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
-            {/* Layout */}
-            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
-                {/* Left column: table */}
-                <section className="border-line overflow-hidden rounded-lg border bg-paper">
-                    {/* Tabs & Search */}
-                    <div className="border-line flex flex-wrap items-center justify-between gap-4 border-b px-4 py-3">
-                        <div className="flex items-center gap-1 rounded-lg bg-cream p-1">
-                            {TABS.map((t) => (
-                                <button
-                                    key={t}
-                                    onClick={() => handleTabChange(t)}
-                                    className={`rounded-md px-4 py-1.5 text-[13px] transition-colors ${
-                                        tab === t
-                                            ? 'bg-white font-semibold text-ink shadow-sm'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
-                                >
-                                    {t}
-                                </button>
-                            ))}
-                        </div>
+            {/* ── Search & category filter ────────────────── */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="relative max-w-md flex-1">
+                    {searching ? (
+                        <Loader2 className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin text-ink-soft/50" />
+                    ) : (
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                    )}
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Nom du produit ou boutique…"
+                        className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                    />
+                </div>
+                <select
+                    value={filters.category_id ?? ''}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                >
+                    <option value="">Toutes les catégories</option>
+                    {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.translated_name}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
-                        <div className="flex items-center gap-3">
-                            <form onSubmit={handleSearch} className="relative">
-                                <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-ink-soft" />
-                                <input
-                                    type="search"
-                                    placeholder="Search products..."
-                                    className="border-line h-9 w-64 rounded-lg bg-cream pr-4 pl-9 text-[13px] focus:border-terracotta-deep focus:ring-1 focus:ring-terracotta-deep focus:outline-none"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                            </form>
-                            <div className="flex items-center gap-3 text-[12px] text-ink-soft">
-                                <button className="inline-flex items-center gap-1 hover:text-ink">
-                                    <SortAscIcon className="h-4 w-4" />
-                                    Sort
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Table */}
+            {/* ── Layout ───────────────────────────────────── */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px]">
+                {/* Left: table */}
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-primary/30 text-left text-[11px] tracking-wider text-ink-soft uppercase">
+                            <thead className="border-b border-border text-left text-xs font-medium text-ink-soft">
                                 <tr>
-                                    <th className="px-5 py-3 font-semibold">
-                                        Product Name
-                                    </th>
-                                    <th className="px-5 py-3 font-semibold">
-                                        Category
-                                    </th>
-                                    <th className="px-5 py-3 font-semibold">
-                                        Submitted By
-                                    </th>
-                                    <th className="px-5 py-3 font-semibold">
-                                        Date
-                                    </th>
-                                    <th className="px-5 py-3 text-right font-semibold">
-                                        Actions
+                                    <th className="px-5 py-3">Produit</th>
+                                    <th className="px-5 py-3">Catégorie</th>
+                                    <th className="px-5 py-3">Boutique</th>
+                                    <th className="px-5 py-3">Date</th>
+                                    <th className="px-5 py-3 text-right">
+                                        Statut
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-line divide-y">
+                            <tbody className="divide-y divide-border">
                                 {products.data.map((p) => {
                                     const isSel = p.id === selectedId;
 
@@ -248,18 +284,19 @@ return 'Flagged';
                                         <tr
                                             key={p.id}
                                             onClick={() => setSelectedId(p.id)}
-                                            className={`cursor-pointer transition-colors ${isSel ? 'bg-terracotta-deep/10' : 'hover:bg-cream/40'}`}
+                                            className={`cursor-pointer transition ${isSel ? 'bg-muted/60' : 'hover:bg-muted/30'}`}
                                         >
                                             <td className="px-5 py-3">
-                                                <p className="font-semibold text-ink">
+                                                <p className="font-medium text-ink">
                                                     {p.name}
                                                 </p>
-                                                <p className="text-[11px] text-ink-soft">
-                                                    ID: #{p.id}
+                                                <p className="text-xs text-ink-soft">
+                                                    #{p.id}
                                                 </p>
                                             </td>
                                             <td className="px-5 py-3 text-ink-soft">
-                                                {p.category?.name}
+                                                {p.category?.translated_name ??
+                                                    '—'}
                                             </td>
                                             <td className="px-5 py-3 text-ink-soft">
                                                 {p.store.store_name}
@@ -268,26 +305,11 @@ return 'Flagged';
                                                 {formatDate(p.updated_at)}
                                             </td>
                                             <td className="px-5 py-3 text-right">
-                                                <div className="inline-flex items-center gap-2">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusPill[p.status]}`}
-                                                    >
-                                                        {isSel &&
-                                                        p.status ===
-                                                            'pending_review'
-                                                            ? 'Reviewing'
-                                                            : statusLabel[
-                                                                  p.status
-                                                              ]}
-                                                    </span>
-                                                    <Link
-                                                        href={route('admin.products.show', p.id)}
-                                                        title="View details"
-                                                        className="flex h-7 w-7 items-center justify-center rounded text-ink-soft hover:bg-cream hover:text-ink"
-                                                    >
-                                                        <SquareArrowOutUpRight className="text-[16px]" />
-                                                    </Link>
-                                                </div>
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[p.status]}`}
+                                                >
+                                                    {STATUS_LABEL[p.status]}
+                                                </span>
                                             </td>
                                         </tr>
                                     );
@@ -298,7 +320,7 @@ return 'Flagged';
                                             colSpan={5}
                                             className="px-5 py-10 text-center text-ink-soft"
                                         >
-                                            No products found.
+                                            Aucun produit trouvé.
                                         </td>
                                     </tr>
                                 )}
@@ -306,49 +328,51 @@ return 'Flagged';
                         </table>
                     </div>
 
-                    {/* Footer / Pagination */}
-                    <div className="border-line flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-[12px] text-ink-soft">
-                        <p>
-                            Showing {products.from || 0} to {products.to || 0}{' '}
-                            of {products.total} items
-                        </p>
-                        <div className="flex items-center gap-1">
-                            {products.links.map((link, i) => (
-                                <Link
-                                    key={i}
-                                    href={link.url || '#'}
-                                    preserveScroll
-                                    className={`flex h-8 min-w-[32px] items-center justify-center rounded px-2 transition-colors ${
-                                        link.active
-                                            ? 'bg-terracotta-deep font-semibold text-white'
-                                            : 'text-ink-soft hover:bg-cream'
-                                    } ${!link.url ? 'pointer-events-none opacity-50' : ''}`}
-                                    dangerouslySetInnerHTML={{
-                                        __html: link.label,
-                                    }}
-                                />
-                            ))}
+                    {/* Pagination */}
+                    {products.last_page > 1 && (
+                        <div className="flex items-center justify-between border-t border-border px-5 py-3.5">
+                            <p className="text-xs text-ink-soft">
+                                {products.from}–{products.to} sur{' '}
+                                {products.total}
+                            </p>
+                            <div className="flex items-center gap-1">
+                                {products.links.map((link, i) => (
+                                    <Link
+                                        key={i}
+                                        href={link.url || '#'}
+                                        preserveScroll
+                                        className={`flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition ${
+                                            link.active
+                                                ? 'bg-ink font-medium text-white'
+                                                : 'text-ink-soft hover:bg-muted'
+                                        } ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                        dangerouslySetInnerHTML={{
+                                            __html: link.label,
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </section>
+                    )}
+                </div>
 
-                {/* Right column: review panel */}
+                {/* Right: review panel */}
                 <aside className="space-y-4">
                     {selected ? (
                         <>
-                            <div className="border-line overflow-hidden rounded-lg border bg-paper">
-                                <div className="border-line flex items-center gap-2 border-b px-5 py-3 text-ink">
-                                    <Eye className="text-[18px] text-terracotta-deep" />
-                                    <p className="text-[13px] font-semibold">
-                                        Reviewing: {selected.name}
+                            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                                <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+                                    <Eye className="h-4 w-4 text-ink-soft" />
+                                    <p className="text-sm font-semibold text-ink">
+                                        {selected.name}
                                     </p>
                                 </div>
 
-                                {/* Image */}
-                                <div className="relative aspect-[4/3] bg-cream">
+                                <div className="relative aspect-4/3 bg-muted">
                                     {selected.media.length > 0 ? (
                                         <img
                                             src={selected.media[0].url}
+                                            alt=""
                                             className="h-full w-full object-cover"
                                         />
                                     ) : (
@@ -357,143 +381,96 @@ return 'Flagged';
                                             className="h-full w-full"
                                         />
                                     )}
-
-                                    <div className="absolute top-2 right-2 flex gap-1.5">
-                                        <button
-                                            onClick={() => {
-                                                setMediaIndex(0);
-                                                setMediaOpen(true);
-                                            }}
-                                            title="Zoom image"
-                                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur hover:bg-white"
-                                        >
-                                            <ZoomIn className="text-[18px]" />
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setMediaIndex(0);
-                                                setMediaOpen(true);
-                                            }}
-                                            title="Browse images & video"
-                                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-ink backdrop-blur hover:bg-white"
-                                        >
-                                            <Images className="!text-[18px]" />
-                                        </button>
-                                    </div>
-                                    {/* {selected?.videos?.length > 0 && (
-                                        <button
-                                            onClick={() => {
-                                                setMediaIndex(
-                                                    selected.images.length,
-                                                );
-                                                setMediaOpen(true);
-                                            }}
-                                            className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-ink backdrop-blur hover:bg-white"
-                                        >
-                                            <PlayCircle className="text-[14px]" />
-                                            Watch video
-                                        </button>
-                                    )} */}
+                                    {selected.media.length > 1 && (
+                                        <span className="absolute right-2 bottom-2 rounded-full bg-ink/80 px-2 py-1 text-xs font-medium text-white">
+                                            {selected.media.length} photos
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="space-y-4 p-5">
                                     <div>
-                                        <p className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                            Product Summary
+                                        <p className="text-xs font-medium text-ink-soft">
+                                            Description
                                         </p>
-                                        <div className="mt-2 prose prose-sm dark:prose-invert max-w-none text-[13px] leading-relaxed text-ink line-clamp-3">
-                                            {selected.description ? (
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: selected.description,
-                                                    }}
-                                                />
-                                            ) : (
-                                                'No description provided.'
-                                            )}
-                                        </div>
+                                        <p className="mt-1 text-sm leading-relaxed text-ink">
+                                            {selected.description ||
+                                                'Aucune description.'}
+                                        </p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="border-line rounded-lg border p-3">
-                                            <p className="text-[11px] tracking-wider text-ink-soft uppercase">
-                                                Price
+                                        <div className="rounded-lg border border-border p-3">
+                                            <p className="text-xs text-ink-soft">
+                                                Prix
                                             </p>
                                             <div className="mt-1 flex items-baseline gap-2">
                                                 {selected.sale_price ? (
                                                     <>
-                                                        <p className="text-[20px] font-bold text-terracotta-deep">
+                                                        <p className="text-lg font-semibold text-ink">
                                                             {
                                                                 selected.sale_price
                                                             }{' '}
-                                                            <span className="text-xs font-medium">
+                                                            <span className="text-xs font-medium text-ink-soft">
                                                                 MAD
                                                             </span>
                                                         </p>
-                                                        <p className="text-[14px] text-ink-soft line-through">
+                                                        <p className="text-sm text-ink-soft line-through">
                                                             {
                                                                 selected.base_price
                                                             }
                                                         </p>
                                                     </>
                                                 ) : (
-                                                    <p className="text-[20px] font-bold text-ink">
+                                                    <p className="text-lg font-semibold text-ink">
                                                         {selected.base_price}{' '}
-                                                        <span className="text-xs font-medium">
+                                                        <span className="text-xs font-medium text-ink-soft">
                                                             MAD
                                                         </span>
                                                     </p>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="border-line rounded-lg border p-3">
-                                            <p className="text-[11px] tracking-wider text-ink-soft uppercase">
+                                        <div className="rounded-lg border border-border p-3">
+                                            <p className="text-xs text-ink-soft">
                                                 Stock
                                             </p>
-                                            <p className="mt-1 text-[20px] font-bold text-ink">
-                                                {selected.stock}{' '}
-                                                <span className="text-xs font-medium">
-                                                    Units
-                                                </span>
-                                            </p>
+                                            {selected.has_variants ? (
+                                                <p className="mt-1 text-sm font-medium text-ink-soft">
+                                                    Géré par déclinaison
+                                                </p>
+                                            ) : (
+                                                <p className="mt-1 text-lg font-semibold text-ink">
+                                                    {selected.stock}{' '}
+                                                    <span className="text-xs font-medium text-ink-soft">
+                                                        unités
+                                                    </span>
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {selected.status === 'draft' ? (
-                                        <div className="space-y-2">
-                                            <div className="rounded-lg bg-cream p-3 text-[12px] text-ink-soft">
-                                                Draft added during onboarding.
-                                                Not yet submitted for review.
-                                            </div>
+                                    {selected.status === 'pending_review' ? (
+                                        <div className="space-y-3">
                                             <button
                                                 onClick={approve}
-                                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-terracotta-deep text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+                                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink text-sm font-semibold text-white transition hover:bg-ink/90"
                                             >
-                                                <CircleCheck className="text-[18px]" />
-                                                Publish Draft
-                                            </button>
-                                        </div>
-                                    ) : selected.status === 'pending_review' ? (
-                                        <div className="space-y-2">
-                                            <button
-                                                onClick={approve}
-                                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-terracotta-deep text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
-                                            >
-                                                <CircleCheck className="text-[18px]" />
-                                                Approve Product
+                                                <CircleCheck className="h-4 w-4" />
+                                                Approuver
                                             </button>
                                             <button
                                                 onClick={reject}
-                                                className="border-line inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border text-[14px] font-semibold text-ink transition-colors hover:bg-cream"
+                                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border text-sm font-semibold text-ink transition hover:bg-muted"
                                             >
-                                                <CircleX className="text-[18px]" />
-                                                Reject &amp; Send Feedback
+                                                <CircleX className="h-4 w-4" />
+                                                Rejeter
                                             </button>
 
-                                            <div className="space-y-3 pt-3">
+                                            <div className="space-y-3 border-t border-border pt-3">
                                                 <div>
-                                                    <label className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                                        Select Rejection Reason
+                                                    <label className="text-xs font-medium text-ink-soft">
+                                                        Motif de rejet
                                                     </label>
                                                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                                                         {REJECTION_REASONS.slice(
@@ -508,11 +485,11 @@ return 'Flagged';
                                                                         r,
                                                                     )
                                                                 }
-                                                                className={`rounded-full border px-2.5 py-1.5 text-left text-[11px] transition-colors ${
+                                                                className={`rounded-lg border px-2.5 py-1.5 text-left text-xs transition ${
                                                                     data.rejection_reason ===
                                                                     r
-                                                                        ? 'border-terracotta-deep bg-terracotta-deep/10 font-semibold text-terracotta-deep'
-                                                                        : 'border-line text-ink-soft hover:border-ink'
+                                                                        ? 'border-ink bg-ink/5 font-medium text-ink'
+                                                                        : 'border-border text-ink-soft hover:border-ink/30'
                                                                 }`}
                                                             >
                                                                 {r}
@@ -521,9 +498,9 @@ return 'Flagged';
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                                        Custom Message (Internal
-                                                        Only)
+                                                    <label className="text-xs font-medium text-ink-soft">
+                                                        Message interne
+                                                        (optionnel)
                                                     </label>
                                                     <textarea
                                                         value={note}
@@ -533,22 +510,22 @@ return 'Flagged';
                                                             )
                                                         }
                                                         rows={3}
-                                                        placeholder="Add a note for the merchant…"
-                                                        className="border-line mt-2 w-full resize-none rounded-lg border bg-cream px-3 py-2 text-[13px] focus:border-terracotta-deep focus:ring-1 focus:ring-terracotta-deep focus:outline-none"
+                                                        placeholder="Ajouter une note pour le vendeur…"
+                                                        className="mt-2 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                                                     />
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="rounded-lg bg-cream p-3 text-[12px] text-ink-soft">
-                                            This product has already been{' '}
-                                            {statusLabel[
+                                        <div className="rounded-lg bg-muted/60 p-3 text-sm text-ink-soft">
+                                            Ce produit est actuellement{' '}
+                                            {STATUS_LABEL[
                                                 selected.status
                                             ].toLowerCase()}
                                             .
                                             {selected.rejection_reason && (
                                                 <p className="mt-1 text-ink">
-                                                    Reason:{' '}
+                                                    Motif :{' '}
                                                     {selected.rejection_reason}
                                                 </p>
                                             )}
@@ -559,123 +536,22 @@ return 'Flagged';
 
                             <Link
                                 href={route('admin.products.show', selected.id)}
-                                className="border-line inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border text-center text-[13px] font-semibold text-ink hover:bg-cream"
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm font-medium text-ink shadow-sm transition hover:bg-muted"
                             >
-                                <SquareArrowOutUpRight className="text-[16px]" />
-                                Open full product detail
+                                <SquareArrowOutUpRight className="h-4 w-4" />
+                                Voir la fiche complète
                             </Link>
                         </>
                     ) : (
-                        <div className="border-line flex h-64 flex-col items-center justify-center rounded-lg border border-dashed bg-paper text-ink-soft">
-                            <Package className="mb-2 h-10 w-10 opacity-20" />
+                        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card text-ink-soft">
+                            <Package className="mb-2 h-10 w-10 opacity-30" />
                             <p className="text-sm">
-                                Select a product to review
+                                Sélectionnez un produit à examiner
                             </p>
                         </div>
                     )}
                 </aside>
             </div>
-
-            {/* Media lightbox */}
-            {/* <Dialog open={mediaOpen} onOpenChange={setMediaOpen}>
-                <DialogContent className="max-w-4xl overflow-hidden bg-[hsl(var(--paper))] p-0">
-                    {selected &&
-                        (selected.images.length > 0 ||
-                            selected.videos.length > 0) &&
-                        (() => {
-                            const allMedia = [
-                                ...selected.images,
-                                ...selected.videos,
-                            ];
-                            const m = allMedia[mediaIndex];
-                            if (!m) return null;
-                            return (
-                                <div>
-                                    <div className="flex items-center justify-between border-b border-[hsl(var(--line))] px-5 py-3">
-                                        <p className="text-[13px] font-semibold text-[hsl(var(--ink))]">
-                                            {selected.name} —{' '}
-                                            {m.type === 'video'
-                                                ? 'Video'
-                                                : `Image ${mediaIndex + 1}`}
-                                        </p>
-                                        <p className="text-[11px] text-[hsl(var(--ink-soft))]">
-                                            {mediaIndex + 1} / {allMedia.length}
-                                        </p>
-                                    </div>
-                                    <div className="relative aspect-[16/10] bg-black">
-                                        {m.type === 'image' ? (
-                                            <img
-                                                src={m.url}
-                                                alt=""
-                                                className="h-full w-full object-contain"
-                                            />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-black">
-                                                <Play className="text-[44px] text-white" />
-                                                <p className="ml-4 text-white">
-                                                    Video Preview
-                                                </p>
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() =>
-                                                setMediaIndex(
-                                                    (i) =>
-                                                        (i -
-                                                            1 +
-                                                            allMedia.length) %
-                                                        allMedia.length,
-                                                )
-                                            }
-                                            className="absolute top-1/2 left-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink hover:bg-white"
-                                        >
-                                            <ChevronLeft className="!text-[22px]" />
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                setMediaIndex(
-                                                    (i) =>
-                                                        (i + 1) %
-                                                        allMedia.length,
-                                                )
-                                            }
-                                            className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[hsl(var(--ink))] hover:bg-white"
-                                        >
-                                            <ChevronRight className="!text-[22px]" />
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-5 gap-2 bg-[hsl(var(--cream))]/40 p-3">
-                                        {allMedia.map((mm, i) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => setMediaIndex(i)}
-                                                className={`relative aspect-square overflow-hidden rounded border-2 transition-colors ${
-                                                    i === mediaIndex
-                                                        ? 'border-[hsl(var(--terracotta-deep))]'
-                                                        : 'border-transparent hover:border-[hsl(var(--line))]'
-                                                }`}
-                                            >
-                                                <img
-                                                    src={
-                                                        mm.type === 'image'
-                                                            ? mm.url
-                                                            : ''
-                                                    }
-                                                    className="h-full w-full object-cover"
-                                                />
-                                                {mm.type === 'video' && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                                        <CirclePlay className="text-[20px] text-white" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            );
-                        })()}
-                </DialogContent>
-            </Dialog> */}
         </div>
     );
 }

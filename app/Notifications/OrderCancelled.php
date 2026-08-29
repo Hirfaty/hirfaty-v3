@@ -5,8 +5,8 @@ namespace App\Notifications;
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class OrderCancelled extends Notification implements ShouldQueue
 {
@@ -14,7 +14,10 @@ class OrderCancelled extends Notification implements ShouldQueue
 
     public function __construct(public Order $order) {}
 
-    public function via(object $notifiable): array { return ['mail']; }
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
 
     public function toMail($notifiable): MailMessage
     {
@@ -30,7 +33,7 @@ class OrderCancelled extends Notification implements ShouldQueue
             ->subject($subjects[$locale] ?? $subjects['fr'])
             ->view("emails.buyer.order-status.cancelled.{$locale}", [
                 'order' => $this->order,
-                'user'  => $notifiable,
+                'user' => $notifiable,
             ]);
     }
 }
