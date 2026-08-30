@@ -95,7 +95,7 @@ const ProductDetail = ({
     };
 
     return (
-        <div className="paper-grain min-h-screen bg-cream">
+        <div className="min-h-screen bg-cream paper-grain">
             <SiteHeader />
 
             {/* Breadcrumb */}
@@ -179,7 +179,7 @@ const ProductDetail = ({
 
                 {/* Info */}
                 <div className="col-span-12 md:col-span-5">
-                    <p className="eyebrow mb-3">
+                    <p className="mb-3 eyebrow">
                         {product.category?.translated_name ?? 'Pièce unique'}
                     </p>
                     <h1 className="h-editorial text-4xl leading-tight text-ink md:text-5xl">
@@ -408,7 +408,7 @@ const ProductDetail = ({
                     </TabsContent>
 
                     <TabsContent value="atelier" className="mt-8 max-w-2xl">
-                        <p className="eyebrow mb-2">
+                        <p className="mb-2 eyebrow">
                             {product.store.store_name}
                         </p>
                         <h3 className="mb-3 font-display text-2xl text-ink">
@@ -434,7 +434,7 @@ const ProductDetail = ({
                 <section className="container pb-24">
                     <div className="mb-8 flex items-end justify-between">
                         <div>
-                            <p className="eyebrow mb-2">Du même atelier</p>
+                            <p className="mb-2 eyebrow">Du même atelier</p>
                             <h2 className="h-editorial text-3xl text-ink md:text-4xl">
                                 Autres pièces de {product.store.store_name}
                             </h2>

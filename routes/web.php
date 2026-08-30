@@ -5,6 +5,7 @@ use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\CheckoutController;
 use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
@@ -13,11 +14,11 @@ use App\Http\Controllers\Seller\StoreSetupController;
 use App\Models\User;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', HomeController::class)->name('home');
+
+// Static marketing page — no backend data, so no dedicated controller.
+Route::inertia('/about', 'about')->name('about');
 
 Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
@@ -60,6 +61,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/users/create', [Admin\UserController::class, 'create'])->name('users.create');
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
+        Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');

@@ -353,9 +353,15 @@ export const SiteHeader = () => {
                         ))}
                     </div>
 
+                    {/*
+                     * Hidden below sm: the label is long enough in fr/ar to wrap
+                     * onto three lines and squeeze the logo on a 375px screen.
+                     * Same escape hatch the account button and locale switcher
+                     * next to it already use.
+                     */}
                     <Link
                         href="/seller/onboarding"
-                        className="ml-2 inline-flex items-center gap-2 border border-ink px-4 py-2 text-sm text-ink transition-colors hover:bg-ink hover:text-cream"
+                        className="ml-2 hidden items-center gap-2 border border-ink px-4 py-2 text-sm whitespace-nowrap text-ink transition-colors hover:bg-ink hover:text-cream sm:inline-flex"
                     >
                         {t('header.start_selling')}
                     </Link>

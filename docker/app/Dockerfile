@@ -39,8 +39,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY docker/app/opcache.ini /usr/local/etc/php/conf.d/opcache-prod.ini
 COPY docker/app/www.conf /usr/local/etc/php-fpm.d/www.conf
-COPY docker/app/nginx-http.conf /etc/nginx/available/nginx-http.conf
-COPY docker/app/nginx-ssl.conf /etc/nginx/available/nginx-ssl.conf
+COPY docker/app/vhosts/ /etc/nginx/available/
+COPY coming-soon /var/www/coming-soon
 COPY docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN rm -f /etc/nginx/sites-enabled/default && chmod +x /usr/local/bin/entrypoint.sh

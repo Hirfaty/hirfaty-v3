@@ -90,14 +90,14 @@ const Index = ({
     };
 
     return (
-        <div className="paper-grain min-h-screen bg-cream">
+        <div className="min-h-screen bg-cream paper-grain">
             <SiteHeader />
 
             {/* Page heading */}
             <section className="container pt-10 pb-8 md:pt-14 md:pb-10">
                 <div className="grid grid-cols-12 items-end gap-4 md:gap-6">
                     <div className="col-span-12 md:col-span-8">
-                        <p className="eyebrow mb-3">Le marché</p>
+                        <p className="mb-3 eyebrow">Le marché</p>
                         <h1 className="h-editorial text-4xl text-ink sm:text-5xl md:text-7xl">
                             Tout ce qui se fait à la main,{' '}
                             <span className="text-terracotta italic">
@@ -174,7 +174,7 @@ const Index = ({
                 <div className="col-span-12 md:hidden">
                     <details className="border border-ink/15 bg-paper/70 p-4">
                         <summary className="flex cursor-pointer list-none items-center justify-between text-sm text-ink">
-                            <span className="eyebrow mb-0">
+                            <span className="mb-0 eyebrow">
                                 Filtres avancés
                             </span>
                             <span className="text-xs text-ink-soft">
@@ -183,7 +183,7 @@ const Index = ({
                         </summary>
                         <div className="mt-4 space-y-6">
                             <div>
-                                <p className="eyebrow mb-3">Recherche</p>
+                                <p className="mb-3 eyebrow">Recherche</p>
                                 <div className="relative">
                                     <Search
                                         className="absolute top-1/2 left-0 h-4 w-4 -translate-y-1/2 text-ink-soft"
@@ -230,7 +230,7 @@ const Index = ({
                             </div>
 
                             <div>
-                                <p className="eyebrow mb-3">Note minimum</p>
+                                <p className="mb-3 eyebrow">Note minimum</p>
                                 <div className="flex gap-1">
                                     {[1, 2, 3, 4, 5].map((n) => (
                                         <button
@@ -262,7 +262,7 @@ const Index = ({
                 <aside className="col-span-12 hidden space-y-10 md:col-span-3 md:block">
                     {/* Search */}
                     <div>
-                        <p className="eyebrow mb-4">Recherche</p>
+                        <p className="mb-4 eyebrow">Recherche</p>
                         <div className="relative">
                             <Search
                                 className="absolute top-1/2 left-0 h-4 w-4 -translate-y-1/2 text-ink-soft"
@@ -282,7 +282,7 @@ const Index = ({
 
                     {/* Category */}
                     <div>
-                        <p className="eyebrow mb-4">Catégorie</p>
+                        <p className="mb-4 eyebrow">Catégorie</p>
                         <ul className="space-y-2.5 text-sm">
                             <li>
                                 <button
@@ -340,7 +340,7 @@ const Index = ({
 
                     {/* Rating */}
                     <div>
-                        <p className="eyebrow mb-4">Note minimum</p>
+                        <p className="mb-4 eyebrow">Note minimum</p>
                         <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map((n) => (
                                 <button

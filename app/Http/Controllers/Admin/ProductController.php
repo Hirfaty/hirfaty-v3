@@ -140,7 +140,7 @@ class ProductController extends Controller
         });
 
         return redirect()
-            ->route('admin.products.edit', $product)
+            ->route('admin.products.show', $product)
             ->with(
                 'success',
                 $isDraft

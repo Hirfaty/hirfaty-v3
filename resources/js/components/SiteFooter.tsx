@@ -51,7 +51,7 @@ export const SiteFooter = () => {
                     },
                 ].map((col) => (
                     <div key={col.title} className="md:col-span-2">
-                        <p className="eyebrow mb-4">{col.title}</p>
+                        <p className="mb-4 eyebrow">{col.title}</p>
                         <ul className="space-y-2.5 text-sm text-ink/80">
                             {col.links.map((l) => (
                                 <li key={l}>
@@ -68,7 +68,7 @@ export const SiteFooter = () => {
                 ))}
 
                 <div className="col-span-2 md:col-span-2">
-                    <p className="eyebrow mb-4">Suivre</p>
+                    <p className="mb-4 eyebrow">Suivre</p>
                     <ul className="space-y-2.5 text-sm text-ink/80">
                         <li>
                             <a href="#" className="hover:text-ink">

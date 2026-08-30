@@ -55,7 +55,7 @@ const Show = ({ order }: PageProps & { order: Order }) => {
                             <ArrowLeft className="h-3 w-3" />
                             Back to Registry
                         </Link>
-                        <h1 className="h-editorial mt-4 text-4xl text-ink">
+                        <h1 className="mt-4 h-editorial text-4xl text-ink">
                             Order <span className="italic">#{order.id}</span>
                         </h1>
                     </div>

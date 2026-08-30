@@ -69,7 +69,7 @@ const CartPage = ({ cart }: { cart: Cart }) => {
     };
 
     return (
-        <div className="paper-grain min-h-screen bg-cream">
+        <div className="min-h-screen bg-cream paper-grain">
             <SiteHeader />
 
             <section className="container pt-12 pb-6">

@@ -26,7 +26,10 @@ class CreateNewUser implements CreatesNewUsers
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'role' => ['required', Rule::in(['seller', 'buyer'])],
+            // professional_buyer is a self-serve choice at signup (an
+            // "individual / professional" toggle on the buyer flow) — it is
+            // not admin-gated, see User::isProfessionalVerified().
+            'role' => ['required', Rule::in(['seller', 'buyer', 'professional_buyer'])],
             'phone_number' => ['required', 'string', 'max:20'],
             'password' => $this->passwordRules(),
             'terms_accepted' => ['required', 'accepted'],

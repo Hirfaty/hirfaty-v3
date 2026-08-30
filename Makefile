@@ -18,8 +18,8 @@ DOMAIN ?= init.hirfaty.com
 CERT_EMAIL ?= creati.maroc@gmail.com
 
 .PHONY: reset prod-build prod-up prod-down prod-restart prod-logs prod-ps \
-	prod-migrate prod-artisan prod-key-generate prod-deploy \
-	prod-cert-init prod-cert-renew
+	prod-migrate prod-db-reset prod-artisan prod-key-generate prod-deploy \
+	prod-cert-init prod-cert-init-hirfaty prod-cert-renew
 
 prod-build:
 	$(COMPOSE) build
@@ -42,6 +42,17 @@ prod-ps:
 
 prod-migrate:
 	$(COMPOSE) exec app php artisan migrate --force
+
+# Drops every table and re-migrates from scratch — irreversible, all data is
+# lost. Requires typing "reset" at the prompt; anything else aborts.
+prod-db-reset:
+	@echo "This will DROP ALL TABLES in the production database. All data will be lost."
+	@read -p "Type 'reset' to confirm: " confirm; \
+	if [ "$$confirm" != "reset" ]; then \
+		echo "Aborted."; \
+		exit 1; \
+	fi
+	$(COMPOSE) run --rm app php artisan migrate:fresh --force
 
 # Usage: make prod-artisan CMD="queue:restart"
 prod-artisan:
@@ -74,4 +85,13 @@ prod-cert-init:
 prod-cert-renew:
 	$(COMPOSE) run --rm certbot renew
 	$(COMPOSE) exec app nginx -s reload
+
+# One-time TLS bootstrap for the separate hirfaty.com "coming soon" static
+# site (apex + www, single cert). Requires DNS for both to already point at
+# this VPS, and the app container already serving HTTP on port 80.
+prod-cert-init-hirfaty:
+	$(COMPOSE) run --rm certbot certonly --webroot -w /var/www/certbot \
+		-d hirfaty.com -d www.hirfaty.com \
+		--email $(CERT_EMAIL) --agree-tos --no-eff-email
+	$(COMPOSE) restart app
 

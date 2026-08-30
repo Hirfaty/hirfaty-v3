@@ -111,6 +111,15 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
         }
     };
 
+    const isProfessional = user.role === 'professional_buyer';
+    const isVerified = Boolean(user.professional_verified_at);
+
+    // Nothing in the buying flow checks this yet — it just lets the admin
+    // flag accounts they've reviewed, ahead of that check being wired in.
+    const handleVerifyProfessional = () => {
+        router.patch(route('admin.users.verify-professional', user.id));
+    };
+
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
             {/* ── Header ───────────────────────────────────── */}
@@ -129,10 +138,23 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                 {user.first_name} {user.last_name}
                             </h1>
                             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                                {user.role === 'professional_buyer'
-                                    ? 'Acheteur pro'
-                                    : 'Acheteur'}
+                                {isProfessional ? 'Acheteur pro' : 'Acheteur'}
                             </span>
+                            {isProfessional && (
+                                <Badge
+                                    variant={isVerified ? 'default' : 'outline'}
+                                    className="rounded-full"
+                                >
+                                    {isVerified ? (
+                                        <>
+                                            <CheckCircle2 className="h-3.5 w-3.5" />{' '}
+                                            Vérifié
+                                        </>
+                                    ) : (
+                                        'Non vérifié'
+                                    )}
+                                </Badge>
+                            )}
                             {user.is_banned && (
                                 <Badge
                                     variant="destructive"
@@ -148,21 +170,36 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                         </p>
                     </div>
 
-                    <Button
-                        variant={user.is_banned ? 'outline' : 'destructive'}
-                        className="rounded-lg"
-                        onClick={handleBan}
-                    >
-                        {user.is_banned ? (
-                            <>
-                                <UserCheck className="h-4 w-4" /> Débloquer
-                            </>
-                        ) : (
-                            <>
-                                <Ban className="h-4 w-4" /> Bloquer
-                            </>
+                    <div className="flex gap-2">
+                        {isProfessional && (
+                            <Button
+                                variant={isVerified ? 'outline' : 'default'}
+                                className="rounded-lg"
+                                onClick={handleVerifyProfessional}
+                            >
+                                <CheckCircle2 className="h-4 w-4" />
+                                {isVerified
+                                    ? 'Retirer la vérification'
+                                    : 'Vérifier'}
+                            </Button>
                         )}
-                    </Button>
+
+                        <Button
+                            variant={user.is_banned ? 'outline' : 'destructive'}
+                            className="rounded-lg"
+                            onClick={handleBan}
+                        >
+                            {user.is_banned ? (
+                                <>
+                                    <UserCheck className="h-4 w-4" /> Débloquer
+                                </>
+                            ) : (
+                                <>
+                                    <Ban className="h-4 w-4" /> Bloquer
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
 

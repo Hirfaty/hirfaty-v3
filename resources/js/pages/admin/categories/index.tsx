@@ -108,7 +108,7 @@ const Index = ({
                     <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
                         Inventory Architecture
                     </p>
-                    <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
+                    <h1 className="mt-2 h-editorial text-4xl text-ink md:text-5xl">
                         Categories & <span className="italic">Taxonomy</span>
                     </h1>
                 </header>
@@ -425,7 +425,7 @@ const Index = ({
                     {/* ── Create Sidebar ── */}
                     <div className="col-span-12 lg:col-span-4">
                         <div className="sticky top-10 border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="h-editorial mb-6 text-2xl text-ink">
+                            <h3 className="mb-6 h-editorial text-2xl text-ink">
                                 New <span className="italic">Category</span>
                             </h3>
                             <div className="space-y-6">

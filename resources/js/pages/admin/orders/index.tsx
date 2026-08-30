@@ -71,7 +71,7 @@ const Index = ({
                         <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
                             Logistics Oversight
                         </p>
-                        <h1 className="h-editorial mt-2 text-4xl text-ink md:text-5xl">
+                        <h1 className="mt-2 h-editorial text-4xl text-ink md:text-5xl">
                             Marketplace <span className="italic">Orders</span>
                         </h1>
                     </div>

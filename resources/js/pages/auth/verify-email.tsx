@@ -1,108 +1,213 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { ArrowRight, Mail, LogOut } from 'lucide-react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { ArrowLeft, Check, LogOut, Mail } from 'lucide-react';
+import VaseIcon from '@/components/home/VaseIcon';
 import { Spinner } from '@/components/ui/spinner';
-import WarmFill from '@/components/WarmFill';
+import { useTranslation } from '@/hooks/use-translation';
+import logo from '@/images/logo.png';
+import zellij from '@/images/zellij-pattern.png';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
+import type { PageProps } from '@/types';
+
+const locales = [
+    { code: 'fr', label: 'FR' },
+    { code: 'ar', label: 'AR' },
+    { code: 'en', label: 'EN' },
+] as const;
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const { t, locale } = useTranslation();
+    const { auth } = usePage<PageProps>().props;
+
     const isLinkSent = status === 'verification-link-sent';
+
+    const switchLocale = (code: string) =>
+        router.post(route('locale.switch', code), {}, { preserveScroll: true });
 
     return (
         <>
-            <Head title="Vérification de l'e-mail" />
-            <div className="paper-grain flex min-h-screen flex-col justify-center bg-cream">
-                <section className="container py-12 md:py-24">
-                    <div className="mx-auto grid max-w-6xl grid-cols-12 items-center gap-8">
-                        {/* Left: Visual */}
-                        {/* <aside className="hidden lg:col-span-5 lg:block">
-                            <div className="aspect-[4/5] overflow-hidden shadow-sm border border-ink/5">
-                                <WarmFill
-                                    variant="pottery"
-                                    className="h-full w-full"
+            <Head title={t('common.auth.verify.eyebrow')} />
+
+            <div className="min-h-screen bg-souk-paper lg:grid lg:h-screen lg:grid-cols-[0.85fr_1.15fr]">
+                {/* ── Brand panel (desktop only) ─────────────────────── */}
+                <aside className="relative hidden overflow-hidden bg-souk-brown lg:flex lg:h-screen lg:flex-col">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 opacity-[0.08] mix-blend-screen"
+                        style={{
+                            backgroundImage: `url(${zellij})`,
+                            backgroundSize: '320px',
+                        }}
+                    />
+
+                    <div className="relative shrink-0 px-10 pt-10">
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-3"
+                            aria-label="Hirfaty"
+                        >
+                            <img
+                                src={logo}
+                                alt=""
+                                className="h-8 w-8 object-contain"
+                            />
+                            <span className="font-display text-xl text-white">
+                                Hirfaty
+                                <span className="text-souk-cream">.</span>
+                            </span>
+                        </Link>
+                    </div>
+
+                    {/*
+                     * No photograph here on purpose — this is a transactional
+                     * waiting screen, not an editorial moment, so the arch
+                     * holds a large icon instead of the artisan photography
+                     * login/register use. Same silhouette keeps it part of
+                     * the same visual family.
+                     */}
+                    <div className="relative flex min-h-0 flex-1 items-center justify-center px-10 py-8">
+                        <div className="relative h-full max-h-[24rem]">
+                            <div
+                                aria-hidden="true"
+                                className="absolute -top-4 -right-4 h-full w-full rounded-t-full rounded-bl-2xl border-2 border-souk-cream/40"
+                            />
+                            <div className="relative flex aspect-[4/5] h-full items-center justify-center overflow-hidden rounded-t-full rounded-bl-2xl bg-souk-cream/10 shadow-2xl shadow-black/30">
+                                <span
+                                    aria-hidden="true"
+                                    className="absolute h-32 w-32 rounded-full bg-souk-cream/10 motion-safe:animate-pulse"
                                 />
-                            </div>
-                        </aside> */}
-
-                        {/* Right: Content */}
-                        <div className="col-span-12 space-y-10 lg:col-span-7 lg:pl-12">
-                            <div className="space-y-4">
-                                <p className="eyebrow">Sécurité du compte</p>
-                                <h1 className="h-editorial text-4xl leading-[1.05] text-ink md:text-6xl">
-                                    Vérifiez votre{' '}
-                                    <span className="text-terracotta italic">
-                                        e-mail
-                                    </span>
-                                    .
-                                </h1>
-                                <p className="max-w-xl text-base leading-relaxed text-ink-soft md:text-lg">
-                                    Merci de nous avoir rejoints ! Avant de
-                                    commencer, pourriez-vous vérifier votre
-                                    adresse e-mail en cliquant sur le lien que
-                                    nous venons de vous envoyer ?
-                                </p>
-                            </div>
-
-                            {isLinkSent && (
-                                <div className="flex items-start gap-3 rounded-sm border border-emerald-100 bg-emerald-50 p-4">
-                                    <div className="mt-0.5">
-                                        <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                                    </div>
-                                    <p className="text-sm leading-relaxed font-medium text-emerald-800">
-                                        Un nouveau lien de vérification a été
-                                        envoyé à l'adresse e-mail que vous avez
-                                        fournie lors de l'inscription.
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="flex flex-col gap-6">
-                                <Form {...send.form()} disableWhileProcessing>
-                                    {({ processing }) => (
-                                        <button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="group inline-flex items-center justify-between gap-6 bg-ink px-8 py-5 text-cream transition-colors hover:bg-terracotta disabled:opacity-60"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {processing ? (
-                                                    <Spinner className="h-5 w-5" />
-                                                ) : (
-                                                    <Mail className="h-5 w-5" />
-                                                )}
-                                                <span className="font-display text-lg">
-                                                    Renvoyer l'e-mail de
-                                                    vérification
-                                                </span>
-                                            </div>
-                                            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                                        </button>
-                                    )}
-                                </Form>
-
-                                <div className="flex items-center gap-8 border-t border-ink/10 pt-4">
-                                    <Link
-                                        href={logout()}
-                                        method="post"
-                                        as="button"
-                                        className="group flex items-center gap-2 text-sm text-ink-soft transition-colors hover:text-ink"
-                                    >
-                                        <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                                        <span>Se déconnecter</span>
-                                    </Link>
-
-                                    <p className="text-sm text-ink-soft/60 italic">
-                                        Pas encore reçu ? Pensez à vérifier vos
-                                        spams.
-                                    </p>
-                                </div>
+                                <Mail
+                                    className="relative h-20 w-20 text-souk-cream/80"
+                                    strokeWidth={1.25}
+                                />
                             </div>
                         </div>
                     </div>
-                </section>
+
+                    <div className="relative shrink-0 px-10 pb-10">
+                        <VaseIcon className="h-8 w-8 text-souk-cream/45" />
+                        <p className="mt-4 max-w-md font-display text-xl leading-snug text-souk-cream">
+                            {t('common.auth.verify.quote')}
+                        </p>
+                    </div>
+                </aside>
+
+                {/* ── Content panel ────────────────────────────────────── */}
+                <main className="flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-y-auto lg:px-14 lg:py-6">
+                    <div className="flex items-center justify-between gap-4">
+                        <Link
+                            href="/"
+                            className="group inline-flex items-center gap-2 text-sm text-souk-brown-deep/70 transition-colors hover:text-souk-brown"
+                        >
+                            <ArrowLeft
+                                className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 rtl:rotate-180"
+                                strokeWidth={1.5}
+                            />
+                            <span className="hidden sm:inline">
+                                {t('common.auth.login.back_home')}
+                            </span>
+                            <span className="inline font-display text-lg text-souk-title sm:hidden">
+                                Hirfaty
+                            </span>
+                        </Link>
+
+                        <div className="flex items-center text-[11px] font-medium tracking-[0.18em] text-souk-brown-deep/50">
+                            {locales.map((l) => (
+                                <button
+                                    key={l.code}
+                                    type="button"
+                                    onClick={() => switchLocale(l.code)}
+                                    className={`px-2 py-1 transition-colors ${
+                                        locale === l.code
+                                            ? 'text-souk-brown'
+                                            : 'hover:text-souk-brown-deep'
+                                    }`}
+                                >
+                                    {l.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-1 items-center justify-center py-6 lg:py-3">
+                        <div className="w-full max-w-sm">
+                            <p className="text-[11px] tracking-[0.2em] text-souk-brown/70 uppercase">
+                                {t('common.auth.verify.eyebrow')}
+                            </p>
+                            <h1 className="mt-3 font-display text-[clamp(1.9rem,4vw,2.75rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
+                                {t('common.auth.verify.title')}{' '}
+                                <span className="text-souk-brown italic">
+                                    {t('common.auth.verify.title_accent')}
+                                </span>
+                            </h1>
+                            <p className="mt-3 text-sm leading-relaxed text-souk-brown-deep/70">
+                                {t('common.auth.verify.subtitle')}
+                            </p>
+                            {auth.user?.email && (
+                                <p className="mt-1 text-sm font-medium text-souk-title">
+                                    {auth.user.email}
+                                </p>
+                            )}
+
+                            {isLinkSent && (
+                                <div
+                                    role="status"
+                                    className="mt-6 flex items-start gap-2.5 border-s-2 border-emerald-600/50 bg-emerald-50/70 px-3.5 py-2.5 text-sm text-emerald-800"
+                                >
+                                    <Check
+                                        className="mt-0.5 h-4 w-4 shrink-0"
+                                        strokeWidth={2}
+                                    />
+                                    {t('common.auth.verify.sent_banner')}
+                                </div>
+                            )}
+
+                            <Form
+                                {...send.form()}
+                                disableWhileProcessing
+                                className="mt-6"
+                            >
+                                {({ processing }) => (
+                                    <button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="group inline-flex w-full items-center justify-center gap-2.5 bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {processing ? (
+                                            <Spinner />
+                                        ) : (
+                                            <Mail
+                                                className="h-4 w-4"
+                                                strokeWidth={1.75}
+                                            />
+                                        )}
+                                        {t('common.auth.verify.resend')}
+                                    </button>
+                                )}
+                            </Form>
+
+                            <div className="mt-5 flex items-center justify-between gap-4 border-t border-souk-brown/10 pt-4">
+                                <p className="text-xs text-souk-brown-deep/50">
+                                    {t('common.auth.verify.spam_hint')}
+                                </p>
+
+                                <Link
+                                    href={logout()}
+                                    method="post"
+                                    as="button"
+                                    className="group inline-flex shrink-0 items-center gap-1.5 text-sm text-souk-brown-deep/70 transition-colors hover:text-souk-brown"
+                                >
+                                    <LogOut
+                                        className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 rtl:rotate-180"
+                                        strokeWidth={1.5}
+                                    />
+                                    {t('common.auth.verify.logout')}
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
         </>
     );
 }
-
-VerifyEmail.layout = (page: React.ReactNode) => page;

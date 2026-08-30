@@ -33,11 +33,11 @@ export default function SellerLayout({ children }: { children: ReactNode }) {
     const [tab, setTab] = useState<Tab>('overview');
 
     return (
-        <div className="paper-grain min-h-screen bg-cream">
+        <div className="min-h-screen bg-cream paper-grain">
             <SiteHeader />
 
             <section className="container pt-12 pb-8">
-                <p className="eyebrow mb-3">Mon espace</p>
+                <p className="mb-3 eyebrow">Mon espace</p>
                 <h1 className="h-editorial text-5xl text-ink md:text-6xl">
                     Bonjour [Salma],{' '}
                     <span className="text-terracotta italic">

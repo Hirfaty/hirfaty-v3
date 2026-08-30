@@ -26,6 +26,7 @@ use Override;
  * @property string|null $last_name
  * @property string|null $phone_number
  * @property string $role
+ * @property CarbonImmutable|null $professional_verified_at
  * @property string|null $avatar
  * @property string|null $bio
  * @property int $is_banned
@@ -86,6 +87,7 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'professional_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
@@ -111,6 +113,16 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     public function isProfessionalBuyer(): bool
     {
         return $this->role === 'professional_buyer';
+    }
+
+    /**
+     * Whether an admin has reviewed and approved this professional buyer.
+     * Nothing currently gates purchasing on this — it's surfaced to the admin
+     * so they can decide to verify (or unverify) an account, not enforced.
+     */
+    public function isProfessionalVerified(): bool
+    {
+        return $this->professional_verified_at !== null;
     }
 
     public function isSeller(): bool

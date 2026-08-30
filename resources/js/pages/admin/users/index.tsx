@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import {
     Ban,
+    CheckCircle2,
     ChevronLeft,
     ChevronRight,
     EllipsisVertical,
@@ -288,11 +289,28 @@ export default function UsersIndex({
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span
-                                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[user.role]}`}
-                                        >
-                                            {ROLE_LABEL[user.role]}
-                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span
+                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[user.role]}`}
+                                            >
+                                                {ROLE_LABEL[user.role]}
+                                            </span>
+                                            {user.role ===
+                                                'professional_buyer' &&
+                                                (user.professional_verified_at ? (
+                                                    <CheckCircle2
+                                                        className="h-4 w-4 text-emerald-600"
+                                                        aria-label="Vérifié"
+                                                    />
+                                                ) : (
+                                                    <span
+                                                        className="text-[11px] text-ink-soft"
+                                                        title="En attente de vérification"
+                                                    >
+                                                        non vérifié
+                                                    </span>
+                                                ))}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         {user.store ? (

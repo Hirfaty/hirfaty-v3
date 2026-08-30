@@ -18,13 +18,17 @@ wait_for_db() {
     echo "Database is reachable."
 }
 
+# Each site (init.hirfaty.com, hirfaty.com) has its own cert lifecycle, so
+# each is selected independently between its -http (pre-cert) and -ssl
+# (post-cert) fragment, then dropped into sites-enabled under its own name.
 select_nginx_vhost() {
-    local domain="${APP_DOMAIN:-init.hirfaty.com}"
+    local domain="$1"
+    local site="$2"
 
     if [ -f "/etc/letsencrypt/live/${domain}/fullchain.pem" ]; then
-        cp /etc/nginx/available/nginx-ssl.conf /etc/nginx/sites-enabled/default
+        cp "/etc/nginx/available/${site}-ssl.conf" "/etc/nginx/sites-enabled/${site}"
     else
-        cp /etc/nginx/available/nginx-http.conf /etc/nginx/sites-enabled/default
+        cp "/etc/nginx/available/${site}-http.conf" "/etc/nginx/sites-enabled/${site}"
     fi
 }
 
@@ -33,6 +37,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan storage:link || true
-select_nginx_vhost
+select_nginx_vhost "${APP_DOMAIN:-init.hirfaty.com}" init
+select_nginx_vhost hirfaty.com hirfaty
 
 exec "$@"

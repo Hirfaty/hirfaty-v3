@@ -123,9 +123,7 @@ function Stat({
                 <Icon className="h-3.5 w-3.5" />
                 {label}
             </div>
-            <p className={`mt-2 text-xl font-semibold ${toneClass}`}>
-                {value}
-            </p>
+            <p className={`mt-2 text-xl font-semibold ${toneClass}`}>{value}</p>
         </div>
     );
 
@@ -478,10 +476,7 @@ const AdminDashboard = ({
                             latestUsers.map((user) => (
                                 <Link
                                     key={user.id}
-                                    href={route(
-                                        'admin.users.show',
-                                        user.id,
-                                    )}
+                                    href={route('admin.users.show', user.id)}
                                     className="flex items-center justify-between gap-3 px-5 py-3.5 transition hover:bg-muted/40"
                                 >
                                     <div className="flex min-w-0 items-center gap-3">

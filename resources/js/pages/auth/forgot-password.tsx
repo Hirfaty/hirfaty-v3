@@ -11,13 +11,13 @@ export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <>
             <Head title="Forgot password" />
-            <div className="paper-grain min-h-screen bg-cream">
+            <div className="min-h-screen bg-cream paper-grain">
                 <SiteHeader />
 
                 <section className="container pt-12 pb-10 md:pt-16">
                     <div className="grid grid-cols-12 items-end gap-6">
                         <div className="col-span-12 md:col-span-8">
-                            <p className="eyebrow mb-3">
+                            <p className="mb-3 eyebrow">
                                 Réinitialiser votre mot de passe
                             </p>
                             <h1 className="h-editorial text-4xl leading-[1.05] text-ink md:text-6xl">

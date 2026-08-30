@@ -40,12 +40,12 @@ export default function SetupStore({
     };
 
     return (
-        <div className="paper-grain min-h-screen bg-cream">
+        <div className="min-h-screen bg-cream paper-grain">
             <SiteHeader />
             <section className="container pt-12 pb-6 md:pt-16">
-                <p className="eyebrow mb-3">Bienvenue sur Hirfaty</p>
+                <p className="mb-3 eyebrow">Bienvenue sur Hirfaty</p>
                 <div className="grid grid-cols-12 items-end gap-6">
-                    <h1 className="h-editorial col-span-12 text-4xl text-ink md:col-span-8 md:text-6xl">
+                    <h1 className="col-span-12 h-editorial text-4xl text-ink md:col-span-8 md:text-6xl">
                         Installons votre{' '}
                         <span className="text-terracotta italic">atelier</span>.
                         <br />
@@ -188,7 +188,7 @@ const Field = ({
     children: React.ReactNode;
 }) => (
     <div>
-        <label className="eyebrow mb-3 block">{label}</label>
+        <label className="mb-3 block eyebrow">{label}</label>
         {children}
     </div>
 );

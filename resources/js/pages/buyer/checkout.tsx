@@ -64,7 +64,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
     };
 
     return (
-        <div className="paper-grain min-h-screen bg-cream font-sans text-ink">
+        <div className="min-h-screen bg-cream paper-grain font-sans text-ink">
             <SiteHeader />
 
             <section className="container pt-12 pb-6">
@@ -75,7 +75,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
                     <ArrowLeft className="h-4 w-4" /> Retour au panier
                 </Link>
 
-                <h1 className="h-editorial mt-6 text-4xl md:text-5xl">
+                <h1 className="mt-6 h-editorial text-4xl md:text-5xl">
                     Finaliser la commande
                 </h1>
             </section>
@@ -102,7 +102,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="eyebrow mb-2 block">
+                                    <label className="mb-2 block eyebrow">
                                         Ville
                                     </label>
                                     <select
@@ -132,7 +132,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
                                 </div>
 
                                 <div>
-                                    <label className="eyebrow mb-2 block">
+                                    <label className="mb-2 block eyebrow">
                                         Adresse complète
                                     </label>
                                     <textarea
@@ -155,7 +155,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
                                 </div>
 
                                 <div>
-                                    <label className="eyebrow mb-2 block">
+                                    <label className="mb-2 block eyebrow">
                                         Notes{' '}
                                         <span className="font-normal text-ink-soft">
                                             (optionnel)
@@ -194,7 +194,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
                                             key={storeId}
                                             className="border border-ink/5 bg-cream-deep/30 p-6"
                                         >
-                                            <p className="eyebrow mb-4 text-xs">
+                                            <p className="mb-4 eyebrow text-xs">
                                                 Expédié par {storeName}
                                             </p>
                                             <ul className="space-y-3">
@@ -269,7 +269,7 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
                     {/* ── Right — summary ── */}
                     <aside className="col-span-12 lg:col-span-5">
                         <div className="sticky top-24 border border-ink/15 bg-paper p-8 shadow-sm">
-                            <h2 className="eyebrow mb-6">Récapitulatif</h2>
+                            <h2 className="mb-6 eyebrow">Récapitulatif</h2>
 
                             <div className="space-y-4 text-sm">
                                 <div className="flex justify-between text-ink-soft">

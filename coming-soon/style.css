@@ -1,0 +1,242 @@
+:root {
+  --cream: #f7f5f1;
+  --cream: oklch(96.8% 0.003 250);
+  --paper: #ffffff;
+  --ink: #22252b;
+  --ink: oklch(21% 0.02 255);
+  --ink-soft: #6b6f76;
+  --ink-soft: oklch(52% 0.015 255);
+  --terracotta: #c1652f;
+  --terracotta: oklch(63% 0.17 41);
+  --terracotta-deep: #a24f22;
+  --terracotta-deep: oklch(55% 0.17 36);
+  --olive: #5c4f30;
+  --olive: oklch(38% 0.05 70);
+  --sand: #e6d0b3;
+  --sand: oklch(84% 0.05 34);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Times New Roman', serif;
+  --font-arabic: 'Noto Naskh Arabic', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  position: relative;
+}
+
+body[dir='rtl'] .card,
+body[dir='rtl'] h1,
+body[dir='rtl'] .subtitle,
+body[dir='rtl'] .eyebrow,
+body[dir='rtl'] .contact {
+  font-family: var(--font-arabic);
+}
+
+body[dir='rtl'] h1 {
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Slowly drifting zellige-inspired background pattern */
+.pattern {
+  position: absolute;
+  inset: -10%;
+  background-image: radial-gradient(circle at 1px 1px, var(--sand) 1.5px, transparent 1.5px);
+  background-size: 42px 42px;
+  opacity: 0.5;
+  animation: drift 40s linear infinite;
+  z-index: 0;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(-42px, -42px, 0) rotate(3deg);
+  }
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  max-width: 30rem;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 1.5rem;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  box-shadow: 0 20px 60px -20px rgba(34, 37, 43, 0.25);
+  animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logo {
+  border-radius: 1rem;
+  margin-bottom: 1.25rem;
+  animation: glow 3.5s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(193, 101, 47, 0));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(193, 101, 47, 0.35));
+  }
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--terracotta-deep);
+  font-weight: 500;
+}
+
+h1 {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.subtitle {
+  margin: 0 auto 1.5rem;
+  max-width: 26rem;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 1.75rem;
+}
+
+.dots span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--terracotta);
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sand);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.contact a {
+  color: var(--terracotta-deep);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.contact a:hover {
+  text-decoration: underline;
+}
+
+.lang-switch {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.75rem;
+}
+
+.lang-switch button {
+  border: 1px solid var(--sand);
+  background: transparent;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.lang-switch button.active {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pattern,
+  .logo,
+  .dots span,
+  .card {
+    animation: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: 2.25rem 1.5rem;
+  }
+}

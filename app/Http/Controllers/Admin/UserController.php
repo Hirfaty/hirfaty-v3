@@ -248,6 +248,25 @@ class UserController extends Controller
         return back()->with('success', "User {$action} successfully.");
     }
 
+    /**
+     * Toggle whether a professional buyer is marked verified. Nothing in the
+     * buying flow currently checks this — it exists purely so the admin can
+     * flag accounts they've reviewed, ahead of that check being wired in.
+     */
+    public function verifyProfessional(User $user)
+    {
+        if ($user->role !== 'professional_buyer') {
+            abort(403);
+        }
+
+        $user->professional_verified_at = $user->professional_verified_at ? null : now();
+        $user->save();
+
+        $action = $user->professional_verified_at ? 'verified' : 'unverified';
+
+        return back()->with('success', "Professional buyer {$action}.");
+    }
+
     public function destroy(User $user)
     {
         if ($user->role === 'super_admin') {
