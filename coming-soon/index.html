@@ -5,38 +5,69 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Hirfaty — Bientôt en ligne</title>
 <meta name="description" content="Hirfaty, le marché de l'artisanat marocain, arrive bientôt." />
+<meta name="theme-color" content="#f7f5f1" />
 <link rel="icon" type="image/png" href="assets/logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500&family=Noto+Naskh+Arabic:wght@500;600&display=swap" rel="stylesheet" />
+<link rel="preload" as="image" href="assets/artisan.jpg" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300&family=Inter:wght@300;400;500&family=Noto+Naskh+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<div class="pattern" aria-hidden="true"></div>
+<div class="stage">
 
-<main class="card">
-  <img class="logo" src="assets/logo.png" alt="Hirfaty" width="72" height="72" />
+  <!-- ── Image panel ─────────────────────────────────────────────── -->
+  <figure class="visual">
+    <div class="visual__frame">
+      <img src="assets/artisan.jpg" alt="Les mains d'un artisan potier au tour, dans un atelier marocain" />
+      <div class="visual__wash" aria-hidden="true"></div>
+      <div class="visual__grain" aria-hidden="true"></div>
+    </div>
+    <!-- <figcaption class="visual__caption"> -->
+      <!-- <span class="visual__rule" aria-hidden="true"></span> -->
+      <!-- <span data-i18n="caption">Atelier de poterie · Fès</span> -->
+    <!-- </figcaption> -->
+  </figure>
 
-  <p class="eyebrow" data-i18n="eyebrow">Souk marocain</p>
-  <h1 data-i18n="heading">L'artisanat marocain arrive bientôt.</h1>
-  <p class="subtitle" data-i18n="subtitle">
-    Nous préparons un marché où chaque pièce raconte l'histoire de la main qui l'a façonnée.
-  </p>
+  <!-- ── Content panel ───────────────────────────────────────────── -->
+  <main class="content">
+    <div class="content__pattern" aria-hidden="true"></div>
 
-  <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="content__inner">
+      <img class="mark reveal" style="--d: 0ms" src="assets/logo.png" alt="Hirfaty" width="64" height="64" />
 
-  <div class="contact">
-    <span data-i18n="contact_label">Une question ? Écrivez-nous</span>
-    <a href="mailto:contact@hirfaty.com">contact@hirfaty.com</a>
-  </div>
+      <!-- <p class="eyebrow reveal" style="--d: 90ms">
+        <span class="eyebrow__line" aria-hidden="true"></span>
+        <span data-i18n="eyebrow">Souk marocain</span>
+      </p> -->
 
-  <div class="lang-switch" role="group" aria-label="Language">
-    <button type="button" data-lang="fr" class="active">FR</button>
-    <button type="button" data-lang="ar">عربية</button>
-    <button type="button" data-lang="en">EN</button>
-  </div>
-</main>
+      <h1 class="reveal" style="--d: 170ms">
+        <span class="h1__a" data-i18n="title_a">L'artisanat marocain</span>
+        <em class="h1__b" data-i18n="title_b">arrive bientôt.</em>
+      </h1>
+
+      <p class="lede reveal" style="--d: 260ms" data-i18n="lede">
+        Nous préparons un marché où chaque pièce porte la trace de la main
+        qui l'a façonnée — et le nom de l'atelier d'où elle vient.
+      </p>
+
+      <div class="progress reveal" style="--d: 350ms">
+        <div class="progress__track"><span class="progress__glint"></span></div>
+        <span class="progress__label" data-i18n="status">En cours de préparation</span>
+      </div>
+
+      <div class="lang reveal" style="--d: 440ms" role="group" aria-label="Language">
+        <button type="button" data-lang="fr" class="active">Français</button>
+        <span class="lang__sep" aria-hidden="true"></span>
+        <button type="button" data-lang="ar">العربية</button>
+        <span class="lang__sep" aria-hidden="true"></span>
+        <button type="button" data-lang="en">English</button>
+      </div>
+    </div>
+  </main>
+
+</div>
 
 <script src="script.js"></script>
 </body>

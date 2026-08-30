@@ -1,32 +1,38 @@
+/* Trilingual copy for the teaser. Keys map to [data-i18n] attributes in
+   index.html; `dir`/`htmlLang` drive the RTL rules in style.css. */
 const translations = {
   fr: {
     dir: 'ltr',
     htmlLang: 'fr',
-    title: 'Hirfaty — Bientôt en ligne',
+    docTitle: 'Hirfaty — Bientôt en ligne',
     eyebrow: 'Souk marocain',
-    heading: "L'artisanat marocain arrive bientôt.",
-    subtitle:
-      "Nous préparons un marché où chaque pièce raconte l'histoire de la main qui l'a façonnée.",
-    contact_label: 'Une question ? Écrivez-nous',
+    title_a: "L'artisanat marocain",
+    title_b: 'arrive bientôt.',
+    lede: "Nous préparons un marché où chaque pièce porte la trace de la main qui l'a façonnée — et le nom de l'atelier d'où elle vient.",
+    status: 'En cours de préparation',
+    caption: 'Atelier de poterie · Fès',
   },
   ar: {
     dir: 'rtl',
     htmlLang: 'ar',
-    title: 'حرفتي — قريباً',
+    docTitle: 'حرفتي — قريباً',
     eyebrow: 'سوق مغربي',
-    heading: 'الحرف المغربية الأصيلة قريباً.',
-    subtitle: 'نُحضّر لكم سوقاً تروي كل قطعة فيه حكاية اليد التي صنعتها.',
-    contact_label: 'لديك سؤال؟ راسلنا',
+    title_a: 'الحرف المغربية الأصيلة',
+    title_b: 'قريباً بين أيديكم.',
+    lede: 'نُحضّر لكم سوقاً تحمل فيه كل قطعة أثر اليد التي صنعتها، واسم الورشة التي خرجت منها.',
+    status: 'قيد التحضير',
+    caption: 'ورشة الفخار · فاس',
   },
   en: {
     dir: 'ltr',
     htmlLang: 'en',
-    title: 'Hirfaty — Coming soon',
+    docTitle: 'Hirfaty — Coming soon',
     eyebrow: 'Moroccan souk',
-    heading: 'Moroccan craftsmanship is coming soon.',
-    subtitle:
-      "We're building a marketplace where every piece carries the story of the hands that made it.",
-    contact_label: 'Got a question? Reach out',
+    title_a: 'Moroccan craftsmanship',
+    title_b: 'is coming soon.',
+    lede: "We're building a marketplace where every piece carries the mark of the hand that made it — and the name of the workshop it came from.",
+    status: 'Currently in the making',
+    caption: 'Pottery workshop · Fès',
   },
 };
 
@@ -38,27 +44,36 @@ function applyLang(lang) {
 
   document.documentElement.lang = t.htmlLang;
   document.body.setAttribute('dir', t.dir);
-  document.title = t.title;
+  document.title = t.docTitle;
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
-    const key = el.getAttribute('data-i18n');
-    if (t[key]) el.textContent = t[key];
+    const value = t[el.getAttribute('data-i18n')];
+    if (value) el.textContent = value;
   });
 
-  document.querySelectorAll('.lang-switch button').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.lang === lang);
+  document.querySelectorAll('.lang button').forEach((btn) => {
+    const isActive = btn.dataset.lang === lang;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', String(isActive));
   });
 
-  localStorage.setItem(STORAGE_KEY, lang);
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* private mode — the choice just won't persist */
+  }
 }
 
-document.querySelectorAll('.lang-switch button').forEach((btn) => {
+document.querySelectorAll('.lang button').forEach((btn) => {
   btn.addEventListener('click', () => applyLang(btn.dataset.lang));
 });
 
-const browserLang = (navigator.language || 'fr').slice(0, 2);
-const initialLang =
-  localStorage.getItem(STORAGE_KEY) ||
-  (translations[browserLang] ? browserLang : 'fr');
+let stored = null;
+try {
+  stored = localStorage.getItem(STORAGE_KEY);
+} catch {
+  /* ignore */
+}
 
-applyLang(initialLang);
+const browserLang = (navigator.language || 'fr').slice(0, 2);
+applyLang(stored || (translations[browserLang] ? browserLang : 'fr'));
