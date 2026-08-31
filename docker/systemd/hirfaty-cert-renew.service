@@ -2,12 +2,17 @@
 #   sudo cp docker/systemd/hirfaty-cert-renew.* /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty-cert-renew.timer
+#
+# Renews the certificates for BOTH domains — certbot renews every cert it
+# manages, and both hirfaty.com and init.hirfaty.com now live in the proxy's
+# shared /etc/letsencrypt volume. Runs from the production checkout because
+# that's where the proxy stack is driven from.
 
 [Unit]
-Description=Renew Hirfaty TLS certificate
+Description=Renew Hirfaty TLS certificates
 After=hirfaty.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/hirfaty
-ExecStart=/usr/bin/make prod-cert-renew
+WorkingDirectory=/home/hirfaty/prod-hirfaty
+ExecStart=/usr/bin/make proxy-cert-renew

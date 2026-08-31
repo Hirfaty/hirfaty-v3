@@ -6,6 +6,10 @@
 # Dumps land in /var/backups/hirfaty (override via Environment= below).
 # Check history with: systemctl status hirfaty-backup.service
 #                      journalctl -u hirfaty-backup.service
+#
+# Production only — staging is deliberately disposable (stage-db-reset wipes
+# it without ceremony), so there is nothing there worth preserving.
+# Runs as root so it can write to /var/backups.
 
 [Unit]
 Description=Backup the Hirfaty production database
@@ -13,5 +17,5 @@ After=hirfaty.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/hirfaty
+WorkingDirectory=/home/hirfaty/prod-hirfaty
 ExecStart=/usr/bin/make prod-backup

@@ -1,15 +1,22 @@
+# Brings the whole VPS back up after a reboot: the shared edge proxy, the
+# production stack, and the staging stack.
+#
 # Install once on the VPS:
 #   sudo cp docker/systemd/hirfaty.service /etc/systemd/system/hirfaty.service
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty
 #
 # Individual containers already restart on crash via `restart: unless-stopped`
-# in docker-compose.prod.yml; this unit's job is only to bring the stack back
-# after a host reboot and to give you `systemctl start/stop/status hirfaty`.
-# Edit WorkingDirectory if the app isn't checked out at /opt/hirfaty.
+# in the compose files; this unit's job is only to bring everything back after
+# a host reboot and to give you `systemctl start/stop/status hirfaty`.
+#
+# Paths assume the two checkouts live at:
+#   /home/hirfaty/prod-hirfaty     (main branch — also runs the shared proxy)
+#   /home/hirfaty/staging-hirfaty  (staging branch)
+# Edit both paths below if you move them.
 
 [Unit]
-Description=Hirfaty production stack (docker compose)
+Description=Hirfaty stacks (proxy + production + staging)
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
@@ -17,10 +24,21 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/hirfaty
-ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml up -d
-ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml down
-TimeoutStartSec=300
+WorkingDirectory=/home/hirfaty/prod-hirfaty
+
+# The proxy goes first so it owns :80/:443 immediately. It resolves its
+# upstreams at request time rather than at startup, so it comes up cleanly
+# even before the app stacks exist — those domains just return 502 until
+# their stack is ready.
+ExecStart=/usr/bin/make proxy-up
+ExecStart=/usr/bin/make prod-up
+ExecStart=/usr/bin/make -C /home/hirfaty/staging-hirfaty stage-up
+
+ExecStop=/usr/bin/make -C /home/hirfaty/staging-hirfaty stage-down
+ExecStop=/usr/bin/make prod-down
+ExecStop=/usr/bin/make proxy-down
+
+TimeoutStartSec=600
 
 [Install]
 WantedBy=multi-user.target

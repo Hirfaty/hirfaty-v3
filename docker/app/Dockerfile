@@ -39,8 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY docker/app/opcache.ini /usr/local/etc/php/conf.d/opcache-prod.ini
 COPY docker/app/www.conf /usr/local/etc/php-fpm.d/www.conf
-COPY docker/app/vhosts/ /etc/nginx/available/
-COPY coming-soon /var/www/coming-soon
+COPY docker/app/vhosts/app.conf /etc/nginx/sites-enabled/app
 COPY docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint.sh
 # nginx here comes from apt, not the official nginx image, so it keeps its

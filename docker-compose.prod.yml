@@ -1,6 +1,13 @@
 # Production stack for the Debian VPS: app (nginx + php-fpm), a queue worker,
-# the Laravel scheduler, Postgres, SeaweedFS, and a certbot helper for TLS.
+# the Laravel scheduler, Postgres and SeaweedFS. Serves hirfaty.com.
 # Run via the `prod-*` Makefile targets, e.g. `make prod-up`.
+#
+# This stack binds no host ports. TLS, certbot and Host-header routing live in
+# docker-compose.proxy.yml, which reaches `app` over the shared `hirfaty-edge`
+# network under the alias `app-prod`. Everything else stays on the private
+# `internal` network, isolated from the staging stack.
+
+name: hirfaty
 
 services:
   app:
@@ -10,17 +17,16 @@ services:
     image: hirfaty-app:latest
     container_name: hirfaty-app
     env_file: .env
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - certbot_certs:/etc/letsencrypt:ro
-      - certbot_webroot:/var/www/certbot
     depends_on:
       db:
         condition: service_healthy
       seaweedfs:
         condition: service_started
+    networks:
+      internal:
+      edge:
+        aliases:
+          - app-prod
     restart: unless-stopped
 
   queue:
@@ -32,6 +38,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - internal
     restart: unless-stopped
 
   scheduler:
@@ -43,6 +51,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - internal
     restart: unless-stopped
 
   db:
@@ -59,6 +69,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
     restart: unless-stopped
 
   seaweedfs:
@@ -70,20 +82,20 @@ services:
     volumes:
       - seaweedfs_data:/data
       - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
+    networks:
+      - internal
     restart: unless-stopped
 
-  # One-off container for issuing/renewing the TLS cert. Not started by
-  # `up`; invoked directly by `make prod-cert-init` / `make prod-cert-renew`.
-  certbot:
-    image: certbot/certbot
-    container_name: hirfaty-certbot
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - certbot_webroot:/var/www/certbot
-    profiles: ['tools']
-
 volumes:
+  # Left unnamed so they keep the names compose already gave them
+  # (hirfaty_db_data / hirfaty_seaweedfs_data) — renaming would orphan the
+  # existing production data.
   db_data:
   seaweedfs_data:
-  certbot_certs:
-  certbot_webroot:
+
+networks:
+  internal:
+    driver: bridge
+  edge:
+    external: true
+    name: hirfaty-edge

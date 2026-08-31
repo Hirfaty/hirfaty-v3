@@ -1,0 +1,54 @@
+# Shared edge proxy + certbot. This is the only stack that binds host ports;
+# the prod and staging app stacks are reachable only through it, over the
+# external `hirfaty-edge` network.
+#
+# Run from the production checkout (/opt/hirfaty) via the `proxy-*` Makefile
+# targets. Bring it up AFTER creating the network: `make edge-network`.
+
+name: hirfaty-proxy
+
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    image: hirfaty-proxy:latest
+    container_name: hirfaty-proxy
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      PROD_DOMAIN: ${PROD_DOMAIN:-hirfaty.com}
+      STAGING_DOMAIN: ${STAGING_DOMAIN:-init.hirfaty.com}
+    volumes:
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot
+      - ./docker/proxy/htpasswd:/etc/nginx/htpasswd:ro
+    networks:
+      - edge
+    restart: unless-stopped
+
+  # One-off container for issuing/renewing certificates. Not started by `up`;
+  # invoked directly by the `proxy-cert-*` Makefile targets.
+  certbot:
+    image: certbot/certbot
+    container_name: hirfaty-certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    profiles: ['tools']
+
+volumes:
+  # Explicitly named to match the volumes the old single-stack setup created
+  # (compose project "hirfaty" + volume "certbot_certs"), so the certificate
+  # already issued for init.hirfaty.com carries over instead of needing a
+  # re-issue against Let's Encrypt's rate limits.
+  certbot_certs:
+    name: hirfaty_certbot_certs
+  certbot_webroot:
+    name: hirfaty_certbot_webroot
+
+networks:
+  edge:
+    external: true
+    name: hirfaty-edge

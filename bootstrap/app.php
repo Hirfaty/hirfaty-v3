@@ -17,6 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The app sits behind the shared nginx proxy (docker-compose.proxy.yml)
+        // and never binds a public port itself, so the only client it can ever
+        // see is the proxy's container IP — trusting '*' is safe here and
+        // avoids hardcoding a docker subnet that changes between networks.
+        // Without this, TLS terminates at the proxy and the app would believe
+        // every request is plain HTTP: assets, redirects and password-reset
+        // links would all be generated as http://.
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([

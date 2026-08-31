@@ -1,0 +1,100 @@
+# Staging stack, serving init.hirfaty.com behind basic auth. Mirrors
+# docker-compose.prod.yml but is a fully separate compose project with its own
+# containers, volumes, database and SeaweedFS storage — nothing is shared with
+# production except the edge proxy in front.
+#
+# Intended to run from a second checkout of this repo on the staging branch,
+# e.g. /opt/hirfaty-staging, via the `stage-*` Makefile targets.
+# Reads .env.staging (APP_ENV=staging), not .env.
+
+name: hirfaty-staging
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    image: hirfaty-staging-app:latest
+    container_name: hirfaty-staging-app
+    env_file: .env.staging
+    depends_on:
+      db:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_started
+    networks:
+      internal:
+      edge:
+        aliases:
+          - app-staging
+    restart: unless-stopped
+
+  queue:
+    image: hirfaty-staging-app:latest
+    container_name: hirfaty-staging-queue
+    env_file: .env.staging
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: ['php', 'artisan', 'queue:work', '--tries=3', '--max-time=3600', '--sleep=3']
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+
+  scheduler:
+    image: hirfaty-staging-app:latest
+    container_name: hirfaty-staging-scheduler
+    env_file: .env.staging
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: ['sh', '-c', 'while true; do php artisan schedule:run --no-interaction; sleep 60; done']
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: hirfaty-staging-db
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-hirfaty}
+      POSTGRES_USER: ${DB_USERNAME:-hirfaty}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hirfaty}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-hirfaty} -d ${DB_DATABASE:-hirfaty}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+  seaweedfs:
+    image: chrislusf/seaweedfs
+    container_name: hirfaty-staging-seaweedfs
+    command: >
+      server -s3 -s3.config=/etc/seaweedfs/s3-config.json -dir=/data
+      -master.volumeSizeLimitMB=1024
+    volumes:
+      - seaweedfs_data:/data
+      - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
+    networks:
+      - internal
+    restart: unless-stopped
+
+volumes:
+  # Prefixed with the compose project name (hirfaty-staging_*), so these are
+  # distinct volumes from production's — staging can be wiped freely.
+  db_data:
+  seaweedfs_data:
+
+networks:
+  internal:
+    driver: bridge
+  edge:
+    external: true
+    name: hirfaty-edge
