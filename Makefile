@@ -36,7 +36,7 @@ EDGE_NETWORK = hirfaty-edge
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
 	prod-deploy prod-backup \
-	stage-build stage-up stage-down stage-restart stage-logs stage-ps \
+	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
 	stage-migrate stage-db-reset stage-seed stage-artisan stage-deploy \
 	proxy-build proxy-up proxy-down proxy-restart proxy-logs proxy-reload \
 	proxy-htpasswd proxy-cert-prod proxy-cert-staging proxy-cert-renew
@@ -79,8 +79,8 @@ proxy-htpasswd:
 	fi
 	@docker run --rm httpd:2.4-alpine htpasswd -nbB "$(USER)" "$(PASS)" \
 		> docker/proxy/htpasswd
-	@chmod 600 docker/proxy/htpasswd
-	@echo "Wrote docker/proxy/htpasswd for user '$(USER)'. Run 'make proxy-up' to apply."
+	@chmod 644 docker/proxy/htpasswd
+	@echo "Wrote docker/proxy/htpasswd for user '$(USER)'."
 
 # TLS bootstrap. The proxy must already be serving HTTP (`make proxy-up`) so
 # certbot can complete the HTTP-01 challenge through the shared webroot.
@@ -181,6 +181,13 @@ prod-backup:
 
 stage-build:
 	$(COMPOSE_STAGE) build
+
+# Same reasoning as prod-key-generate: no .env file lives inside the
+# container, so this just prints a key to paste into .env.staging by hand.
+# Needs an image to run against — `make stage-build` first if this is a
+# fresh checkout.
+stage-key-generate:
+	docker run --rm --entrypoint php hirfaty-staging-app:latest artisan key:generate --show
 
 stage-up: edge-network
 	$(COMPOSE_STAGE) up -d db seaweedfs
