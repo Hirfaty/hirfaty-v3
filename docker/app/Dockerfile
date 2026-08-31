@@ -43,7 +43,15 @@ COPY docker/app/vhosts/ /etc/nginx/available/
 COPY coming-soon /var/www/coming-soon
 COPY docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN rm -f /etc/nginx/sites-enabled/default && chmod +x /usr/local/bin/entrypoint.sh
+# nginx here comes from apt, not the official nginx image, so it keeps its
+# default file-based logs at /var/log/nginx/*.log — invisible to `docker logs`,
+# which makes upstream/502 errors effectively undebuggable from the host.
+# Symlink both streams to the container's stdout/stderr the way the official
+# nginx image does, so supervisord forwards them.
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /var/www/html
 

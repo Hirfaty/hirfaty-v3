@@ -61,7 +61,9 @@ prod-db-reset:
 		exit 1; \
 	fi
 	$(COMPOSE) run --rm -e APP_ENV=local app php artisan migrate:fresh --force
-	$(COMPOSE) run --rm app php artisan db:seed --class=SuperAdminSeeder --force
+
+prod-seed:
+	$(COMPOSE) run --rm app php artisan db:seed --force
 
 # Usage: make prod-artisan CMD="queue:restart"
 prod-artisan:
