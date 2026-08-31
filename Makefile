@@ -43,8 +43,16 @@ prod-ps:
 prod-migrate:
 	$(COMPOSE) exec app php artisan migrate --force
 
-# Drops every table and re-migrates from scratch — irreversible, all data is
-# lost. Requires typing "reset" at the prompt; anything else aborts.
+# Drops every table, re-migrates from scratch, and reseeds only the super
+# admin account — irreversible, all data is lost. Requires typing "reset" at
+# the prompt; anything else aborts. Take a `make prod-backup` first.
+#
+# `migrate:fresh` is normally refused in production (see
+# DB::prohibitDestructiveCommands in AppServiceProvider) even with --force,
+# which is a *different* guard than --force bypasses — so this one-off `run`
+# gets APP_ENV=local injected to disable it, without touching the real
+# APP_ENV=production the long-running app/queue/scheduler containers use.
+# db:seed isn't covered by that guard, so it needs no override.
 prod-db-reset:
 	@echo "This will DROP ALL TABLES in the production database. All data will be lost."
 	@read -p "Type 'reset' to confirm: " confirm; \
@@ -52,7 +60,8 @@ prod-db-reset:
 		echo "Aborted."; \
 		exit 1; \
 	fi
-	$(COMPOSE) run --rm app php artisan migrate:fresh --force
+	$(COMPOSE) run --rm -e APP_ENV=local app php artisan migrate:fresh --force
+	$(COMPOSE) run --rm app php artisan db:seed --class=SuperAdminSeeder --force
 
 # Usage: make prod-artisan CMD="queue:restart"
 prod-artisan:
