@@ -27,5 +27,4 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-.env.staging
 /docker/proxy/htpasswd

@@ -23,8 +23,22 @@ reset:
 #   sudo cp docker/systemd/hirfaty.service /etc/systemd/system/hirfaty.service
 #   sudo systemctl daemon-reload && sudo systemctl enable hirfaty
 
-COMPOSE = docker compose -f docker-compose.prod.yml
-COMPOSE_STAGE = docker compose -f docker-compose.staging.yml
+# Both app stacks keep their real secrets in a file named plainly `.env` in
+# their own checkout (prod's ~/prod-hirfaty/.env, staging's
+# ~/staging-hirfaty/.env — two different files that just share a filename).
+#
+# --env-file is explicit here on purpose, not decorative. `${VAR:-default}`
+# interpolation inside a compose YAML (a separate mechanism from `env_file:`
+# on a service) is resolved by Compose itself at parse time from EITHER the
+# shell's exported vars OR a file literally named `.env` in the working
+# directory. Naming staging's file anything else (it used to be
+# `.env.staging`) makes every ${DB_USERNAME:-hirfaty}-style default silently
+# win regardless of what the file says — that's exactly what caused the
+# staging db to init with the wrong credentials once already. Passing
+# --env-file explicitly is defense against a repeat if this ever runs from a
+# different cwd or the filename convention drifts again.
+COMPOSE = docker compose -f docker-compose.prod.yml --env-file .env
+COMPOSE_STAGE = docker compose -f docker-compose.staging.yml --env-file .env
 COMPOSE_PROXY = docker compose -f docker-compose.proxy.yml
 
 PROD_DOMAIN ?= hirfaty.com
@@ -175,15 +189,15 @@ prod-backup:
 	./docker/scripts/backup-db.sh
 
 # ── Staging (init.hirfaty.com) ──────────────────────────────────────────
-# Same targets, against the staging stack. APP_ENV=staging in .env.staging
-# means Laravel's destructive-command guard is off, so stage-db-reset needs
-# no APP_ENV override and prompts for nothing — staging is disposable.
+# Same targets, against the staging stack. APP_ENV=staging in this checkout's
+# .env means Laravel's destructive-command guard is off, so stage-db-reset
+# needs no APP_ENV override and prompts for nothing — staging is disposable.
 
 stage-build:
 	$(COMPOSE_STAGE) build
 
 # Same reasoning as prod-key-generate: no .env file lives inside the
-# container, so this just prints a key to paste into .env.staging by hand.
+# container, so this just prints a key to paste into this checkout's .env by hand.
 # Needs an image to run against — `make stage-build` first if this is a
 # fresh checkout.
 stage-key-generate:

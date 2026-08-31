@@ -4,8 +4,17 @@
 # production except the edge proxy in front.
 #
 # Intended to run from a second checkout of this repo on the staging branch,
-# e.g. /opt/hirfaty-staging, via the `stage-*` Makefile targets.
-# Reads .env.staging (APP_ENV=staging), not .env.
+# e.g. ~/staging-hirfaty, via the `stage-*` Makefile targets.
+# Reads .env (APP_ENV=staging) from THIS checkout — a completely separate
+# file from prod's .env in the prod checkout, they just share a filename.
+# Named plainly `.env` rather than `.env.staging` deliberately: Compose's own
+# ${VAR:-default} interpolation (used below, e.g. POSTGRES_USER) is resolved
+# from a file literally named `.env` in the working directory — it does NOT
+# read whatever `env_file:` points at. A differently-named env file here
+# silently fell back to defaults for the db service while env_file: still
+# worked fine for the app, which is exactly what broke staging's db
+# credentials earlier. `--env-file .env` is still passed explicitly in the
+# Makefile as defense against ever hitting this again from a different cwd.
 
 name: hirfaty-staging
 
@@ -16,7 +25,7 @@ services:
       dockerfile: docker/app/Dockerfile
     image: hirfaty-staging-app:latest
     container_name: hirfaty-staging-app
-    env_file: .env.staging
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +41,7 @@ services:
   queue:
     image: hirfaty-staging-app:latest
     container_name: hirfaty-staging-queue
-    env_file: .env.staging
+    env_file: .env
     entrypoint: /usr/local/bin/entrypoint.sh
     command: ['php', 'artisan', 'queue:work', '--tries=3', '--max-time=3600', '--sleep=3']
     depends_on:
@@ -45,7 +54,7 @@ services:
   scheduler:
     image: hirfaty-staging-app:latest
     container_name: hirfaty-staging-scheduler
-    env_file: .env.staging
+    env_file: .env
     entrypoint: /usr/local/bin/entrypoint.sh
     command: ['sh', '-c', 'while true; do php artisan schedule:run --no-interaction; sleep 60; done']
     depends_on:
