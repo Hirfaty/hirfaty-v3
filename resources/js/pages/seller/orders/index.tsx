@@ -72,7 +72,7 @@ export default function SellerOrders({
                 `${o.buyer.first_name} ${o.buyer.last_name}`.toLowerCase();
             const matchesQuery =
                 !q ||
-                String(o.id).includes(q) ||
+                o.reference.toLowerCase().includes(q) ||
                 customerName.includes(q) ||
                 o.buyer.email.toLowerCase().includes(q);
 
@@ -100,7 +100,7 @@ export default function SellerOrders({
                         <Search className="absolute inset-s-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             id="search"
-                            placeholder="Rechercher (ID, client, email)"
+                            placeholder="Rechercher (référence, client, email)"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             className="w-72 rounded-sm ps-10"
@@ -182,10 +182,13 @@ export default function SellerOrders({
                                     >
                                         <TableCell className="font-mono text-xs">
                                             <Link
-                                                href={`/seller/orders/${o.id}`}
+                                                href={route(
+                                                    'seller.orders.show',
+                                                    o.reference,
+                                                )}
                                                 className="hover:underline"
                                             >
-                                                {o.id}
+                                                {o.reference}
                                             </Link>
                                         </TableCell>
                                         <TableCell className="text-sm text-muted-foreground">
@@ -231,7 +234,7 @@ export default function SellerOrders({
                                                     <Link
                                                         href={route(
                                                             'seller.orders.show',
-                                                            o.id,
+                                                            o.reference,
                                                         )}
                                                     >
                                                         <Eye className="h-4 w-4" />

@@ -6,11 +6,23 @@ import {
     Pencil,
     PlayCircle,
     SquareArrowOutUpRight,
+    Trash2,
     X,
     ZoomIn,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -19,6 +31,7 @@ import type {
     Media,
     Order,
     OrderItem,
+    PageProps,
     Product,
     ProductStatus,
     ProductVariant,
@@ -101,6 +114,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function AdminProductShow({ product }: AdminProductShowProps) {
     const [mediaOpen, setMediaOpen] = useState(false);
     const [mediaIndex, setMediaIndex] = useState(0);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const { data, setData, patch, processing } = useForm<{
         rejection_reason: string;
@@ -121,6 +136,33 @@ function AdminProductShow({ product }: AdminProductShowProps) {
 
     const archive = () => {
         router.patch(route('admin.products.archive', product.id));
+    };
+
+    // A product that has ever been ordered can't be hard-deleted — the
+    // controller enforces this too, but checking it here avoids offering an
+    // action that's guaranteed to fail.
+    const hasOrders = product.order_items.length > 0;
+
+    const confirmDelete = () => {
+        setDeleting(true);
+        router.delete(route('admin.products.destroy', product.id), {
+            // A successful *request* isn't the same as a successful
+            // *deletion* — the destroy endpoint replies 200 either way and
+            // reports the real outcome via `flash`, so that's what has to
+            // be read here. On an actual delete this page redirects to the
+            // index, so `page.props` is that page's props by the time this
+            // runs.
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+                } else {
+                    toast.success(flash?.success ?? 'Produit supprimé.');
+                }
+            },
+            onFinish: () => setDeleting(false),
+        });
     };
 
     const totalSales = product.order_items.reduce(
@@ -175,6 +217,18 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                     >
                         <SquareArrowOutUpRight className="h-4 w-4" />
                     </Link>
+                    <button
+                        onClick={() => setDeleteOpen(true)}
+                        disabled={hasOrders}
+                        title={
+                            hasOrders
+                                ? 'Ce produit a des commandes — archivez-le plutôt'
+                                : 'Supprimer'
+                        }
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:border-terracotta hover:bg-terracotta hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-transparent disabled:hover:text-ink-soft"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
                 </div>
             </div>
 
@@ -542,6 +596,26 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                 <Pencil className="h-4 w-4" />
                                 Modifier le produit
                             </Link>
+
+                            <button
+                                onClick={() => setDeleteOpen(true)}
+                                disabled={hasOrders}
+                                title={
+                                    hasOrders
+                                        ? 'Ce produit a des commandes — archivez-le plutôt'
+                                        : undefined
+                                }
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-terracotta/30 text-sm font-medium text-terracotta transition hover:bg-terracotta hover:text-white disabled:cursor-not-allowed disabled:border-border disabled:text-ink-soft/50 disabled:hover:bg-transparent"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Supprimer le produit
+                            </button>
+                            {hasOrders && (
+                                <p className="text-center text-xs text-ink-soft">
+                                    Ce produit a des commandes et ne peut pas
+                                    être supprimé.
+                                </p>
+                            )}
                         </div>
                     </Card>
                 </div>
@@ -578,6 +652,32 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* ── Delete confirmation ─────────────────────────── */}
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Supprimer «&nbsp;{product.name}&nbsp;» ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cette action est irréversible : le produit, ses
+                            photos et ses déclinaisons seront supprimés
+                            définitivement.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            disabled={deleting}
+                            className="bg-terracotta text-white hover:bg-terracotta/90"
+                        >
+                            {deleting ? 'Suppression…' : 'Supprimer'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

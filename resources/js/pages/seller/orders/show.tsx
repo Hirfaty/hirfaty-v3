@@ -84,7 +84,7 @@ function SellerOrderDetail({
 
     const handleSave = () => {
         router.patch(
-            route('seller.orders.status', order.id),
+            route('seller.orders.status', order.reference),
             {
                 status: data.status,
                 tracking_number: data.tracking_number || null,
@@ -93,7 +93,7 @@ function SellerOrderDetail({
             {
                 onSuccess: () => {
                     toast.success('Statut mis à jour', {
-                        description: `Commande ${order.id} -> ${statusLabel[data.status]}`,
+                        description: `Commande ${order.reference} -> ${statusLabel[data.status]}`,
                     });
                 },
             },
@@ -132,8 +132,8 @@ function SellerOrderDetail({
                         <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground uppercase">
                             Commande
                         </p>
-                        <h1 className="font-display text-4xl leading-none md:text-5xl">
-                            #{order.id}
+                        <h1 className="font-mono text-2xl leading-none tracking-tight md:text-3xl">
+                            {order.reference}
                         </h1>
                         <p className="mt-3 text-muted-foreground">
                             Passee le {formatDateTime(order.created_at)}

@@ -1,0 +1,17 @@
+# Paired with hirfaty-backup.timer. Install both:
+#   sudo cp docker/systemd/hirfaty-backup.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hirfaty-backup.timer
+#
+# Dumps land in /var/backups/hirfaty (override via Environment= below).
+# Check history with: systemctl status hirfaty-backup.service
+#                      journalctl -u hirfaty-backup.service
+
+[Unit]
+Description=Backup the Hirfaty production database
+After=hirfaty.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/hirfaty
+ExecStart=/usr/bin/make prod-backup

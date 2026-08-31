@@ -19,7 +19,7 @@ CERT_EMAIL ?= creati.maroc@gmail.com
 
 .PHONY: reset prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-artisan prod-key-generate prod-deploy \
-	prod-cert-init prod-cert-init-hirfaty prod-cert-renew
+	prod-cert-init prod-cert-init-hirfaty prod-cert-renew prod-backup
 
 prod-build:
 	$(COMPOSE) build
@@ -85,6 +85,12 @@ prod-cert-init:
 prod-cert-renew:
 	$(COMPOSE) run --rm certbot renew
 	$(COMPOSE) exec app nginx -s reload
+
+# Dumps the `db` container to /var/backups/hirfaty and prunes dumps older
+# than 14 days. Scheduled by hirfaty-backup.timer; run by hand to test or to
+# take an ad-hoc backup before a risky migration.
+prod-backup:
+	./docker/scripts/backup-db.sh
 
 # One-time TLS bootstrap for the separate hirfaty.com "coming soon" static
 # site (apex + www, single cert). Requires DNS for both to already point at

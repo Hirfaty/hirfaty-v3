@@ -145,7 +145,7 @@ export default function ProductForm({
         professional_sale_price: product?.professional_sale_price ?? '',
         min_order_qty_professional: product?.min_order_qty_professional ?? 1,
         visibility: product?.visibility ?? 'both',
-        stock: product?.stock ?? 0,
+        stock: product?.stock ?? 1,
     });
 
     const [media, setMedia] = useState<MediaItem[]>(

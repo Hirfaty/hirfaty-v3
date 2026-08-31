@@ -24,9 +24,9 @@ class OrderPlaced extends Notification implements ShouldQueue
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
-            'fr' => "Votre commande #{$this->order->id} est confirmée — Hirfaty",
-            'ar' => "تم تأكيد طلبك #{$this->order->id} — حرفتي",
-            'en' => "Your order #{$this->order->id} is confirmed — Hirfaty",
+            'fr' => "Votre commande {$this->order->reference} est confirmée — Hirfaty",
+            'ar' => "تم تأكيد طلبك {$this->order->reference} — حرفتي",
+            'en' => "Your order {$this->order->reference} is confirmed — Hirfaty",
         ];
 
         return (new MailMessage)

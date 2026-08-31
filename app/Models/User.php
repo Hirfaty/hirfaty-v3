@@ -71,7 +71,7 @@ use Override;
 // `email_verified_at` is fillable so admin-created users can be pre-verified.
 // Safe because no public endpoint mass-assigns raw request input into User —
 // registration (Actions\Fortify\CreateNewUser) whitelists fields explicitly.
-#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
+#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements AuthMustVerifyEmail
 {

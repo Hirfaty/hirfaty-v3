@@ -36,14 +36,14 @@ class OrderConfirmed extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Your order #{ $this->order->id} has been confirmed — Hirfaty")
+            ->subject("Your order {$this->order->reference} has been confirmed — Hirfaty")
             ->greeting("Hello {$notifiable->first_name}!")
-            ->line("Great news! Your order #{$this->order->id} has been confirmed by the seller.")
+            ->line("Great news! Your order {$this->order->reference} has been confirmed by the seller.")
             ->line("**Store:** {$this->order->store->store_name}")
             ->line("**Total:** {$this->order->total_amount} MAD")
             ->line("**Shipping address:** {$this->order->shipping_address}")
             ->line('The seller is now preparing your order. You will receive another email once it is shipped.')
-            ->action('View your order', url("/orders/{$this->order->id}"))
+            ->action('View your order', url("/orders/{$this->order->reference}"))
             ->line('Thank you for shopping on Hirfaty!');
     }
 

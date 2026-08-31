@@ -198,6 +198,63 @@ test('admin creates a normal buyer', function () {
         ->and($user->isBuyer())->toBeTrue();
 });
 
+test('a buyer description is saved on the user', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Salma',
+            'last_name' => 'Bennani',
+            'email' => 'salma@client.ma',
+            'phone_number' => '0655443322',
+            'role' => 'buyer',
+            'description' => 'Revendeuse à Casablanca, commande surtout des tapis.',
+        ])
+        ->assertRedirect();
+
+    expect(User::firstWhere('email', 'salma@client.ma')->bio)
+        ->toBe('Revendeuse à Casablanca, commande surtout des tapis.');
+});
+
+test('a seller description describes the shop, not the seller', function () {
+    $category = Category::create([
+        'slug' => 'tapis',
+        'name' => ['fr' => 'Tapis', 'ar' => 'زرابي', 'en' => 'Rugs'],
+    ]);
+    $city = City::create(['name' => 'Marrakech']);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Youssef',
+            'last_name' => 'Amrani',
+            'email' => 'youssef@artisan.ma',
+            'role' => 'seller',
+            'store_name' => 'Tapis Amrani',
+            'category_id' => $category->id,
+            'city_id' => $city->id,
+            'description' => 'Atelier familial de tapis noués main.',
+        ])
+        ->assertRedirect();
+
+    $user = User::firstWhere('email', 'youssef@artisan.ma');
+
+    // The seller edits their own bio in seller settings — the admin's text
+    // belongs to the store, so the user bio must stay untouched.
+    expect($user->bio)->toBeNull()
+        ->and(Store::firstWhere('user_id', $user->id)->description)
+        ->toBe('Atelier familial de tapis noués main.');
+});
+
+test('an over-long description is rejected', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Trop',
+            'last_name' => 'Long',
+            'email' => 'trop@long.ma',
+            'role' => 'buyer',
+            'description' => str_repeat('a', 1001),
+        ])
+        ->assertSessionHasErrors('description');
+});
+
 test('a seller cannot be created without store details', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.users.store'), [

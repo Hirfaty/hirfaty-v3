@@ -3,10 +3,17 @@
 namespace App\Notifications;
 
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class ResetPasswordNotification extends ResetPassword
+// Queued like every other user-facing notification here — sending mail
+// synchronously blocks the request on the SMTP round-trip (and, if the mail
+// host is unreachable, on PHP's execution time limit).
+class ResetPasswordNotification extends ResetPassword implements ShouldQueue
 {
+    use Queueable;
+
     public function toMail($notifiable): MailMessage
     {
         $url = $this->resetUrl($notifiable);

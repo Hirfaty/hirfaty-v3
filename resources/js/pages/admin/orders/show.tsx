@@ -18,7 +18,7 @@ import type { Order, PageProps } from '@/types';
 const Show = ({ order }: PageProps & { order: Order }) => {
     const handleStatusUpdate = (status: string) => {
         router.patch(
-            route('admin.orders.status', order.id),
+            route('admin.orders.status', order.reference),
             { status },
             {
                 onSuccess: () => toast.success(`Order marked as ${status}`),
@@ -43,7 +43,7 @@ const Show = ({ order }: PageProps & { order: Order }) => {
 
     return (
         <div className="min-h-screen bg-cream/30 p-6 md:p-10">
-            <Head title={`Order #${order.id}`} />
+            <Head title={`Order ${order.reference}`} />
 
             <div className="mx-auto max-w-5xl">
                 <header className="mb-10 flex items-center justify-between">
@@ -56,7 +56,10 @@ const Show = ({ order }: PageProps & { order: Order }) => {
                             Back to Registry
                         </Link>
                         <h1 className="mt-4 h-editorial text-4xl text-ink">
-                            Order <span className="italic">#{order.id}</span>
+                            Order{' '}
+                            <span className="font-mono text-2xl">
+                                {order.reference}
+                            </span>
                         </h1>
                     </div>
 

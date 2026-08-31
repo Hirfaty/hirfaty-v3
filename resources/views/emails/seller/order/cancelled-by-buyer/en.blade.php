@@ -38,7 +38,7 @@
         <span class="badge">✕ Order Cancelled</span>
 
         <h1 class="headline">
-            The buyer has cancelled<br>order #{{ $order->id }}.
+            The buyer has cancelled<br>order {{ $order->reference }}.
         </h1>
 
         <p class="body-text">
@@ -50,7 +50,7 @@
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Order</span>
-                <span class="order-meta-value">#{{ $order->id }}</span>
+                <span class="order-meta-value">{{ $order->reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Buyer</span>

@@ -62,11 +62,15 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
         Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
+        Route::post('/users/{user}/send-reset-link', [Admin\UserController::class, 'sendResetLink'])->name('users.send-reset-link');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
-        // `create` must stay above `{product}`, otherwise "create" is matched as an id.
+        // `create` and `bulk-destroy` must stay above `{product}`, otherwise
+        // they're matched as an id (and Postgres then errors casting the
+        // string to the bigint id column, rather than a clean 404).
         Route::get('/products/create', [Admin\ProductController::class, 'create'])->name('products.create');
+        Route::delete('/products/bulk-destroy', [Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');
         Route::post('/products/{product}', [Admin\ProductController::class, 'update'])->name('products.update');
@@ -74,6 +78,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::patch('/products/{product}/approve', [Admin\ProductController::class, 'approve'])->name('products.approve');
         Route::patch('/products/{product}/reject', [Admin\ProductController::class, 'reject'])->name('products.reject');
         Route::patch('/products/{product}/archive', [Admin\ProductController::class, 'archive'])->name('products.archive');
+        Route::delete('/products/{product}', [Admin\ProductController::class, 'destroy'])->name('products.destroy');
 
         // Orders
         Route::get('/orders', [Admin\OrderController::class, 'index'])->name('orders.index');

@@ -96,9 +96,7 @@ export const SiteFooter = () => {
                 </p>
                 <p className="flex items-center gap-2">
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-terracotta" />
-                    Livraison assurée par{' '}
-                    <span className="font-medium text-ink">Amana</span> dans
-                    tout le Maroc.
+                    Livraison dans tout le Maroc.
                 </p>
             </div>
         </footer>

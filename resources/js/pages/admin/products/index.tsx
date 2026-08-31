@@ -7,15 +7,29 @@ import {
     Package,
     Search,
     SquareArrowOutUpRight,
+    Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { WarmFill } from '@/components/WarmFill';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type {
     Category,
     Media,
+    PageProps,
     PaginatedData,
     Product,
     ProductStatus,
@@ -184,6 +198,108 @@ function AdminProducts({
         }
     };
 
+    // ── Checkbox selection for bulk delete ──────────────────────
+    // Kept separate from `selectedId` above: that one drives the review
+    // panel on the right, this one drives which rows get deleted together.
+    const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+
+    const toggleChecked = (id: number) =>
+        setCheckedIds((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+
+            return next;
+        });
+
+    const pageIds = products.data.map((p) => p.id);
+    const checkedOnPage = pageIds.filter((id) => checkedIds.has(id));
+    const allOnPageChecked =
+        pageIds.length > 0 && checkedOnPage.length === pageIds.length;
+    const someOnPageChecked = checkedOnPage.length > 0 && !allOnPageChecked;
+
+    const toggleAllOnPage = () =>
+        setCheckedIds((prev) => {
+            const next = new Set(prev);
+
+            if (allOnPageChecked) {
+                pageIds.forEach((id) => next.delete(id));
+            } else {
+                pageIds.forEach((id) => next.add(id));
+            }
+
+            return next;
+        });
+
+    // ── Delete (single row and bulk) ────────────────────────────
+    // The dialogs' open flags are kept separate from the data they display:
+    // Radix keeps a dialog mounted through its close animation, so clearing
+    // `deleteTarget`/`checkedIds` on close would flash an empty name or a
+    // "0 products" count for the last frames of that animation.
+    const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+    const [deleteOneOpen, setDeleteOneOpen] = useState(false);
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
+
+    const askDeleteOne = (product: Product) => {
+        setDeleteTarget(product);
+        setDeleteOneOpen(true);
+    };
+
+    const askBulkDelete = () => {
+        setBulkDeleteCount(checkedIds.size);
+        setBulkDeleteOpen(true);
+    };
+
+    const confirmDeleteOne = () => {
+        if (!deleteTarget) {
+            return;
+        }
+
+        const deletedId = deleteTarget.id;
+
+        router.delete(route('admin.products.destroy', deletedId), {
+            // The destroy endpoint replies 200 either way (deleted, or
+            // blocked because the product has order history) — the outcome
+            // only shows up in `flash`, so it has to be read here rather
+            // than assumed from the request merely succeeding.
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+
+                    return;
+                }
+
+                toast.success(flash?.success ?? 'Produit supprimé.');
+                setCheckedIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(deletedId);
+
+                    return next;
+                });
+            },
+            onFinish: () => setDeleteOneOpen(false),
+        });
+    };
+
+    const confirmBulkDelete = () => {
+        router.delete(route('admin.products.bulk-destroy'), {
+            data: { ids: Array.from(checkedIds) },
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+                toast.success(flash?.success ?? 'Produits supprimés.');
+                setCheckedIds(new Set());
+            },
+            onFinish: () => setBulkDeleteOpen(false),
+        });
+    };
+
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
             <header className="flex flex-wrap items-end justify-between gap-4">
@@ -259,6 +375,32 @@ function AdminProducts({
                 </select>
             </div>
 
+            {/* ── Bulk action bar ──────────────────────────── */}
+            {checkedIds.size > 0 && (
+                <div className="flex items-center justify-between rounded-lg border border-ink/15 bg-ink px-4 py-3 text-white">
+                    <p className="text-sm font-medium">
+                        {checkedIds.size} produit
+                        {checkedIds.size > 1 ? 's' : ''} sélectionné
+                        {checkedIds.size > 1 ? 's' : ''}
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setCheckedIds(new Set())}
+                            className="text-sm text-white/70 transition hover:text-white"
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            onClick={askBulkDelete}
+                            className="inline-flex items-center gap-2 rounded-lg bg-terracotta px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-terracotta/90"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Supprimer
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* ── Layout ───────────────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px]">
                 {/* Left: table */}
@@ -267,18 +409,34 @@ function AdminProducts({
                         <table className="w-full text-sm">
                             <thead className="border-b border-border text-left text-xs font-medium text-ink-soft">
                                 <tr>
+                                    <th className="w-10 px-5 py-3">
+                                        <Checkbox
+                                            checked={
+                                                allOnPageChecked
+                                                    ? true
+                                                    : someOnPageChecked
+                                                      ? 'indeterminate'
+                                                      : false
+                                            }
+                                            onCheckedChange={toggleAllOnPage}
+                                            disabled={pageIds.length === 0}
+                                            aria-label="Sélectionner tous les produits de la page"
+                                        />
+                                    </th>
                                     <th className="px-5 py-3">Produit</th>
                                     <th className="px-5 py-3">Catégorie</th>
                                     <th className="px-5 py-3">Boutique</th>
                                     <th className="px-5 py-3">Date</th>
+                                    <th className="px-5 py-3">Statut</th>
                                     <th className="px-5 py-3 text-right">
-                                        Statut
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {products.data.map((p) => {
                                     const isSel = p.id === selectedId;
+                                    const isChecked = checkedIds.has(p.id);
 
                                     return (
                                         <tr
@@ -286,6 +444,20 @@ function AdminProducts({
                                             onClick={() => setSelectedId(p.id)}
                                             className={`cursor-pointer transition ${isSel ? 'bg-muted/60' : 'hover:bg-muted/30'}`}
                                         >
+                                            <td
+                                                className="px-5 py-3"
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                            >
+                                                <Checkbox
+                                                    checked={isChecked}
+                                                    onCheckedChange={() =>
+                                                        toggleChecked(p.id)
+                                                    }
+                                                    aria-label={`Sélectionner ${p.name}`}
+                                                />
+                                            </td>
                                             <td className="px-5 py-3">
                                                 <p className="font-medium text-ink">
                                                     {p.name}
@@ -304,12 +476,24 @@ function AdminProducts({
                                             <td className="px-5 py-3 text-ink-soft">
                                                 {formatDate(p.updated_at)}
                                             </td>
-                                            <td className="px-5 py-3 text-right">
+                                            <td className="px-5 py-3">
                                                 <span
                                                     className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[p.status]}`}
                                                 >
                                                     {STATUS_LABEL[p.status]}
                                                 </span>
+                                            </td>
+                                            <td className="px-5 py-3 text-right">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        askDeleteOne(p);
+                                                    }}
+                                                    aria-label={`Supprimer ${p.name}`}
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft transition hover:bg-terracotta hover:text-white"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -317,7 +501,7 @@ function AdminProducts({
                                 {products.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={7}
                                             className="px-5 py-10 text-center text-ink-soft"
                                         >
                                             Aucun produit trouvé.
@@ -552,6 +736,58 @@ function AdminProducts({
                     )}
                 </aside>
             </div>
+
+            {/* ── Delete confirmation (single row) ────────────── */}
+            <AlertDialog open={deleteOneOpen} onOpenChange={setDeleteOneOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Supprimer «&nbsp;{deleteTarget?.name}&nbsp;» ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cette action est irréversible : le produit, ses
+                            photos et ses déclinaisons seront supprimés
+                            définitivement. Un produit ayant déjà été commandé
+                            ne peut pas être supprimé — archivez-le à la place.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDeleteOne}
+                            className="bg-terracotta text-white hover:bg-terracotta/90"
+                        >
+                            Supprimer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* ── Delete confirmation (bulk) ───────────────────── */}
+            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Supprimer {bulkDeleteCount} produit
+                            {bulkDeleteCount > 1 ? 's' : ''} ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cette action est irréversible. Les produits ayant
+                            déjà été commandés seront automatiquement ignorés
+                            plutôt que supprimés.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmBulkDelete}
+                            className="bg-terracotta text-white hover:bg-terracotta/90"
+                        >
+                            Supprimer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

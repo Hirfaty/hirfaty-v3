@@ -67,7 +67,7 @@
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Order number</span>
-                <span class="order-meta-value">#{{ $order->id }}</span>
+                <span class="order-meta-value">{{ $order->reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Store</span>
@@ -126,7 +126,7 @@
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->id }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
                 Track my order →
             </a>
         </div>

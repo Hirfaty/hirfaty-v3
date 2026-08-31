@@ -52,7 +52,7 @@
         </p>
 
         <div class="order-meta">
-            <div class="order-meta-row"><span class="order-meta-value">#{{ $order->id }}</span><span class="order-meta-label">رقم الطلب</span></div>
+            <div class="order-meta-row"><span class="order-meta-value">{{ $order->reference }}</span><span class="order-meta-label">رقم الطلب</span></div>
             <div class="order-meta-row"><span class="order-meta-value">{{ $order->buyer->first_name }} {{ $order->buyer->last_name }}</span><span class="order-meta-label">المشتري</span></div>
             <div class="order-meta-row"><span class="order-meta-value">{{ $order->created_at->format('d/m/Y') }}</span><span class="order-meta-label">التاريخ</span></div>
             <div class="order-meta-row"><span class="order-meta-value">{{ $order->shipping_address }}</span><span class="order-meta-label">عنوان التوصيل</span></div>
@@ -82,7 +82,7 @@
             <p>⏱ أكّد هذا الطلب في أقرب وقت. يقدّر المشترون الردود السريعة وهذا يحسّن ترتيبك على حرفتي.</p>
         </div>
 
-        <a href="{{ config('app.url') }}/seller/orders/{{ $order->id }}" class="cta-btn">← عرض وتأكيد الطلب</a>
+        <a href="{{ config('app.url') }}/seller/orders/{{ $order->reference }}" class="cta-btn">← عرض وتأكيد الطلب</a>
 
         <div class="footer">
             <p>تلقيت هذا البريد لأنك بائع على حرفتي.</p>

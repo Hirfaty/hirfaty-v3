@@ -38,7 +38,7 @@
         <span class="badge">✕ تم إلغاء الطلب</span>
 
         <h1 class="headline">
-            قام المشتري بإلغاء<br>الطلب #{{ $order->id }}.
+            قام المشتري بإلغاء<br>الطلب {{ $order->reference }}.
         </h1>
 
         <p class="body-text">
@@ -50,7 +50,7 @@
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">الطلب</span>
-                <span class="order-meta-value">#{{ $order->id }}</span>
+                <span class="order-meta-value">{{ $order->reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">المشتري</span>

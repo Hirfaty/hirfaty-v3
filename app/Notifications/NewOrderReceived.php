@@ -24,9 +24,9 @@ class NewOrderReceived extends Notification implements ShouldQueue
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
-            'fr' => "Nouvelle commande #{$this->order->id} reçue — Hirfaty",
-            'ar' => "طلب جديد #{$this->order->id} — حرفتي",
-            'en' => "New order #{$this->order->id} received — Hirfaty",
+            'fr' => "Nouvelle commande {$this->order->reference} reçue — Hirfaty",
+            'ar' => "طلب جديد {$this->order->reference} — حرفتي",
+            'en' => "New order {$this->order->reference} received — Hirfaty",
         ];
 
         return (new MailMessage)

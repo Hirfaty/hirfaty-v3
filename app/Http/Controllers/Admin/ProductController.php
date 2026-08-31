@@ -11,6 +11,7 @@ use App\Models\Store;
 use App\Notifications\ProductApproved;
 use App\Notifications\ProductRejected;
 use App\Rules\ValidProductMedia;
+use App\Services\ProductDeletionService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -517,5 +518,41 @@ class ProductController extends Controller
         $product->update(['status' => 'archived']);
 
         return back()->with('success', 'Product archived.');
+    }
+
+    public function destroy(Product $product, ProductDeletionService $deletions)
+    {
+        $name = $product->name;
+
+        try {
+            $deletions->delete($product);
+        } catch (\RuntimeException $e) {
+            // A flash message, not a validation error: there's no form field
+            // for "delete" to attach to, and withErrors() would land in the
+            // errors bag where nothing on this page ever looks for it.
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('success', "Product \"{$name}\" deleted.");
+    }
+
+    public function bulkDestroy(Request $request, ProductDeletionService $deletions)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
+        ]);
+
+        $result = $deletions->deleteMany($data['ids']);
+
+        $message = $result['deleted'].' product'.($result['deleted'] === 1 ? '' : 's').' deleted.';
+
+        if ($result['blocked'] !== []) {
+            $message .= ' Skipped (has order history): '.implode(', ', $result['blocked']).'.';
+        }
+
+        return back()->with('success', $message);
     }
 }

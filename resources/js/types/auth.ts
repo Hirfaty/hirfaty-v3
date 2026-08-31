@@ -13,6 +13,8 @@ export type User = {
     role: UserRole;
     is_banned: boolean;
     avatar?: string;
+    /** Free-text description: self-written by sellers, admin-written for buyers. */
+    bio?: string | null;
     email_verified_at: string | null;
     /** Only meaningful when role is 'professional_buyer'; null = not reviewed. */
     professional_verified_at?: string | null;

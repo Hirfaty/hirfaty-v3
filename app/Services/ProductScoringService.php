@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\Wishlist;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProductScoringService
@@ -19,32 +18,48 @@ class ProductScoringService
         //
     }
 
+    /**
+     * Rank a product query by a blend of demand signals and freshness.
+     *
+     * Recency is expressed as CASE buckets over plain timestamp comparisons
+     * rather than a date-difference function: the original used MySQL's
+     * DATEDIFF/GREATEST, which do not exist on Postgres (production) and
+     * behave differently on SQLite (tests) — so every listing that fell back
+     * to this default sort was erroring out. Comparisons against bound
+     * timestamps are the one formulation all three drivers agree on.
+     */
     public function apply(Builder $query): Builder
     {
-        $thirtyDaysAgo = now()->subDays(30);
+        $table = $query->getModel()->getTable();
 
-        return $query->addSelect([
-            DB::raw("
-                (
-                    -- Wishlist score
-                    (SELECT COUNT(*) FROM wishlists WHERE wishlists.product_id = products.id) * 5
-                    +
-                    -- Orders score
-                    (SELECT COUNT(*) FROM order_items WHERE order_items.product_id = products.id) * 10
-                    +
-                    -- Rating score
-                    (products.average_rating * 15)
-                    +
-                    -- Recent views score (last 30 days)
-                    (SELECT COUNT(*) FROM product_views
-                        WHERE product_views.product_id = products.id
-                        AND product_views.viewed_at >= '{$thirtyDaysAgo}') * 1
-                    +
-                    -- Recency score (newer products get up to 20 points)
-                    GREATEST(0, 20 - DATEDIFF(NOW(), products.created_at))
-                ) AS score
-            "),
-        ])->orderByDesc('score');
+        // addSelect() on a query with no columns yet would select *only* the
+        // score and drop every product column, so pin the base columns first.
+        if ($query->getQuery()->columns === null) {
+            $query->select("{$table}.*");
+        }
+
+        return $query->selectRaw(
+            '(
+                (SELECT COUNT(*) FROM wishlists WHERE wishlists.product_id = products.id) * 5
+                + (SELECT COUNT(*) FROM order_items WHERE order_items.product_id = products.id) * 10
+                + (products.average_rating * 15)
+                + (SELECT COUNT(*) FROM product_views
+                     WHERE product_views.product_id = products.id
+                       AND product_views.viewed_at >= ?) * 1
+                + CASE
+                    WHEN products.created_at >= ? THEN 20
+                    WHEN products.created_at >= ? THEN 12
+                    WHEN products.created_at >= ? THEN 6
+                    ELSE 0
+                  END
+            ) AS score',
+            [
+                now()->subDays(30),
+                now()->subDays(3),
+                now()->subDays(14),
+                now()->subDays(30),
+            ]
+        )->orderByDesc('score');
     }
 
     // ─── Product detail ──────────────────────────────────────

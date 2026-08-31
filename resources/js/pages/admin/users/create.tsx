@@ -210,12 +210,15 @@ const Create = ({
         post(route('admin.users.store'), {
             onError: (errs) => {
                 // Send the admin back to the step that actually failed.
+                // `description` is edited on whichever step renders it: the
+                // shop step for sellers, the identity step for everyone else.
                 const identityFields = [
                     'first_name',
                     'last_name',
                     'email',
                     'phone_number',
                     'role',
+                    ...(isSeller ? [] : ['description']),
                 ];
                 const shopFields = [
                     'store_name',
@@ -465,6 +468,31 @@ const Create = ({
                                                 className={INPUT}
                                             />
                                         </Field>
+
+                                        {/* Sellers describe their shop on the
+                                            next step instead. */}
+                                        {!isSeller && (
+                                            <div className="sm:col-span-2">
+                                                <Field
+                                                    label="Description (optionnel)"
+                                                    error={errors.description}
+                                                    hint="Notes sur ce client — activité, contexte, ce qu’il achète."
+                                                >
+                                                    <textarea
+                                                        rows={4}
+                                                        value={data.description}
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                'description',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Revendeur basé à Casablanca, commande surtout des tapis…"
+                                                        className={INPUT}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        )}
                                     </div>
                                 </section>
                             )}
@@ -683,6 +711,12 @@ const Create = ({
                                                     label="Téléphone"
                                                     value={data.phone_number}
                                                 />
+                                                {!isSeller && (
+                                                    <Summary
+                                                        label="Description"
+                                                        value={data.description}
+                                                    />
+                                                )}
                                             </dl>
                                         </div>
 

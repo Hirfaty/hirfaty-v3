@@ -52,7 +52,7 @@
         </p>
 
         <div class="order-meta">
-            <div class="order-meta-row"><span class="order-meta-label">Order</span><span class="order-meta-value">#{{ $order->id }}</span></div>
+            <div class="order-meta-row"><span class="order-meta-label">Order</span><span class="order-meta-value">{{ $order->reference }}</span></div>
             <div class="order-meta-row"><span class="order-meta-label">Buyer</span><span class="order-meta-value">{{ $order->buyer->first_name }} {{ $order->buyer->last_name }}</span></div>
             <div class="order-meta-row"><span class="order-meta-label">Date</span><span class="order-meta-value">{{ $order->created_at->format('d/m/Y H:i') }}</span></div>
             <div class="order-meta-row"><span class="order-meta-label">Ship to</span><span class="order-meta-value">{{ $order->shipping_address }}</span></div>
@@ -82,7 +82,7 @@
             <p>⏱ Confirm this order as soon as possible. Buyers value fast responses and it improves your ranking on Hirfaty.</p>
         </div>
 
-        <a href="{{ config('app.url') }}/seller/orders/{{ $order->id }}" class="cta-btn">View and confirm order →</a>
+        <a href="{{ config('app.url') }}/seller/orders/{{ $order->reference }}" class="cta-btn">View and confirm order →</a>
 
         <div class="footer">
             <p>You're receiving this because you're a seller on Hirfaty.</p>

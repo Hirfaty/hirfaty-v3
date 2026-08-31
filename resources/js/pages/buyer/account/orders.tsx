@@ -36,7 +36,9 @@ const Orders = ({ orders }: { orders: PaginatedData<Order> }) => {
                     >
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/10 px-5 py-4">
                             <div>
-                                <p className="font-display text-ink">#{o.id}</p>
+                                <p className="font-mono text-sm text-ink">
+                                    {o.reference}
+                                </p>
                                 <p className="text-xs text-ink-soft">
                                     Passée le {formatOrderDate(o.created_at)}
                                 </p>
@@ -54,7 +56,7 @@ const Orders = ({ orders }: { orders: PaginatedData<Order> }) => {
                                                 router.post(
                                                     route(
                                                         'buyer.orders.cancel',
-                                                        o.id,
+                                                        o.reference,
                                                     ),
                                                 );
                                             }

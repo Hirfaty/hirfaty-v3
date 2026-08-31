@@ -1,6 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight, BadgeCheck, Building2, Check, Store } from 'lucide-react';
 import ArtisanCta from '@/components/ArtisanCta';
+import {
+    AtelierArchIcon,
+    PotteryIcon,
+    ZellijStarIcon,
+} from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import VaseIcon from '@/components/home/VaseIcon';
 import SiteFooter from '@/components/SiteFooter';
@@ -14,7 +19,6 @@ import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
-import zellij from '@/images/zellij-pattern.png';
 
 type Media = { id: number; url: string; type: string };
 
@@ -24,13 +28,23 @@ type FeaturedProduct = {
     slug: string;
     base_price: number | string;
     sale_price: number | string | null;
-    category: { id: number | null; name: string | null };
+    category: { id: number; translated_name: string } | null;
     store: { store_name: string | null; city_name: string | null };
     images: Media[];
 };
 
 /** Fallback tiles for the product strip before any product is published. */
 const SHOWCASE = [pottery, leather, wood, textile, jewelry, spice];
+
+/**
+ * One glyph per claim. They were all the same vase before, which read as a
+ * rendering bug rather than a set.
+ */
+const QUALITY_CARDS = [
+    { n: 1, Icon: PotteryIcon }, // authentic craftsmanship
+    { n: 2, Icon: AtelierArchIcon }, // straight from the workshop
+    { n: 3, Icon: ZellijStarIcon }, // no two pieces alike
+] as const;
 
 const MARQUEE = [
     'Pottery',
@@ -64,14 +78,16 @@ export default function Welcome({
 
                 {/* ───────────────────────── Hero ───────────────────────── */}
                 <section className="relative overflow-hidden">
-                    <div className="relative bg-souk-brown lg:rounded-br-[40rem]">
+                    <div className="relative overflow-hidden bg-souk-brown lg:rounded-br-[40rem]">
+                        {/* Warm pool of light behind the copy, so the flat brown
+                            reads as a lit room rather than a solid block. */}
                         <div
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 opacity-[0.07] mix-blend-screen"
-                            style={{
-                                backgroundImage: `url(${zellij})`,
-                                backgroundSize: '340px',
-                            }}
+                            className="pointer-events-none absolute -top-1/3 -left-1/4 h-[120%] w-[80%] rounded-full bg-[radial-gradient(closest-side,rgba(240,228,201,0.16),transparent)]"
+                        />
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 motif-zellij opacity-[0.55] [--pattern-color:rgba(240,228,201,0.16)] [--pattern-size:76px]"
                         />
 
                         <div className="relative container grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
@@ -208,23 +224,31 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* ─────────────────── Craft marquee ─────────────────── */}
+                {/* ─────────────────── Craft marquee ───────────────────
+                    Sits on cream rather than paper: coming straight off the
+                    dark hero, a near-white band gave no landing step, and the
+                    marquee is what carries the eye down into the light half of
+                    the page. */}
                 <section
                     aria-hidden="true"
-                    className="overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-6"
+                    className="relative overflow-hidden border-y border-souk-brown/15 bg-souk-cream py-5"
                 >
-                    <div className="flex w-max motion-safe:animate-marquee">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-weave opacity-40 [--pattern-color:rgba(130,71,42,0.12)]"
+                    />
+                    <div className="relative flex w-max motion-safe:animate-marquee">
                         {[0, 1].map((copy) => (
                             <ul key={copy} className="flex items-center">
                                 {MARQUEE.map((word) => (
                                     <li
                                         key={`${copy}-${word}`}
-                                        className="flex items-center gap-10 px-10"
+                                        className="flex items-center gap-8 px-8"
                                     >
-                                        <span className="font-display text-2xl whitespace-nowrap text-souk-brown/45">
+                                        <span className="font-display text-xl whitespace-nowrap text-souk-brown-deep/70">
                                             {word}
                                         </span>
-                                        <span className="h-1.5 w-1.5 rounded-full bg-souk-brown/25" />
+                                        <ZellijStarIcon className="h-3 w-3 shrink-0 text-souk-brown/40" />
                                     </li>
                                 ))}
                             </ul>
@@ -233,14 +257,10 @@ export default function Welcome({
                 </section>
 
                 {/* ───────────────────── Quality ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
+                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
                     <div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 opacity-[0.13]"
-                        style={{
-                            backgroundImage: `url(${zellij})`,
-                            backgroundSize: '420px',
-                        }}
+                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:34px]"
                     />
 
                     <div className="relative container">
@@ -262,17 +282,19 @@ export default function Welcome({
                             </Reveal>
                         </div>
 
-                        <div className="mt-20 grid gap-8 md:grid-cols-3">
-                            {[1, 2, 3].map((n, i) => (
+                        <div className="mt-20 grid gap-6 md:grid-cols-3">
+                            {QUALITY_CARDS.map(({ n, Icon }, i) => (
                                 <Reveal key={n} delay={i * 120}>
-                                    <article className="group h-full rounded-3xl border border-souk-brown/12 bg-souk-paper/80 p-9 text-center backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:border-souk-brown/25 hover:shadow-2xl hover:shadow-souk-brown/10">
-                                        <VaseIcon className="mx-auto h-[81px] w-[81px] text-souk-brown transition-transform duration-500 group-hover:scale-110" />
-                                        <h3 className="mt-7 font-display text-2xl leading-snug text-souk-title">
+                                    <article className="group h-full rounded-3xl border border-souk-brown/12 bg-souk-peach/60 p-9 text-center transition-all duration-500 hover:-translate-y-1.5 hover:border-souk-brown/25 hover:bg-souk-peach hover:shadow-xl hover:shadow-souk-brown/10">
+                                        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-souk-brown/8 text-souk-brown ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:bg-souk-brown group-hover:text-souk-cream">
+                                            <Icon className="h-9 w-9" />
+                                        </span>
+                                        <h3 className="mt-6 font-display text-2xl leading-snug text-souk-title">
                                             {t(
                                                 `welcome.quality.card${n}.title`,
                                             )}
                                         </h3>
-                                        <p className="mt-4 text-[15px] leading-relaxed text-souk-brown-deep/75">
+                                        <p className="mt-3.5 text-[15px] leading-relaxed text-souk-brown-deep/75">
                                             {t(`welcome.quality.card${n}.body`)}
                                         </p>
                                     </article>
@@ -283,44 +305,61 @@ export default function Welcome({
                 </section>
 
                 {/* ───────────────────── Harmony ───────────────────── */}
-                <section className="bg-souk-paper py-24 lg:py-32">
-                    <div className="container grid items-center gap-16 lg:grid-cols-2">
+                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-arches motif-fade [--pattern-color:rgba(130,71,42,0.13)] [--pattern-size:52px]"
+                    />
+
+                    <div className="relative container grid items-center gap-16 lg:grid-cols-[0.92fr_1.08fr]">
                         <div>
                             <Reveal>
-                                <p className="text-[11px] tracking-[0.22em] text-souk-brown uppercase">
+                                <p className="flex items-center gap-3 text-[11px] tracking-[0.22em] text-souk-brown uppercase">
+                                    <span className="h-px w-8 bg-souk-brown/40" />
                                     {t('welcome.harmony.eyebrow')}
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2.25rem,5vw,4.5rem)] leading-[1.02] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2.25rem,4.6vw,4rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
                                     {t('welcome.harmony.heading')}
                                 </h2>
                             </Reveal>
 
-                            <div className="mt-10 space-y-7">
+                            {/* Numbered rather than indented: the old staggered
+                                left margin made the three lines look misaligned
+                                instead of deliberate. */}
+                            <ol className="mt-10 space-y-6">
                                 {[1, 2, 3].map((n, i) => (
                                     <Reveal
                                         key={n}
                                         delay={140 + i * 110}
                                         from="left"
                                     >
-                                        <p
-                                            className="border-l-2 border-souk-brown/25 pl-6 text-lg leading-relaxed text-souk-brown"
-                                            style={{
-                                                marginInlineStart: i * 18,
-                                            }}
-                                        >
-                                            {t(`welcome.harmony.line${n}`)}
-                                        </p>
+                                        <li className="flex gap-5">
+                                            <span
+                                                aria-hidden="true"
+                                                className="mt-1 font-display text-sm text-souk-brown/45 tabular-nums"
+                                            >
+                                                0{n}
+                                            </span>
+                                            <p className="border-s border-souk-brown/20 ps-5 text-lg leading-relaxed text-souk-brown-deep">
+                                                {t(`welcome.harmony.line${n}`)}
+                                            </p>
+                                        </li>
                                     </Reveal>
                                 ))}
-                            </div>
+                            </ol>
                         </div>
 
-                        {/* Overlapping image pair, as composed in the design */}
+                        {/* Arch-topped pair, echoing the hero frame and the
+                            arcade motif behind it. */}
                         <Reveal from="right" delay={120}>
-                            <div className="relative mx-auto aspect-[4/5] w-full max-w-[30rem]">
-                                <div className="absolute top-0 left-0 h-[78%] w-[74%] overflow-hidden rounded-3xl shadow-2xl shadow-souk-brown/20">
+                            <div className="relative mx-auto aspect-[5/4] w-full max-w-[34rem]">
+                                <div
+                                    aria-hidden="true"
+                                    className="absolute -top-4 left-[6%] h-[86%] w-[56%] rounded-t-full rounded-b-3xl border border-souk-brown/25"
+                                />
+                                <div className="absolute top-0 left-0 h-[86%] w-[56%] overflow-hidden rounded-t-full rounded-b-3xl shadow-2xl shadow-souk-brown/25">
                                     <img
                                         src={leather}
                                         alt="Hand-tooled Moroccan leather goods drying in a workshop"
@@ -328,7 +367,7 @@ export default function Welcome({
                                         loading="lazy"
                                     />
                                 </div>
-                                <div className="absolute right-0 bottom-0 h-[62%] w-[54%] overflow-hidden rounded-3xl border-[10px] border-souk-paper shadow-2xl shadow-souk-brown/25">
+                                <div className="absolute right-0 bottom-0 h-[66%] w-[48%] overflow-hidden rounded-t-full rounded-b-3xl border-[8px] border-souk-peach shadow-2xl shadow-souk-brown/25">
                                     <img
                                         src={pottery}
                                         alt="Glazed Moroccan pottery arranged on a shelf"
@@ -336,14 +375,23 @@ export default function Welcome({
                                         loading="lazy"
                                     />
                                 </div>
+                                <ZellijStarIcon
+                                    aria-hidden="true"
+                                    className="absolute top-[8%] right-[10%] h-10 w-10 text-souk-brown/25"
+                                />
                             </div>
                         </Reveal>
                     </div>
                 </section>
 
                 {/* ──────────────── B2B / B2C — the Hirfaty model ──────────────── */}
-                <section className="bg-souk-brown py-24 text-souk-cream lg:py-32">
-                    <div className="container">
+                <section className="relative overflow-hidden bg-souk-brown py-24 text-souk-cream lg:py-32">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-khayamiya motif-fade"
+                    />
+
+                    <div className="relative container">
                         <div className="mx-auto max-w-3xl text-center">
                             <Reveal>
                                 <p className="text-[11px] tracking-[0.22em] text-souk-cream/70 uppercase">
@@ -424,8 +472,13 @@ export default function Welcome({
                 </section>
 
                 {/* ───────────────── Explore our products ───────────────── */}
-                <section className="bg-souk-peach py-24 lg:py-32">
-                    <div className="container">
+                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-weave motif-fade opacity-50 [--pattern-color:rgba(130,71,42,0.07)] [--pattern-size:46px]"
+                    />
+
+                    <div className="relative container">
                         <div className="flex flex-wrap items-end justify-between gap-6">
                             <div className="max-w-2xl">
                                 <Reveal>
@@ -434,7 +487,7 @@ export default function Welcome({
                                     </p>
                                 </Reveal>
                                 <Reveal delay={80}>
-                                    <h2 className="mt-4 font-display text-[clamp(2.25rem,5vw,4.5rem)] leading-[1.02] tracking-[-0.02em] text-souk-title">
+                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
                                         {t('welcome.products.heading')}
                                     </h2>
                                 </Reveal>
@@ -459,18 +512,21 @@ export default function Welcome({
                         </div>
 
                         {featuredProducts.length > 0 ? (
-                            <div className="mt-16 grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {featuredProducts.map((product, i) => (
                                     <Reveal
                                         key={product.id}
-                                        delay={(i % 3) * 120}
+                                        delay={(i % 4) * 100}
                                     >
                                         <Link
                                             href={`/products/${product.slug}`}
                                             className="group block"
                                         >
-                                            {/* arch-topped card, per the design */}
-                                            <div className="relative aspect-square overflow-hidden rounded-t-full bg-souk-brown/5">
+                                            {/* Arch-topped, but only a half-arch
+                                                now — a full rounded-t-full on a
+                                                square made every tile read as a
+                                                giant dome. */}
+                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
                                                 {product.images?.[0]?.url ? (
                                                     <img
                                                         src={
@@ -483,38 +539,38 @@ export default function Welcome({
                                                     />
                                                 ) : (
                                                     <div className="flex h-full w-full items-center justify-center">
-                                                        <VaseIcon className="h-20 w-20 text-souk-brown/25" />
+                                                        <VaseIcon className="h-14 w-14 text-souk-brown/25" />
                                                     </div>
                                                 )}
                                                 <div
                                                     aria-hidden="true"
-                                                    className="absolute inset-0 rounded-t-full ring-1 ring-souk-brown/10 ring-inset"
+                                                    className="absolute inset-0 rounded-t-[8rem] rounded-b-2xl ring-1 ring-souk-brown/10 ring-inset"
                                                 />
                                             </div>
 
-                                            <div className="mt-6">
+                                            <div className="mt-4">
                                                 {product.store.city_name && (
-                                                    <p className="text-[11px] tracking-[0.18em] text-souk-brown/70 uppercase">
+                                                    <p className="text-[10px] tracking-[0.18em] text-souk-brown/70 uppercase">
                                                         {
                                                             product.store
                                                                 .city_name
                                                         }
                                                     </p>
                                                 )}
-                                                <h3 className="mt-2 font-display text-xl leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
+                                                <h3 className="mt-1.5 font-display text-base leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
                                                     {product.name}
                                                 </h3>
-                                                <div className="mt-2 flex items-baseline gap-3">
-                                                    <span className="font-display text-lg text-souk-brown">
+                                                <div className="mt-1.5 flex items-baseline gap-2">
+                                                    <span className="font-display text-[15px] text-souk-brown">
                                                         {price(product)}{' '}
-                                                        <span className="text-xs">
+                                                        <span className="text-[10px]">
                                                             {t(
                                                                 'welcome.products.currency',
                                                             )}
                                                         </span>
                                                     </span>
                                                     {product.sale_price && (
-                                                        <span className="text-sm text-souk-brown-deep/45 line-through">
+                                                        <span className="text-xs text-souk-brown-deep/45 line-through">
                                                             {Number(
                                                                 product.base_price,
                                                             )}
@@ -522,7 +578,7 @@ export default function Welcome({
                                                     )}
                                                 </div>
                                                 {product.store.store_name && (
-                                                    <p className="mt-1.5 text-sm text-souk-brown-deep/60">
+                                                    <p className="mt-1 text-xs text-souk-brown-deep/60">
                                                         {
                                                             product.store
                                                                 .store_name
@@ -535,11 +591,11 @@ export default function Welcome({
                                 ))}
                             </div>
                         ) : (
-                            <div className="mt-16">
-                                <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-                                    {SHOWCASE.slice(0, 3).map((src, i) => (
-                                        <Reveal key={src} delay={i * 120}>
-                                            <div className="relative aspect-square overflow-hidden rounded-t-full bg-souk-brown/5">
+                            <div className="mt-14">
+                                <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                                    {SHOWCASE.slice(0, 4).map((src, i) => (
+                                        <Reveal key={src} delay={i * 100}>
+                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
                                                 <img
                                                     src={src}
                                                     alt=""
@@ -559,51 +615,58 @@ export default function Welcome({
                 </section>
 
                 {/* ───────────────────── Gallery ───────────────────── */}
-                <section className="bg-souk-paper py-24 lg:py-32">
-                    <div className="container text-center">
+                <section className="relative overflow-hidden bg-souk-cream py-24 lg:py-28">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-zellij motif-fade opacity-60 [--pattern-color:rgba(130,71,42,0.1)] [--pattern-size:58px]"
+                    />
+
+                    <div className="relative container text-center">
                         <Reveal>
                             <p className="text-[11px] tracking-[0.22em] text-souk-brown uppercase">
                                 {t('welcome.gallery.eyebrow')}
                             </p>
                         </Reveal>
                         <Reveal delay={80}>
-                            <h2 className="mt-4 font-display text-[clamp(2.5rem,6vw,5.5rem)] leading-none tracking-[-0.02em] text-souk-title">
+                            <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-none tracking-[-0.02em] text-souk-title">
                                 {t('welcome.gallery.heading')}
                             </h2>
                         </Reveal>
                         <Reveal delay={140}>
-                            <p className="mx-auto mt-5 max-w-xl text-lg text-souk-brown-deep/75">
+                            <p className="mx-auto mt-4 max-w-xl text-souk-brown-deep/75">
                                 {t('welcome.gallery.lead')}
                             </p>
                         </Reveal>
                     </div>
 
-                    {/* uneven widths mirror the design's gallery strip */}
-                    <div className="mt-16 grid grid-cols-2 gap-3 px-3 md:grid-cols-10 md:gap-4 md:px-4">
+                    {/* Contained rather than full-bleed, and on a 12-column
+                        track so the tiles stay small and the uneven widths
+                        still read as a woven strip. */}
+                    <div className="relative container mt-12 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-12 md:gap-3">
                         {[
                             {
                                 src: jewelry,
-                                span: 'md:col-span-2',
+                                span: 'md:col-span-3',
                                 alt: 'Silver Moroccan jewellery',
                             },
                             {
                                 src: wood,
-                                span: 'md:col-span-3',
+                                span: 'md:col-span-4',
                                 alt: 'Carved cedar wood detail',
                             },
                             {
                                 src: pottery,
-                                span: 'md:col-span-2',
+                                span: 'md:col-span-5',
                                 alt: 'A potter at the wheel',
                             },
                             {
                                 src: textile,
-                                span: 'md:col-span-3',
+                                span: 'md:col-span-4',
                                 alt: 'Handwoven Moroccan textile',
                             },
                             {
                                 src: accessories,
-                                span: 'md:col-span-4',
+                                span: 'md:col-span-5',
                                 alt: 'Handmade artisan accessories',
                             },
                             {
@@ -611,19 +674,14 @@ export default function Welcome({
                                 span: 'md:col-span-3',
                                 alt: 'Moroccan spices at the souk',
                             },
-                            {
-                                src: leather,
-                                span: 'md:col-span-3',
-                                alt: 'Tooled leather in the tannery',
-                            },
                         ].map(({ src, span, alt }, i) => (
                             <Reveal
                                 key={alt}
-                                delay={(i % 4) * 90}
+                                delay={(i % 3) * 90}
                                 from="scale"
                                 className={span}
                             >
-                                <div className="group relative aspect-[4/5] overflow-hidden rounded-2xl md:aspect-[3/4]">
+                                <div className="group relative aspect-square overflow-hidden rounded-xl md:aspect-[5/4]">
                                     <img
                                         src={src}
                                         alt={alt}
@@ -632,7 +690,7 @@ export default function Welcome({
                                     />
                                     <div
                                         aria-hidden="true"
-                                        className="absolute inset-0 bg-souk-brown/0 transition-colors duration-500 group-hover:bg-souk-brown/25"
+                                        className="absolute inset-0 bg-souk-brown/0 transition-colors duration-500 group-hover:bg-souk-brown/20"
                                     />
                                 </div>
                             </Reveal>

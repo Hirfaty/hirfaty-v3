@@ -36,9 +36,9 @@ class OrderShipped extends Notification
     {
 
         return (new MailMessage)
-            ->subject("Your order #{$this->order->id} is on its way — Hirfaty")
+            ->subject("Your order {$this->order->reference} is on its way — Hirfaty")
             ->greeting("Hello {$notifiable->first_name}!")
-            ->line("Your order #{$this->order->id} has been shipped via Amana.")
+            ->line("Your order {$this->order->reference} has been shipped via Amana.")
             ->line("**Store:** {$this->order->store->store_name}")
             ->line("**Tracking number:** {$this->order->tracking_number}")
             ->line("**Shipping address:** {$this->order->shipping_address}")

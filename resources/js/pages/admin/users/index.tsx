@@ -6,6 +6,7 @@ import {
     ChevronRight,
     EllipsisVertical,
     Eye,
+    KeyRound,
     Loader2,
     Package,
     Search,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,11 +35,18 @@ import {
 } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
-import type { PaginatedData, StoreType, User, UserRole } from '@/types';
+import type {
+    PageProps,
+    PaginatedData,
+    StoreType,
+    User,
+    UserRole,
+} from '@/types';
 
 type UserRow = User & {
     products_count: number;
     store: {
+        id: number;
         store_name: string;
         type: StoreType;
         city: { name: string } | null;
@@ -82,6 +91,7 @@ export default function UsersIndex({
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [searching, setSearching] = useState(false);
+    const [sendingResetId, setSendingResetId] = useState<number | null>(null);
     // Skip the debounced effect's own request on first render — otherwise
     // landing on the page with ?search= already set fires a redundant fetch.
     const isFirstRender = useRef(true);
@@ -130,6 +140,25 @@ export default function UsersIndex({
                 preserveScroll: true,
             });
         }
+    };
+
+    const handleSendResetLink = (user: User) => {
+        setSendingResetId(user.id);
+        router.post(route('admin.users.send-reset-link', user.id), undefined, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+                } else {
+                    toast.success(
+                        flash?.success ?? 'Lien de réinitialisation envoyé.',
+                    );
+                }
+            },
+            onFinish: () => setSendingResetId(null),
+        });
     };
 
     const handleDelete = (user: User) => {
@@ -262,10 +291,16 @@ export default function UsersIndex({
                                 >
                                     <TableCell>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium text-ink">
+                                            <Link
+                                                href={route(
+                                                    'admin.users.show',
+                                                    user.id,
+                                                )}
+                                                className="font-medium text-ink hover:underline"
+                                            >
                                                 {user.first_name}{' '}
                                                 {user.last_name}
-                                            </span>
+                                            </Link>
                                             {user.is_banned ? (
                                                 <Badge
                                                     variant="destructive"
@@ -372,6 +407,45 @@ export default function UsersIndex({
                                                         <Eye className="h-4 w-4" />
                                                         Voir le profil
                                                     </Link>
+                                                </DropdownMenuItem>
+                                                {user.role === 'seller' &&
+                                                    user.store && (
+                                                        <DropdownMenuItem
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={route(
+                                                                    'admin.products.create',
+                                                                    {
+                                                                        store_id:
+                                                                            user
+                                                                                .store
+                                                                                .id,
+                                                                    },
+                                                                )}
+                                                                className="flex items-center gap-2"
+                                                            >
+                                                                <Package className="h-4 w-4" />
+                                                                Ajouter un
+                                                                produit
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                <DropdownMenuItem
+                                                    disabled={
+                                                        sendingResetId ===
+                                                        user.id
+                                                    }
+                                                    onClick={() =>
+                                                        handleSendResetLink(
+                                                            user,
+                                                        )
+                                                    }
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <KeyRound className="h-4 w-4" />
+                                                    Envoyer un lien de
+                                                    réinitialisation
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     onClick={() =>

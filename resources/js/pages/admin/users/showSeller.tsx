@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     Clock,
     ExternalLink,
+    KeyRound,
     Mail,
     MapPin,
     Package,
@@ -16,6 +17,8 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +31,7 @@ import {
 } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
-import type { Order, Product, StoreType, User } from '@/types';
+import type { Order, PageProps, Product, StoreType, User } from '@/types';
 
 /** Labels for the seller-type badge shown on the store card. */
 const STORE_TYPE_LABEL: Record<StoreType, string> = {
@@ -170,6 +173,8 @@ const ShowSeller = ({
     productStats,
     recentOrders,
 }: Props) => {
+    const [sendingReset, setSendingReset] = useState(false);
+
     const handleBan = () => {
         if (
             confirm(
@@ -178,6 +183,25 @@ const ShowSeller = ({
         ) {
             router.patch(route('admin.users.ban', user.id));
         }
+    };
+
+    const handleSendResetLink = () => {
+        setSendingReset(true);
+        router.post(route('admin.users.send-reset-link', user.id), undefined, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+                } else {
+                    toast.success(
+                        flash?.success ?? 'Lien de réinitialisation envoyé.',
+                    );
+                }
+            },
+            onFinish: () => setSendingReset(false),
+        });
     };
 
     return (
@@ -227,6 +251,15 @@ const ShowSeller = ({
                             <Package className="h-4 w-4" />
                             Ajouter un produit
                         </Link>
+                        <Button
+                            variant="outline"
+                            className="rounded-lg"
+                            disabled={sendingReset}
+                            onClick={handleSendResetLink}
+                        >
+                            <KeyRound className="h-4 w-4" />
+                            Envoyer un lien de réinitialisation
+                        </Button>
                         <Button
                             variant={user.is_banned ? 'outline' : 'destructive'}
                             className="rounded-lg"
@@ -411,7 +444,7 @@ const ShowSeller = ({
                                     recentOrders.map((order) => (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-mono text-xs text-ink-soft">
-                                                #{order.id}
+                                                {order.reference}
                                             </TableCell>
                                             <TableCell className="text-sm text-ink">
                                                 {order.buyer?.first_name}{' '}

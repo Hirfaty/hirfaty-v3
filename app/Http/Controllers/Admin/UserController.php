@@ -12,6 +12,7 @@ use App\Notifications\WelcomeUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -43,6 +44,9 @@ class UserController extends Controller
             'store_type' => ['nullable', Rule::in(Store::TYPES)],
             'category_id' => ['required_if:role,seller', 'nullable', 'exists:categories,id'],
             'city_id' => ['required_if:role,seller', 'nullable', 'exists:cities,id'],
+            // One field, two destinations: for a seller it describes the shop
+            // (stores.description); for a buyer/pro it describes the person
+            // and lands on users.bio.
             'description' => ['nullable', 'string', 'max:1000'],
             // Optional at creation — there is no admin store-edit screen yet, so
             // requiring these would block onboarding whenever a photo isn't
@@ -60,6 +64,8 @@ class UserController extends Controller
             'email' => $data['email'],
             'phone_number' => $data['phone_number'] ?? null,
             'role' => $data['role'],
+            // Sellers describe their shop instead, on the store record below.
+            'bio' => $data['role'] === 'seller' ? null : ($data['description'] ?? null),
             'password' => Hash::make($plainPassword),
             'email_verified_at' => now(),
         ]);
@@ -265,6 +271,23 @@ class UserController extends Controller
         $action = $user->professional_verified_at ? 'verified' : 'unverified';
 
         return back()->with('success', "Professional buyer {$action}.");
+    }
+
+    /**
+     * Send the standard Fortify "reset your password" email — the same link
+     * a user gets from the public forgot-password form — so the admin can
+     * get someone into an account they can't otherwise sign into (e.g. one
+     * created here with a random generated password).
+     */
+    public function sendResetLink(User $user)
+    {
+        if ($user->role === 'super_admin') {
+            abort(403);
+        }
+
+        Password::sendResetLink(['email' => $user->email]);
+
+        return back()->with('success', "Lien de réinitialisation envoyé à {$user->email}.");
     }
 
     public function destroy(User $user)

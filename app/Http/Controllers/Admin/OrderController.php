@@ -16,7 +16,10 @@ class OrderController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('id', $search)
+                // References are stored uppercase, so the needle is folded
+                // rather than the column — keeps this index-friendly and
+                // works on both Postgres and the SQLite used in tests.
+                $q->where('reference', 'like', '%'.strtoupper($search).'%')
                     ->orWhere('tracking_number', 'like', "%{$search}%")
                     ->orWhereHas('buyer', fn ($q) => $q->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));

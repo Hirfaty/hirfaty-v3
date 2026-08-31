@@ -10,10 +10,11 @@ class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
+        $email = config('auth.admin_default_email');
         $password = config('auth.admin_default_password');
 
         User::firstOrCreate(
-            ['email' => 'admin@hirfaty.test'],
+            ['email' => $email],
             [
                 'first_name' => 'Super',
                 'last_name' => 'Admin',

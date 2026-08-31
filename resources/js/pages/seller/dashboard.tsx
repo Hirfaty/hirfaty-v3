@@ -79,6 +79,8 @@ interface OrderItem {
 
 interface RecentOrder {
     id: number;
+    /** Public-facing identifier — display this rather than `id`. */
+    reference: string;
     status: string;
     total: number;
     created_at: string;
@@ -351,11 +353,11 @@ export default function Dashboard({
                                                 <Link
                                                     href={route(
                                                         'seller.orders.show',
-                                                        order.id,
+                                                        order.reference,
                                                     )}
-                                                    className="font-medium text-blue-600 hover:text-blue-700"
+                                                    className="font-mono text-sm font-medium text-blue-600 hover:text-blue-700"
                                                 >
-                                                    #{order.id}
+                                                    {order.reference}
                                                 </Link>
                                             </td>
                                             <td className="px-4 py-3 text-muted-foreground">

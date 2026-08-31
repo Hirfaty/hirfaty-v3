@@ -38,7 +38,7 @@
         <span class="badge">✕ Commande annulée</span>
 
         <h1 class="headline">
-            L'acheteur a annulé<br>la commande #{{ $order->id }}.
+            L'acheteur a annulé<br>la commande {{ $order->reference }}.
         </h1>
 
         <p class="body-text">
@@ -50,7 +50,7 @@
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Commande</span>
-                <span class="order-meta-value">#{{ $order->id }}</span>
+                <span class="order-meta-value">{{ $order->reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Acheteur</span>

@@ -24,9 +24,9 @@ class OrderCancelled extends Notification implements ShouldQueue
         $locale = $notifiable->locale ?? 'fr';
 
         $subjects = [
-            'fr' => "Votre commande #{$this->order->id} a été annulée — Hirfaty",
-            'ar' => "تم إلغاء طلبك #{$this->order->id} — حرفتي",
-            'en' => "Your order #{$this->order->id} has been cancelled — Hirfaty",
+            'fr' => "Votre commande {$this->order->reference} a été annulée — Hirfaty",
+            'ar' => "تم إلغاء طلبك {$this->order->reference} — حرفتي",
+            'en' => "Your order {$this->order->reference} has been cancelled — Hirfaty",
         ];
 
         return (new MailMessage)

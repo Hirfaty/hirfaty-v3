@@ -46,7 +46,7 @@ const Index = ({ orders }: { orders: PaginatedData<Order> }) => {
                         <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
                             <div className="flex items-center gap-4">
                                 <span className="font-mono text-sm font-medium">
-                                    #{order.id}
+                                    {order.reference}
                                 </span>
                                 <span className="text-sm text-gray-500">
                                     {order.store?.store_name}
@@ -114,7 +114,10 @@ const Index = ({ orders }: { orders: PaginatedData<Order> }) => {
                                 </p>
                             )}
                             <Link
-                                href={route('buyer.orders.show', order.id)}
+                                href={route(
+                                    'buyer.orders.show',
+                                    order.reference,
+                                )}
                                 className="text-sm text-blue-600 hover:underline"
                             >
                                 View details →

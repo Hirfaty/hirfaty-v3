@@ -158,6 +158,11 @@ export type OrderStatus =
 
 export interface Order {
     id: number;
+    /**
+     * Public-facing identifier, e.g. "HRF-2K8F-4M9Q". Display this and use it
+     * in URLs — `id` is a global sequence and leaks total order volume.
+     */
+    reference: string;
     buyer_id: number;
     store_id: number;
     city_id: number | null;

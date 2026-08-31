@@ -140,8 +140,8 @@ const Index = ({
                                     className="group transition-colors hover:bg-cream/5"
                                 >
                                     <td className="px-8 py-6">
-                                        <p className="font-sans text-xs font-bold text-ink">
-                                            #{order.id}
+                                        <p className="font-mono text-xs font-bold text-ink">
+                                            {order.reference}
                                         </p>
                                         <p className="mt-1 text-[10px] tracking-wider text-ink-soft uppercase">
                                             {new Date(
@@ -193,7 +193,7 @@ const Index = ({
                                         <Link
                                             href={route(
                                                 'admin.orders.show',
-                                                order.id,
+                                                order.reference,
                                             )}
                                             className="inline-flex h-8 w-8 items-center justify-center border border-ink/5 bg-cream/20 text-ink-soft transition-all hover:border-ink hover:bg-ink hover:text-cream"
                                         >
