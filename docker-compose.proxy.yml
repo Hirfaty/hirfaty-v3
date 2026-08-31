@@ -20,6 +20,10 @@ services:
     environment:
       PROD_DOMAIN: ${PROD_DOMAIN:-hirfaty.com}
       STAGING_DOMAIN: ${STAGING_DOMAIN:-init.hirfaty.com}
+      # 'coming-soon' (default) serves the static placeholder with no app
+      # stack required. Set to 'app' once hirfaty.com should serve the real
+      # production app, then `make proxy-up` again to apply.
+      PROD_MODE: ${PROD_MODE:-coming-soon}
     volumes:
       - certbot_certs:/etc/letsencrypt:ro
       - certbot_webroot:/var/www/certbot

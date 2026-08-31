@@ -16,6 +16,10 @@ COPY docker/proxy/vhosts/ /etc/nginx/available/
 COPY docker/proxy/proxy-headers.conf /etc/nginx/proxy-headers.conf
 COPY docker/proxy/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+# Static placeholder for hirfaty.com pre-launch — see PROD_MODE in
+# entrypoint.sh. Served directly by the proxy, no app stack required.
+COPY coming-soon /var/www/coming-soon
+
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && rm -f /etc/nginx/conf.d/default.conf
 
