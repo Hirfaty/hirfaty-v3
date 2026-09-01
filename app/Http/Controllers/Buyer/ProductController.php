@@ -111,7 +111,18 @@ class ProductController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-            'categories' => Category::whereNull('parent_id')->get(),
+            // Drives the category strip under the hero. Top level only — the
+            // strip is a browse row, not a full taxonomy tree. `translated_name`
+            // is appended by the model accessor, since `name` is a per-locale
+            // object that must never be rendered raw.
+            'categories' => Category::whereNull('parent_id')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Category $category) => [
+                    'id' => $category->id,
+                    'slug' => $category->slug,
+                    'translated_name' => $category->translated_name,
+                ]),
             'filters' => [
                 'search' => $request->input('search', ''),
                 'category_id' => $request->input('category_id', ''),

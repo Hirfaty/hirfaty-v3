@@ -116,6 +116,19 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     }
 
     /**
+     * A trade account an admin has actually reviewed.
+     *
+     * Trade pricing keys off this rather than the role alone: anyone can
+     * register as a professional buyer, and wholesale rates should not be
+     * handed out — nor billed — on an unvetted self-declaration.
+     */
+    public function isVerifiedProfessionalBuyer(): bool
+    {
+        return $this->isProfessionalBuyer()
+            && $this->professional_verified_at !== null;
+    }
+
+    /**
      * Whether an admin has reviewed and approved this professional buyer.
      * Nothing currently gates purchasing on this — it's surfaced to the admin
      * so they can decide to verify (or unverify) an account, not enforced.

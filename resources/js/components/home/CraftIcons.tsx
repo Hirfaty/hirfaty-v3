@@ -57,6 +57,115 @@ export function AtelierArchIcon({ className }: IconProps) {
     );
 }
 
+/* ── Category glyphs ──────────────────────────────────────────────────
+   One per top-level category, for the browse strip under the products
+   hero. Same 64×64 grid and stroke weight as the three above so the whole
+   row reads as one hand. `PotteryIcon` doubles as the pottery category. */
+
+/** Satchel with a carry handle — leather goods. */
+export function LeatherIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* handle */}
+            <path d="M24 24v-3a8 8 0 0 1 16 0v3" />
+            {/* body */}
+            <path d="M11 24h42v23a5 5 0 0 1-5 5H16a5 5 0 0 1-5-5V24Z" />
+            {/* flap edge */}
+            <path d="M11 34h42" />
+            {/* clasp */}
+            <path d="M29 32h6v6h-6z" />
+        </svg>
+    );
+}
+
+/** Woven rug with knotted fringe — textiles and weaving. */
+export function TextileIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* field */}
+            <path d="M13 14h38v30H13z" />
+            {/* inner border */}
+            <path d="M19 20h26v18H19z" />
+            {/* centre lozenge, the usual Berber motif */}
+            <path d="M32 24l6 5-6 5-6-5 6-5Z" />
+            {/* fringe */}
+            <path d="M17 44v6M23 44v6M29 44v6M35 44v6M41 44v6M47 44v6" />
+        </svg>
+    );
+}
+
+/** Faceted stone — jewellery and accessories. */
+export function JewelryIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* crown and pavilion */}
+            <path d="M21 18h22l8 12-19 22-19-22 8-12Z" />
+            {/* girdle */}
+            <path d="M13 30h38" />
+            {/* crown facets */}
+            <path d="M27 18l5 12 5-12" />
+            {/* pavilion ridge */}
+            <path d="M32 30v22" />
+        </svg>
+    );
+}
+
+/** Mashrabiya lattice panel — wood and carpentry. */
+export function WoodIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* frame */}
+            <path d="M12 12h40v40H12z" />
+            {/* cross members */}
+            <path d="M32 12v40M12 32h40" />
+            {/* diagonal lattice */}
+            <path d="M22 22l20 20M42 22L22 42" />
+        </svg>
+    );
+}
+
+/** Lidded preserve jar — spices and food. */
+export function SpiceIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* lid */}
+            <path d="M23 12h18v7H23z" />
+            {/* body */}
+            <path d="M24 19c-5 3-8 8-8 13v13a6 6 0 0 0 6 6h20a6 6 0 0 0 6-6V32c0-5-3-10-8-13" />
+            {/* label */}
+            <path d="M24 33h16v11H24z" />
+        </svg>
+    );
+}
+
+/** Painter's palette — painting and art. */
+export function ArtIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            <path d="M32 12c11 0 20 8 20 18 0 5-4 8-8 8h-4a4 4 0 0 0 0 8c0 3-3 6-8 6-11 0-20-9-20-20s9-20 20-20Z" />
+            {/* wells */}
+            <circle cx="24" cy="25" r="2.4" />
+            <circle cx="34" cy="21" r="2.4" />
+            <circle cx="43" cy="28" r="2.4" />
+            <circle cx="22" cy="36" r="2.4" />
+        </svg>
+    );
+}
+
+/** Oil bottle with an argan leaf — cosmetics. */
+export function ArganIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* cap */}
+            <path d="M28 11h8v6h-8z" />
+            {/* shoulders and body */}
+            <path d="M28 17c0 4-7 6-7 13v16a6 6 0 0 0 6 6h10a6 6 0 0 0 6-6V30c0-7-7-9-7-13" />
+            {/* leaf */}
+            <path d="M17 36c-6-1-10-5-10-11 7-1 12 3 12 9" />
+        </svg>
+    );
+}
+
 /**
  * Eight-point khatim star — the zellige signature, standing for the piece
  * being one of a kind.

@@ -2,18 +2,36 @@ import { Link, router } from '@inertiajs/react';
 import {
     BadgePercent,
     Check,
+    Hand,
+    Leaf,
     Loader2,
     PackageSearch,
     Search,
     SlidersHorizontal,
-    Star,
+    Users,
     X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import { useEffect, useState } from 'react';
+import HeroCarousel from '@/components/HeroCarousel';
+import {
+    ArganIcon,
+    ArtIcon,
+    JewelryIcon,
+    LeatherIcon,
+    PotteryIcon,
+    SpiceIcon,
+    TextileIcon,
+    WoodIcon,
+    ZellijStarIcon,
+} from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
-import type { Category, Media } from '@/types';
+import { useTranslation } from '@/hooks/use-translation';
+import heroMain from '@/images/hero-main.jpg';
+import heroSpice from '@/images/hero-spice.jpg';
+import heroTextile from '@/images/hero-textile.jpg';
+import heroZellige from '@/images/hero-zellige.jpg';
+import type { Media } from '@/types';
 
 /**
  * Shape of one row from BuyerProductResource.
@@ -58,6 +76,17 @@ type Filters = {
     sort: string;
 };
 
+/**
+ * Trimmed server-side to just what the strip renders, rather than the whole
+ * Category model — `name` is a per-locale object that must never reach the
+ * page raw, so only the resolved `translated_name` is sent.
+ */
+type StripCategory = {
+    id: number;
+    slug: string;
+    translated_name: string;
+};
+
 type Props = {
     products: ListingProduct[];
     pagination: {
@@ -66,27 +95,89 @@ type Props = {
         total: number;
         has_more: boolean;
     };
-    categories: Category[];
+    categories: StripCategory[];
     filters: Filters;
     audience: 'individual' | 'professional';
     priceCeiling: number;
 };
 
+/**
+ * Sort values map to translation keys rather than literal labels, so the
+ * dropdown follows the active locale like the rest of the page.
+ */
 const SORTS = [
-    { value: 'score', label: 'Pertinence' },
-    { value: 'latest', label: 'Nouveautés' },
-    { value: 'price_asc', label: 'Prix croissant' },
-    { value: 'price_desc', label: 'Prix décroissant' },
-    { value: 'rating', label: 'Mieux notés' },
+    { value: 'score', key: 'buyer.products.sort_score' },
+    { value: 'latest', key: 'buyer.products.sort_latest' },
+    { value: 'price_asc', key: 'buyer.products.sort_price_asc' },
+    { value: 'price_desc', key: 'buyer.products.sort_price_desc' },
+    { value: 'rating', key: 'buyer.products.sort_rating' },
 ] as const;
 
-const money = (value: number | string) =>
-    new Intl.NumberFormat('fr-MA', { maximumFractionDigits: 0 }).format(
-        Number(value),
-    );
+/**
+ * Hero carousel slides. Alt text is stored as a translation key and resolved
+ * at render, so the descriptions follow the active locale like everything
+ * else on the page.
+ */
+const HERO_SLIDES = [
+    { src: heroMain, altKey: 'buyer.products.hero_slide_pottery' },
+    { src: heroTextile, altKey: 'buyer.products.hero_slide_textile' },
+    { src: heroZellige, altKey: 'buyer.products.hero_slide_zellige' },
+    { src: heroSpice, altKey: 'buyer.products.hero_slide_spice' },
+] as const;
+
+/**
+ * The four promises shown under the hero copy. ZellijStarIcon is the brand's
+ * own ornament and stands in for "unique & authentic"; the rest come from
+ * lucide, matching the icon set used everywhere else.
+ */
+const HERO_FEATURES = [
+    {
+        icon: Hand,
+        labelKey: 'buyer.products.feature_handmade',
+        subKey: 'buyer.products.feature_handmade_sub',
+    },
+    {
+        icon: Leaf,
+        labelKey: 'buyer.products.feature_natural',
+        subKey: 'buyer.products.feature_natural_sub',
+    },
+    {
+        icon: ZellijStarIcon,
+        labelKey: 'buyer.products.feature_unique',
+        subKey: 'buyer.products.feature_unique_sub',
+    },
+    {
+        icon: Users,
+        labelKey: 'buyer.products.feature_artisans',
+        subKey: 'buyer.products.feature_artisans_sub',
+    },
+] as const;
+
+/**
+ * Category slug → glyph. Keyed on slug rather than id so it survives a
+ * reseed, and falls back to the zellij star for any category added later
+ * without a drawing of its own.
+ */
+const CATEGORY_ICONS: Record<string, typeof ZellijStarIcon> = {
+    'poterie-ceramique': PotteryIcon,
+    maroquinerie: LeatherIcon,
+    'textiles-tissage': TextileIcon,
+    'bijoux-accessoires': JewelryIcon,
+    'bois-menuiserie': WoodIcon,
+    'epices-alimentation': SpiceIcon,
+    'peinture-art': ArtIcon,
+    'cosmetiques-argan': ArganIcon,
+};
 
 /** Museum-caption label, per the design system's label styling. */
 const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
+
+/** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
+const LOCALE_TAGS: Record<string, string> = {
+    fr: 'fr-MA',
+    ar: 'ar-MA',
+    en: 'en-MA',
+};
 
 /**
  * Price for one card.
@@ -100,9 +191,13 @@ const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 function PriceBlock({
     product,
     audience,
+    money,
+    t,
 }: {
     product: ListingProduct;
     audience: Props['audience'];
+    money: (value: number | string) => string;
+    t: (key: string) => string;
 }) {
     const base = Number(product.base_price);
     const sale = product.sale_price ? Number(product.sale_price) : null;
@@ -115,7 +210,7 @@ function PriceBlock({
     const minQty = product.min_order_qty_professional ?? 1;
 
     return (
-        <div className="text-right">
+        <div className="text-end">
             <div className="flex items-baseline justify-end gap-2">
                 <span
                     className={`font-display text-lg leading-none ${onSale ? 'text-terracotta' : 'text-souk-title'}`}
@@ -133,10 +228,10 @@ function PriceBlock({
             {showPro && (
                 <div
                     className="mt-1.5 inline-flex flex-wrap items-baseline justify-end gap-x-1.5 rounded-full bg-olive/10 px-2.5 py-1"
-                    title="Tarif professionnel indicatif — la facturation reste au prix public pour le moment."
+                    title={t('buyer.products.pro_price_hint')}
                 >
                     <span className="text-[9px] tracking-[0.16em] text-olive/80 uppercase">
-                        Pro*
+                        {t('buyer.products.pro_short')}
                     </span>
                     <span className="font-display text-sm leading-none text-olive">
                         {money(pro)}
@@ -148,7 +243,7 @@ function PriceBlock({
                     )}
                     {minQty > 1 && (
                         <span className="text-[10px] text-olive/70">
-                            dès {minQty}
+                            {t('buyer.products.pro_from_qty')} {minQty}
                         </span>
                     )}
                 </div>
@@ -165,20 +260,23 @@ function PriceBlock({
 function ProductCard({
     product,
     audience,
+    money,
+    t,
 }: {
     product: ListingProduct;
     audience: Props['audience'];
+    money: (value: number | string) => string;
+    t: (key: string) => string;
 }) {
     const cover = product.images[0]?.url;
     const base = Number(product.base_price);
     const sale = product.sale_price ? Number(product.sale_price) : null;
     const onSale = sale !== null && sale < base;
-    const rating = Number(product.average_rating ?? 0);
     const soldOut = product.stock === 0;
 
     return (
         <Link href={`/products/${product.slug}`} className="group block">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[6rem] rounded-b-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10 transition-shadow duration-500 group-hover:shadow-xl group-hover:shadow-souk-brown/15">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[6rem] rounded-b-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-souk-brown/15 group-hover:ring-souk-brown/25">
                 {cover ? (
                     <img
                         src={cover}
@@ -190,23 +288,23 @@ function ProductCard({
                     <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-souk-brown/30">
                         <ZellijStarIcon className="h-8 w-8" />
                         <span className="text-[10px] tracking-[0.16em] uppercase">
-                            Sans image
+                            {t('buyer.products.no_image')}
                         </span>
                     </div>
                 )}
 
                 {onSale && (
                     <span
-                        className={`absolute top-4 left-4 rounded-full bg-terracotta px-3 py-1 text-white ${EYEBROW}`}
+                        className={`absolute start-4 top-4 rounded-full bg-terracotta px-3 py-1 text-white ${EYEBROW}`}
                     >
-                        Promo
+                        {t('buyer.products.badge_sale')}
                     </span>
                 )}
                 {soldOut && (
                     <span
-                        className={`absolute top-4 right-4 rounded-full bg-souk-title/85 px-3 py-1 text-souk-cream backdrop-blur ${EYEBROW}`}
+                        className={`absolute end-4 top-4 rounded-full bg-souk-title/85 px-3 py-1 text-souk-cream backdrop-blur ${EYEBROW}`}
                     >
-                        Épuisé
+                        {t('buyer.products.badge_sold_out')}
                     </span>
                 )}
             </div>
@@ -223,19 +321,14 @@ function ProductCard({
                         {product.name}
                     </h3>
                     <div className="shrink-0">
-                        <PriceBlock product={product} audience={audience} />
+                        <PriceBlock
+                            product={product}
+                            audience={audience}
+                            money={money}
+                            t={t}
+                        />
                     </div>
                 </div>
-
-                {rating > 0 && (
-                    <div className="mt-2 flex items-center gap-1 text-xs text-souk-brown-deep/60">
-                        <Star
-                            className="h-3 w-3 fill-terracotta text-terracotta"
-                            strokeWidth={1.5}
-                        />
-                        {rating.toFixed(1)}
-                    </div>
-                )}
             </div>
         </Link>
     );
@@ -249,6 +342,7 @@ export default function ProductsIndex({
     audience,
     priceCeiling,
 }: Props) {
+    const { t, locale } = useTranslation();
     const [search, setSearch] = useState(filters.search);
     const [maxPrice, setMaxPrice] = useState(
         filters.max_price || String(priceCeiling),
@@ -256,14 +350,29 @@ export default function ProductsIndex({
     const [busy, setBusy] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    // Skip the debounce on mount, otherwise landing with ?search= already set
-    // fires a redundant request for results the server just rendered.
-    const isFirstRender = useRef(true);
+    const money = (value: number | string) =>
+        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
+            maximumFractionDigits: 0,
+        }).format(Number(value));
 
     /**
      * Any filter change restarts the listing at page 1, so `products` must be
      * reset — without it the merge strategy used by "load more" would append
      * the new results onto the old ones.
+     *
+     * min_rating no longer has any UI but is still passed through so an
+     * existing deep link keeps filtering while other controls are adjusted;
+     * the server still honours it.
+     *
+     * Deliberately NOT `reset: ['products']`. That option made Inertia apply
+     * only the named merge prop and leave every other prop at its previous
+     * value, so `filters` and `pagination` went stale on each visit: the grid
+     * refreshed, but the active sort/category never lit up and the result
+     * count read against the unfiltered total ("3 sur 6" when the filtered
+     * total was 3). This is a full visit rather than a partial reload, and a
+     * full visit replaces merge props anyway — the append behaviour `reset`
+     * was guarding against only applies to the `only:`-scoped reload in
+     * loadMore below.
      */
     const applyFilters = (overrides: Partial<Filters> = {}) => {
         const next = {
@@ -290,17 +399,27 @@ export default function ProductsIndex({
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
-                reset: ['products'],
                 onStart: () => setBusy(true),
                 onFinish: () => setBusy(false),
             },
         );
     };
 
+    /**
+     * Debounced search. Fires only once the box has actually diverged from
+     * what the server already has, which makes it a no-op on mount without
+     * needing a "first render" ref.
+     *
+     * That guard used to be a ref, and StrictMode defeated it: React runs
+     * setup → cleanup → setup on the *same* instance, so the ref was already
+     * false by the second setup and the effect fired a spurious visit ~300ms
+     * after every mount. Because that visit rebuilt its query from the props
+     * of the render it closed over, it raced the click that caused the mount
+     * and could silently drop the filter just applied — which is why picking
+     * a sort or a category sometimes appeared not to stick.
+     */
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-
+        if (search === filters.search) {
             return;
         }
 
@@ -308,7 +427,7 @@ export default function ProductsIndex({
 
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search]);
+    }, [search, filters.search]);
 
     const loadMore = () => {
         // reload() already forces preserveScroll/preserveState, which is why
@@ -327,7 +446,8 @@ export default function ProductsIndex({
         router.get(
             route('products.index'),
             {},
-            { preserveScroll: true, reset: ['products'] },
+            // No `reset` here either — see the note on applyFilters.
+            { preserveScroll: true },
         );
     };
 
@@ -339,17 +459,46 @@ export default function ProductsIndex({
         filters.in_stock ||
         filters.sort !== 'score';
 
-    const toggleRating = (n: number) =>
-        applyFilters({
-            min_rating: String(n) === filters.min_rating ? '' : String(n),
-        });
-
     // ── Refinements, shared by the sidebar and the mobile drawer ──
     const refinements = (
-        <div className="space-y-9">
+        <div className="space-y-8">
+            {/* Sort lives here rather than beside the search field, keeping
+                every control that narrows the grid in one place. */}
             <div>
-                <div className="mb-4 flex items-baseline justify-between">
-                    <p className={`text-souk-brown-deep/60 ${EYEBROW}`}>Prix</p>
+                <p className={`mb-3 text-souk-brown-deep/60 ${EYEBROW}`}>
+                    {t('buyer.products.sort')}
+                </p>
+                <div className="space-y-1">
+                    {SORTS.map((s) => {
+                        const active = filters.sort === s.value;
+
+                        return (
+                            <button
+                                key={s.value}
+                                onClick={() => applyFilters({ sort: s.value })}
+                                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-start text-sm transition-colors ${
+                                    active
+                                        ? 'bg-souk-brown text-souk-cream'
+                                        : 'text-souk-brown-deep/80 hover:bg-souk-brown/8 hover:text-souk-title'
+                                }`}
+                            >
+                                {t(s.key)}
+                                {active && (
+                                    <Check className="h-3.5 w-3.5 shrink-0" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="h-px bg-souk-brown/10" />
+
+            <div>
+                <div className="mb-4 flex items-baseline justify-between gap-3">
+                    <p className={`text-souk-brown-deep/60 ${EYEBROW}`}>
+                        {t('buyer.products.price')}
+                    </p>
                     <span className="font-display text-sm text-souk-title">
                         ≤ {money(maxPrice)} MAD
                     </span>
@@ -363,7 +512,7 @@ export default function ProductsIndex({
                     onChange={(e) => setMaxPrice(e.target.value)}
                     onMouseUp={() => applyFilters()}
                     onTouchEnd={() => applyFilters()}
-                    aria-label="Prix maximum"
+                    aria-label={t('buyer.products.price_max_label')}
                     className="w-full accent-terracotta"
                 />
                 <div className="mt-2 flex justify-between text-[11px] text-souk-brown-deep/50">
@@ -372,26 +521,7 @@ export default function ProductsIndex({
                 </div>
             </div>
 
-            <div>
-                <p className={`mb-3 text-souk-brown-deep/60 ${EYEBROW}`}>
-                    Note minimum
-                </p>
-                <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                        <button
-                            key={n}
-                            onClick={() => toggleRating(n)}
-                            aria-label={`${n} étoile${n > 1 ? 's' : ''} minimum`}
-                            className="rounded-full p-1 transition-colors hover:bg-souk-brown/5"
-                        >
-                            <Star
-                                className={`h-4 w-4 ${n <= Number(filters.min_rating) ? 'fill-terracotta text-terracotta' : 'text-souk-brown/25'}`}
-                                strokeWidth={1.5}
-                            />
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <div className="h-px bg-souk-brown/10" />
 
             <button
                 onClick={() => applyFilters({ in_stock: !filters.in_stock })}
@@ -408,15 +538,15 @@ export default function ProductsIndex({
                         <Check className="h-3 w-3 text-souk-cream" />
                     )}
                 </span>
-                En stock uniquement
+                {t('buyer.products.in_stock_only')}
             </button>
 
             {hasActiveFilters && (
                 <button
                     onClick={resetAll}
-                    className="rounded-full border border-souk-brown/20 px-4 py-2 text-sm text-souk-brown-deep transition-colors hover:border-souk-brown hover:bg-souk-brown hover:text-souk-cream"
+                    className="w-full rounded-full border border-souk-brown/20 px-4 py-2 text-sm text-souk-brown-deep transition-colors hover:border-souk-brown hover:bg-souk-brown hover:text-souk-cream"
                 >
-                    Tout réinitialiser
+                    {t('buyer.products.reset_all')}
                 </button>
             )}
         </div>
@@ -426,146 +556,167 @@ export default function ProductsIndex({
         <div className="min-h-screen bg-souk-paper">
             <SiteHeader />
 
-            {/* ── Hero ─────────────────────────────────────────
-                Compact on purpose: this is a browsing page, so the grid
-                should not be pushed below the fold. */}
-            <section className="relative overflow-hidden rounded-b-[2.5rem] bg-souk-brown lg:rounded-br-[18rem]">
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -top-1/3 -left-1/4 h-[140%] w-[70%] rounded-full bg-[radial-gradient(closest-side,rgba(240,228,201,0.16),transparent)]"
-                />
-                <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 motif-zellij opacity-50 [--pattern-color:rgba(240,228,201,0.16)] [--pattern-size:72px]"
-                />
-
-                <div className="relative container py-12 md:py-16">
-                    <div className="flex flex-wrap items-end justify-between gap-6">
-                        <div className="max-w-2xl">
-                            <p
-                                className={`flex items-center gap-3 text-souk-cream/70 ${EYEBROW}`}
-                            >
-                                <ZellijStarIcon className="h-3.5 w-3.5" />
-                                Le marché
-                            </p>
-                            <h1 className="mt-4 font-display text-[clamp(2.25rem,5vw,4rem)] leading-[1.04] tracking-[-0.02em] text-white">
-                                Tout ce qui se fait{' '}
-                                <span className="text-souk-cream italic">
-                                    à la main
+            {/* ── Hero: a light, inset card. The carousel is the card's
+                background and the copy sits over its start edge, where the
+                scrim keeps dark type legible over any of the photographs. */}
+            <section className="container pt-6 pb-2 md:pt-8">
+                <HeroCarousel
+                    slides={HERO_SLIDES.map((slide) => ({
+                        src: slide.src,
+                        alt: t(slide.altKey),
+                    }))}
+                >
+                    <div className="flex min-h-[clamp(22rem,52vh,30rem)] items-center px-7 py-12 sm:px-12 md:px-16">
+                        <div className="max-w-lg">
+                            <h1 className="font-display text-[clamp(2.15rem,4.4vw,3.5rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
+                                <span className="block">
+                                    {t('buyer.products.hero_title_l1')}
+                                </span>
+                                <span className="block">
+                                    {t('buyer.products.hero_title_l2')}
+                                </span>
+                                <span className="block text-terracotta">
+                                    {t('buyer.products.hero_title_l3')}
                                 </span>
                             </h1>
-                            <p className="mt-4 max-w-lg leading-relaxed text-souk-cream/75">
-                                Pièces façonnées dans les ateliers du Maroc, et
-                                vendues directement par les artisans.
-                            </p>
-                        </div>
 
-                        <dl className="flex shrink-0 items-end gap-8 border-s border-souk-cream/20 ps-8">
-                            <div>
-                                <dt className="font-display text-3xl text-white">
-                                    {pagination.total}
-                                </dt>
-                                <dd
-                                    className={`mt-1 text-souk-cream/60 ${EYEBROW}`}
-                                >
-                                    pièce{pagination.total > 1 ? 's' : ''}
-                                </dd>
+                            <div
+                                aria-hidden="true"
+                                className="mt-7 flex items-center gap-2"
+                            >
+                                <ZellijStarIcon className="h-3 w-3 shrink-0 text-terracotta/70" />
+                                <span className="h-px w-8 bg-terracotta/45" />
+                                <ZellijStarIcon className="h-3 w-3 shrink-0 text-terracotta/70" />
+                                <span className="h-px flex-1 bg-souk-brown/20" />
                             </div>
-                            <div>
-                                <dt className="font-display text-3xl text-white">
-                                    {categories.length}
-                                </dt>
-                                <dd
-                                    className={`mt-1 text-souk-cream/60 ${EYEBROW}`}
-                                >
-                                    métiers
-                                </dd>
-                            </div>
-                        </dl>
+
+                            <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-souk-brown-deep/85">
+                                {t('buyer.products.hero_subtitle')}
+                            </p>
+
+                            <ul className="mt-9 flex flex-wrap gap-x-8 gap-y-6">
+                                {HERO_FEATURES.map((feature) => {
+                                    const Icon = feature.icon;
+
+                                    return (
+                                        <li
+                                            key={feature.labelKey}
+                                            className="w-[5.5rem]"
+                                        >
+                                            <Icon
+                                                className="h-6 w-6 text-souk-brown"
+                                                strokeWidth={1.5}
+                                            />
+                                            <p className="mt-2.5 text-[13px] leading-tight font-medium text-souk-title">
+                                                {t(feature.labelKey)}
+                                            </p>
+                                            <p className="text-[13px] leading-tight text-souk-brown-deep/70">
+                                                {t(feature.subKey)}
+                                            </p>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                </HeroCarousel>
             </section>
 
-            {/* ── Search + sort, pinned so they stay reachable ── */}
+            {/* ── Category strip ───────────────────────────────────────
+                A browse row rather than a filter chip set: one glyph per
+                top-level craft, hairline-separated. Scrolls sideways below
+                md, where eight of them can't fit without shrinking to
+                nothing. Selecting the active one clears it again, which is
+                why there is no separate "all" entry. */}
+            <nav className="border-b border-souk-brown/10 bg-souk-peach/40">
+                <div className="container">
+                    <ul className="-mx-5 flex snap-x snap-mandatory overflow-x-auto px-5 md:mx-0 md:justify-center md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+                        {categories.map((category, i) => {
+                            const Icon =
+                                CATEGORY_ICONS[category.slug] ?? ZellijStarIcon;
+                            const value = String(category.id);
+                            const active = filters.category_id === value;
+
+                            return (
+                                <li
+                                    key={category.id}
+                                    className={`shrink-0 snap-start ${
+                                        // Hairline between items, never before
+                                        // the first — `border-s` so it lands on
+                                        // the correct side under RTL.
+                                        i > 0
+                                            ? 'border-s border-souk-brown/15'
+                                            : ''
+                                    }`}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            applyFilters({
+                                                category_id: active
+                                                    ? ''
+                                                    : value,
+                                            })
+                                        }
+                                        aria-pressed={active}
+                                        className={`group flex w-[8.5rem] cursor-pointer flex-col items-center gap-2.5 px-3 py-6 transition-colors md:w-[9.5rem] ${
+                                            active
+                                                ? 'text-souk-title'
+                                                : 'text-souk-brown-deep/75 hover:text-souk-title'
+                                        }`}
+                                    >
+                                        <Icon
+                                            className={`h-11 w-11 transition-colors ${
+                                                active
+                                                    ? 'text-terracotta'
+                                                    : 'text-souk-brown/70 group-hover:text-terracotta'
+                                            }`}
+                                        />
+                                        <span className="text-center text-[13px] leading-tight">
+                                            {category.translated_name}
+                                        </span>
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            </nav>
+
+            {/* ── Search, pinned so it stays reachable while scrolling ── */}
             <div className="sticky top-0 z-30 border-b border-souk-brown/10 bg-souk-paper/90 backdrop-blur">
-                <div className="container flex flex-wrap items-center gap-3 py-4">
-                    <div className="relative min-w-0 flex-1">
+                <div className="container py-4">
+                    <div className="relative w-full max-w-md">
                         {busy ? (
-                            <Loader2 className="absolute top-1/2 left-5 h-4 w-4 -translate-y-1/2 animate-spin text-souk-brown/60" />
+                            <Loader2 className="absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-souk-brown/60" />
                         ) : (
                             <Search
-                                className="absolute top-1/2 left-5 h-4 w-4 -translate-y-1/2 text-souk-brown/50"
+                                className="absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-souk-brown/50"
                                 strokeWidth={1.5}
                             />
                         )}
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Rechercher une pièce, une matière, un atelier…"
-                            aria-label="Rechercher un produit"
-                            className="w-full rounded-full border border-souk-brown/15 bg-souk-peach/50 py-3 pr-11 pl-12 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/45 focus:border-souk-brown/45 focus:bg-souk-peach focus:outline-none"
+                            placeholder={t('buyer.products.search_placeholder')}
+                            aria-label={t('buyer.products.search_label')}
+                            className="w-full rounded-full border border-souk-brown/15 bg-souk-peach/50 py-2.5 ps-11 pe-10 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/45 focus:border-souk-brown/45 focus:bg-souk-peach focus:outline-none"
                         />
                         {search && (
                             <button
                                 onClick={() => setSearch('')}
-                                aria-label="Effacer la recherche"
-                                className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full p-1 text-souk-brown/50 transition-colors hover:bg-souk-brown/10 hover:text-souk-title"
+                                aria-label={t('buyer.products.search_clear')}
+                                className="absolute end-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-souk-brown/50 transition-colors hover:bg-souk-brown/10 hover:text-souk-title"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </button>
                         )}
                     </div>
-
-                    <label className="flex shrink-0 items-center gap-2 text-sm text-souk-brown-deep/70">
-                        <span className="hidden sm:inline">Trier</span>
-                        <select
-                            value={filters.sort}
-                            onChange={(e) =>
-                                applyFilters({ sort: e.target.value })
-                            }
-                            className="rounded-full border border-souk-brown/15 bg-souk-paper px-4 py-3 text-sm text-souk-title transition-colors focus:border-souk-brown/45 focus:outline-none"
-                        >
-                            {SORTS.map((s) => (
-                                <option key={s.value} value={s.value}>
-                                    {s.label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-            </div>
-
-            {/* ── Category pills ──────────────────────────────── */}
-            <div className="container pt-7">
-                <div className="flex flex-wrap gap-2">
-                    {[
-                        { id: '', translated_name: 'Tout le marché' },
-                        ...categories,
-                    ].map((c) => {
-                        const value = String(c.id);
-                        const active = filters.category_id === value;
-
-                        return (
-                            <button
-                                key={value || 'all'}
-                                onClick={() =>
-                                    applyFilters({ category_id: value })
-                                }
-                                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                                    active
-                                        ? 'border-souk-brown bg-souk-brown text-souk-cream'
-                                        : 'border-souk-brown/15 bg-souk-peach/40 text-souk-brown-deep hover:border-souk-brown/40 hover:bg-souk-peach'
-                                }`}
-                            >
-                                {c.translated_name}
-                            </button>
-                        );
-                    })}
                 </div>
             </div>
 
             {/* ── Audience notice ─────────────────────────────── */}
-            <div className="container pt-6">
+            <div className="container pt-8">
                 {audience === 'professional' ? (
                     <div className="flex items-start gap-3 rounded-2xl border border-olive/25 bg-olive/5 px-5 py-4 text-sm">
                         <BadgePercent
@@ -574,26 +725,21 @@ export default function ProductsIndex({
                         />
                         <p className="text-souk-brown-deep/80">
                             <span className="font-medium text-souk-title">
-                                Compte professionnel.
+                                {t('buyer.products.pro_notice_title')}
                             </span>{' '}
-                            Vos tarifs pro apparaissent sous le prix public,
-                            marqués <span className="text-olive">Pro*</span>.
-                            Ils sont indicatifs : la facturation reste au prix
-                            public pour le moment.
+                            {t('buyer.products.pro_notice_body')}
                         </p>
                     </div>
                 ) : (
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-souk-brown/12 bg-souk-peach/50 px-5 py-4 text-sm">
                         <p className="text-souk-brown-deep/80">
-                            Vous achetez pour un riad, un hôtel ou une boutique
-                            ? Des tarifs professionnels existent sur une grande
-                            partie du catalogue.
+                            {t('buyer.products.pro_cta_body')}
                         </p>
                         <Link
                             href={route('register')}
                             className="shrink-0 rounded-full bg-souk-brown px-5 py-2 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep"
                         >
-                            Ouvrir un compte pro
+                            {t('buyer.products.pro_cta_button')}
                         </Link>
                     </div>
                 )}
@@ -608,10 +754,10 @@ export default function ProductsIndex({
                                 className={`flex items-center gap-2 text-souk-brown-deep/70 ${EYEBROW}`}
                             >
                                 <SlidersHorizontal className="h-3.5 w-3.5" />
-                                Affiner
+                                {t('buyer.products.refine')}
                             </span>
                             <span className="text-xs text-souk-brown-deep/50">
-                                Ouvrir
+                                {t('buyer.products.refine_open')}
                             </span>
                         </summary>
                         <div className="mt-6">{refinements}</div>
@@ -625,7 +771,7 @@ export default function ProductsIndex({
                             className={`mb-6 flex items-center gap-2 text-souk-brown-deep/70 ${EYEBROW}`}
                         >
                             <SlidersHorizontal className="h-3.5 w-3.5" />
-                            Affiner
+                            {t('buyer.products.refine')}
                         </p>
                         {refinements}
                     </div>
@@ -641,15 +787,15 @@ export default function ProductsIndex({
                             />
                             <p className="text-souk-brown-deep/70">
                                 {filters.search
-                                    ? `Aucune pièce ne correspond à « ${filters.search} ».`
-                                    : 'Aucune pièce ne correspond à vos filtres.'}
+                                    ? t('buyer.products.empty_with_search')
+                                    : t('buyer.products.empty')}
                             </p>
                             {hasActiveFilters && (
                                 <button
                                     onClick={resetAll}
                                     className="rounded-full bg-souk-brown px-6 py-2.5 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep"
                                 >
-                                    Tout réinitialiser
+                                    {t('buyer.products.reset_all')}
                                 </button>
                             )}
                         </div>
@@ -662,6 +808,8 @@ export default function ProductsIndex({
                                     key={p.id}
                                     product={p}
                                     audience={audience}
+                                    money={money}
+                                    t={t}
                                 />
                             ))}
                         </div>
@@ -679,12 +827,13 @@ export default function ProductsIndex({
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     )}
                                     {loadingMore
-                                        ? 'Chargement…'
-                                        : 'Voir plus de pièces'}
+                                        ? t('buyer.products.loading')
+                                        : t('buyer.products.load_more')}
                                 </button>
                             )}
                             <p className={`text-souk-brown-deep/50 ${EYEBROW}`}>
-                                {products.length} sur {pagination.total}
+                                {products.length} {t('buyer.products.count_of')}{' '}
+                                {pagination.total}
                             </p>
                         </div>
                     )}

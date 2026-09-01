@@ -15,7 +15,13 @@ class BuyerProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $isProfessional = $request->user()?->isProfessionalBuyer() ?? false;
+        /*
+         * Asked via audienceFor() rather than checking the role directly, so
+         * this cannot drift from what CheckoutService bills — both route
+         * through the same helper, and both therefore require a *verified*
+         * trade account. An unverified one is shown, and charged, retail.
+         */
+        $isProfessional = Product::audienceFor($request->user()) === Product::AUDIENCE_PROFESSIONAL;
 
         return [
             'id' => $this->id,
@@ -45,6 +51,9 @@ class BuyerProductResource extends JsonResource
                 'store_name' => $this->store?->store_name,
                 // A store without a city must not fatal the whole listing.
                 'city_name' => $this->store?->city?->name,
+                // For the storefront's seller card. Nullable — a shop that
+                // never uploaded one falls back to an initial.
+                'logo' => $this->store?->logo,
             ],
 
             'images' => $this->images,

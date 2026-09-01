@@ -78,7 +78,7 @@ export default function Welcome({
 
                 {/* ───────────────────────── Hero ───────────────────────── */}
                 <section className="relative overflow-hidden">
-                    <div className="relative overflow-hidden bg-souk-brown lg:rounded-br-[40rem]">
+                    <div className="relative overflow-hidden bg-souk-brown lg:rounded-br-[20rem]">
                         {/* Warm pool of light behind the copy, so the flat brown
                             reads as a lit room rather than a solid block. */}
                         <div

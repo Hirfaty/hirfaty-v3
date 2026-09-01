@@ -139,12 +139,26 @@
         }
     }
 
+    /* Hero carousel. A slow drift across whichever slide is showing, so a
+       still photograph keeps moving the whole time it is on screen. Runs
+       longer than the slide interval on purpose: the travel never reaches its
+       end, so it is never seen snapping back. */
+    @keyframes ken-burns {
+        from {
+            transform: scale(1.02) translate3d(0, 0, 0);
+        }
+        to {
+            transform: scale(1.14) translate3d(0, -2%, 0);
+        }
+    }
+
     --animate-accordion-down: accordion-down 0.2s ease-out;
     --animate-accordion-up: accordion-up 0.2s ease-out;
     --animate-fade-up: fade-up 0.5s ease-out both;
     --animate-float-slow: float-slow 7s ease-in-out infinite;
     --animate-marquee: marquee 38s linear infinite;
     --animate-sheen: sheen 1.1s ease-out;
+    --animate-ken-burns: ken-burns 9s ease-out both;
 
     /* Base Container Config (Variables only) */
     --container-center: true;

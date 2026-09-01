@@ -30,7 +30,25 @@ class CheckoutService
     {
         $orders = [];
 
-        DB::transaction(function () use ($cart, $checkoutData, &$orders) {
+        /*
+         * Which price list this basket is billed on, resolved once from the
+         * cart's owner. Verified trade accounts are charged their wholesale
+         * rate; everyone else — including an unverified trade account — pays
+         * retail. Product::audienceFor() is the same call the storefront uses
+         * to decide what to *show*, so a buyer cannot be quoted one figure
+         * and charged another.
+         */
+        $audience = Product::audienceFor($cart->user);
+
+        /*
+         * One place that turns a product into a unit price. The order total
+         * and the individual order lines are computed separately below, and
+         * pricing them through anything but a shared helper is how a total
+         * ends up disagreeing with the sum of its own lines.
+         */
+        $unitPrice = fn (Product $product): float => (float) ($product->priceFor($audience) ?? 0);
+
+        DB::transaction(function () use ($cart, $checkoutData, $unitPrice, &$orders) {
             // 1. Validate stock for ALL items first with lock to avoid race conditions
             foreach ($cart->items as $item) {
                 // We re-fetch each product with a lock to ensure the stock count is accurate
@@ -53,7 +71,7 @@ class CheckoutService
                 $store = $items->first()->product->store;
 
                 // Calculate amounts
-                $grossAmount = $items->sum(fn ($item) => (float) ($item->product->sale_price ?? $item->product->base_price) * $item->quantity);
+                $grossAmount = $items->sum(fn ($item) => $unitPrice($item->product) * $item->quantity);
                 $platformFee = round($grossAmount * self::PLATFORM_FEE_PERCENT, 2);
                 $amanaFee = self::AMANA_FEE;
                 $sellerEarnings = $grossAmount - $platformFee + $amanaFee;
@@ -74,7 +92,7 @@ class CheckoutService
 
                 // Create order items
                 foreach ($items as $item) {
-                    $price = (float) ($item->product->sale_price ?? $item->product->base_price);
+                    $price = $unitPrice($item->product);
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $item->product_id,

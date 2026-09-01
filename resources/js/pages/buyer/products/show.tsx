@@ -1,32 +1,131 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
+    BadgePercent,
     Heart,
-    ShoppingBag,
-    Star,
+    Clock,
     MapPin,
-    Truck,
-    ShieldCheck,
     Minus,
-    Plus,
     Play,
+    Plus,
+    ShieldCheck,
+    ShoppingBag,
+    Store as StoreIcon,
+    Truck,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslation } from '@/hooks/use-translation';
 import { useGuestCart } from '@/hooks/useGuestCart';
 import type { Media } from '@/types';
-import { Category, Product, Store } from '@/types';
 import type { BuyerProductResource } from '@/types/extended_models';
 
-type Review = {
-    id: number;
-    author: string;
-    date: string;
-    rating: number;
-    body: string;
+/** Museum-caption label, matching the listing page. */
+const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
+
+const LOCALE_TAGS: Record<string, string> = {
+    fr: 'fr-MA',
+    ar: 'ar-MA',
+    en: 'en-MA',
 };
+
+type DetailProduct = BuyerProductResource & {
+    wishlists_count?: number;
+    professional_effective_price?: number | null;
+    min_order_qty_professional?: number;
+    store: BuyerProductResource['store'] & { logo?: string | null };
+};
+
+/**
+ * Price block.
+ *
+ * A verified trade buyer sees their wholesale rate as *the* price, with the
+ * public price struck through — CheckoutService bills exactly this figure, so
+ * it can be stated plainly rather than hedged as "indicative". Everyone else
+ * sees retail. The two come from the same `Product::audienceFor()` decision
+ * server-side, so this can't quote a number the basket won't honour.
+ */
+function PriceBlock({
+    product,
+    money,
+    t,
+}: {
+    product: DetailProduct;
+    money: (v: number | string) => string;
+    t: (k: string) => string;
+}) {
+    const base = Number(product.base_price);
+    const sale = product.sale_price ? Number(product.sale_price) : null;
+    const onSale = sale !== null && sale < base;
+    const retail = onSale ? sale : base;
+
+    const trade = product.professional_effective_price ?? null;
+    const hasTrade = trade !== null && trade < retail;
+    const saving = hasTrade ? Math.round((1 - trade / retail) * 100) : 0;
+    const minQty = product.min_order_qty_professional ?? 1;
+
+    if (hasTrade) {
+        return (
+            <div className="rounded-2xl border border-olive/25 bg-olive/5 p-5">
+                <p className={`text-olive/80 ${EYEBROW}`}>
+                    {t('buyer.detail.your_trade_price')}
+                </p>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="font-display text-4xl leading-none text-olive">
+                        {money(trade)}
+                        <span className="ms-1.5 text-base">MAD</span>
+                    </span>
+                    <span className="text-sm text-souk-brown-deep/50 line-through">
+                        {money(retail)} MAD
+                    </span>
+                    {saving > 0 && (
+                        <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
+                            −{saving}%
+                        </span>
+                    )}
+                </div>
+                <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-souk-brown-deep/70">
+                    <BadgePercent
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-olive"
+                        strokeWidth={1.5}
+                    />
+                    {t('buyer.detail.trade_billed_note')}
+                    {minQty > 1 && (
+                        <>
+                            {' · '}
+                            {t('buyer.detail.trade_min_qty').replace(
+                                ':count',
+                                String(minQty),
+                            )}
+                        </>
+                    )}
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
+                {t('buyer.detail.public_price')}
+            </p>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-3">
+                <span
+                    className={`font-display text-4xl leading-none ${onSale ? 'text-terracotta' : 'text-souk-title'}`}
+                >
+                    {money(retail)}
+                    <span className="ms-1.5 text-base">MAD</span>
+                </span>
+                {onSale && (
+                    <span className="text-sm text-souk-brown-deep/50 line-through">
+                        {money(base)} MAD
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
 
 const ProductDetail = ({
     product,
@@ -34,48 +133,53 @@ const ProductDetail = ({
     inCart,
     moreFromStore,
 }: {
-    product: BuyerProductResource;
+    product: DetailProduct;
     inWishlist: boolean;
     inCart: boolean;
-    moreFromStore: BuyerProductResource[];
+    moreFromStore: DetailProduct[];
 }) => {
-    console.log({ product, inWishlist, inCart, moreFromStore });
-    const { auth } = usePage().props;
-    const initialWish = inWishlist;
-    const mockReviews: Review[] = [];
-    const wishlistsCount =
-        (product as BuyerProductResource & { wishlists_count?: number })
-            .wishlists_count ?? 0;
-    const media = useMemo<Media[]>(
-        () => [...product.images, ...product.videos],
-        [product],
-    );
+    const { t, locale } = useTranslation();
+    const { auth } = usePage().props as unknown as {
+        auth: {
+            user: {
+                role?: string;
+                professional_verified_at?: string | null;
+            } | null;
+        };
+    };
 
+    const media: Media[] = [...product.images, ...product.videos];
     const [activeIdx, setActiveIdx] = useState(0);
     const [qty, setQty] = useState(1);
     const [wished, setWished] = useState(inWishlist);
 
+    const guestCart = useGuestCart();
     const active = media[activeIdx];
+    const soldOut = product.stock === 0;
+
+    const money = (v: number | string) =>
+        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
+            maximumFractionDigits: 0,
+        }).format(Number(v));
+
     const onSale =
         product.sale_price &&
         Number(product.sale_price) < Number(product.base_price);
-    const price = onSale
-        ? Number(product.sale_price)
-        : Number(product.base_price);
-    const rating = Number(product.average_rating);
-    const guestCart = useGuestCart();
+
+    // A trade account that hasn't been verified yet still pays retail, so it
+    // gets a nudge rather than the wholesale figure.
+    const isPendingTrade =
+        auth.user?.role === 'professional_buyer' &&
+        !auth.user?.professional_verified_at;
+    const isGuestOrConsumer =
+        !auth.user || auth.user.role === 'buyer' || !auth.user.role;
 
     const handleAddToCart = () => {
         if (auth.user) {
             router.post(
                 route('cart.add'),
-                {
-                    product_id: product.id,
-                    quantity: qty,
-                },
-                {
-                    preserveScroll: true,
-                },
+                { product_id: product.id, quantity: qty },
+                { preserveScroll: true },
             );
         } else {
             guestCart.addItem({
@@ -86,179 +190,210 @@ const ProductDetail = ({
                 image: product.images[0]?.url ?? null,
                 store_name: product.store.store_name,
             });
-            alert('Added to cart! Login to checkout.');
         }
     };
 
-    const goToCart = () => {
-        router.visit('/cart');
+    const toggleWishlist = () => {
+        // The route is auth-only, so a guest would just get bounced; send them
+        // to log in instead of firing a request that cannot succeed.
+        if (!auth.user) {
+            router.visit(route('login'));
+
+            return;
+        }
+
+        // Optimistic, rolled back if the request fails. Previously this button
+        // only flipped local state and never told the server at all, so a
+        // "favourited" piece was silently forgotten on reload.
+        setWished((w) => !w);
+        router.post(
+            route('products.wishlist', product.id),
+            {},
+            {
+                preserveScroll: true,
+                onError: () => setWished((w) => !w),
+            },
+        );
     };
 
     return (
-        <div className="min-h-screen bg-cream paper-grain">
+        <div className="min-h-screen bg-souk-paper">
             <SiteHeader />
 
-            {/* Breadcrumb */}
-            <div className="container pt-8 pb-4 text-xs tracking-[0.18em] text-ink-soft uppercase">
-                <Link href="/products" className="hover:text-ink">
-                    Marché
+            {/* ── Breadcrumb ─────────────────────────────────── */}
+            <div
+                className={`container pt-8 pb-5 text-souk-brown-deep/55 ${EYEBROW}`}
+            >
+                <Link
+                    href={route('products.index')}
+                    className="transition-colors hover:text-souk-title"
+                >
+                    {t('buyer.detail.back_to_market')}
                 </Link>
                 {product.category?.translated_name && (
-                    <>
-                        {' '}
-                        / <span>{product.category?.translated_name}</span>
-                    </>
+                    <> · {product.category.translated_name}</>
                 )}
-                {' / '}
-                <span className="text-ink">{product.name}</span>
             </div>
 
-            {/* Main */}
             <section className="container grid grid-cols-12 gap-8 pb-16 md:gap-12">
-                {/* Gallery */}
-                <div className="col-span-12 md:col-span-6">
-                    <div className="relative mx-auto aspect-square max-w-md overflow-hidden bg-ink/5 md:mx-0 md:max-w-lg">
-                        {active?.type === 'video' ? (
-                            <video
-                                key={active.id}
-                                src={active.url}
-                                controls
-                                className="h-full w-full object-cover"
-                            />
-                        ) : active ? (
-                            <img
-                                key={active.id}
-                                src={active.url}
-                                alt={product.name}
-                                className="h-full w-full object-cover"
-                            />
-                        ) : null}
-
-                        {onSale && (
-                            <span className="absolute top-4 left-4 bg-terracotta px-2.5 py-1 text-[10px] tracking-[0.2em] text-cream uppercase">
-                                Promo
-                            </span>
-                        )}
-                    </div>
-
-                    {media.length > 1 && (
-                        <div className="mx-auto mt-3 grid max-w-md grid-cols-5 gap-2 md:mx-0 md:max-w-lg">
-                            {media.map((m, i) => (
-                                <button
-                                    key={m.id}
-                                    onClick={() => setActiveIdx(i)}
-                                    className={`relative aspect-square overflow-hidden border ${
-                                        i === activeIdx
-                                            ? 'border-ink'
-                                            : 'border-transparent'
-                                    }`}
-                                >
-                                    {m.type === 'video' ? (
-                                        <>
-                                            <video
+                {/* ── Gallery: rail of thumbnails beside the main image ── */}
+                <div className="col-span-12 md:col-span-7">
+                    <div className="flex gap-3 md:gap-4">
+                        {media.length > 1 && (
+                            <div className="flex w-16 shrink-0 flex-col gap-3 md:w-20">
+                                {media.map((m, i) => (
+                                    <button
+                                        key={m.id}
+                                        onClick={() => setActiveIdx(i)}
+                                        aria-label={t(
+                                            'buyer.detail.view_media',
+                                        ).replace(':n', String(i + 1))}
+                                        aria-current={i === activeIdx}
+                                        className={`relative aspect-square overflow-hidden rounded-xl ring-1 transition-all ${
+                                            i === activeIdx
+                                                ? 'ring-2 ring-souk-brown'
+                                                : 'ring-souk-brown/15 hover:ring-souk-brown/40'
+                                        }`}
+                                    >
+                                        {m.type === 'video' ? (
+                                            <>
+                                                <video
+                                                    src={m.url}
+                                                    className="h-full w-full object-cover"
+                                                    muted
+                                                />
+                                                <span className="absolute inset-0 flex items-center justify-center bg-souk-title/40">
+                                                    <Play className="h-3.5 w-3.5 fill-white text-white" />
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <img
                                                 src={m.url}
+                                                alt=""
+                                                loading="lazy"
                                                 className="h-full w-full object-cover"
-                                                muted
                                             />
-                                            <span className="absolute inset-0 flex items-center justify-center bg-ink/40">
-                                                <Play className="h-4 w-4 fill-cream text-cream" />
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <img
-                                            src={m.url}
-                                            alt=""
-                                            className="h-full w-full object-cover"
-                                        />
-                                    )}
-                                </button>
-                            ))}
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Arch-topped main frame, echoing the listing cards. */}
+                        <div className="relative min-w-0 flex-1 overflow-hidden rounded-t-[6rem] rounded-b-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
+                            <div className="aspect-[4/5]">
+                                {active?.type === 'video' ? (
+                                    <video
+                                        key={active.id}
+                                        src={active.url}
+                                        controls
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : active ? (
+                                    <img
+                                        key={active.id}
+                                        src={active.url}
+                                        alt={product.name}
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
+                                        <ZellijStarIcon className="h-10 w-10" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {onSale && (
+                                <span
+                                    className={`absolute start-6 top-6 rounded-full bg-terracotta px-3 py-1 text-white ${EYEBROW}`}
+                                >
+                                    {t('buyer.products.badge_sale')}
+                                </span>
+                            )}
+                            {soldOut && (
+                                <span
+                                    className={`absolute end-6 top-6 rounded-full bg-souk-title/85 px-3 py-1 text-souk-cream backdrop-blur ${EYEBROW}`}
+                                >
+                                    {t('buyer.detail.sold_out')}
+                                </span>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                {/* Info */}
+                {/* ── Buying column ──────────────────────────── */}
                 <div className="col-span-12 md:col-span-5">
-                    <p className="mb-3 eyebrow">
-                        {product.category?.translated_name ?? 'Pièce unique'}
+                    <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
+                        {product.category?.translated_name}
                     </p>
-                    <h1 className="h-editorial text-4xl leading-tight text-ink md:text-5xl">
+                    <h1 className="mt-3 font-display text-[clamp(1.9rem,3.4vw,2.75rem)] leading-[1.1] tracking-[-0.02em] text-souk-title">
                         {product.name}
                     </h1>
 
-                    {/* Store + rating */}
-                    <div className="mt-4 flex items-center gap-4 text-sm text-ink-soft">
-                        <Link
-                            href={`/seller/${product.store.slug}`}
-                            className="link-underline text-ink"
-                        >
-                            {product.store.store_name}
-                        </Link>
-                        {product.store.city_name && (
-                            <span className="inline-flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                {product.store.city_name}
-                            </span>
-                        )}
-                        {rating > 0 && (
-                            <span className="inline-flex items-center gap-1">
-                                <Star
-                                    className="h-3.5 w-3.5 fill-terracotta text-terracotta"
-                                    strokeWidth={1.5}
-                                />
-                                {rating.toFixed(1)}
-                            </span>
-                        )}
+                    <div className="mt-6">
+                        <PriceBlock product={product} money={money} t={t} />
                     </div>
 
-                    {/* Price */}
-                    <div className="mt-6 flex items-baseline gap-3">
-                        <span className="font-display text-3xl text-ink">
-                            {price}{' '}
-                            <span className="text-base text-ink-soft">MAD</span>
-                        </span>
-                        {onSale && (
-                            <span className="text-sm text-ink-soft line-through">
-                                {Number(product.base_price)} MAD
+                    {/* Trade nudges — one for consumers, one for a trade
+                        account still awaiting verification. */}
+                    {isPendingTrade && (
+                        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-souk-brown-deep/85">
+                            <Clock
+                                className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+                                strokeWidth={1.5}
+                            />
+                            <span>
+                                <span className="font-medium text-souk-title">
+                                    {t(
+                                        'buyer.detail.trade_pending_title',
+                                    )}
+                                </span>{' '}
+                                {t('buyer.detail.trade_pending_body')}
                             </span>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
-                    {/* Stock */}
-                    <p className="mt-3 text-xs tracking-[0.18em] uppercase">
-                        {product.stock > 0 ? (
-                            <span className="text-olive">
-                                En stock — {product.stock} disponible
-                                {product.stock > 1 ? 's' : ''}
+                    <p className={`mt-5 ${EYEBROW}`}>
+                        {soldOut ? (
+                            <span className="text-terracotta">
+                                {t('buyer.detail.sold_out')}
+                            </span>
+                        ) : product.stock <= 5 ? (
+                            <span className="text-terracotta">
+                                {t('buyer.detail.only_left').replace(
+                                    ':count',
+                                    String(product.stock),
+                                )}
                             </span>
                         ) : (
-                            <span className="text-destructive">Épuisé</span>
+                            <span className="text-olive">
+                                {t('buyer.detail.in_stock')}
+                            </span>
                         )}
                     </p>
 
-                    {/* Description */}
-                    {product.description && (
-                        <p className="mt-6 leading-relaxed text-ink-soft">
-                            {product.description}
-                        </p>
-                    )}
-
                     {/* Quantity + actions */}
-                    <div className="mt-8 space-y-4">
+                    <div className="mt-7 space-y-4">
                         <div className="flex items-center gap-4">
-                            <span className="eyebrow">Quantité</span>
-                            <div className="inline-flex items-center border border-ink/30">
+                            <span
+                                className={`text-souk-brown-deep/55 ${EYEBROW}`}
+                            >
+                                {t('buyer.detail.quantity')}
+                            </span>
+                            <div className="inline-flex items-center rounded-full border border-souk-brown/20">
                                 <button
                                     onClick={() =>
                                         setQty((q) => Math.max(1, q - 1))
                                     }
-                                    className="px-3 py-2 transition-colors hover:bg-ink hover:text-cream disabled:hover:bg-transparent disabled:hover:text-ink/30"
-                                    aria-label="Diminuer"
                                     disabled={qty <= 1}
+                                    aria-label={t(
+                                        'buyer.detail.decrease',
+                                    )}
+                                    className="rounded-full px-3.5 py-2 text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-souk-brown-deep"
                                 >
                                     <Minus className="h-3.5 w-3.5" />
                                 </button>
-                                <span className="px-4 text-sm tabular-nums">
+                                <span className="min-w-8 px-1 text-center text-sm text-souk-title tabular-nums">
                                     {qty}
                                 </span>
                                 <button
@@ -270,9 +405,11 @@ const ProductDetail = ({
                                             ),
                                         )
                                     }
-                                    className="px-3 py-2 transition-colors hover:bg-ink hover:text-cream disabled:hover:bg-transparent disabled:hover:text-ink/30"
-                                    aria-label="Augmenter"
                                     disabled={qty >= product.stock}
+                                    aria-label={t(
+                                        'buyer.detail.increase',
+                                    )}
+                                    className="rounded-full px-3.5 py-2 text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-souk-brown-deep"
                                 >
                                     <Plus className="h-3.5 w-3.5" />
                                 </button>
@@ -280,179 +417,169 @@ const ProductDetail = ({
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row">
-                            <Button
-                                disabled={product.stock === 0}
-                                onClick={inCart ? goToCart : handleAddToCart}
-                                className="h-12 flex-1 rounded-none bg-ink text-cream hover:bg-terracotta"
+                            <button
+                                type="button"
+                                disabled={soldOut}
+                                onClick={
+                                    inCart
+                                        ? () => router.visit(route('cart.show'))
+                                        : handleAddToCart
+                                }
+                                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-souk-brown text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                <ShoppingBag className="me-2 h-4 w-4" />
-
+                                <ShoppingBag className="h-4 w-4" />
                                 {inCart
-                                    ? 'Passer au paiement'
-                                    : 'Ajouter au panier'}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => setWished((w) => !w)}
-                                className={`h-12 rounded-none border-ink ${
-                                    wished ? 'bg-ink text-cream' : 'text-ink'
+                                    ? t('buyer.detail.go_to_cart')
+                                    : t('buyer.detail.add_to_cart')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={toggleWishlist}
+                                aria-pressed={wished}
+                                aria-label={t(
+                                    wished
+                                        ? 'buyer.detail.wishlist_remove'
+                                        : 'buyer.detail.wishlist_add',
+                                )}
+                                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                    wished
+                                        ? 'border-terracotta bg-terracotta text-white'
+                                        : 'border-souk-brown/25 text-souk-brown-deep hover:border-souk-brown hover:text-souk-title'
                                 }`}
                             >
                                 <Heart
-                                    className={`me-2 h-4 w-4 ${wished ? 'fill-cream' : ''}`}
+                                    className={`h-4 w-4 ${wished ? 'fill-white' : ''}`}
                                 />
-                                {wished ? 'Dans la wishlist' : 'Wishlist'}
-                                <span className="ms-2 text-xs text-ink-soft">
-                                    (
-                                    {wishlistsCount +
-                                        (wished && !initialWish ? 1 : 0)}
-                                    )
-                                </span>
-                            </Button>
+                            </button>
                         </div>
                     </div>
 
+                    {/* ── Seller card ─────────────────────────── */}
+                    <div className="mt-8 rounded-2xl border border-souk-brown/12 bg-souk-peach/40 p-5">
+                        <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
+                            {t('buyer.detail.sold_by')}
+                        </p>
+                        <div className="mt-3 flex items-center gap-4">
+                            {product.store.logo ? (
+                                <img
+                                    src={product.store.logo}
+                                    alt={product.store.store_name ?? ''}
+                                    className="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-souk-brown/15"
+                                />
+                            ) : (
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-souk-brown/10 ring-1 ring-souk-brown/15">
+                                    <StoreIcon
+                                        className="h-6 w-6 text-souk-brown/60"
+                                        strokeWidth={1.5}
+                                    />
+                                </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate font-display text-lg text-souk-title">
+                                    {product.store.store_name}
+                                </p>
+                                {product.store.city_name && (
+                                    <p className="mt-0.5 flex items-center gap-1.5 text-sm text-souk-brown-deep/70">
+                                        <MapPin
+                                            className="h-3.5 w-3.5"
+                                            strokeWidth={1.5}
+                                        />
+                                        {product.store.city_name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        {product.store.description && (
+                            <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-souk-brown-deep/75">
+                                {product.store.description}
+                            </p>
+                        )}
+                        <Link
+                            href={`/seller/${product.store.slug}`}
+                            className="mt-4 inline-flex rounded-full border border-souk-brown/25 px-4 py-2 text-sm text-souk-brown-deep transition-colors hover:border-souk-brown hover:bg-souk-brown hover:text-souk-cream"
+                        >
+                            {t('buyer.detail.visit_store')}
+                        </Link>
+                    </div>
+
                     {/* Trust strip */}
-                    <div className="mt-10 grid grid-cols-2 gap-4 border-t border-ink/10 pt-6 text-xs text-ink-soft">
-                        <div className="flex items-start gap-2">
-                            <Truck className="mt-0.5 h-4 w-4 text-ink" />
-                            <span>
-                                Livraison Amana sous 3–7 jours partout au Maroc.
-                            </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <ShieldCheck className="mt-0.5 h-4 w-4 text-ink" />
-                            <span>
-                                Pièce authentique, garantie de l'atelier.
-                            </span>
-                        </div>
+                    <div className="mt-7 grid gap-3 border-t border-souk-brown/10 pt-6 text-xs text-souk-brown-deep/75 sm:grid-cols-2">
+                        <p className="flex items-start gap-2">
+                            <Truck
+                                className="mt-0.5 h-4 w-4 shrink-0 text-souk-brown"
+                                strokeWidth={1.5}
+                            />
+                            {t('buyer.detail.delivery')}
+                        </p>
+                        <p className="flex items-start gap-2">
+                            <ShieldCheck
+                                className="mt-0.5 h-4 w-4 shrink-0 text-souk-brown"
+                                strokeWidth={1.5}
+                            />
+                            {t('buyer.detail.authentic')}
+                        </p>
                     </div>
                 </div>
             </section>
 
-            {/* Tabs: details + reviews */}
-            <section className="container pb-20">
-                <Tabs defaultValue="reviews" className="w-full">
-                    <TabsList className="h-auto w-full justify-start gap-6 rounded-none border-b border-ink/15 bg-transparent p-0">
-                        <TabsTrigger
-                            value="reviews"
-                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                        >
-                            Avis ({mockReviews.length})
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="atelier"
-                            className="rounded-none px-0 pb-3 text-sm tracking-[0.18em] uppercase data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                        >
-                            L'atelier
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="reviews" className="mt-8">
-                        <div className="grid grid-cols-12 gap-8">
-                            {/* Rating summary */}
-                            <div className="col-span-12 md:col-span-3">
-                                <p className="font-display text-6xl leading-none text-ink">
-                                    {rating.toFixed(1)}
-                                </p>
-                                <div className="mt-2 flex gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((n) => (
-                                        <Star
-                                            key={n}
-                                            className={`h-4 w-4 ${
-                                                n <= Math.round(rating)
-                                                    ? 'fill-terracotta text-terracotta'
-                                                    : 'text-ink/20'
-                                            }`}
-                                            strokeWidth={1.5}
-                                        />
-                                    ))}
-                                </div>
-                                <p className="mt-2 text-xs text-ink-soft">
-                                    basé sur {mockReviews.length} avis
-                                </p>
-                            </div>
-
-                            {/* Review list */}
-                            <ul className="col-span-12 divide-y divide-ink/10 md:col-span-9">
-                                {mockReviews.map((r) => (
-                                    <li key={r.id} className="py-5 first:pt-0">
-                                        <div className="flex items-center justify-between gap-4">
-                                            <p className="font-display text-lg text-ink">
-                                                {r.author}
-                                            </p>
-                                            <span className="text-xs text-ink-soft">
-                                                {r.date}
-                                            </span>
-                                        </div>
-                                        <div className="mt-1 flex gap-0.5">
-                                            {[1, 2, 3, 4, 5].map((n) => (
-                                                <Star
-                                                    key={n}
-                                                    className={`h-3.5 w-3.5 ${
-                                                        n <= r.rating
-                                                            ? 'fill-terracotta text-terracotta'
-                                                            : 'text-ink/20'
-                                                    }`}
-                                                    strokeWidth={1.5}
-                                                />
-                                            ))}
-                                        </div>
-                                        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                                            {r.body}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="atelier" className="mt-8 max-w-2xl">
-                        <p className="mb-2 eyebrow">
-                            {product.store.store_name}
-                        </p>
-                        <h3 className="mb-3 font-display text-2xl text-ink">
-                            {product.store.city_name &&
-                                ` · ${product.store.city_name}`}
-                        </h3>
-                        <p className="leading-relaxed text-ink-soft">
-                            {product.store.description ??
-                                "Cet atelier n'a pas encore rédigé sa présentation."}
-                        </p>
-                        <Link
-                            href={`/seller/${product.store.slug}`}
-                            className="link-underline mt-4 inline-block text-ink"
-                        >
-                            Voir la boutique →
-                        </Link>
-                    </TabsContent>
-                </Tabs>
+            {/* ── Description ────────────────────────────────── */}
+            <section className="container pb-16">
+                <div className="max-w-3xl">
+                    <div className="flex items-center gap-3">
+                        <ZellijStarIcon className="h-3.5 w-3.5 shrink-0 text-terracotta/70" />
+                        <h2 className={`text-souk-brown-deep/60 ${EYEBROW}`}>
+                            {t('buyer.detail.description')}
+                        </h2>
+                        <span className="h-px flex-1 bg-souk-brown/15" />
+                    </div>
+                    <p className="mt-5 leading-relaxed whitespace-pre-line text-souk-brown-deep/85">
+                        {product.description ||
+                            t('buyer.detail.no_description')}
+                    </p>
+                </div>
             </section>
 
-            {/* More from store */}
-            {moreFromStore.length > 0 && (
-                <section className="container pb-24">
-                    <div className="mb-8 flex items-end justify-between">
-                        <div>
-                            <p className="mb-2 eyebrow">Du même atelier</p>
-                            <h2 className="h-editorial text-3xl text-ink md:text-4xl">
-                                Autres pièces de {product.store.store_name}
-                            </h2>
+            {/* ── Trade CTA for consumers ─────────────────────── */}
+            {isGuestOrConsumer && (
+                <section className="container pb-16">
+                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-souk-brown/12 bg-souk-peach/50 px-6 py-5">
+                        <div className="max-w-xl">
+                            <p className="font-display text-lg text-souk-title">
+                                {t('buyer.detail.trade_cta_title')}
+                            </p>
+                            <p className="mt-1 text-sm text-souk-brown-deep/80">
+                                {t('buyer.detail.trade_cta_body')}
+                            </p>
                         </div>
                         <Link
-                            href={`/seller/${product.store.slug}`}
-                            className="link-underline hidden text-sm text-ink md:inline"
+                            href={route('register')}
+                            className="shrink-0 rounded-full bg-souk-brown px-5 py-2.5 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep"
                         >
-                            Voir tout →
+                            {t('buyer.detail.trade_cta_button')}
                         </Link>
                     </div>
+                </section>
+            )}
 
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+            {/* ── More from the same workshop ─────────────────── */}
+            {moreFromStore.length > 0 && (
+                <section className="container pb-24">
+                    <div className="mb-8 flex items-center gap-3">
+                        <ZellijStarIcon className="h-3.5 w-3.5 shrink-0 text-terracotta/70" />
+                        <h2 className={`text-souk-brown-deep/60 ${EYEBROW}`}>
+                            {t('buyer.detail.more_from_store')}
+                        </h2>
+                        <span className="h-px flex-1 bg-souk-brown/15" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
                         {moreFromStore.map((p) => {
                             const cover = p.images[0]?.url;
-                            const sale =
+                            const pSale =
                                 p.sale_price &&
                                 Number(p.sale_price) < Number(p.base_price);
+                            const pTrade =
+                                p.professional_effective_price ?? null;
 
                             return (
                                 <Link
@@ -460,35 +587,42 @@ const ProductDetail = ({
                                     href={`/products/${p.slug}`}
                                     className="group block"
                                 >
-                                    <div className="relative aspect-4/5 overflow-hidden bg-ink/5">
+                                    <div className="aspect-[4/5] overflow-hidden rounded-t-[4rem] rounded-b-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-souk-brown/15">
                                         {cover && (
                                             <img
                                                 src={cover}
                                                 alt={p.name}
                                                 loading="lazy"
-                                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
                                             />
                                         )}
                                     </div>
-                                    <p className="mt-2 text-[11px] tracking-[0.18em] text-ink-soft uppercase">
-                                        {p.category?.translated_name}
-                                    </p>
-                                    <h3 className="font-display text-base leading-tight text-ink transition-colors group-hover:text-terracotta">
+                                    <h3 className="mt-3 font-display text-base leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
                                         {p.name}
                                     </h3>
                                     <p className="mt-1 text-sm">
-                                        {sale ? (
+                                        {pTrade !== null ? (
+                                            <span className="text-olive">
+                                                {money(pTrade)} MAD
+                                            </span>
+                                        ) : pSale ? (
                                             <>
                                                 <span className="text-terracotta">
-                                                    {Number(p.sale_price)} MAD
+                                                    {money(
+                                                        Number(p.sale_price),
+                                                    )}{' '}
+                                                    MAD
                                                 </span>{' '}
-                                                <span className="text-xs text-ink-soft line-through">
-                                                    {Number(p.base_price)} MAD
+                                                <span className="text-xs text-souk-brown-deep/45 line-through">
+                                                    {money(
+                                                        Number(p.base_price),
+                                                    )}
                                                 </span>
                                             </>
                                         ) : (
-                                            <span className="text-ink">
-                                                {Number(p.base_price)} MAD
+                                            <span className="text-souk-title">
+                                                {money(Number(p.base_price))}{' '}
+                                                MAD
                                             </span>
                                         )}
                                     </p>

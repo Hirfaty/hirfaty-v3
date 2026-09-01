@@ -71,11 +71,18 @@ class Product extends Model
 
     /**
      * Map a user to the price list that applies to them. Guests and normal
-     * buyers get retail pricing; only professional buyers get the pro list.
+     * buyers get retail pricing; only *verified* professional buyers get the
+     * pro list — anyone can self-register as a trade account, so the rate is
+     * gated on an admin having reviewed it.
+     *
+     * This is the single choke point for that decision: product visibility,
+     * the storefront resource and CheckoutService all route through it, so
+     * what a trade buyer is quoted and what they are billed cannot drift
+     * apart.
      */
     public static function audienceFor(?User $user): string
     {
-        return $user?->isProfessionalBuyer()
+        return $user?->isVerifiedProfessionalBuyer()
             ? self::AUDIENCE_PROFESSIONAL
             : self::AUDIENCE_INDIVIDUAL;
     }
