@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Hirfaty** is a multi-vendor marketplace built on the Laravel + React starter kit: Laravel 13 (PHP 8.3) backend, Inertia v3 + React 19 + TypeScript frontend, Tailwind v4 + shadcn/ui components. There is one SPA-like app with three distinct user roles — `super_admin`, `seller`, `buyer` — each with its own route group, controllers, and page tree.
+**Hirfaty** is a multi-vendor marketplace built on the Laravel + React starter kit: Laravel 13 (**PHP 8.4** — the locked Symfony 8 stack requires `>=8.4`; `composer.json`'s `config.platform.php` pins resolution to it and `docker/app/Dockerfile`'s runtime image must stay in sync) backend, Inertia v3 + React 19 + TypeScript frontend, Tailwind v4 + shadcn/ui components. There is one SPA-like app with three distinct user roles — `super_admin`, `seller`, `buyer` — each with its own route group, controllers, and page tree.
 
 ## Commands
 

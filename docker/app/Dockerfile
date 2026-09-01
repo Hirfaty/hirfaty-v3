@@ -4,7 +4,16 @@
 FROM composer:2 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
+# Only extension requirements are ignored, NOT the PHP version requirement.
+# The blanket --ignore-platform-reqs used here previously also suppressed the
+# php constraint, which let the Symfony 8 stack (18 packages, all `php: >=8.4`)
+# install into what was then a PHP 8.3 runtime image. Nothing failed at build
+# time; it blew up in production instead, on the first DELETE/PATCH/PUT request
+# — Symfony's Request::createFromGlobals() calls PHP 8.4's request_parse_body()
+# unguarded for those verbs. composer.json pins config.platform.php to the
+# runtime version so this is validated against the image PHP below, not against
+# whatever PHP the composer image happens to ship.
+RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-*
 
 # The Wayfinder Vite plugin shells out to `php artisan wayfinder:generate`
 # during the build, so this stage needs PHP + vendor + the full app source
@@ -21,7 +30,11 @@ COPY --from=vendor /app/vendor ./vendor
 RUN php artisan package:discover --ansi
 RUN npm run build
 
-FROM php:8.3-fpm-bookworm AS app
+# PHP 8.4, not 8.3: composer.lock pins the Symfony 8 stack, every package of
+# which requires `php: >=8.4`. Keep this in sync with config.platform.php in
+# composer.json — if they drift, the vendor stage above now fails the build
+# rather than shipping a runtime that can't run its own dependencies.
+FROM php:8.4-fpm-bookworm AS app
 
 # Runtime libs are installed in their own explicit step so apt keeps them
 # marked "manually installed" — otherwise `apt-get purge --auto-remove` below

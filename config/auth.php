@@ -117,5 +117,4 @@ return [
     'admin_default_email' => env('ADMIN_AUTH_DEFAULT_EMAIL'),
     'admin_default_password' => env('ADMIN_AUTH_DEFAULT_PASSWORD'),
 
-
 ];
