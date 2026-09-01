@@ -62,7 +62,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
         Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
-        Route::post('/users/{user}/send-reset-link', [Admin\UserController::class, 'sendResetLink'])->name('users.send-reset-link');
+        Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');

@@ -19,6 +19,7 @@ import {
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import ResetLinkDialog from '@/components/admin/reset-link-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +32,14 @@ import {
 } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
-import type { Order, PageProps, Product, StoreType, User } from '@/types';
+import type {
+    Order,
+    PageProps,
+    Product,
+    ResetLinkPayload,
+    StoreType,
+    User,
+} from '@/types';
 
 /** Labels for the seller-type badge shown on the store card. */
 const STORE_TYPE_LABEL: Record<StoreType, string> = {
@@ -173,7 +181,8 @@ const ShowSeller = ({
     productStats,
     recentOrders,
 }: Props) => {
-    const [sendingReset, setSendingReset] = useState(false);
+    const [generatingReset, setGeneratingReset] = useState(false);
+    const [resetLink, setResetLink] = useState<ResetLinkPayload | null>(null);
 
     const handleBan = () => {
         if (
@@ -185,22 +194,22 @@ const ShowSeller = ({
         }
     };
 
-    const handleSendResetLink = () => {
-        setSendingReset(true);
-        router.post(route('admin.users.send-reset-link', user.id), undefined, {
+    const handleGenerateResetLink = () => {
+        setGeneratingReset(true);
+        router.post(route('admin.users.reset-link', user.id), undefined, {
             preserveScroll: true,
             onSuccess: (page) => {
                 const flash = (page.props as unknown as PageProps).flash;
 
                 if (flash?.error) {
                     toast.error(flash.error);
+                } else if (flash?.reset_link) {
+                    setResetLink(flash.reset_link);
                 } else {
-                    toast.success(
-                        flash?.success ?? 'Lien de réinitialisation envoyé.',
-                    );
+                    toast.error('Impossible de générer le lien.');
                 }
             },
-            onFinish: () => setSendingReset(false),
+            onFinish: () => setGeneratingReset(false),
         });
     };
 
@@ -254,11 +263,11 @@ const ShowSeller = ({
                         <Button
                             variant="outline"
                             className="rounded-lg"
-                            disabled={sendingReset}
-                            onClick={handleSendResetLink}
+                            disabled={generatingReset}
+                            onClick={handleGenerateResetLink}
                         >
                             <KeyRound className="h-4 w-4" />
-                            Envoyer un lien de réinitialisation
+                            Copier un lien de réinitialisation
                         </Button>
                         <Button
                             variant={user.is_banned ? 'outline' : 'destructive'}
@@ -544,6 +553,11 @@ const ShowSeller = ({
                     </Card>
                 </div>
             </div>
+
+            <ResetLinkDialog
+                link={resetLink}
+                onClose={() => setResetLink(null)}
+            />
         </div>
     );
 };

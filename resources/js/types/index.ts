@@ -23,6 +23,16 @@ export interface PaginatedData<T> {
     }[];
 }
 
+/**
+ * A password reset link minted by an admin for another user, returned so it
+ * can be copied and delivered by hand instead of emailed.
+ */
+export interface ResetLinkPayload {
+    url: string;
+    email: string;
+    expires_in_minutes: number;
+}
+
 export interface PageProps extends InertiaPageProps {
     auth: Auth;
     name: string;
@@ -30,6 +40,8 @@ export interface PageProps extends InertiaPageProps {
     flash: {
         success?: string;
         error?: string;
+        /** Set only by the admin "generate reset link" action. */
+        reset_link?: ResetLinkPayload;
     };
     locale: 'ar' | 'fr' | 'en';
     direction: 'ltr' | 'rtl';

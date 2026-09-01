@@ -17,6 +17,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import ResetLinkDialog from '@/components/admin/reset-link-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,7 @@ import { formatDate } from '@/lib/utils';
 import type {
     PageProps,
     PaginatedData,
+    ResetLinkPayload,
     StoreType,
     User,
     UserRole,
@@ -91,7 +93,10 @@ export default function UsersIndex({
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [searching, setSearching] = useState(false);
-    const [sendingResetId, setSendingResetId] = useState<number | null>(null);
+    const [generatingResetId, setGeneratingResetId] = useState<number | null>(
+        null,
+    );
+    const [resetLink, setResetLink] = useState<ResetLinkPayload | null>(null);
     // Skip the debounced effect's own request on first render — otherwise
     // landing on the page with ?search= already set fires a redundant fetch.
     const isFirstRender = useRef(true);
@@ -142,22 +147,22 @@ export default function UsersIndex({
         }
     };
 
-    const handleSendResetLink = (user: User) => {
-        setSendingResetId(user.id);
-        router.post(route('admin.users.send-reset-link', user.id), undefined, {
+    const handleGenerateResetLink = (user: User) => {
+        setGeneratingResetId(user.id);
+        router.post(route('admin.users.reset-link', user.id), undefined, {
             preserveScroll: true,
             onSuccess: (page) => {
                 const flash = (page.props as unknown as PageProps).flash;
 
                 if (flash?.error) {
                     toast.error(flash.error);
+                } else if (flash?.reset_link) {
+                    setResetLink(flash.reset_link);
                 } else {
-                    toast.success(
-                        flash?.success ?? 'Lien de réinitialisation envoyé.',
-                    );
+                    toast.error('Impossible de générer le lien.');
                 }
             },
-            onFinish: () => setSendingResetId(null),
+            onFinish: () => setGeneratingResetId(null),
         });
     };
 
@@ -433,18 +438,18 @@ export default function UsersIndex({
                                                     )}
                                                 <DropdownMenuItem
                                                     disabled={
-                                                        sendingResetId ===
+                                                        generatingResetId ===
                                                         user.id
                                                     }
                                                     onClick={() =>
-                                                        handleSendResetLink(
+                                                        handleGenerateResetLink(
                                                             user,
                                                         )
                                                     }
                                                     className="flex items-center gap-2"
                                                 >
                                                     <KeyRound className="h-4 w-4" />
-                                                    Envoyer un lien de
+                                                    Copier un lien de
                                                     réinitialisation
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
@@ -540,6 +545,11 @@ export default function UsersIndex({
                     </div>
                 )}
             </div>
+
+            <ResetLinkDialog
+                link={resetLink}
+                onClose={() => setResetLink(null)}
+            />
         </div>
     );
 }

@@ -45,6 +45,11 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error'),
+                // Admin-generated password reset link, passed back to the page
+                // so it can be displayed for copying rather than emailed.
+                // Only ever set by Admin\UserController::resetLink; null on
+                // every other response.
+                'reset_link' => session('reset_link'),
             ],
             'locale' => app()->getLocale(),
             'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',

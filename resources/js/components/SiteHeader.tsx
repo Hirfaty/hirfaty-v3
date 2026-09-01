@@ -359,12 +359,12 @@ export const SiteHeader = () => {
                      * Same escape hatch the account button and locale switcher
                      * next to it already use.
                      */}
-                    <Link
+                    {/* <Link
                         href="/seller/onboarding"
                         className="ml-2 hidden items-center gap-2 border border-ink px-4 py-2 text-sm whitespace-nowrap text-ink transition-colors hover:bg-ink hover:text-cream sm:inline-flex"
                     >
                         {t('header.start_selling')}
-                    </Link>
+                    </Link> */}
                 </div>
             </div>
         </header>

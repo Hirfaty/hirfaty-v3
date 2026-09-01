@@ -274,20 +274,35 @@ class UserController extends Controller
     }
 
     /**
-     * Send the standard Fortify "reset your password" email — the same link
-     * a user gets from the public forgot-password form — so the admin can
-     * get someone into an account they can't otherwise sign into (e.g. one
-     * created here with a random generated password).
+     * Mint a password reset link and hand it straight back to the admin to
+     * deliver however they like, instead of emailing it.
+     *
+     * Uses the same token repository as the public forgot-password flow, so
+     * the link is byte-for-byte what Fortify would have mailed and lands on
+     * the same /reset-password/{token} screen — only the delivery step is
+     * skipped. Deliberately does NOT go through Password::sendResetLink(),
+     * which would both send mail and apply the broker's 60-second throttle;
+     * createToken() has no throttle, so an admin can regenerate on demand.
+     *
+     * Each call replaces the user's stored token, which invalidates any link
+     * generated earlier — surfaced to the admin in the dialog.
      */
-    public function sendResetLink(User $user)
+    public function resetLink(User $user)
     {
         if ($user->role === 'super_admin') {
             abort(403);
         }
 
-        Password::sendResetLink(['email' => $user->email]);
+        $broker = config('auth.defaults.passwords');
 
-        return back()->with('success', "Lien de réinitialisation envoyé à {$user->email}.");
+        return back()->with('reset_link', [
+            'url' => route('password.reset', [
+                'token' => Password::broker()->createToken($user),
+                'email' => $user->email,
+            ]),
+            'email' => $user->email,
+            'expires_in_minutes' => (int) config("auth.passwords.{$broker}.expire"),
+        ]);
     }
 
     public function destroy(User $user)
