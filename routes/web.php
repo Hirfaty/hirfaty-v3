@@ -64,6 +64,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
         Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
+        Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
         // `create` and `bulk-destroy` must stay above `{product}`, otherwise

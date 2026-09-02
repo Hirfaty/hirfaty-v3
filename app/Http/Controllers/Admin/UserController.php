@@ -305,15 +305,40 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Hard-deletes a user. Every FK back to `users` (orders, stores,
+     * products, order_items, earnings...) is ON DELETE CASCADE, so a buyer
+     * with order history would take their Orders and the seller's Earnings
+     * on those orders down with them; a seller would take their whole store,
+     * catalog, and every order any buyer ever placed with them. That's
+     * financial/transaction history, not something a misclick should erase.
+     *
+     * So: refuse to delete anyone with order history and point the admin at
+     * Ban instead (same effect — account can't be used — without touching
+     * data). Only an account with zero orders (a seller who never sold
+     * anything, a buyer who never checked out, a test account, ...) can be
+     * hard-deleted.
+     */
     public function destroy(User $user)
     {
         if ($user->role === 'super_admin') {
             abort(403);
         }
 
+        $orderCount = $user->role === 'seller'
+            ? ($user->store?->orders()->count() ?? 0)
+            : $user->orders()->count();
+
+        if ($orderCount > 0) {
+            return back()->with(
+                'error',
+                "Impossible de supprimer : {$orderCount} commande(s) lié(e)s à ce compte. Bloquez-le plutôt pour couper son accès sans perdre l'historique."
+            );
+        }
+
         $user->delete();
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User deleted.');
+            ->with('success', 'Utilisateur supprimé.');
     }
 }

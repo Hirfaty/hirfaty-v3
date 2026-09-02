@@ -174,6 +174,20 @@ export default function UsersIndex({
         ) {
             router.delete(route('admin.users.destroy', user.id), {
                 preserveScroll: true,
+                onSuccess: (page) => {
+                    const flash = (page.props as unknown as PageProps).flash;
+
+                    if (flash?.error) {
+                        toast.error(flash.error);
+                    } else if (flash?.success) {
+                        toast.success(flash.success);
+                    }
+                },
+                onError: () => {
+                    toast.error(
+                        'Une erreur est survenue lors de la suppression.',
+                    );
+                },
             });
         }
     };
