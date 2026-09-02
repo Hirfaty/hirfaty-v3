@@ -9,6 +9,7 @@ import {
     KeyRound,
     Loader2,
     Package,
+    Pencil,
     Search,
     Trash2,
     UserCheck,
@@ -425,6 +426,18 @@ export default function UsersIndex({
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                         Voir le profil
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={route(
+                                                            'admin.users.edit',
+                                                            user.id,
+                                                        )}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                        Modifier
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 {user.role === 'seller' &&

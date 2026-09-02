@@ -7,6 +7,7 @@ import {
     FileText,
     KeyRound,
     Mail,
+    Pencil,
     Phone,
     ShoppingBag,
     UserCheck,
@@ -220,6 +221,16 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                     : 'Vérifier'}
                             </Button>
                         )}
+
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="rounded-lg"
+                        >
+                            <Link href={route('admin.users.edit', user.id)}>
+                                <Pencil className="h-4 w-4" /> Modifier
+                            </Link>
+                        </Button>
 
                         <Button
                             variant={user.is_banned ? 'outline' : 'destructive'}

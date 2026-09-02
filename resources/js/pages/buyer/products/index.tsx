@@ -559,7 +559,7 @@ export default function ProductsIndex({
             {/* ── Hero: a light, inset card. The carousel is the card's
                 background and the copy sits over its start edge, where the
                 scrim keeps dark type legible over any of the photographs. */}
-            <section className="container pt-6 pb-2 md:pt-8">
+            <section className="container bg-souk-brown pt-6 pb-2 md:pt-8">
                 <HeroCarousel
                     slides={HERO_SLIDES.map((slide) => ({
                         src: slide.src,

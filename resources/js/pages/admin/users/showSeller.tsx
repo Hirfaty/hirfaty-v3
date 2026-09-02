@@ -10,6 +10,7 @@ import {
     Mail,
     MapPin,
     Package,
+    Pencil,
     Phone,
     ShoppingBag,
     Store,
@@ -268,6 +269,15 @@ const ShowSeller = ({
                         >
                             <KeyRound className="h-4 w-4" />
                             Copier un lien de réinitialisation
+                        </Button>
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="rounded-lg"
+                        >
+                            <Link href={route('admin.users.edit', user.id)}>
+                                <Pencil className="h-4 w-4" /> Modifier
+                            </Link>
                         </Button>
                         <Button
                             variant={user.is_banned ? 'outline' : 'destructive'}

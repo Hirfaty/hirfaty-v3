@@ -59,7 +59,12 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
 
         Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [Admin\UserController::class, 'create'])->name('users.create');
+        // Above `{user}`, or "create"/"edit" would be swallowed as an id.
+        Route::get('/users/{user}/edit', [Admin\UserController::class, 'edit'])->name('users.edit');
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
+        // POST, not PUT: the form ships a logo/banner as multipart, which
+        // browsers can only send on a POST.
+        Route::post('/users/{user}', [Admin\UserController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
         Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
         Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');

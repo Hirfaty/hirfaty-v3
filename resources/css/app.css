@@ -388,6 +388,27 @@
         calc(var(--pattern-size, 44px) * 0.62);
 }
 
+/*
+ * Zellij frise — the tiled border strip that edges a Moroccan wall or
+ * doorway. Meant for a short, wide element (6–10px tall) used as a decorative
+ * rule in place of a flat 1px border.
+ *
+ * A conic checkerboard rotated 45° gives the row of lozenges; two tones make
+ * it read as glazed tile rather than as a chequer.
+ *   --band-color / --band-color-alt : the two glazes
+ *   --band-size                     : lozenge pitch
+ */
+@utility craft-band {
+    background-image: conic-gradient(
+        from 45deg at 50% 50%,
+        var(--band-color, var(--terracotta)) 0deg 90deg,
+        var(--band-color-alt, var(--sand)) 90deg 180deg,
+        var(--band-color, var(--terracotta)) 180deg 270deg,
+        var(--band-color-alt, var(--sand)) 270deg 360deg
+    );
+    background-size: var(--band-size, 10px) var(--band-size, 10px);
+}
+
 /* Hand-troweled plaster speckle — tadelakt. */
 @utility motif-tadelakt {
     background-image:

@@ -11,12 +11,14 @@ use App\Models\User;
 use App\Notifications\WelcomeUser;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Dimensions;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -123,6 +125,168 @@ class UserController extends Controller
         ]);
 
         return Storage::disk($disk)->url($path);
+    }
+
+    public function edit(User $user)
+    {
+        if ($user->role === 'super_admin') {
+            abort(403);
+        }
+
+        $user->load('store');
+
+        return Inertia::render('admin/users/edit', [
+            'user' => $user,
+            'cities' => City::orderBy('name', 'asc')->get(),
+            'categories' => Category::whereNull('parent_id')->get(),
+            /*
+             * Whether this account may still leave the seller role. Computed
+             * here rather than in the form so the UI and the server agree on
+             * one answer — see assertRoleChangeIsSafe().
+             */
+            'canLeaveSellerRole' => $user->role !== 'seller' || $this->sellerRoleIsReleasable($user),
+        ]);
+    }
+
+    public function update(Request $request, User $user)
+    {
+        if ($user->role === 'super_admin') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            // Ignore this user's own row so re-saving doesn't collide with itself.
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone_number' => ['nullable', 'string', Rule::unique('users', 'phone_number')->ignore($user->id)],
+            'role' => ['required', 'in:seller,buyer,professional_buyer'],
+            'store_name' => [
+                'required_if:role,seller', 'nullable', 'string',
+                Rule::unique('stores', 'store_name')->ignore($user->store?->id),
+            ],
+            'store_type' => ['nullable', Rule::in(Store::TYPES)],
+            'category_id' => ['required_if:role,seller', 'nullable', 'exists:categories,id'],
+            'city_id' => ['required_if:role,seller', 'nullable', 'exists:cities,id'],
+            'description' => ['nullable', 'string', 'max:2500'],
+            'logo' => ['nullable', 'image', 'max:'.config('media.image.max_kb'), $this->imageDimensionRule()],
+            'banner' => ['nullable', 'image', 'max:'.config('media.image.max_kb'), $this->imageDimensionRule()],
+        ]);
+
+        $this->assertRoleChangeIsSafe($user, $data['role']);
+
+        DB::transaction(function () use ($user, $data, $request) {
+            $becomesSeller = $data['role'] === 'seller';
+
+            $user->update([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone_number' => $data['phone_number'] ?? null,
+                'role' => $data['role'],
+                // Sellers describe their shop on the store record instead.
+                'bio' => $becomesSeller ? null : ($data['description'] ?? null),
+            ]);
+
+            /*
+             * Verification is a statement about a *professional buyer*, so it
+             * is dropped when the account stops being one — otherwise
+             * switching back later would silently restore wholesale pricing
+             * without anyone reviewing the account a second time.
+             *
+             * Assigned directly rather than through update(): the column is
+             * deliberately left out of User's Fillable list because it gates
+             * which price list a buyer is billed on, and mass assignment would
+             * quietly ignore it here anyway.
+             */
+            if ($data['role'] !== 'professional_buyer' && $user->professional_verified_at !== null) {
+                $user->professional_verified_at = null;
+                $user->save();
+            }
+
+            if ($becomesSeller) {
+                $store = $user->store;
+
+                if ($store) {
+                    $store->update([
+                        'store_name' => $data['store_name'],
+                        'type' => $data['store_type'] ?? $store->type,
+                        'category_id' => $data['category_id'],
+                        'city_id' => $data['city_id'],
+                        'description' => $data['description'] ?? null,
+                    ]);
+                } else {
+                    // Promoted to seller: give them the shop the seller area
+                    // (EnsureStoreIsSetup) requires before it will let them in.
+                    $store = Store::create([
+                        'user_id' => $user->id,
+                        'store_name' => $data['store_name'],
+                        'slug' => Str::slug($data['store_name']).'-'.Str::random(5),
+                        'type' => $data['store_type'] ?? 'artist',
+                        'category_id' => $data['category_id'],
+                        'city_id' => $data['city_id'],
+                        'description' => $data['description'] ?? null,
+                    ]);
+                }
+
+                if ($request->hasFile('logo')) {
+                    $store->update(['logo' => $this->storeShopImage($request->file('logo'), $store->id)]);
+                }
+
+                if ($request->hasFile('banner')) {
+                    $store->update(['banner' => $this->storeShopImage($request->file('banner'), $store->id)]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.users.show', $user)
+            ->with('success', 'Utilisateur mis à jour.');
+    }
+
+    /**
+     * Can this seller still be moved off the seller role?
+     *
+     * Only while their shop holds nothing. A shop with products or orders
+     * belongs to someone who needs the seller area to fulfil them.
+     */
+    private function sellerRoleIsReleasable(User $user): bool
+    {
+        $store = $user->store;
+
+        if (! $store) {
+            return true;
+        }
+
+        return $store->products()->count() === 0
+            && $store->orders()->count() === 0;
+    }
+
+    /**
+     * Demoting a seller does not delete their shop — the row, its products and
+     * its orders all survive — but it does lock them out of `/seller/*`, so
+     * nobody can dispatch the orders buyers have already paid for. Refuse
+     * while there is anything to fulfil, and say what to do instead.
+     *
+     * @throws ValidationException
+     */
+    private function assertRoleChangeIsSafe(User $user, string $newRole): void
+    {
+        if ($user->role !== 'seller' || $newRole === 'seller') {
+            return;
+        }
+
+        if ($this->sellerRoleIsReleasable($user)) {
+            return;
+        }
+
+        $store = $user->store;
+
+        throw ValidationException::withMessages([
+            'role' => "Impossible de changer le rôle : la boutique « {$store->store_name} » compte "
+                .$store->products()->count().' produit(s) et '
+                .$store->orders()->count().' commande(s). '
+                .'Bloquez le compte si vous voulez en couper l’accès.',
+        ]);
     }
 
     public function index(Request $request)

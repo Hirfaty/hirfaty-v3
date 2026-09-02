@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Search, ShoppingBag, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import CartSync from '@/components/CartSync';
+import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import {
     Popover,
     PopoverContent,
@@ -18,6 +19,14 @@ const locales = [
     { code: 'ar', label: 'AR' },
     { code: 'en', label: 'EN' },
 ] as const;
+
+/**
+ * Icon buttons wear the horseshoe-arch silhouette used by the product cards
+ * and the logo mark, so the whole header belongs to one craft vocabulary.
+ * Rounded on the top, squared at the foot — an arch, not a pill.
+ */
+const ICON_BUTTON =
+    'rounded-t-full rounded-b-md p-2 text-ink/70 transition-colors hover:bg-sand/40 hover:text-ink';
 
 export const SiteHeader = () => {
     const { t, locale } = useTranslation();
@@ -37,6 +46,8 @@ export const SiteHeader = () => {
             items: Array<{
                 id: number;
                 name: string;
+                /** "Rouge / 4m" — absent on a product without variants. */
+                variant?: string | null;
                 seller: string;
                 qty: number;
                 price: number;
@@ -48,6 +59,7 @@ export const SiteHeader = () => {
     }>().props;
 
     const user = auth?.user;
+    const currentUrl = usePage().url.split('?')[0];
 
     // const guestItems = getItems();
     const [guestItems, setGuestItems] = useState(getItems());
@@ -57,6 +69,10 @@ export const SiteHeader = () => {
               items: guestItems.map((item) => ({
                   id: item.product_id,
                   name: item.name,
+                  // Guest lines keep the label under a different key; surface
+                  // it under the same name the server cart uses so the
+                  // dropdown renders identically either side of logging in.
+                  variant: item.variant_label ?? null,
                   seller: item.store_name,
                   qty: item.quantity,
                   price: Number(item.price),
@@ -90,20 +106,48 @@ export const SiteHeader = () => {
         { href: '/about', label: t('header.about') },
     ];
 
+    // Marks the current section so its nav link can carry the zellij star.
+    const isActive = (href: string) =>
+        currentUrl === href || currentUrl.startsWith(`${href}/`);
+
     return (
-        <header className="border-b border-ink/10 bg-cream">
+        <header className="relative bg-cream">
             <CartSync />
-            <div className="container flex items-center justify-between gap-6 py-5">
+
+            {/*
+             * Faint zellij lattice across the bar. Tuned well below the value
+             * the motif uses on a full section — at section strength it reads
+             * as graph paper behind the nav text rather than as texture.
+             */}
+            <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 motif-zellij"
+                style={
+                    {
+                        '--pattern-color': 'rgba(130, 71, 42, 0.045)',
+                        '--pattern-size': '34px',
+                    } as React.CSSProperties
+                }
+            />
+
+            <div className="relative container flex items-center justify-between gap-6 py-5">
                 <Link
                     href="/"
-                    className="flex shrink-0 items-center gap-2"
+                    className="group flex shrink-0 items-center gap-2.5"
                     aria-label="Hirfaty"
                 >
-                    <img
-                        src={logo}
-                        alt="Hirfaty"
-                        className="h-9 w-9 object-contain"
-                    />
+                    {/*
+                     * Arch-topped frame around the mark — the same horseshoe
+                     * silhouette the product cards use, so the header reads as
+                     * part of the same craft language.
+                     */}
+                    <span className="flex h-10 w-10 items-center justify-center rounded-t-full rounded-b-lg bg-sand/35 ring-1 ring-terracotta/20 transition-colors group-hover:bg-sand/60">
+                        <img
+                            src={logo}
+                            alt="Hirfaty"
+                            className="h-6 w-6 object-contain"
+                        />
+                    </span>
                     <span className="font-display text-xl leading-none text-ink">
                         Hirfaty<span className="text-terracotta">.</span>
                     </span>
@@ -114,9 +158,29 @@ export const SiteHeader = () => {
                         <Link
                             key={l.href}
                             href={l.href}
-                            className="text-ink/80 transition-colors hover:text-ink"
+                            aria-current={isActive(l.href) ? 'page' : undefined}
+                            className="group relative py-1 text-ink/80 transition-colors hover:text-ink"
                         >
                             {l.label}
+                            {/*
+                             * Underline grows from the centre on hover; the
+                             * current section keeps it, with a zellij star
+                             * set into the middle of the rule.
+                             */}
+                            <span
+                                aria-hidden
+                                className={`pointer-events-none absolute -bottom-1 left-1/2 h-px -translate-x-1/2 bg-terracotta/45 transition-all duration-300 ${
+                                    isActive(l.href)
+                                        ? 'w-full'
+                                        : 'w-0 group-hover:w-full'
+                                }`}
+                            />
+                            {isActive(l.href) && (
+                                <ZellijStarIcon
+                                    aria-hidden
+                                    className="absolute -bottom-[7px] left-1/2 h-[7px] w-[7px] -translate-x-1/2 bg-cream text-terracotta"
+                                />
+                            )}
                         </Link>
                     ))}
                 </nav>
@@ -124,7 +188,7 @@ export const SiteHeader = () => {
                 <div className="flex items-center gap-2 md:gap-4">
                     <button
                         aria-label={t('header.search')}
-                        className="p-2 text-ink/70 transition-colors hover:text-ink"
+                        className={ICON_BUTTON}
                     >
                         <Search
                             className="h-[18px] w-[18px]"
@@ -135,7 +199,7 @@ export const SiteHeader = () => {
                         <PopoverTrigger asChild>
                             <button
                                 aria-label="Panier"
-                                className="relative p-2 text-ink/70 transition-colors hover:text-ink"
+                                className={`relative ${ICON_BUTTON}`}
                             >
                                 <ShoppingBag
                                     className="h-[18px] w-[18px] cursor-pointer"
@@ -224,7 +288,7 @@ export const SiteHeader = () => {
                         <PopoverTrigger asChild>
                             <button
                                 aria-label="Compte"
-                                className="cursot-pointer hidden p-2 text-ink/70 transition-colors hover:text-ink sm:inline-flex"
+                                className={`hidden sm:inline-flex ${ICON_BUTTON}`}
                             >
                                 <User
                                     className="h-[18px] w-[18px]"
@@ -340,21 +404,28 @@ export const SiteHeader = () => {
                     <span className="hidden h-5 w-px bg-ink/15 sm:block" />
 
                     {/* Locale switcher */}
-                    <div className="hidden items-center text-[11px] font-medium tracking-[0.18em] text-ink/60 sm:flex">
-                        {locales.map((l, i) => (
+                    <div className="hidden items-center gap-0.5 text-[11px] font-medium tracking-[0.18em] text-ink/60 sm:flex">
+                        {locales.map((l) => (
                             <button
                                 key={l.code}
                                 onClick={() => switchLocale(l.code)}
-                                className={`px-1.5 py-1 transition-colors ${
+                                aria-current={
+                                    locale === l.code ? 'true' : undefined
+                                }
+                                /*
+                                 * The chosen language sits on its own small
+                                 * glazed tile. Replaces the "FR / AR / EN"
+                                 * slashes, which read as a breadcrumb — and,
+                                 * being a separator baked into each button's
+                                 * label, were announced as part of it.
+                                 */
+                                className={`rounded-sm px-2 py-1 transition-colors ${
                                     locale === l.code
-                                        ? 'text-ink'
-                                        : 'hover:text-ink/80'
+                                        ? 'bg-terracotta/12 text-terracotta ring-1 ring-terracotta/25'
+                                        : 'hover:bg-sand/40 hover:text-ink'
                                 }`}
                             >
                                 {l.label}
-                                {i < locales.length - 1 && (
-                                    <span className="ml-2 text-ink/25">/</span>
-                                )}
                             </button>
                         ))}
                     </div>
@@ -372,6 +443,25 @@ export const SiteHeader = () => {
                         {t('header.start_selling')}
                     </Link> */}
                 </div>
+            </div>
+
+            {/*
+             * Zellij frise closing the header, in place of a flat 1px rule —
+             * the tiled strip that edges a doorway. A hairline above it keeps
+             * the separation crisp where the lozenges meet the page.
+             */}
+            <div aria-hidden className="relative">
+                <div className="h-px w-full bg-ink/10" />
+                <div
+                    className="h-[7px] w-full craft-band opacity-70"
+                    style={
+                        {
+                            '--band-color': 'rgba(193, 82, 42, 0.55)',
+                            '--band-color-alt': 'rgba(217, 199, 167, 0.75)',
+                            '--band-size': '14px',
+                        } as React.CSSProperties
+                    }
+                />
             </div>
         </header>
     );

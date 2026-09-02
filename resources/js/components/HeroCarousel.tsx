@@ -177,8 +177,8 @@ export default function HeroCarousel({
                                 aria-current={active}
                                 className={`h-2 w-2 rounded-full transition-colors duration-300 ${
                                     active
-                                        ? 'bg-souk-title'
-                                        : 'bg-souk-brown/25 hover:bg-souk-brown/45'
+                                        ? 'bg-white'
+                                        : 'bg-white/25 hover:bg-white/45'
                                 }`}
                             />
                         );
