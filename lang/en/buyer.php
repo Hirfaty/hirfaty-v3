@@ -95,4 +95,23 @@ return [
     'detail.trade_cta_button' => 'Open a trade account',
     'detail.trade_pending_title' => 'Trade account awaiting verification.',
     'detail.trade_pending_body' => 'Your trade rates will apply as soon as an administrator approves your account.',
+
+    // Variants
+    'detail.select_variant_prompt' => 'Choose an option',
+
+    // Page furniture
+    'detail.home' => 'Home',
+    'detail.eyebrow_handmade' => 'Handmade',
+    'detail.related' => 'You may also like',
+    'detail.handmade_note' => 'Every piece is handmade, so slight variations in colour and pattern are possible — they are what make yours one of a kind.',
+
+    // Reassurance row
+    'detail.trust_materials_title' => 'Natural materials',
+    'detail.trust_materials_body' => 'High quality clay and natural glazes.',
+    'detail.trust_handmade_title' => 'Handmade',
+    'detail.trust_handmade_body' => 'Each piece is shaped by hand.',
+    'detail.trust_durable_title' => 'Durable',
+    'detail.trust_durable_body' => 'High fired ceramic, made to last.',
+    'detail.trust_packaging_title' => 'Secure packaging',
+    'detail.trust_packaging_body' => 'Carefully packed for a safe delivery.',
 ];

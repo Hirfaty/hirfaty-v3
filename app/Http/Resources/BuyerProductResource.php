@@ -33,9 +33,31 @@ class BuyerProductResource extends JsonResource
             'base_price' => $this->base_price,
             'sale_price' => $this->sale_price,
 
+            /*
+             * For a variant product this is 0 by design (the admin zeroes it;
+             * stock lives on each variant), so the storefront must read
+             * `variants` for availability instead — `in_stock` below already
+             * accounts for that, use it rather than comparing `stock` to 0.
+             */
             'stock' => $this->stock,
             'has_variants' => (bool) $this->has_variants,
+            'in_stock' => $this->isInStock(),
             'average_rating' => $this->average_rating,
+
+            /*
+             * Only present on the detail page, which eager-loads them. The
+             * listing skips the joins, and whenLoaded keeps the key absent
+             * there rather than shipping an empty array that would read as
+             * "this product has no variants".
+             */
+            'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),
+
+            // Selector rows ("Couleur", then "Taille"), derived server-side so
+            // ordering is stable rather than depending on object key order.
+            'option_groups' => $this->when(
+                $this->relationLoaded('variants'),
+                fn () => $this->optionGroups(),
+            ),
 
             'category' => $this->category ? [
                 'id' => $this->category->id,
@@ -88,5 +110,74 @@ class BuyerProductResource extends JsonResource
     {
         return $this->professional_price !== null
             || $this->professional_sale_price !== null;
+    }
+
+    /**
+     * Is anything actually buyable? A variant product's own stock column is
+     * always 0, so availability has to come from its variants.
+     */
+    private function isInStock(): bool
+    {
+        if (! $this->has_variants) {
+            return (int) $this->stock > 0;
+        }
+
+        if (! $this->relationLoaded('variants')) {
+            // Cheap existence check for the listing, which doesn't load them.
+            return $this->variants()->where('is_active', true)->where('stock', '>', 0)->exists();
+        }
+
+        return $this->variants->contains(fn ($v) => $v->is_active && (int) $v->stock > 0);
+    }
+
+    /**
+     * Collapse the variants' options into one row per axis, preserving
+     * first-seen order, e.g.
+     *
+     *   [{ name: "Couleur", type: "color",
+     *      values: [{ value: "Rouge" }, { value: "Bleu" }] }, ...]
+     *
+     * The frontend renders a selector per group and resolves the chosen
+     * combination back to a concrete variant.
+     *
+     * Grouping on `name` is why the axis has to be stored as the axis: when
+     * the admin wrote the label into it, every value became its own group and
+     * no variant could satisfy them all.
+     *
+     * Ordering rides on variant `position`, which the admin's generator emits
+     * in axis-value order — so "S, M, L" stays "S, M, L" rather than being
+     * re-sorted alphabetically.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function optionGroups(): array
+    {
+        $groups = [];
+
+        foreach ($this->variants->sortBy('position') as $variant) {
+            if (! $variant->relationLoaded('options')) {
+                continue;
+            }
+
+            foreach ($variant->options as $option) {
+                $groups[$option->name] ??= [
+                    'name' => $option->name,
+                    'type' => $option->type,
+                    'values' => [],
+                ];
+
+                // Keyed by value while building so a value shared by several
+                // variants (Rouge/S, Rouge/M) is listed once.
+                $groups[$option->name]['values'][$option->value] ??= [
+                    'value' => $option->value,
+                ];
+            }
+        }
+
+        return array_values(array_map(function (array $group) {
+            $group['values'] = array_values($group['values']);
+
+            return $group;
+        }, $groups));
     }
 }

@@ -100,7 +100,7 @@ test('drafts never appear in the storefront', function () {
         ->assertDontSee('Caché');
 });
 
-test('variant options keep their type and colour swatch', function () {
+test('variant options record the axis separately from the value', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.products.store'), [
             'store_id' => $this->store->id,
@@ -112,16 +112,13 @@ test('variant options keep their type and colour swatch', function () {
                 [
                     'stock' => 5,
                     'options' => [
-                        [
-                            'type' => 'color',
-                            'name' => 'Bleu Majorelle',
-                            'color_hex' => '#2743CE',
-                        ],
-                        ['type' => 'size', 'name' => '42'],
+                        ['type' => 'color', 'value' => 'Bleu Majorelle'],
+                        ['type' => 'dimension', 'value' => '42'],
+                        ['type' => 'material', 'value' => 'Cuir'],
                         [
                             'type' => 'other',
-                            'name' => 'Matière',
-                            'value' => 'Cuir',
+                            'name' => 'Tressage',
+                            'value' => 'Serré',
                         ],
                     ],
                 ],
@@ -132,43 +129,42 @@ test('variant options keep their type and colour swatch', function () {
     $options = Product::firstWhere('name', 'Babouche')
         ->variants->first()->options;
 
-    $color = $options->firstWhere('type', 'color');
-    $size = $options->firstWhere('type', 'size');
-    $other = $options->firstWhere('type', 'other');
-
-    expect($color->name)->toBe('Bleu Majorelle')
-        ->and($color->color_hex)->toBe('#2743CE')
-        // Colour and size are identified by their label, so value mirrors name.
-        ->and($color->value)->toBe('Bleu Majorelle')
-        ->and($size->value)->toBe('42')
-        ->and($size->color_hex)->toBeNull()
-        ->and($other->value)->toBe('Cuir')
-        // A swatch is only kept for colour options.
-        ->and($other->color_hex)->toBeNull();
+    /*
+     * `name` is the axis and `value` the point on it. These used to both hold
+     * the label, which made the storefront build one dead selector row per
+     * value instead of one row per axis.
+     */
+    expect($options->firstWhere('type', 'color')->only(['name', 'value']))
+        ->toBe(['name' => 'Couleur', 'value' => 'Bleu Majorelle'])
+        ->and($options->firstWhere('type', 'dimension')->only(['name', 'value']))
+        ->toBe(['name' => 'Dimension', 'value' => '42'])
+        ->and($options->firstWhere('type', 'material')->only(['name', 'value']))
+        ->toBe(['name' => 'Matière', 'value' => 'Cuir'])
+        // Only `other` lets the seller name the axis themselves.
+        ->and($options->firstWhere('type', 'other')->only(['name', 'value']))
+        ->toBe(['name' => 'Tressage', 'value' => 'Serré']);
 });
 
-test('an invalid colour swatch is rejected', function () {
+test('an option without a value is rejected', function () {
+    // The value is what the shopper actually picks; an option carrying only an
+    // axis would render an empty chip that resolves to no variant.
     $this->actingAs($this->admin)
         ->post(route('admin.products.store'), [
             'store_id' => $this->store->id,
             'category_id' => $this->category->id,
-            'name' => 'Mauvaise couleur',
+            'name' => 'Option vide',
             'base_price' => 10,
             'status' => 'published',
             'variants' => [
                 [
                     'stock' => 1,
                     'options' => [
-                        [
-                            'type' => 'color',
-                            'name' => 'Rouge',
-                            'color_hex' => 'not-a-color',
-                        ],
+                        ['type' => 'color', 'name' => 'Couleur'],
                     ],
                 ],
             ],
         ])
-        ->assertSessionHasErrors('variants.0.options.0.color_hex');
+        ->assertSessionHasErrors('variants.0.options.0.value');
 });
 
 test('an unknown option type is rejected', function () {

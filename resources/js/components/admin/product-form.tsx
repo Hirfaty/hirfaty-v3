@@ -9,9 +9,7 @@ import type {
     ExistingMedia,
     MediaItem,
 } from '@/components/admin/product-media-input';
-import VariantBuilder, {
-    emptyVariant,
-} from '@/components/admin/variant-builder';
+import VariantBuilder from '@/components/admin/variant-builder';
 import type { VariantDraft } from '@/components/admin/variant-builder';
 import type { Category, Product, ProductVisibility } from '@/types';
 
@@ -105,15 +103,20 @@ interface ProductFormState {
 /** Map a saved product's variants back into editable drafts. */
 function variantsFromProduct(product?: Product | null): VariantDraft[] {
     return (product?.variants ?? []).map((v) => ({
+        // Load-bearing: the server matches variants by id on save. Dropping it
+        // puts saving back on position matching, which silently rebinds an
+        // existing variant — and the cart/order rows referencing its id — to a
+        // different combination when one is removed from the middle.
+        id: v.id,
         sku: v.sku ?? '',
         stock: v.stock,
         price_override: v.price_override ?? '',
         professional_price_override: v.professional_price_override ?? '',
+        is_active: v.is_active ?? true,
         options: (v.options ?? []).map((o) => ({
             type: o.type ?? 'other',
             name: o.name,
             value: o.value,
-            color_hex: o.color_hex ?? '',
         })),
         media: [],
         existingMedia: (v.media ?? []).map((m) => ({
@@ -201,11 +204,15 @@ export default function ProductForm({
             // expects the removed ids under `deleted_media` (snake_case).
             variants: hasVariants
                 ? variants.map((v) => ({
+                      // Absent for a combination that was just generated; the
+                      // server creates those and matches the rest by id.
+                      ...(v.id ? { id: v.id } : {}),
                       sku: v.sku,
                       stock: v.stock,
                       price_override: v.price_override,
                       professional_price_override:
                           v.professional_price_override,
+                      is_active: v.is_active,
                       options: v.options,
                       media: v.media,
                       deleted_media: v.deletedMediaIds,
@@ -513,8 +520,8 @@ export default function ProductForm({
                         title="Stock & déclinaisons"
                         description={
                             hasVariants
-                                ? "Une déclinaison, c'est une version précise et achetable du produit (ex. « Bleu, taille 42 »). Chacune a son propre stock, et un prix laissé vide reprend celui du produit."
-                                : 'Un produit simple a un seul stock. Ajoutez des déclinaisons seulement s’il se décline en plusieurs couleurs, tailles ou autres variantes.'
+                                ? 'Définissez les options (couleur, dimension…) et leurs valeurs, générez les combinaisons, puis supprimez celles qui n’existent pas. Chacune a son propre stock ; un prix laissé vide reprend celui du produit.'
+                                : 'Un produit simple a un seul stock. Ajoutez une option seulement s’il se décline en plusieurs couleurs, dimensions, matières…'
                         }
                     >
                         {!hasVariants && (

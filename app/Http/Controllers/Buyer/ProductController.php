@@ -11,6 +11,7 @@ use App\Models\ProductView;
 use App\Models\Wishlist;
 use App\Services\ProductScoringService;
 use Auth;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -160,6 +161,11 @@ class ProductController extends Controller
                 'category',
                 'images',
                 'videos',
+                // Only sellable variants reach the selector — an inactive one
+                // would render as a pickable option that the cart then refuses.
+                'variants' => fn ($q) => $q->where('is_active', true)->orderBy('position'),
+                'variants.options',
+                'variants.media',
             ])
             ->withCount('wishlists')
             ->firstOrFail();
@@ -172,20 +178,52 @@ class ProductController extends Controller
             $q->where('user_id', Auth::id());
         })->where('product_id', $product->id)->exists()
         : false;
-        // Other products from the same store
-        $moreFromStore = Product::where('store_id', $product->store_id)
-            ->where('id', '!=', $product->id)
-            ->where('status', 'published')
-            ->with(['images'])
-            ->limit(4)
-            ->get();
 
         return Inertia::render('buyer/products/show', [
             'product' => new BuyerProductResource($product),
             'inWishlist' => $inWishlist,
             'inCart' => $inCart,
-            'moreFromStore' => BuyerProductResource::collection($moreFromStore),
+            'moreFromStore' => BuyerProductResource::collection($this->moreFromStore($product)),
+            'relatedProducts' => BuyerProductResource::collection($this->relatedProducts($product)),
         ]);
+    }
+
+    /**
+     * Other pieces by the same artisan.
+     *
+     * @return Collection<int, Product>
+     */
+    private function moreFromStore(Product $product)
+    {
+        return Product::where('store_id', $product->store_id)
+            ->where('id', '!=', $product->id)
+            ->where('status', 'published')
+            ->with(['images'])
+            ->latest()
+            ->limit(4)
+            ->get();
+    }
+
+    /**
+     * Fallback row for the bottom of the detail page: same category, different
+     * shop. A store with a single product would otherwise end the page on an
+     * empty "more from this shop" strip.
+     *
+     * @return Collection<int, Product>
+     */
+    private function relatedProducts(Product $product)
+    {
+        return Product::where('status', 'published')
+            ->where('id', '!=', $product->id)
+            ->where('store_id', '!=', $product->store_id)
+            ->when(
+                $product->category_id,
+                fn ($q) => $q->where('category_id', $product->category_id),
+            )
+            ->with(['images', 'store'])
+            ->latest()
+            ->limit(4)
+            ->get();
     }
 
     private function recordView(int $productId): void

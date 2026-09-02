@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Cart;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -83,15 +84,27 @@ class HandleInertiaRequests extends Middleware
         }
 
         $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-        $cart->load(['items.product.store']);
+        $cart->load(['items.product.store', 'items.variant.options']);
 
-        $items = $cart->items->map(function ($item) {
-            $unit = (float) ($item->product?->sale_price ?: $item->product?->base_price ?: 0);
+        /*
+         * Same price list the checkout will actually bill, resolved once.
+         * This used to read `sale_price ?: base_price` directly, which
+         * ignored both the trade price list and any variant override — the
+         * header cart could therefore quote a total the checkout disagreed
+         * with. Route through the line, like CheckoutService does.
+         */
+        $audience = Product::audienceFor($user);
+
+        $items = $cart->items->map(function ($item) use ($audience) {
+            $unit = $item->unitPriceFor($audience);
             $qty = (int) $item->quantity;
 
             return [
                 'id' => $item->id,
                 'name' => $item->product?->name ?? 'Produit',
+                // e.g. "Rouge / M" — null for a product without variants, so
+                // the header can render it only when there is one.
+                'variant' => $item->variantLabel(),
                 'seller' => $item->product?->store?->store_name ?? '',
                 'qty' => $qty,
                 'price' => $unit,

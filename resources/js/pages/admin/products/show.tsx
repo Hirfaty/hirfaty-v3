@@ -391,16 +391,9 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                                     key={option.id}
                                                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs font-medium text-ink"
                                                 >
-                                                    {option.type === 'color' &&
-                                                        option.color_hex && (
-                                                            <span
-                                                                className="h-3 w-3 shrink-0 rounded-full border border-black/10"
-                                                                style={{
-                                                                    background:
-                                                                        option.color_hex,
-                                                                }}
-                                                            />
-                                                        )}
+                                                    <span className="text-ink-soft">
+                                                        {option.name}
+                                                    </span>
                                                     {option.value}
                                                 </span>
                                             ))}

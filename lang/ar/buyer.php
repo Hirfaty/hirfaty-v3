@@ -99,4 +99,23 @@ return [
     'detail.trade_cta_button' => 'افتح حساباً احترافياً',
     'detail.trade_pending_title' => 'حساب احترافي في انتظار التوثيق.',
     'detail.trade_pending_body' => 'ستُطبَّق أسعارك الاحترافية بمجرد موافقة المشرف على حسابك.',
+
+    // Variants
+    'detail.select_variant_prompt' => 'اختر خياراً',
+
+    // Page furniture
+    'detail.home' => 'الرئيسية',
+    'detail.eyebrow_handmade' => 'صناعة يدوية',
+    'detail.related' => 'قد يعجبك أيضاً',
+    'detail.handmade_note' => 'كل قطعة مصنوعة يدوياً، لذا قد تختلف الألوان والنقوش قليلاً، وهو ما يجعل قطعتك فريدة.',
+
+    // Reassurance row
+    'detail.trust_materials_title' => 'مواد طبيعية',
+    'detail.trust_materials_body' => 'طين عالي الجودة وطلاء طبيعي.',
+    'detail.trust_handmade_title' => 'صناعة يدوية',
+    'detail.trust_handmade_body' => 'كل قطعة تُشكَّل باليد.',
+    'detail.trust_durable_title' => 'متين',
+    'detail.trust_durable_body' => 'خزف محروق على حرارة عالية ليدوم طويلاً.',
+    'detail.trust_packaging_title' => 'تغليف آمن',
+    'detail.trust_packaging_body' => 'يُغلَّف بعناية لضمان وصول سالم.',
 ];

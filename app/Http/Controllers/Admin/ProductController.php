@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -99,6 +100,7 @@ class ProductController extends Controller
     {
         $isDraft = $request->input('status') === 'draft';
         $data = $request->validate($this->productRules($isDraft));
+        $this->assertVariantsAreCoherent($data['variants'] ?? []);
 
         $store = Store::findOrFail($data['store_id']);
 
@@ -164,6 +166,7 @@ class ProductController extends Controller
     {
         $isDraft = $request->input('status') === 'draft';
         $data = $request->validate($this->productRules($isDraft, $product));
+        $this->assertVariantsAreCoherent($data['variants'] ?? []);
 
         DB::transaction(function () use ($data, $request, $product, $isDraft) {
             $hasVariants = ! empty($data['variants']);
@@ -243,20 +246,35 @@ class ProductController extends Controller
             'stock' => [$isDraft ? 'nullable' : 'required_without:variants', 'nullable', 'integer', 'min:0'],
 
             'variants' => ['nullable', 'array'],
+            /*
+             * The id of an already-saved variant, so it can be matched on save
+             * instead of by array position. Scoped to this product: without
+             * the scope a crafted request could rebind another product's
+             * variant — and cart_items/order_items point at these ids.
+             */
+            'variants.*.id' => [
+                'nullable',
+                'integer',
+                $product
+                    ? Rule::exists('product_variants', 'id')->where('product_id', $product->id)
+                    : 'prohibited',
+            ],
             'variants.*.sku' => ['nullable', 'string', 'max:100'],
             'variants.*.stock' => [$required, 'integer', 'min:0'],
             'variants.*.price_override' => ['nullable', 'numeric', 'min:0'],
             'variants.*.professional_price_override' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.is_active' => ['nullable', 'boolean'],
             'variants.*.options' => ['required', 'array', 'min:1'],
             'variants.*.options.*.type' => ['required', Rule::in(ProductVariantOption::TYPES)],
-            'variants.*.options.*.name' => ['required', 'string', 'max:50'],
-            // A colour/size option is identified by its label, so the value is
-            // optional there and defaults to the name.
-            'variants.*.options.*.value' => ['nullable', 'string', 'max:50'],
-            'variants.*.options.*.color_hex' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            // The axis ("Couleur"), not the value. Canonical for every type
+            // but `other`, which the seller names — see normaliseOptions().
+            'variants.*.options.*.name' => ['nullable', 'string', 'max:50'],
+            // The point on that axis ("Rouge"). Required: it is what the
+            // shopper actually picks.
+            'variants.*.options.*.value' => ['required', 'string', 'max:50'],
 
-            // Per-variant photos — images only (a colour/size swatch photo
-            // has no need for video).
+            // Per-variant photos — images only (a variant photo has no need
+            // for video).
             'variants.*.media' => ['nullable', 'array', 'max:5'],
             'variants.*.media.*' => ['file', 'mimes:jpg,jpeg,png,webp', new ValidProductMedia],
             // Existing variant media ids to remove (edit screen only).
@@ -290,20 +308,29 @@ class ProductController extends Controller
      */
     private function syncVariants(Product $product, array $variants, Request $request): void
     {
-        $existing = $product->variants()->orderBy('position')->get();
+        $existing = $product->variants()->get()->keyBy('id');
+        $keptIds = [];
 
         foreach (array_values($variants) as $position => $variant) {
             $attributes = [
-                'sku' => $variant['sku'] ?? null,
+                'sku' => ($variant['sku'] ?? null) ?: null,
                 'stock' => $variant['stock'],
                 'price_override' => $variant['price_override'] ?? null,
                 'professional_price_override' => $variant['professional_price_override'] ?? null,
                 'position' => $position,
-                'is_active' => true,
+                'is_active' => (bool) ($variant['is_active'] ?? true),
             ];
 
-            /** @var ProductVariant|null $row */
-            $row = $existing->get($position);
+            /*
+             * Matched by id, never by array position.
+             *
+             * Position matching silently rebound rows: deleting the first of
+             * three variants and saving made variant #1 take on #2's options
+             * and #3 disappear. Since cart_items and order_items hold
+             * product_variant_id, a shopper's basket line would quietly become
+             * a different colour/size than the one they chose.
+             */
+            $row = isset($variant['id']) ? $existing->get($variant['id']) : null;
 
             if ($row) {
                 $row->update($attributes);
@@ -312,29 +339,103 @@ class ProductController extends Controller
                 $row = $product->variants()->create($attributes);
             }
 
-            $row->options()->createMany(
-                collect($variant['options'])
-                    ->map(fn (array $o) => [
-                        'type' => $o['type'],
-                        'name' => $o['name'],
-                        // Colour and size are identified by their label, so the
-                        // value mirrors the name when none was supplied.
-                        'value' => $o['value'] ?? $o['name'],
-                        'color_hex' => $o['type'] === 'color' ? ($o['color_hex'] ?? null) : null,
-                    ])
-                    ->all()
-            );
+            $keptIds[] = $row->id;
+
+            $row->options()->createMany($this->normaliseOptions($variant['options']));
 
             $this->deleteVariantMedia($row, $variant['deleted_media'] ?? []);
             $this->uploadVariantMedia($row, $request, $position);
         }
 
-        // Any existing variant beyond the new count (the admin removed a
-        // slot) is gone — clean up its media so nothing leaks in storage.
-        $existing->slice(count($variants))->each(function (ProductVariant $v) {
+        // Whatever the admin removed from the form. Clean up its media too so
+        // nothing leaks in storage.
+        $existing->except($keptIds)->each(function (ProductVariant $v) {
             $this->deleteVariantMedia($v, $v->media()->pluck('id')->all());
             $v->delete();
         });
+    }
+
+    /**
+     * Turn submitted options into rows, forcing the canonical axis name for
+     * every type but `other`.
+     *
+     * The axis is derived server-side rather than trusted from the form, so
+     * "Couleur" cannot arrive as "couleur"/"Color" and split one selector row
+     * into several that no variant can satisfy together.
+     *
+     * @param  array<int, array<string, mixed>>  $options
+     * @return array<int, array<string, string>>
+     */
+    private function normaliseOptions(array $options): array
+    {
+        return collect($options)
+            ->map(fn (array $o) => [
+                'type' => $o['type'],
+                'name' => ProductVariantOption::axisFor($o['type'])
+                    ?? trim((string) ($o['name'] ?? '')) ?: 'Option',
+                'value' => trim((string) $o['value']),
+            ])
+            ->all();
+    }
+
+    /**
+     * Structural rules a set of variants must satisfy, checked before anything
+     * is written.
+     *
+     * Both failures here are silent-corruption bugs rather than cosmetic ones:
+     *
+     *  - Ragged axes (one variant on "Couleur", another on "Dimension") make
+     *    the storefront render selector rows that no single variant answers,
+     *    so the product cannot be added to a basket at all. This is the shape
+     *    the old admin produced.
+     *  - Two variants on the same combination leave the shopper picking one
+     *    row while stock silently splits across two, and the storefront can
+     *    only ever resolve the first.
+     *
+     * @param  array<int, array<string, mixed>>  $variants
+     *
+     * @throws ValidationException
+     */
+    private function assertVariantsAreCoherent(array $variants): void
+    {
+        if ($variants === []) {
+            return;
+        }
+
+        $axesOf = function (array $variant): array {
+            $axes = collect($this->normaliseOptions($variant['options']))
+                ->pluck('name')
+                ->all();
+            sort($axes);
+
+            return $axes;
+        };
+
+        $expected = $axesOf($variants[array_key_first($variants)]);
+        $seen = [];
+
+        foreach (array_values($variants) as $i => $variant) {
+            if ($axesOf($variant) !== $expected) {
+                throw ValidationException::withMessages([
+                    "variants.{$i}.options" => 'Toutes les déclinaisons doivent utiliser les mêmes options ('
+                        .implode(', ', $expected).').',
+                ]);
+            }
+
+            // Order-independent, so Rouge/4m and 4m/Rouge count as the same.
+            $signature = collect($this->normaliseOptions($variant['options']))
+                ->map(fn (array $o) => $o['name'].'='.mb_strtolower($o['value']))
+                ->sort()
+                ->implode('|');
+
+            if (isset($seen[$signature])) {
+                throw ValidationException::withMessages([
+                    "variants.{$i}.options" => 'Cette combinaison existe déjà dans une autre déclinaison.',
+                ]);
+            }
+
+            $seen[$signature] = true;
+        }
     }
 
     private function uploadVariantMedia(ProductVariant $variant, Request $request, int $position): void

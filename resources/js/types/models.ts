@@ -68,17 +68,26 @@ export type ProductStatus =
 export type ProductVisibility = 'individual' | 'professional' | 'both';
 
 /** How a variant option is captured in the admin UI. */
-export type VariantOptionType = 'color' | 'size' | 'other';
+export type VariantOptionType =
+    | 'color'
+    | 'dimension'
+    | 'material'
+    | 'finish'
+    | 'pattern'
+    | 'other';
 
-/** One option on a variant, e.g. { name: 'Couleur', value: 'Rouge' }. */
+/**
+ * One axis/value pair on a variant, e.g. { name: 'Couleur', value: 'Rouge' }.
+ * `name` is the axis, `value` the point on it — never the same string.
+ */
 export interface ProductVariantOption {
     id: number;
     product_variant_id: number;
     type: VariantOptionType;
+    /** The axis, e.g. "Couleur". Canonical for all types but 'other'. */
     name: string;
+    /** The chosen point, e.g. "Rouge". */
     value: string;
-    /** #rrggbb swatch; only set when type is 'color'. */
-    color_hex: string | null;
 }
 
 export interface ProductVariant {

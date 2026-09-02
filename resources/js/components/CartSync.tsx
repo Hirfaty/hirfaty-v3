@@ -15,6 +15,11 @@ export default function CartSync() {
                 {
                     items: items.map((item) => ({
                         product_id: item.product_id,
+                        // Carried through so the variant the guest chose is
+                        // the one that lands in their account's cart. The
+                        // server drops lines whose variant has since gone
+                        // away rather than failing the whole merge.
+                        variant_id: item.variant_id ?? null,
                         quantity: item.quantity,
                     })),
                 },

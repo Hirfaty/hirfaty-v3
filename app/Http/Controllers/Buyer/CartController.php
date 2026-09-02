@@ -5,16 +5,20 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Services\CartService;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class CartController extends Controller
 {
+    public function __construct(private readonly CartService $cart) {}
+
     public function show()
     {
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
-        $cart->load(['items.product.images', 'items.product.store']);
+        $cart->load(['items.product.images', 'items.product.store', 'items.variant.options']);
 
         return Inertia::render('buyer/cart', ['cart' => $cart]);
     }
@@ -24,20 +28,20 @@ class CartController extends Controller
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'quantity' => ['integer', 'min:1'],
+            // Existence/ownership/active checks live in CartService, which
+            // needs the product anyway to decide whether a variant is even
+            // required — keeping them there avoids two sources of truth.
+            'variant_id' => ['nullable', 'integer'],
         ]);
 
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
 
-        $item = $cart->items()->where('product_id', $data['product_id'])->first();
-
-        if ($item) {
-            $item->increment('quantity', $data['quantity'] ?? 1);
-        } else {
-            $cart->items()->create([
-                'product_id' => $data['product_id'],
-                'quantity' => $data['quantity'] ?? 1,
-            ]);
-        }
+        $this->cart->addLine(
+            $cart,
+            (int) $data['product_id'],
+            isset($data['variant_id']) ? (int) $data['variant_id'] : null,
+            (int) ($data['quantity'] ?? 1),
+        );
 
         return back()->with('success', 'Added to cart.');
     }
@@ -47,6 +51,12 @@ class CartController extends Controller
         $data = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
+
+        // Stop a quantity bump sailing past available stock: otherwise the
+        // cart sits on an impossible quantity until checkout rejects the
+        // entire basket, which reads as a broken checkout rather than as one
+        // line being over-ordered.
+        $this->cart->assertStock($cartItem, (int) $data['quantity']);
 
         $cartItem->update(['quantity' => $data['quantity']]);
 
@@ -65,21 +75,29 @@ class CartController extends Controller
         $data = $request->validate([
             'items' => ['required', 'array'],
             'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.variant_id' => ['nullable', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
-        foreach ($data['items'] as $item) {
-            $existing = $cart->items()->where('product_id', $item['product_id'])->first();
 
-            if ($existing) {
-                // Add guest quantity on top of existing DB quantity
-                $existing->increment('quantity', $item['quantity']);
-            } else {
-                $cart->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                ]);
+        foreach ($data['items'] as $item) {
+            /*
+             * A guest cart is unvalidated client state that may have sat in
+             * localStorage for weeks — a variant can have been deactivated or
+             * sold out meanwhile. Drop lines that no longer hold rather than
+             * failing the whole merge, which would strand every other item
+             * the buyer had collected.
+             */
+            try {
+                $this->cart->addLine(
+                    $cart,
+                    (int) $item['product_id'],
+                    isset($item['variant_id']) ? (int) $item['variant_id'] : null,
+                    (int) $item['quantity'],
+                );
+            } catch (ValidationException) {
+                continue;
             }
         }
 

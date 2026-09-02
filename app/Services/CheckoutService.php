@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Earning;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Notifications\NewOrderReceived;
 use App\Notifications\OrderPlaced;
 use Illuminate\Support\Facades\DB;
@@ -41,16 +43,47 @@ class CheckoutService
         $audience = Product::audienceFor($cart->user);
 
         /*
-         * One place that turns a product into a unit price. The order total
+         * One place that turns a cart line into a unit price. The order total
          * and the individual order lines are computed separately below, and
          * pricing them through anything but a shared helper is how a total
          * ends up disagreeing with the sum of its own lines.
+         *
+         * Delegated to the line so a chosen variant's price override wins over
+         * the product's list price; CartItem::unitPriceFor() falls back to the
+         * product for a line with no variant.
          */
-        $unitPrice = fn (Product $product): float => (float) ($product->priceFor($audience) ?? 0);
+        $unitPrice = fn (CartItem $item): float => $item->unitPriceFor($audience);
 
         DB::transaction(function () use ($cart, $checkoutData, $unitPrice, &$orders) {
             // 1. Validate stock for ALL items first with lock to avoid race conditions
             foreach ($cart->items as $item) {
+                /*
+                 * Lock the row that actually holds the stock. For a variant
+                 * line that is the variant, not the product: a variant
+                 * product keeps products.stock at 0 by design, so checking
+                 * the product here would reject every such order as
+                 * out-of-stock — which is exactly what used to happen.
+                 */
+                if ($item->product_variant_id !== null) {
+                    $variant = ProductVariant::where('id', $item->product_variant_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $variant || $variant->stock < $item->quantity) {
+                        $label = $item->product->name ?? 'Inconnu';
+
+                        if ($item->variant) {
+                            $label .= ' ('.$item->variant->label().')';
+                        }
+
+                        throw ValidationException::withMessages([
+                            'cart' => "Le produit '{$label}' n'a plus assez de stock (disponible : ".(int) ($variant->stock ?? 0).').',
+                        ]);
+                    }
+
+                    continue;
+                }
+
                 // We re-fetch each product with a lock to ensure the stock count is accurate
                 $product = Product::where('id', $item->product_id)->lockForUpdate()->first();
 
@@ -71,7 +104,7 @@ class CheckoutService
                 $store = $items->first()->product->store;
 
                 // Calculate amounts
-                $grossAmount = $items->sum(fn ($item) => $unitPrice($item->product) * $item->quantity);
+                $grossAmount = $items->sum(fn ($item) => $unitPrice($item) * $item->quantity);
                 $platformFee = round($grossAmount * self::PLATFORM_FEE_PERCENT, 2);
                 $amanaFee = self::AMANA_FEE;
                 $sellerEarnings = $grossAmount - $platformFee + $amanaFee;
@@ -92,17 +125,26 @@ class CheckoutService
 
                 // Create order items
                 foreach ($items as $item) {
-                    $price = $unitPrice($item->product);
+                    $price = $unitPrice($item);
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $item->product_id,
+                        'product_variant_id' => $item->product_variant_id,
+                        // Snapshot, so the line still reads "Rouge / M" after
+                        // the variant is renamed or deleted.
+                        'variant_label' => $item->variantLabel(),
                         'quantity' => $item->quantity,
                         'unit_price' => $price,
                         'subtotal' => $price * $item->quantity,
                     ]);
 
-                    // Decrease stock on the locked product row
-                    Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                    // Decrease stock on whichever row was locked above.
+                    if ($item->product_variant_id !== null) {
+                        ProductVariant::where('id', $item->product_variant_id)
+                            ->decrement('stock', $item->quantity);
+                    } else {
+                        Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                    }
                 }
 
                 // Create earning record

@@ -35,11 +35,7 @@ function variantPayload(array $overrides = []): array
     return array_merge([
         'stock' => 5,
         'options' => [
-            [
-                'type' => 'color',
-                'name' => 'Bleu Majorelle',
-                'color_hex' => '#2743CE',
-            ],
+            ['type' => 'color', 'value' => 'Bleu Majorelle'],
         ],
     ], $overrides);
 }
@@ -129,9 +125,10 @@ test('re-saving a variant without touching its photo keeps the photo', function 
     $variant = $product->variants->first();
     $mediaPath = $variant->media->first()->path;
 
-    // Re-save with the same single variant at the same position (index 0),
-    // no new media and nothing marked for deletion — simulates the admin
-    // just tweaking stock on the edit screen.
+    // Re-save the same variant by id, with no new media and nothing marked
+    // for deletion — the admin just tweaking stock on the edit screen. The
+    // id is what the edit form round-trips; without it the server correctly
+    // treats this as a brand new variant.
     $this->actingAs($this->admin)
         ->post(route('admin.products.update', $product), [
             'name' => 'Collier Persistant',
@@ -139,7 +136,7 @@ test('re-saving a variant without touching its photo keeps the photo', function 
             'base_price' => 300,
             'status' => 'published',
             'variants' => [
-                variantPayload(['stock' => 9]),
+                variantPayload(['id' => $variant->id, 'stock' => 9]),
             ],
         ])
         ->assertRedirect();
@@ -179,7 +176,10 @@ test('deleting a variant photo removes the file from storage', function () {
             'base_price' => 300,
             'status' => 'published',
             'variants' => [
-                variantPayload(['deleted_media' => [$media->id]]),
+                variantPayload([
+                    'id' => $variant->id,
+                    'deleted_media' => [$media->id],
+                ]),
             ],
         ])
         ->assertRedirect();
@@ -200,21 +200,21 @@ test('removing a variant slot cleans up its photos too', function () {
         'status' => 'published',
         'variants' => [
             variantPayload([
-                'options' => [['type' => 'color', 'name' => 'Bleu', 'color_hex' => '#2743CE']],
+                'options' => [['type' => 'color', 'value' => 'Bleu']],
                 'media' => [UploadedFile::fake()->create('bleu.jpg', 40, 'image/jpeg')],
             ]),
             variantPayload([
-                'options' => [['type' => 'color', 'name' => 'Rouge', 'color_hex' => '#DC2626']],
+                'options' => [['type' => 'color', 'value' => 'Rouge']],
                 'media' => [UploadedFile::fake()->create('rouge.jpg', 40, 'image/jpeg')],
             ]),
         ],
     ]);
 
     $product = Product::firstWhere('name', 'Deux Déclinaisons');
-    $secondVariant = $product->variants()->orderBy('position')->get()[1];
+    [$firstVariant, $secondVariant] = $product->variants()->orderBy('position')->get()->all();
     $secondMediaPath = $secondVariant->media->first()->path;
 
-    // Only resubmit the first variant — the second slot is gone.
+    // Resubmit only the first variant, by id — the second is dropped.
     $this->actingAs($this->admin)
         ->post(route('admin.products.update', $product), [
             'name' => 'Deux Déclinaisons',
@@ -223,7 +223,8 @@ test('removing a variant slot cleans up its photos too', function () {
             'status' => 'published',
             'variants' => [
                 variantPayload([
-                    'options' => [['type' => 'color', 'name' => 'Bleu', 'color_hex' => '#2743CE']],
+                    'id' => $firstVariant->id,
+                    'options' => [['type' => 'color', 'value' => 'Bleu']],
                 ]),
             ],
         ])
@@ -231,6 +232,9 @@ test('removing a variant slot cleans up its photos too', function () {
 
     $product->refresh();
 
-    expect($product->variants)->toHaveCount(1);
+    expect($product->variants)->toHaveCount(1)
+        // The survivor is the one that was kept, not a fresh row that happens
+        // to sit at the same index.
+        ->and($product->variants->first()->id)->toBe($firstVariant->id);
     Storage::disk('public')->assertMissing($secondMediaPath);
 });

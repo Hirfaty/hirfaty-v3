@@ -81,9 +81,8 @@ test('the show page exposes variants with their options', function () {
     ProductVariantOption::create([
         'product_variant_id' => $variant->id,
         'type' => 'color',
-        'name' => 'Bleu Majorelle',
+        'name' => 'Couleur',
         'value' => 'Bleu Majorelle',
-        'color_hex' => '#2743CE',
     ]);
 
     $this->actingAs($this->admin)
@@ -94,10 +93,9 @@ test('the show page exposes variants with their options', function () {
                 ->where('product.variants.0.sku', 'VASE-BLEU')
                 ->where('product.variants.0.stock', 4)
                 ->has('product.variants.0.options', 1)
-                ->where(
-                    'product.variants.0.options.0.color_hex',
-                    '#2743CE'
-                )
+                // Axis and value, kept distinct.
+                ->where('product.variants.0.options.0.name', 'Couleur')
+                ->where('product.variants.0.options.0.value', 'Bleu Majorelle')
         );
 });
 

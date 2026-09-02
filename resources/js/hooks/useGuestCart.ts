@@ -3,12 +3,35 @@ const CART_EVENT = 'guest-cart-updated';
 
 export type GuestCartItem = {
     product_id: number;
+    /**
+     * Which variant was picked, or null for a product without variants.
+     * Optional on read because carts saved before variants existed carry no
+     * such key — a missing value means null, not a distinct line.
+     */
+    variant_id?: number | null;
+    /** "Rouge / M" — so the header and cart can identify the line. */
+    variant_label?: string | null;
     quantity: number;
     name: string;
     price: string;
     image: string | null;
     store_name: string;
 };
+
+/**
+ * A cart line is identified by the product *and* the variant: "Rouge / M" and
+ * "Bleu / L" are two lines of one product, and matching on product_id alone
+ * would silently collapse the second into the first.
+ */
+const lineKey = (productId: number, variantId?: number | null) =>
+    `${productId}:${variantId ?? ''}`;
+
+const sameLine = (
+    item: GuestCartItem,
+    productId: number,
+    variantId?: number | null,
+) =>
+    lineKey(item.product_id, item.variant_id) === lineKey(productId, variantId);
 
 export function useGuestCart() {
     const getItems = (): GuestCartItem[] => {
@@ -28,24 +51,30 @@ export function useGuestCart() {
 
     const addItem = (item: GuestCartItem) => {
         const items = getItems();
-        const existing = items.find((i) => i.product_id === item.product_id);
+        const existing = items.find((i) =>
+            sameLine(i, item.product_id, item.variant_id),
+        );
 
         if (existing) {
             existing.quantity += item.quantity;
         } else {
-            items.push(item);
+            items.push({ ...item, variant_id: item.variant_id ?? null });
         }
 
         saveItems(items);
     };
 
-    const removeItem = (productId: number) => {
-        saveItems(getItems().filter((i) => i.product_id !== productId));
+    const removeItem = (productId: number, variantId?: number | null) => {
+        saveItems(getItems().filter((i) => !sameLine(i, productId, variantId)));
     };
 
-    const updateQuantity = (productId: number, quantity: number) => {
+    const updateQuantity = (
+        productId: number,
+        quantity: number,
+        variantId?: number | null,
+    ) => {
         const items = getItems();
-        const item = items.find((i) => i.product_id === productId);
+        const item = items.find((i) => sameLine(i, productId, variantId));
 
         if (item) {
             item.quantity = quantity;

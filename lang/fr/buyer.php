@@ -96,4 +96,23 @@ return [
     'detail.trade_cta_button' => 'Ouvrir un compte pro',
     'detail.trade_pending_title' => 'Compte professionnel en attente de vérification.',
     'detail.trade_pending_body' => 'Vos tarifs professionnels s’appliqueront dès qu’un administrateur aura validé votre compte.',
+
+    // Variants
+    'detail.select_variant_prompt' => 'Choisissez une option',
+
+    // Page furniture
+    'detail.home' => 'Accueil',
+    'detail.eyebrow_handmade' => 'Fait main',
+    'detail.related' => 'Vous aimerez aussi',
+    'detail.handmade_note' => 'Chaque pièce est faite main : de légères variations de teinte et de motif sont possibles, et rendent la vôtre unique.',
+
+    // Reassurance row
+    'detail.trust_materials_title' => 'Matières naturelles',
+    'detail.trust_materials_body' => 'Argile et émaux naturels de qualité.',
+    'detail.trust_handmade_title' => 'Fait main',
+    'detail.trust_handmade_body' => 'Chaque pièce est façonnée à la main.',
+    'detail.trust_durable_title' => 'Durable',
+    'detail.trust_durable_body' => 'Cuisson à haute température, pour durer.',
+    'detail.trust_packaging_title' => 'Emballage soigné',
+    'detail.trust_packaging_body' => 'Emballé avec soin pour voyager sans risque.',
 ];

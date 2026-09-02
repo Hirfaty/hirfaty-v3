@@ -72,8 +72,8 @@ test('admin creates a product with colour and size variants', function () {
                     'sku' => 'BAB-RED-40',
                     'stock' => 4,
                     'options' => [
-                        ['type' => 'color', 'name' => 'Rouge', 'color_hex' => '#DC2626'],
-                        ['type' => 'size', 'name' => '40'],
+                        ['type' => 'color', 'value' => 'Rouge'],
+                        ['type' => 'dimension', 'value' => '40'],
                     ],
                 ],
                 [
@@ -81,8 +81,8 @@ test('admin creates a product with colour and size variants', function () {
                     'stock' => 7,
                     'price_override' => 340,
                     'options' => [
-                        ['type' => 'color', 'name' => 'Bleu', 'color_hex' => '#2743CE'],
-                        ['type' => 'size', 'name' => '42'],
+                        ['type' => 'color', 'value' => 'Bleu'],
+                        ['type' => 'dimension', 'value' => '42'],
                     ],
                 ],
             ],
@@ -117,7 +117,7 @@ test('stock lives on the variants, not the parent product', function () {
                 [
                     'stock' => 3,
                     'options' => [
-                        ['type' => 'color', 'name' => 'Camel', 'color_hex' => '#8B5E3C'],
+                        ['type' => 'color', 'value' => 'Camel'],
                     ],
                 ],
             ],

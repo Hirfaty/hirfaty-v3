@@ -172,6 +172,12 @@ export const SiteHeader = () => {
                                                     <p className="truncate font-display text-sm leading-tight text-ink">
                                                         {item.name}
                                                     </p>
+                                                    {/* Distinguishes two variants of one product. */}
+                                                    {item.variant && (
+                                                        <p className="mt-0.5 truncate text-xs text-ink">
+                                                            {item.variant}
+                                                        </p>
+                                                    )}
                                                     <p className="mt-0.5 truncate text-xs text-ink-soft">
                                                         {item.seller}
                                                     </p>

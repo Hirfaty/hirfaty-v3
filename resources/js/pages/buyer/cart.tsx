@@ -108,6 +108,22 @@ const CartPage = ({ cart }: { cart: Cart }) => {
                                             {item.product.name}
                                         </Link>
 
+                                        {/*
+                                         * Without this, two variants of the
+                                         * same product render as two
+                                         * identical-looking lines.
+                                         */}
+                                        {item.variant?.options?.length > 0 && (
+                                            <p className="mt-0.5 text-sm text-ink-soft">
+                                                {item.variant.options
+                                                    .map(
+                                                        (o) =>
+                                                            `${o.name}: ${o.value}`,
+                                                    )
+                                                    .join(' · ')}
+                                            </p>
+                                        )}
+
                                         <p className="text-sm text-ink-soft">
                                             par {item.product.store.store_name}
                                         </p>
