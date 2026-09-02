@@ -19,7 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.3', '8.4', '8.5']
+        # 8.3 dropped: composer.lock pins the Symfony 8 stack, every package
+        # of which requires php >= 8.4. Because config.platform.php is pinned
+        # to 8.4, composer still *installs* happily on 8.3 — the failure only
+        # surfaces later, when vendor/composer/platform_check.php fatals as
+        # soon as artisan boots.
+        php-version: ['8.4', '8.5']
 
     steps:
       - name: Checkout code

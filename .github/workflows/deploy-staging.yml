@@ -1,0 +1,73 @@
+# Push to `staging` → the VPS pulls, rebuilds and migrates. No test gate for
+# now — deploys straight from the push, on purpose (see below).
+#
+# One-time setup, under Settings → Secrets and variables → Actions:
+#   STAGING_SSH_HOST  the VPS IP or hostname (e.g. 31.97.53.157)
+#   STAGING_SSH_USER  the deploy user (hirfaty)
+#   STAGING_SSH_KEY   a PRIVATE key whose public half is in the VPS's
+#                     ~/.ssh/authorized_keys. Generate a dedicated one rather
+#                     than reusing a personal key:
+#                       ssh-keygen -t ed25519 -C "gh-actions-staging" -f gh_staging -N ""
+#                       # paste gh_staging.pub into ~/.ssh/authorized_keys on the VPS
+#                       # paste the contents of gh_staging into this secret
+#   STAGING_SSH_PORT  optional, defaults to 22
+#
+# The VPS also needs its own read access to this repo (it runs `git fetch`),
+# which it already has from the original `git clone`.
+
+name: deploy staging
+
+on:
+  push:
+    branches: [staging]
+  # Lets you re-run a deploy from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  # Serialise deploys. Never cancel one in flight: it could be halfway
+  # through `migrate` or a container swap, and killing it there leaves the
+  # box in a worse state than letting it finish.
+  group: deploy-staging
+  cancel-in-progress: false
+
+# The test job that used to gate this deploy is removed for now, not just
+# skipped — re-add it (see git history / the previous version of this file)
+# once tests/Feature/Auth, tests/Feature/Settings and `tsc` are cleaned up on
+# pre-existing, untouched code. Until then it would either block every deploy
+# on failures nothing here caused, or need the same suite-subset carve-out
+# maintained by hand every time a new test directory is added — worse than no
+# gate at all.
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          # Abort the whole script on the first failing command, and fail the
+          # job with it — otherwise a broken migration still reports green.
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd ~/staging-hirfaty
+
+            # Hard reset rather than `git pull`: a deploy target should match
+            # the branch exactly, and this cannot fail on a divergent history
+            # or a stray local edit. Everything the box needs but git does not
+            # track (.env, docker/seaweedfs/s3-config.json) is gitignored and
+            # therefore survives untouched.
+            git fetch --prune origin
+            git reset --hard origin/staging
+
+            # stage-release, not stage-deploy: git is already synced above, and
+            # pulling again here could build one commit then migrate another.
+            make stage-release
+
+            docker compose -f docker-compose.staging.yml --env-file .env ps

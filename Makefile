@@ -51,7 +51,8 @@ EDGE_NETWORK = hirfaty-edge
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
 	prod-deploy prod-backup \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
-	stage-migrate stage-db-reset stage-seed stage-artisan stage-deploy \
+	stage-migrate stage-db-reset stage-seed stage-artisan \
+	stage-pull stage-release stage-deploy \
 	proxy-build proxy-up proxy-down proxy-restart proxy-logs proxy-reload \
 	proxy-htpasswd proxy-cert-prod proxy-cert-staging proxy-cert-renew
 
@@ -233,9 +234,22 @@ stage-seed:
 stage-artisan:
 	$(COMPOSE_STAGE) exec app php artisan $(CMD)
 
-stage-deploy: edge-network
-	git pull
+# Rebuild, migrate and restart from whatever is already checked out — the
+# deploy itself, with no git step. Split out so CI can own the git side (it
+# hard-resets to origin/staging for a deterministic deploy) without pulling a
+# second time mid-release, which could otherwise build one commit and migrate
+# another.
+stage-release: edge-network
 	$(COMPOSE_STAGE) build app
 	$(COMPOSE_STAGE) up -d db seaweedfs
 	$(COMPOSE_STAGE) run --rm app php artisan migrate --force
 	$(COMPOSE_STAGE) up -d app queue scheduler
+
+stage-pull:
+	git pull
+
+# What you run by hand on the box. CI syncs git itself and calls
+# stage-release directly. Expressed as ordered prerequisites rather than a
+# recursive $(MAKE) call, which breaks under Windows make when the binary's
+# path contains spaces.
+stage-deploy: stage-pull stage-release
