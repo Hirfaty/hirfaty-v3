@@ -45,7 +45,7 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 
 - Translations live in `lang/<locale>/{common,seller,buyer,header,welcome}.php` as **flat** PHP arrays whose keys may contain dots (`'how_it_works.step1.title' => '…'`) — **not** nested arrays. `useTranslation()` (`resources/js/hooks/use-translation.tsx`) splits a key once on the first dot to pick the file, then does a flat lookup on the remainder. A genuinely nested array will therefore never resolve, and `t()` silently renders the raw key onto the page.
 - `HandleInertiaRequests::getTranslations()` has a hardcoded file list; a new `lang/<locale>/<file>.php` is ignored until it is added there, and a missing file is skipped silently. All three locales must define the same keys.
-- Locale is stored in the session (`SetLocale` middleware) and switched via `POST /locale/{locale}`. Arabic sets `direction: 'rtl'`; account for RTL when doing layout work. Arabic also relies on the `[lang='ar']` / `[dir='rtl']` overrides in `app.css`: Fraunces and Inter carry no Arabic glyphs, and Arabic must never be italicised.
+- Locale is stored in the session (`SetLocale` middleware) and switched via `POST /locale/{locale}`. Arabic sets `direction: 'rtl'`; account for RTL when doing layout work. Arabic also relies on the `[lang='ar']` / `[dir='rtl']` overrides in `app.css`: Bodoni Moda (the single brand font — both `--font-sans` and `--font-display` point at it) carries no Arabic glyphs, and Arabic must never be italicised.
 
 ## Cart & checkout
 

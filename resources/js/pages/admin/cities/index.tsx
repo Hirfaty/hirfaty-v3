@@ -108,7 +108,7 @@ const Index = ({
                                         tickLine={false}
                                         style={{
                                             fontSize: '12px',
-                                            fontFamily: 'Inter, sans-serif',
+                                            fontFamily: 'var(--font-sans)',
                                             fill: '#333',
                                         }}
                                     />

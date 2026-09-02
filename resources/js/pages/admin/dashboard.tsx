@@ -305,7 +305,7 @@ const AdminDashboard = ({
                                         tickLine={false}
                                         style={{
                                             fontSize: '11px',
-                                            fontFamily: 'Inter',
+                                            fontFamily: 'var(--font-sans)',
                                             fill: 'oklch(52% 0.015 255)',
                                         }}
                                         dy={10}
@@ -315,7 +315,7 @@ const AdminDashboard = ({
                                         tickLine={false}
                                         style={{
                                             fontSize: '11px',
-                                            fontFamily: 'Inter',
+                                            fontFamily: 'var(--font-sans)',
                                             fill: 'oklch(52% 0.015 255)',
                                         }}
                                     />

@@ -15,7 +15,11 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=fraunces:opsz,wght@9..144,300..900|inter:300,400,500,600,700,800|noto-naskh-arabic:400,500,600,700" rel="stylesheet" />
+        {{-- Bunny's own `family:400,500,700i` list syntax, NOT Google's
+             `ital,wght@0,400;1,700` axis syntax: bunny accepts the Google form
+             without erroring but silently serves only a couple of the requested
+             faces, leaving the rest to be synthesised by the browser. --}}
+        <link href="https://fonts.bunny.net/css?family=bodoni-moda:400,500,600,700,400i,500i,600i,700i|noto-naskh-arabic:400,500,600,700" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
