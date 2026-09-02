@@ -285,7 +285,7 @@ export default function SellerSettings({
                                         </Label>
                                         <Textarea
                                             id="description"
-                                            rows={4}
+                                            rows={8}
                                             value={storeForm.data.description}
                                             onChange={(event) =>
                                                 storeForm.setData(

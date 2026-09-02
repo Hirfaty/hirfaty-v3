@@ -479,7 +479,7 @@ const Create = ({
                                                     hint="Notes sur ce client — activité, contexte, ce qu’il achète."
                                                 >
                                                     <textarea
-                                                        rows={4}
+                                                        rows={8}
                                                         value={data.description}
                                                         onChange={(e) =>
                                                             setData(

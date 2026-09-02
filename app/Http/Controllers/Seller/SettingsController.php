@@ -53,7 +53,7 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'store_name' => ['required', 'string', 'max:255', Rule::unique('stores', 'store_name')->ignore($store->id)],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:2500'],
             'category_id' => ['required', 'exists:categories,id'],
             'city_id' => ['required', 'exists:cities,id'],
         ]

@@ -243,6 +243,18 @@ test('a seller description describes the shop, not the seller', function () {
         ->toBe('Atelier familial de tapis noués main.');
 });
 
+test('a description at the 2500 limit is accepted', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Juste',
+            'last_name' => 'Assez',
+            'email' => 'juste@assez.ma',
+            'role' => 'buyer',
+            'description' => str_repeat('a', 2500),
+        ])
+        ->assertSessionHasNoErrors();
+});
+
 test('an over-long description is rejected', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.users.store'), [
@@ -250,7 +262,7 @@ test('an over-long description is rejected', function () {
             'last_name' => 'Long',
             'email' => 'trop@long.ma',
             'role' => 'buyer',
-            'description' => str_repeat('a', 1001),
+            'description' => str_repeat('a', 2501),
         ])
         ->assertSessionHasErrors('description');
 });

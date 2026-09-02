@@ -33,7 +33,7 @@ class StoreSetupController extends Controller
             'store_name' => ['required', 'string', 'max:255', 'unique:stores'],
             'category_id' => ['required', 'exists:categories,id'],
             'city_id' => ['required', 'exists:cities,id'],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:2500'],
             'terms_accepted' => ['required', 'accepted'],
         ]);
 

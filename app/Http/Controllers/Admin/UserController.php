@@ -47,7 +47,7 @@ class UserController extends Controller
             // One field, two destinations: for a seller it describes the shop
             // (stores.description); for a buyer/pro it describes the person
             // and lands on users.bio.
-            'description' => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:2500'],
             // Optional at creation — there is no admin store-edit screen yet, so
             // requiring these would block onboarding whenever a photo isn't
             // ready on hand. Size/dimension caps come from config/media.php,

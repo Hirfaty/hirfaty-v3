@@ -24,7 +24,10 @@ export default function SetupStore({
         terms_accepted: false,
     });
 
-    const bioMax = 240;
+    // Kept in step with the server's max:2500 in StoreSetupController — this
+    // hard-truncates as the seller types, so a smaller number here silently
+    // caps them well below what the server would actually accept.
+    const bioMax = 2500;
 
     const canSubmit = useMemo(() => {
         return (
@@ -114,8 +117,8 @@ export default function SetupStore({
                                         e.target.value.slice(0, bioMax),
                                     )
                                 }
-                                rows={4}
-                                className="w-full resize-none border border-ink/20 bg-transparent p-4 text-base leading-relaxed text-ink focus:border-ink focus:outline-none"
+                                rows={8}
+                                className="w-full resize-y border border-ink/20 bg-transparent p-4 text-base leading-relaxed text-ink focus:border-ink focus:outline-none"
                             />
                             <div className="mt-2 flex items-center justify-between">
                                 <span className="text-xs text-ink-soft tabular-nums">
