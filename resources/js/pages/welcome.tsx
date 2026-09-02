@@ -20,6 +20,8 @@ import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
 
+//change
+
 type Media = { id: number; url: string; type: string };
 
 type FeaturedProduct = {
