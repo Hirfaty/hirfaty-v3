@@ -43,40 +43,54 @@ jobs:
     name: deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+
       - name: Deploy to VPS over SSH
         # The SSH TCP handshake to the VPS occasionally times out (network
-        # blip / VPS momentarily busy) before the script even starts.
-        # stage-release is idempotent (up -d, migrate --force), so retrying
-        # the whole step on a connection failure is safe.
-        uses: Wandalen/wretry.action@v3
-        with:
-          action: appleboy/ssh-action@v1
-          attempt_limit: 3
-          attempt_delay: 15000
-          with: |
-            host: ${{ secrets.STAGING_SSH_HOST }}
-            username: ${{ secrets.STAGING_SSH_USER }}
-            key: ${{ secrets.STAGING_SSH_KEY }}
-            port: ${{ secrets.STAGING_SSH_PORT || 22 }}
-            # Abort the whole script on the first failing command, and fail
-            # the job with it — otherwise a broken migration still reports
-            # green.
-            script_stop: true
-            command_timeout: 30m
-            script: |
-              set -euo pipefail
-              cd ~/staging-hirfaty
+        # blip / VPS momentarily busy) before the script even starts. Retry
+        # the connection a few times before giving up. stage-release is
+        # idempotent (up -d, migrate --force), so retrying the whole thing
+        # on a connection failure is safe.
+        env:
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT || 22 }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-              # Hard reset rather than `git pull`: a deploy target should match
-              # the branch exactly, and this cannot fail on a divergent history
-              # or a stray local edit. Everything the box needs but git does not
-              # track (.env, docker/seaweedfs/s3-config.json) is gitignored and
-              # therefore survives untouched.
-              git fetch --prune origin
-              git reset --hard origin/staging
+          remote_script='
+            set -euo pipefail
+            cd ~/staging-hirfaty
 
-              # stage-release, not stage-deploy: git is already synced above, and
-              # pulling again here could build one commit then migrate another.
-              make stage-release
+            # Hard reset rather than `git pull`: a deploy target should match
+            # the branch exactly, and this cannot fail on a divergent history
+            # or a stray local edit. Everything the box needs but git does not
+            # track (.env, docker/seaweedfs/s3-config.json) is gitignored and
+            # therefore survives untouched.
+            git fetch --prune origin
+            git reset --hard origin/staging
 
-              docker compose -f docker-compose.staging.yml --env-file .env ps
+            # stage-release, not stage-deploy: git is already synced above, and
+            # pulling again here could build one commit then migrate another.
+            make stage-release
+
+            docker compose -f docker-compose.staging.yml --env-file .env ps
+          '
+
+          attempt=1
+          max_attempts=3
+          until ssh -p "$SSH_PORT" -o ConnectTimeout=15 -o ServerAliveInterval=15 \
+              "$SSH_USER@$SSH_HOST" "$remote_script"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Deploy failed after $max_attempts attempts" >&2
+              exit 1
+            fi
+            echo "Attempt $attempt failed, retrying in 15s..."
+            attempt=$((attempt + 1))
+            sleep 15
+          done
