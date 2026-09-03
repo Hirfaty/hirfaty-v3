@@ -255,7 +255,19 @@ export default function EditUser({
                                     className={INPUT}
                                 />
                             </Field>
-                            <Field label="Email" error={errors.email}>
+                            {/* Optional, like phone: a user created without
+                                contact details gets them filled in here. The
+                                account simply can't log in until it has an
+                                address, which is what the warning says. */}
+                            <Field
+                                label="Email"
+                                error={errors.email}
+                                hint={
+                                    data.email.trim() === ''
+                                        ? 'Sans email, ce compte ne peut pas se connecter.'
+                                        : 'Optionnel.'
+                                }
+                            >
                                 <input
                                     type="email"
                                     value={data.email}

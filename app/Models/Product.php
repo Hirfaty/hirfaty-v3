@@ -88,6 +88,33 @@ class Product extends Model
     }
 
     /**
+     * Everything the storefront is allowed to show and sell.
+     *
+     * `published` alone is no longer enough: an admin can publish a product
+     * before its price has been agreed (base_price NULL), and an unpriced
+     * product has no figure to put on a card, sort by, or bill. It stays in
+     * the catalogue and in the admin lists — it just isn't on sale yet.
+     *
+     * Every public query goes through here rather than repeating the pair of
+     * conditions, so "priced" can never be remembered in one listing and
+     * forgotten in another.
+     */
+    public function scopeStorefront($query)
+    {
+        return $query->where('status', 'published')->whereNotNull('base_price');
+    }
+
+    /**
+     * Priced, and therefore quotable and billable. The row-level counterpart
+     * of scopeStorefront() — used on a product already in hand (a cart line,
+     * a checkout item) where re-querying would be wasteful.
+     */
+    public function isPriced(): bool
+    {
+        return $this->base_price !== null;
+    }
+
+    /**
      * Effective unit price for an audience, preferring an active sale price.
      *
      * Professional pricing is optional — a product sold only at retail falls

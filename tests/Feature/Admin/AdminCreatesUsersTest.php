@@ -4,7 +4,9 @@ use App\Models\Category;
 use App\Models\City;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\WelcomeUser;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -306,4 +308,122 @@ test('sellers are still blocked from buyer routes', function () {
     ]);
 
     $this->actingAs($seller)->get(route('cart.show'))->assertForbidden();
+});
+
+/**
+ * Artisans are often signed up in person, before the CEO has their contact
+ * details. The account is created anyway and completed later from the edit
+ * screen — see the users.email nullable migration.
+ */
+test('admin creates a buyer with neither email nor phone', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Sans',
+            'last_name' => 'Contact',
+            'role' => 'buyer',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $user = User::firstWhere('first_name', 'Sans');
+
+    expect($user)->not->toBeNull()
+        ->and($user->email)->toBeNull()
+        ->and($user->phone_number)->toBeNull()
+        // Nothing to pre-verify without an address on file.
+        ->and($user->email_verified_at)->toBeNull();
+});
+
+test('admin creates a seller with a store but no contact details', function () {
+    $category = Category::create([
+        'slug' => 'tapis',
+        'name' => ['fr' => 'Tapis', 'ar' => 'زربية', 'en' => 'Rugs'],
+    ]);
+    $city = City::create(['name' => 'Taznakht']);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Fatima',
+            'last_name' => 'Ait',
+            'role' => 'seller',
+            'store_name' => 'Tapis Taznakht',
+            'category_id' => $category->id,
+            'city_id' => $city->id,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $user = User::firstWhere('first_name', 'Fatima');
+
+    expect($user->email)->toBeNull()
+        ->and(Store::firstWhere('user_id', $user->id)->store_name)
+        ->toBe('Tapis Taznakht');
+});
+
+/**
+ * NULL is exempt from a unique index in both MySQL and Postgres, so any
+ * number of contactless accounts can coexist. Worth pinning: if the index
+ * were ever rebuilt in a way that treats NULLs as equal, the second create
+ * would start failing and the feature would silently break after one use.
+ */
+test('several users can be contactless at once', function () {
+    foreach (['Un', 'Deux', 'Trois'] as $name) {
+        $this->actingAs($this->admin)
+            ->post(route('admin.users.store'), [
+                'first_name' => $name,
+                'last_name' => 'Contact',
+                'role' => 'buyer',
+            ])
+            ->assertSessionHasNoErrors();
+    }
+
+    expect(User::whereNull('email')->count())->toBe(3);
+});
+
+/**
+ * Optional does not mean unvalidated: a real address still has to be a real
+ * address, and still has to be unique.
+ */
+test('a malformed or duplicate email is still rejected', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Mauvais',
+            'last_name' => 'Email',
+            'email' => 'pas-une-adresse',
+            'role' => 'buyer',
+        ])
+        ->assertSessionHasErrors('email');
+
+    User::factory()->create(['email' => 'pris@exemple.ma']);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.store'), [
+            'first_name' => 'Doublon',
+            'last_name' => 'Email',
+            'email' => 'pris@exemple.ma',
+            'role' => 'buyer',
+        ])
+        ->assertSessionHasErrors('email');
+});
+
+/**
+ * Every notification in app/Notifications is mail-only, and a queued job with
+ * no To address can only fail in the worker. A contactless seller reaches
+ * this for real: an admin can list products on their behalf, so a buyer's
+ * order would fire NewOrderReceived at an account with nowhere to send it.
+ */
+test('notifications are dropped for a contactless user', function () {
+    Notification::fake();
+
+    User::factory()->create(['email' => null])
+        ->notify(new WelcomeUser('secret'));
+
+    Notification::assertNothingSent();
+
+    // ...and start flowing again as soon as an address exists, so this is a
+    // deferral rather than a permanent hole.
+    User::factory()->create(['email' => 'joignable@exemple.ma'])
+        ->notify(new WelcomeUser('secret'));
+
+    Notification::assertCount(1);
 });

@@ -36,7 +36,10 @@ class UserController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            // Both optional: an artisan signed up in person often has neither
+            // to hand. The account is created anyway and the admin fills the
+            // contact details in later from the edit screen.
+            'email' => ['nullable', 'email', 'unique:users,email'],
             'phone_number' => ['nullable', 'string', 'unique:users,phone_number'],
             'role' => ['required', 'in:seller,buyer,professional_buyer'],
             'store_name' => ['required_if:role,seller', 'nullable', 'string', 'unique:stores,store_name'],
@@ -63,13 +66,15 @@ class UserController extends Controller
         $user = User::create([
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
-            'email' => $data['email'],
+            'email' => $data['email'] ?? null,
             'phone_number' => $data['phone_number'] ?? null,
             'role' => $data['role'],
             // Sellers describe their shop instead, on the store record below.
             'bio' => $data['role'] === 'seller' ? null : ($data['description'] ?? null),
             'password' => Hash::make($plainPassword),
-            'email_verified_at' => now(),
+            // Nothing to pre-verify when there's no address on file; it stays
+            // null so the normal verification flow applies once one is added.
+            'email_verified_at' => isset($data['email']) ? now() : null,
         ]);
 
         if ($data['role'] === 'seller') {
@@ -157,8 +162,10 @@ class UserController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
+            // Optional for the same reason as on create — and this is the
+            // screen where a missing address eventually gets filled in.
             // Ignore this user's own row so re-saving doesn't collide with itself.
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'phone_number' => ['nullable', 'string', Rule::unique('users', 'phone_number')->ignore($user->id)],
             'role' => ['required', 'in:seller,buyer,professional_buyer'],
             'store_name' => [
@@ -178,15 +185,30 @@ class UserController extends Controller
         DB::transaction(function () use ($user, $data, $request) {
             $becomesSeller = $data['role'] === 'seller';
 
+            $wasContactless = $user->email === null;
+
             $user->update([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
-                'email' => $data['email'],
+                'email' => $data['email'] ?? null,
                 'phone_number' => $data['phone_number'] ?? null,
                 'role' => $data['role'],
                 // Sellers describe their shop on the store record instead.
                 'bio' => $becomesSeller ? null : ($data['description'] ?? null),
             ]);
+
+            /*
+             * Keep email_verified_at consistent with the address itself.
+             * An admin filling in the address of a contactless account is the
+             * same trusted act as supplying one at creation, so it is
+             * pre-verified the same way; clearing the address drops the
+             * verification, which would otherwise vouch for nothing.
+             */
+            if ($wasContactless && $user->email !== null) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            } elseif ($user->email === null && $user->email_verified_at !== null) {
+                $user->forceFill(['email_verified_at' => null])->save();
+            }
 
             /*
              * Verification is a statement about a *professional buyer*, so it
@@ -455,6 +477,16 @@ class UserController extends Controller
     {
         if ($user->role === 'super_admin') {
             abort(403);
+        }
+
+        // The token repository is keyed by email, and the reset screen
+        // identifies the account by it — there is nothing to mint a link
+        // against until the admin fills one in.
+        if ($user->email === null) {
+            return back()->with(
+                'error',
+                'Ce compte n’a pas encore d’adresse email. Ajoutez-en une avant de générer un lien de connexion.'
+            );
         }
 
         $broker = config('auth.defaults.passwords');

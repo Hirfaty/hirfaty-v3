@@ -114,8 +114,11 @@ class ProductController extends Controller
                 'sku' => ($data['sku'] ?? null) ?: null,
                 'description' => $data['description'] ?? null,
 
-                // Retail price list. A draft may not have a price yet.
-                'base_price' => $data['base_price'] ?? 0,
+                // Retail price list. NULL means "not priced yet", which is not
+                // the same as 0 (free) — an unpriced product stays off the
+                // storefront until a figure is agreed, rather than being
+                // published at nothing.
+                'base_price' => $data['base_price'] ?? null,
                 'sale_price' => $data['sale_price'] ?? null,
 
                 // Professional price list — optional; when absent the product is
@@ -176,7 +179,8 @@ class ProductController extends Controller
                 // Blank strings become null so the unique index stays usable.
                 'sku' => ($data['sku'] ?? null) ?: null,
                 'description' => $data['description'] ?? null,
-                'base_price' => $data['base_price'] ?? 0,
+                // See store(): NULL is "not priced yet", not free.
+                'base_price' => $data['base_price'] ?? null,
                 'sale_price' => $data['sale_price'] ?? null,
                 'professional_price' => $data['professional_price'] ?? null,
                 'professional_sale_price' => $data['professional_sale_price'] ?? null,
@@ -230,8 +234,17 @@ class ProductController extends Controller
             'category_id' => [$required, 'exists:categories,id'],
             'status' => ['nullable', 'in:draft,published'],
 
-            // Retail pricing.
-            'base_price' => [$required, 'numeric', 'min:0'],
+            /*
+             * Retail pricing. `base_price` is optional even when publishing:
+             * the admin catalogues an artisan's work before the price has
+             * been agreed, and inventing a 0 would mean "free", not
+             * "unpriced". An unpriced product is kept out of the storefront
+             * by Product::scopeStorefront() until a figure is filled in.
+             */
+            // A discount off a price that doesn't exist yet is meaningless,
+            // and `lt:base_price` silently passes when base_price is absent —
+            // so a sale price drags the base price back to being required.
+            'base_price' => ['nullable', 'required_with:sale_price', 'numeric', 'min:0'],
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lt:base_price'],
 
             // Professional pricing.

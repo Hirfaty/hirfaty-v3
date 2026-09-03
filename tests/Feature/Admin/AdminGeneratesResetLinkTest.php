@@ -125,3 +125,21 @@ test('a non-admin cannot generate a reset link', function () {
     expect(DB::table('password_reset_tokens')->where('email', $otherBuyer->email)->count())
         ->toBe(0);
 });
+
+/**
+ * The token repository is keyed by email and the reset screen identifies the
+ * account by it, so there is nothing to mint against on a contactless account
+ * (see the users.email nullable migration). Fail with a readable message
+ * rather than a 500 from a null primary key.
+ */
+test('no reset link is generated for a user without an email', function () {
+    $contactless = User::factory()->create(['role' => 'buyer', 'email' => null]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.reset-link', $contactless))
+        ->assertRedirect()
+        ->assertSessionMissing('reset_link')
+        ->assertSessionHas('error');
+
+    expect(DB::table('password_reset_tokens')->count())->toBe(0);
+});

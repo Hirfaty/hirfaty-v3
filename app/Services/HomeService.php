@@ -19,7 +19,7 @@ class HomeService
     public function featuredProducts(int $limit = 6): Collection
     {
         return Product::query()
-            ->where('status', 'published')
+            ->storefront()
             ->whereHas('store')
             ->with(['store.city', 'category', 'images'])
             ->withCount(['wishlists'])

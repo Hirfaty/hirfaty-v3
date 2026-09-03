@@ -44,6 +44,12 @@ test('a draft can be saved with only a name and seller', function () {
         ->and($product->reviewed_at)->toBeNull();
 });
 
+/**
+ * `base_price` is deliberately absent from this list: it is optional even on
+ * publish, because the admin catalogues an artisan's work before the price is
+ * agreed. An unpriced product is kept off the storefront instead of being
+ * refused — see AdminUnpricedProductTest.
+ */
 test('publishing still enforces the full rule set', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.products.store'), [
@@ -51,7 +57,7 @@ test('publishing still enforces the full rule set', function () {
             'name' => 'Incomplet',
             'status' => 'published',
         ])
-        ->assertSessionHasErrors(['category_id', 'base_price']);
+        ->assertSessionHasErrors(['category_id', 'stock']);
 
     expect(Product::count())->toBe(0);
 });

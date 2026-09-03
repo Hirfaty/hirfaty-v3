@@ -295,3 +295,59 @@ test('a non-admin cannot reach the edit screen', function () {
 
     expect($target->fresh()->first_name)->not->toBe('Piraté');
 });
+
+/**
+ * The completion half of contactless creation: the admin comes back once they
+ * have the artisan's details. Filling the address in is the same trusted act
+ * as supplying one at creation, so it is pre-verified the same way and the
+ * account can log in immediately.
+ */
+test('adding an email to a contactless user pre-verifies it', function () {
+    $user = User::factory()->create([
+        'role' => 'buyer',
+        'email' => null,
+        'email_verified_at' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.update', $user), [
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => 'enfin@joignable.ma',
+            'role' => 'buyer',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $user->refresh();
+
+    expect($user->email)->toBe('enfin@joignable.ma')
+        ->and($user->email_verified_at)->not->toBeNull();
+});
+
+/**
+ * The reverse: a verification that vouches for an address no longer on file
+ * would be meaningless, so it is dropped with the address.
+ */
+test('clearing the email drops its verification', function () {
+    $user = User::factory()->create([
+        'role' => 'buyer',
+        'email' => 'partant@exemple.ma',
+        'email_verified_at' => now(),
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.users.update', $user), [
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => '',
+            'role' => 'buyer',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $user->refresh();
+
+    expect($user->email)->toBeNull()
+        ->and($user->email_verified_at)->toBeNull();
+});

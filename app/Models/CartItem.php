@@ -56,12 +56,21 @@ class CartItem extends Model
      * the product's list price when it defines one. ProductVariant::priceFor()
      * already falls back to the parent product, so this stays correct for a
      * variant that sets no override.
+     *
+     * Null when the line cannot be priced at all — an admin can now publish a
+     * product before its price is agreed (base_price NULL), and a variant
+     * without its own override inherits that. This used to coerce to 0.0,
+     * which since base_price became nullable would quietly bill an unpriced
+     * item as free; CheckoutService rejects the null instead. Note a variant
+     * *with* an override is still priced even when its parent is not.
      */
-    public function unitPriceFor(string $audience): float
+    public function unitPriceFor(string $audience): ?float
     {
         $source = $this->variant ?? $this->product;
 
-        return (float) ($source?->priceFor($audience) ?? 0);
+        $price = $source?->priceFor($audience);
+
+        return $price === null ? null : (float) $price;
     }
 
     /**

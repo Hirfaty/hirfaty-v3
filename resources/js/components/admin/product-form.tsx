@@ -404,15 +404,26 @@ export default function ProductForm({
                         description="Deux grilles indépendantes : particuliers et professionnels."
                     >
                         <div className="grid gap-5 sm:grid-cols-2">
+                            {/* Optional: the admin catalogues a piece before
+                                the price is agreed with the artisan. An
+                                unpriced product is kept off the storefront
+                                (Product::scopeStorefront) rather than sold at
+                                nothing, which is what the hint warns about. */}
                             <Field
                                 label="Prix de base"
                                 error={errors.base_price}
+                                hint={
+                                    data.base_price === ''
+                                        ? 'Laissez vide si le prix n’est pas encore fixé — le produit ne sera pas visible en boutique tant qu’il n’a pas de prix.'
+                                        : undefined
+                                }
                             >
                                 <input
                                     type="number"
                                     min="0"
                                     step="0.01"
                                     value={data.base_price}
+                                    placeholder="À définir"
                                     onChange={(e) =>
                                         set('base_price', e.target.value)
                                     }

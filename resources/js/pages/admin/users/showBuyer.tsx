@@ -288,7 +288,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                                         Email
                                     </p>
                                     <p className="truncate text-ink">
-                                        {user.email}
+                                        {user.email || '—'}
                                     </p>
                                 </div>
                             </div>

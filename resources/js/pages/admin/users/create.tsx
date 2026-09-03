@@ -90,6 +90,33 @@ function Field({
 }
 
 /**
+ * "I don't have it yet" toggle sitting under an optional contact field.
+ * Ticking it clears whatever was typed, so the waiver and the value can never
+ * disagree — the server reads the empty field, not the checkbox.
+ */
+function NotAvailableToggle({
+    label,
+    checked,
+    onChange,
+}: {
+    label: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}) {
+    return (
+        <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-ink-soft">
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                className="size-3.5 rounded border-border text-ink focus:ring-2 focus:ring-ink/10"
+            />
+            {label}
+        </label>
+    );
+}
+
+/**
  * Object URL for a picked file, recreated when the file changes and revoked
  * on cleanup so review-step thumbnails don't leak blob URLs.
  *
@@ -185,12 +212,21 @@ const Create = ({
     const currentIndex = Math.min(stepIndex, steps.length - 1);
     const current = steps[currentIndex].id;
 
+    /*
+     * Contact details are often not to hand when an artisan is signed up in
+     * person, so each can be explicitly waived. Kept as local state rather
+     * than form data: the server infers "not provided" from the empty field
+     * itself, so there is nothing extra to send.
+     */
+    const [noEmail, setNoEmail] = useState(false);
+    const [noPhone, setNoPhone] = useState(false);
+
     // Client-side gate so the CEO can't reach review with empty fields.
     const identityComplete =
         data.first_name.trim() !== '' &&
         data.last_name.trim() !== '' &&
-        data.email.trim() !== '' &&
-        data.phone_number.trim() !== '';
+        (noEmail || data.email.trim() !== '') &&
+        (noPhone || data.phone_number.trim() !== '');
 
     const shopComplete =
         data.store_name.trim() !== '' &&
@@ -434,40 +470,79 @@ const Create = ({
                                             />
                                         </Field>
 
-                                        <Field
-                                            label="Email"
-                                            error={errors.email}
-                                        >
-                                            <input
-                                                type="email"
-                                                value={data.email}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'email',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="hassan@exemple.ma"
-                                                className={INPUT}
-                                            />
-                                        </Field>
+                                        <div>
+                                            <Field
+                                                label="Email"
+                                                error={errors.email}
+                                            >
+                                                <input
+                                                    type="email"
+                                                    value={data.email}
+                                                    disabled={noEmail}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'email',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="hassan@exemple.ma"
+                                                    className={`${INPUT} disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-ink-soft/60`}
+                                                />
+                                            </Field>
+                                            <NotAvailableToggle
+                                                label="Je n’ai pas son email"
+                                                checked={noEmail}
+                                                onChange={(checked) => {
+                                                    setNoEmail(checked);
 
-                                        <Field
-                                            label="Téléphone"
-                                            error={errors.phone_number}
-                                        >
-                                            <input
-                                                value={data.phone_number}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'phone_number',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="0612345678"
-                                                className={INPUT}
+                                                    if (checked) {
+                                                        setData('email', '');
+                                                    }
+                                                }}
                                             />
-                                        </Field>
+                                            {noEmail && (
+                                                <p className="mt-1.5 text-xs text-amber-700">
+                                                    Le compte sera créé, mais il
+                                                    ne pourra pas se connecter
+                                                    tant qu’une adresse email
+                                                    n’est pas ajoutée.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <Field
+                                                label="Téléphone"
+                                                error={errors.phone_number}
+                                            >
+                                                <input
+                                                    value={data.phone_number}
+                                                    disabled={noPhone}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'phone_number',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="0612345678"
+                                                    className={`${INPUT} disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-ink-soft/60`}
+                                                />
+                                            </Field>
+                                            <NotAvailableToggle
+                                                label="Je n’ai pas son téléphone"
+                                                checked={noPhone}
+                                                onChange={(checked) => {
+                                                    setNoPhone(checked);
+
+                                                    if (checked) {
+                                                        setData(
+                                                            'phone_number',
+                                                            '',
+                                                        );
+                                                    }
+                                                }}
+                                            />
+                                        </div>
 
                                         {/* Sellers describe their shop on the
                                             next step instead. */}
@@ -705,11 +780,19 @@ const Create = ({
                                                 />
                                                 <Summary
                                                     label="Email"
-                                                    value={data.email}
+                                                    value={
+                                                        noEmail
+                                                            ? 'À compléter plus tard'
+                                                            : data.email
+                                                    }
                                                 />
                                                 <Summary
                                                     label="Téléphone"
-                                                    value={data.phone_number}
+                                                    value={
+                                                        noPhone
+                                                            ? 'À compléter plus tard'
+                                                            : data.phone_number
+                                                    }
                                                 />
                                                 {!isSeller && (
                                                     <Summary

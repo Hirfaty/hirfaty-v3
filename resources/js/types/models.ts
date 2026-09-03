@@ -113,7 +113,12 @@ export interface Product {
     slug: string;
     sku: string | null;
     description: string | null;
-    base_price: string;
+    /**
+     * Null when the admin catalogued the piece before agreeing a price. Such
+     * a product never reaches the storefront, so buyer-facing screens can
+     * treat it as always set; the admin screens must render the empty case.
+     */
+    base_price: string | null;
     sale_price: string | null;
     /** Professional (bulk) price list; null when sold at retail only. */
     professional_price: string | null;

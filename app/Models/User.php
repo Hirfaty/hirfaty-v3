@@ -30,7 +30,7 @@ use Override;
  * @property string|null $avatar
  * @property string|null $bio
  * @property int $is_banned
- * @property string $email
+ * @property string|null $email
  * @property CarbonImmutable|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -76,7 +76,13 @@ use Override;
 class User extends Authenticatable implements AuthMustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    // Notifiable::notify is aliased rather than overridden outright: the trait
+    // is used by this class, not inherited, so parent::notify() would resolve
+    // to Authenticatable and fatal. See notify() below.
+    use HasFactory, Notifiable {
+        Notifiable::notify as notifyViaTrait;
+    }
+    use TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -141,6 +147,27 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     public function isSeller(): bool
     {
         return $this->role === 'seller';
+    }
+
+    /**
+     * Admin-created accounts may have no email yet (see the users.email
+     * nullable migration), and every notification in app/Notifications is
+     * mail-only — dispatching one would queue a job that can only fail in the
+     * worker with "no To address". A seller reaches this: an admin can list
+     * products for them, so a buyer's order fires NewOrderReceived at an
+     * account that has no address on file.
+     *
+     * Drop it instead. Nothing is lost that could have been delivered, and
+     * the notification resumes working the moment an address is filled in.
+     * Revisit if a database/SMS channel is ever added.
+     */
+    public function notify($instance): void
+    {
+        if ($this->email === null) {
+            return;
+        }
+
+        $this->notifyViaTrait($instance);
     }
 
     public function sendEmailVerificationNotification()

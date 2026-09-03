@@ -346,9 +346,17 @@ function AdminProductShow({ product }: AdminProductShowProps) {
 
                             <div className="grid grid-cols-2 gap-5">
                                 <Field label="Prix de base">
-                                    <span className="text-xl font-semibold text-ink">
-                                        {product.base_price} MAD
-                                    </span>
+                                    {product.base_price === null ? (
+                                        // Not priced yet — kept out of the
+                                        // storefront until a figure is set.
+                                        <span className="text-xl font-semibold text-amber-700">
+                                            À définir
+                                        </span>
+                                    ) : (
+                                        <span className="text-xl font-semibold text-ink">
+                                            {product.base_price} MAD
+                                        </span>
+                                    )}
                                 </Field>
                                 {product.sale_price && (
                                     <Field label="Prix promo">

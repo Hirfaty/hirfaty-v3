@@ -65,8 +65,8 @@ class ProductScoringService
     // ─── Product detail ──────────────────────────────────────
     public function show(string $slug)
     {
-        $product = Product::where('slug', $slug)
-            ->where('status', 'published')
+        $product = Product::storefront()
+            ->where('slug', $slug)
             ->with(['store.city', 'category', 'images', 'videos'])
             ->withCount('wishlists')
             ->firstOrFail();

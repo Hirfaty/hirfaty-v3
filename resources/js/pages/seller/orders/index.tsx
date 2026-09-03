@@ -74,7 +74,7 @@ export default function SellerOrders({
                 !q ||
                 o.reference.toLowerCase().includes(q) ||
                 customerName.includes(q) ||
-                o.buyer.email.toLowerCase().includes(q);
+                (o.buyer.email?.toLowerCase().includes(q) ?? false);
 
             return matchesStatus && matchesQuery;
         });

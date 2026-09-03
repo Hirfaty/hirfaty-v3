@@ -342,7 +342,7 @@ const ShowSeller = ({
                                         Email
                                     </p>
                                     <p className="truncate text-ink">
-                                        {user.email}
+                                        {user.email || '—'}
                                     </p>
                                 </div>
                             </div>

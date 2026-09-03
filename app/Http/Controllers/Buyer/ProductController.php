@@ -27,7 +27,7 @@ class ProductController extends Controller
         $audience = Product::audienceFor($request->user());
 
         $query = Product::query()
-            ->where('status', 'published')
+            ->storefront()
             // A product may be listed for consumers, for the trade, or both.
             // Without this the storefront showed wholesale-only items to
             // guests — `visibility` existed but was never enforced.
@@ -144,7 +144,7 @@ class ProductController extends Controller
      */
     private function priceCeiling(string $audience): int
     {
-        $max = (float) Product::where('status', 'published')
+        $max = (float) Product::storefront()
             ->whereIn('visibility', ['both', $audience])
             ->max('base_price');
 
@@ -153,8 +153,8 @@ class ProductController extends Controller
 
     public function show(string $slug)
     {
-        $product = Product::where('slug', $slug)
-            ->where('status', 'published')
+        $product = Product::storefront()
+            ->where('slug', $slug)
             ->with([
                 'store.city',
                 'store.user',
@@ -195,9 +195,9 @@ class ProductController extends Controller
      */
     private function moreFromStore(Product $product)
     {
-        return Product::where('store_id', $product->store_id)
+        return Product::storefront()
+            ->where('store_id', $product->store_id)
             ->where('id', '!=', $product->id)
-            ->where('status', 'published')
             ->with(['images'])
             ->latest()
             ->limit(4)
@@ -213,7 +213,7 @@ class ProductController extends Controller
      */
     private function relatedProducts(Product $product)
     {
-        return Product::where('status', 'published')
+        return Product::storefront()
             ->where('id', '!=', $product->id)
             ->where('store_id', '!=', $product->store_id)
             ->when(

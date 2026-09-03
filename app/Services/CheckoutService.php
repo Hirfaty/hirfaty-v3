@@ -52,11 +52,42 @@ class CheckoutService
          * the product's list price; CartItem::unitPriceFor() falls back to the
          * product for a line with no variant.
          */
-        $unitPrice = fn (CartItem $item): float => $item->unitPriceFor($audience);
+        $unitPrice = function (CartItem $item) use ($audience): float {
+            $price = $item->unitPriceFor($audience);
 
-        DB::transaction(function () use ($cart, $checkoutData, $unitPrice, &$orders) {
+            /*
+             * Refuse rather than fall back to 0. An admin may publish a
+             * product before agreeing its price (base_price NULL), and such a
+             * product is kept off the storefront — but one already sitting in
+             * a basket when its price was cleared would otherwise be billed as
+             * free, and the seller's Earning written against that nothing.
+             *
+             * Belt and braces with the pre-flight check below: this closure is
+             * the only path from a cart line to money, so nothing unpriced can
+             * reach an order total or an order line by any route.
+             */
+            if ($price === null) {
+                throw ValidationException::withMessages([
+                    'cart' => "Le produit '".($item->product->name ?? 'Inconnu')
+                        ."' n'a pas encore de prix et ne peut pas être commandé. Retirez-le du panier.",
+                ]);
+            }
+
+            return $price;
+        };
+
+        DB::transaction(function () use ($cart, $checkoutData, $unitPrice, $audience, &$orders) {
             // 1. Validate stock for ALL items first with lock to avoid race conditions
             foreach ($cart->items as $item) {
+                // Priced-ness is checked up front alongside stock, so an
+                // unpriced basket fails before any row is locked or written.
+                if ($item->unitPriceFor($audience) === null) {
+                    throw ValidationException::withMessages([
+                        'cart' => "Le produit '".($item->product->name ?? 'Inconnu')
+                            ."' n'a pas encore de prix et ne peut pas être commandé. Retirez-le du panier.",
+                    ]);
+                }
+
                 /*
                  * Lock the row that actually holds the stock. For a variant
                  * line that is the variant, not the product: a variant

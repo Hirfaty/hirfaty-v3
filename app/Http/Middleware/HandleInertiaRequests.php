@@ -96,7 +96,13 @@ class HandleInertiaRequests extends Middleware
         $audience = Product::audienceFor($user);
 
         $items = $cart->items->map(function ($item) use ($audience) {
-            $unit = $item->unitPriceFor($audience);
+            /*
+             * Null when the product has no agreed price yet. Shown as 0 in the
+             * header rather than crashing the layout; checkout refuses the
+             * line outright, so this is only ever a display placeholder for a
+             * basket that cannot be paid for as it stands.
+             */
+            $unit = $item->unitPriceFor($audience) ?? 0.0;
             $qty = (int) $item->quantity;
 
             return [

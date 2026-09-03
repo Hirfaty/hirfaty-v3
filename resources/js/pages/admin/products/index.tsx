@@ -605,6 +605,13 @@ function AdminProducts({
                                                             }
                                                         </p>
                                                     </>
+                                                ) : selected.base_price ===
+                                                  null ? (
+                                                    // Unpriced: off the
+                                                    // storefront until set.
+                                                    <p className="text-lg font-semibold text-amber-700">
+                                                        À définir
+                                                    </p>
                                                 ) : (
                                                     <p className="text-lg font-semibold text-ink">
                                                         {selected.base_price}{' '}

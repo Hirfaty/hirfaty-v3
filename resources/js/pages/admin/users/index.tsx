@@ -336,7 +336,7 @@ export default function UsersIndex({
                                     <TableCell>
                                         <div className="flex flex-col text-sm">
                                             <span className="text-ink">
-                                                {user.email}
+                                                {user.email || '—'}
                                             </span>
                                             <span className="text-ink-soft">
                                                 {user.phone_number || '—'}

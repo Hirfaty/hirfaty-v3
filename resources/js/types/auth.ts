@@ -8,8 +8,12 @@ export type User = {
     id: number;
     first_name: string;
     last_name: string;
-    phone_number: string;
-    email: string;
+    phone_number: string | null;
+    /**
+     * Null on an account an admin created before having the artisan's
+     * details. Such an account cannot log in until an address is filled in.
+     */
+    email: string | null;
     role: UserRole;
     is_banned: boolean;
     avatar?: string;

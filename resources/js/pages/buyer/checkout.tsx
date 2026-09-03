@@ -25,8 +25,12 @@ const Checkout = ({ cart, cities }: { cart: Cart; cities: City[] }) => {
             currency: 'MAD',
         }).format(value);
 
+    // base_price is null only for a product an admin has not priced yet, and
+    // such a product never reaches the storefront or checkout — the server
+    // rejects the line. Fall back to 0 so the summary still renders if one
+    // ever slips through, rather than showing NaN.
     const getPrice = (product: Product) =>
-        parseFloat(product.sale_price ?? product.base_price);
+        parseFloat(product.sale_price ?? product.base_price ?? '0');
 
     // Group by store
     const grouped = cart.items.reduce<
