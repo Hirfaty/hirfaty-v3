@@ -29,3 +29,20 @@ Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) 
 
     return view("emails.buyer.order-status.cancelled.{$locale}", compact('order', 'user'));
 })->middleware('auth');
+
+/*
+ * Verification email, both audiences and all three locales:
+ *   /preview/email/verify/buyer/fr   ...   /preview/email/verify/seller/ar
+ */
+Route::get('/preview/email/verify/{audience}/{locale}', function (string $audience, string $locale) {
+    abort_unless(in_array($audience, ['buyer', 'seller'], true), 404);
+    abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
+
+    return view('emails.verify', [
+        'url' => url('/verify-email/1/preview-signature'),
+        'user' => auth()->user(),
+        'locale' => $locale,
+        'audience' => $audience,
+        'expiresInMinutes' => config('auth.verification.expire', 60),
+    ]);
+})->middleware('auth');

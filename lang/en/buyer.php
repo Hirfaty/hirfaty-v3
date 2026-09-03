@@ -99,6 +99,11 @@ return [
     // Variants
     'detail.select_variant_prompt' => 'Choose an option',
 
+    // Add to cart feedback
+    'detail.adding' => 'Added to cart',
+    'detail.added_to_cart' => 'Added to your cart',
+    'detail.add_failed' => 'Could not add to cart.',
+
     // Page furniture
     'detail.home' => 'Home',
     'detail.eyebrow_handmade' => 'Handmade',

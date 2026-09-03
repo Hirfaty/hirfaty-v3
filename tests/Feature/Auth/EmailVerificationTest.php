@@ -18,7 +18,10 @@ test('email verification screen can be rendered', function () {
     $response->assertOk();
 });
 
-test('email can be verified', function () {
+test('a verified buyer is sent to the market, not the dashboard', function () {
+    // The factory default role is 'buyer'. App\Http\Responses\VerifyEmailResponse
+    // routes by role the same way LoginResponse does — a buyer's first real
+    // screen after verifying should be somewhere they can actually shop.
     $user = User::factory()->unverified()->create();
 
     Event::fake();
@@ -33,7 +36,33 @@ test('email can be verified', function () {
 
     Event::assertDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+    $response->assertRedirect(route('products.index', absolute: false));
+});
+
+test('a verified seller is sent to their shop', function () {
+    $user = User::factory()->unverified()->create(['role' => 'seller']);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)],
+    );
+
+    $this->actingAs($user)->get($verificationUrl)
+        ->assertRedirect(route('seller.products.index', absolute: false));
+});
+
+test('a verified professional buyer is also sent to the market', function () {
+    $user = User::factory()->unverified()->create(['role' => 'professional_buyer']);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)],
+    );
+
+    $this->actingAs($user)->get($verificationUrl)
+        ->assertRedirect(route('products.index', absolute: false));
 });
 
 test('email is not verified with invalid hash', function () {
@@ -93,7 +122,7 @@ test('already verified user visiting verification link is redirected without fir
     );
 
     $this->actingAs($user)->get($verificationUrl)
-        ->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+        ->assertRedirect(route('products.index', absolute: false));
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();

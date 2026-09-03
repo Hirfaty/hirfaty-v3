@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     BadgePercent,
+    Check,
     CheckCircle2,
     Clock,
     Hand,
@@ -17,7 +18,8 @@ import {
     Store as StoreIcon,
     Truck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -373,6 +375,24 @@ const ProductDetail = ({
     const [activeIdx, setActiveIdx] = useState(0);
     const [qty, setQty] = useState(1);
     const [wished, setWished] = useState(inWishlist);
+    /**
+     * Holds the Add-to-Cart button in its confirming state for 3s after a
+     * click, so the action reads as having landed even though the guest path
+     * is instantaneous and the server path only re-renders the header count.
+     */
+    const [adding, setAdding] = useState(false);
+
+    useEffect(() => {
+        if (!adding) {
+            return;
+        }
+
+        const timer = setTimeout(() => setAdding(false), 3000);
+
+        // Cleared on unmount too, so navigating away mid-window can't fire
+        // setState on a gone component.
+        return () => clearTimeout(timer);
+    }, [adding]);
 
     const guestCart = useGuestCart();
 
@@ -461,13 +481,26 @@ const ProductDetail = ({
         setQty(1);
     };
 
+    /** Name the shopper actually chose, for the confirmation message. */
+    const addedLabel = selectedVariant
+        ? `${product.name} — ${selectedVariant.label}`
+        : product.name;
+
     const handleAddToCart = () => {
-        if (needsChoice) {
+        if (needsChoice || adding) {
             return;
         }
 
         const unitPrice =
             selectedVariant?.price ?? product.sale_price ?? product.base_price;
+
+        setAdding(true);
+
+        const confirm = () => {
+            toast.success(t('buyer.detail.added_to_cart'), {
+                description: addedLabel,
+            });
+        };
 
         if (auth.user) {
             router.post(
@@ -477,7 +510,21 @@ const ProductDetail = ({
                     variant_id: selectedVariant?.id ?? null,
                     quantity: qty,
                 },
-                { preserveScroll: true },
+                {
+                    preserveScroll: true,
+                    onSuccess: confirm,
+                    /*
+                     * The server still refuses on a stock race or a variant
+                     * pulled mid-visit. Surface its message rather than
+                     * showing a success toast for something that didn't
+                     * happen.
+                     */
+                    onError: (errors) =>
+                        toast.error(
+                            Object.values(errors)[0] ??
+                                t('buyer.detail.add_failed'),
+                        ),
+                },
             );
         } else {
             guestCart.addItem({
@@ -490,6 +537,7 @@ const ProductDetail = ({
                 image: media[0]?.url ?? null,
                 store_name: product.store.store_name,
             });
+            confirm();
         }
     };
 
@@ -520,17 +568,49 @@ const ProductDetail = ({
         <div className="min-h-screen bg-souk-paper">
             <SiteHeader />
 
-            <section className="container grid grid-cols-12 gap-8 pt-6 pb-12 lg:gap-14">
+            {/*
+             * No top padding at lg: the gallery is a full viewport tall and
+             * pins at top-0, so a padded row would leave a strip of page
+             * showing above it once it sticks.
+             */}
+            <section className="container grid grid-cols-12 gap-8 pt-6 pb-12 lg:gap-14 lg:pt-0">
                 {/*
-                 * Gallery. Sticky so the piece stays in view while the buying
-                 * details scroll past it, and height-capped (rather than
-                 * filling its column) so a tall photo can't push the page
-                 * out of proportion.
+                 * Gallery. Sticky and a full viewport tall, so the piece holds
+                 * the screen while the buying details scroll past it. The
+                 * thumbnails sit *over* the photograph's top corner rather than
+                 * in a rail beside it — a rail would eat width the image needs
+                 * to fill that height without letterboxing.
+                 *
+                 * On small screens it drops to a fixed 70svh: `h-screen` there
+                 * would push the price and the Add-to-Cart button entirely
+                 * below the fold. svh, not vh, so the mobile browser chrome
+                 * collapsing doesn't resize it mid-scroll.
                  */}
-                <div className="col-span-12 lg:sticky lg:top-6 lg:col-span-6 lg:self-start">
-                    <div className="flex gap-3 md:gap-4">
+                <div className="col-span-12 h-[70svh] lg:sticky lg:top-0 lg:col-span-6 lg:h-screen lg:self-start">
+                    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10 lg:rounded-none lg:ring-0">
+                        {active?.type === 'video' ? (
+                            <video
+                                key={active.id}
+                                src={active.url}
+                                controls
+                                className="h-full w-full object-cover"
+                            />
+                        ) : active ? (
+                            <img
+                                key={active.id}
+                                src={active.url}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
+                                <ZellijStarIcon className="h-10 w-10" />
+                            </div>
+                        )}
+
+                        {/* Thumbnails, over the top-left of the photograph. */}
                         {media.length > 1 && (
-                            <div className="flex w-16 shrink-0 flex-col gap-3 md:w-[4.5rem]">
+                            <div className="absolute start-4 top-4 flex max-h-[calc(100%-2rem)] flex-col gap-2.5 overflow-y-auto md:start-5 md:top-5">
                                 {media.map((m, i) => (
                                     <button
                                         key={m.id}
@@ -539,10 +619,10 @@ const ProductDetail = ({
                                             'buyer.detail.view_media',
                                         ).replace(':n', String(i + 1))}
                                         aria-current={i === activeIdx}
-                                        className={`relative aspect-square overflow-hidden rounded-xl ring-1 transition-all ${
+                                        className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg ring-1 backdrop-blur transition-all md:h-16 md:w-16 ${
                                             i === activeIdx
-                                                ? 'ring-2 ring-souk-brown'
-                                                : 'ring-souk-brown/15 hover:ring-souk-brown/40'
+                                                ? 'ring-2 ring-white'
+                                                : 'ring-white/45 hover:ring-white/80'
                                         }`}
                                     >
                                         {m.type === 'video' ? (
@@ -569,44 +649,20 @@ const ProductDetail = ({
                             </div>
                         )}
 
-                        <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
-                            <div className="aspect-[4/5] max-h-[68vh]">
-                                {active?.type === 'video' ? (
-                                    <video
-                                        key={active.id}
-                                        src={active.url}
-                                        controls
-                                        className="h-full w-full object-cover"
-                                    />
-                                ) : active ? (
-                                    <img
-                                        key={active.id}
-                                        src={active.url}
-                                        alt={product.name}
-                                        className="h-full w-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
-                                        <ZellijStarIcon className="h-10 w-10" />
-                                    </div>
-                                )}
-                            </div>
-
-                            {onSale && (
-                                <span
-                                    className={`absolute start-5 top-5 rounded-full bg-terracotta px-3 py-1 text-white ${EYEBROW}`}
-                                >
-                                    {t('buyer.products.badge_sale')}
-                                </span>
-                            )}
-                            {soldOut && (
-                                <span
-                                    className={`absolute end-5 top-5 rounded-full bg-souk-title/85 px-3 py-1 text-souk-cream backdrop-blur ${EYEBROW}`}
-                                >
-                                    {t('buyer.detail.sold_out')}
-                                </span>
-                            )}
-                        </div>
+                        {onSale && (
+                            <span
+                                className={`absolute end-5 top-5 rounded-full bg-terracotta px-3 py-1 text-white ${EYEBROW}`}
+                            >
+                                {t('buyer.products.badge_sale')}
+                            </span>
+                        )}
+                        {soldOut && (
+                            <span
+                                className={`absolute end-5 bottom-5 rounded-full bg-souk-title/85 px-3 py-1 text-souk-cream backdrop-blur ${EYEBROW}`}
+                            >
+                                {t('buyer.detail.sold_out')}
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -779,16 +835,36 @@ const ProductDetail = ({
                     <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                         <button
                             onClick={handleAddToCart}
-                            disabled={soldOut || needsChoice}
-                            className="inline-flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-souk-brown px-6 py-4 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-45"
+                            disabled={soldOut || needsChoice || adding}
+                            aria-live="polite"
+                            className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-xl px-6 py-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                                adding
+                                    ? // Not greyed out like the other disabled
+                                      // states: this one is a confirmation, so
+                                      // it has to stay legible.
+                                      'bg-olive text-white disabled:opacity-100'
+                                    : 'bg-souk-brown text-souk-cream hover:bg-souk-brown-deep disabled:opacity-45'
+                            }`}
                         >
-                            {soldOut
-                                ? t('buyer.detail.sold_out')
-                                : t('buyer.detail.add_to_cart')}
-                            <ShoppingBag
-                                className="h-4 w-4"
-                                strokeWidth={1.6}
-                            />
+                            {adding ? (
+                                <>
+                                    {t('buyer.detail.adding')}
+                                    <Check
+                                        className="h-4 w-4"
+                                        strokeWidth={2.2}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    {soldOut
+                                        ? t('buyer.detail.sold_out')
+                                        : t('buyer.detail.add_to_cart')}
+                                    <ShoppingBag
+                                        className="h-4 w-4"
+                                        strokeWidth={1.6}
+                                    />
+                                </>
+                            )}
                         </button>
                         <button
                             onClick={toggleWishlist}

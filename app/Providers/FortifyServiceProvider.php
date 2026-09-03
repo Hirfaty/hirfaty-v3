@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
-use App\Http\Responses\VerifyEmailResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -14,6 +13,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as ContractsLoginResponse;
+use Laravel\Fortify\Contracts\VerifyEmailResponse as ContractsVerifyEmailResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
@@ -24,7 +24,16 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(VerifyEmailResponse::class, CustomVerifyEmailResponse::class);
+        /*
+         * Was `$this->app->singleton(VerifyEmailResponse::class,
+         * CustomVerifyEmailResponse::class)` — both names aliased the same
+         * App\Http\Responses class, so this bound that class to itself and
+         * never touched Fortify's actual contract. Fortify kept using its own
+         * default response (redirect to config('fortify.home'), i.e.
+         * /dashboard, for every role) regardless of what CustomVerifyEmailResponse
+         * did.
+         */
+        $this->app->singleton(ContractsVerifyEmailResponse::class, CustomVerifyEmailResponse::class);
         $this->app->singleton(ContractsLoginResponse::class, CustomLoginResponse::class);
     }
 

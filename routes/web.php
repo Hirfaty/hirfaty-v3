@@ -12,7 +12,6 @@ use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\StoreSetupController;
 use App\Models\User;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -24,17 +23,21 @@ Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 });
 
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill(); // marks email as verified
-
-    $user = $request->user();
-
-    if ($user->role === 'seller') {
-        return redirect('/seller/setup-store');
-    }
-
-    return redirect('/dashboard');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+/*
+ * No app-level `verification.verify` route here on purpose — Fortify already
+ * registers one at the same URI (`/email/verify/{id}/{hash}`) bound to
+ * VerifyEmailController, which delegates the redirect to the
+ * Laravel\Fortify\Contracts\VerifyEmailResponse binding (see
+ * FortifyServiceProvider → App\Http\Responses\VerifyEmailResponse).
+ *
+ * A closure route used to be defined here too, under the exact same name.
+ * Because it was registered later, it silently replaced Fortify's route in
+ * the named-route lookup: every request actually ran this closure's own
+ * hardcoded redirect (seller → /seller/setup-store, everyone else →
+ * /dashboard) instead of ever reaching VerifyEmailResponse — so fixing that
+ * class's role-based redirect (see its docblock) had no effect until this
+ * shadow route was removed.
+ */
 
 // Super Admin
 Route::middleware(['auth', 'verified', 'role:super_admin'])

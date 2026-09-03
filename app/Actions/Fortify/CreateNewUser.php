@@ -30,7 +30,18 @@ class CreateNewUser implements CreatesNewUsers
             // "individual / professional" toggle on the buyer flow) — it is
             // not admin-gated, see User::isProfessionalVerified().
             'role' => ['required', Rule::in(['seller', 'buyer', 'professional_buyer'])],
-            'phone_number' => ['required', 'string', 'max:20'],
+            /*
+             * `unique` is load-bearing: users.phone_number carries a UNIQUE
+             * index, so without it a duplicate number sailed past validation
+             * and blew up on the insert — a 500 on the register screen
+             * instead of "this number is already in use".
+             */
+            'phone_number' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique(User::class, 'phone_number'),
+            ],
             'password' => $this->passwordRules(),
             'terms_accepted' => ['required', 'accepted'],
         ])->validate();

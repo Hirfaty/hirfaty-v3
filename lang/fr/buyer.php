@@ -100,6 +100,11 @@ return [
     // Variants
     'detail.select_variant_prompt' => 'Choisissez une option',
 
+    // Add to cart feedback
+    'detail.adding' => 'Ajouté au panier',
+    'detail.added_to_cart' => 'Ajouté à votre panier',
+    'detail.add_failed' => 'Impossible d’ajouter au panier.',
+
     // Page furniture
     'detail.home' => 'Accueil',
     'detail.eyebrow_handmade' => 'Fait main',

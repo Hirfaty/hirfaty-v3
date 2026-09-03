@@ -103,6 +103,11 @@ return [
     // Variants
     'detail.select_variant_prompt' => 'اختر خياراً',
 
+    // Add to cart feedback
+    'detail.adding' => 'أُضيف إلى السلة',
+    'detail.added_to_cart' => 'أُضيف إلى سلتك',
+    'detail.add_failed' => 'تعذّرت الإضافة إلى السلة.',
+
     // Page furniture
     'detail.home' => 'الرئيسية',
     'detail.eyebrow_handmade' => 'صناعة يدوية',
