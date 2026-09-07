@@ -191,6 +191,54 @@ test('the list exposes each seller\'s shop name, type, and city', function () {
         });
 });
 
+test('filtering by professional request status narrows the list', function () {
+    $pending = User::factory()->create([
+        'role' => 'buyer',
+        'professional_request_status' => 'pending',
+        'professional_requested_at' => now(),
+    ]);
+    User::factory()->create([
+        'role' => 'professional_buyer',
+        'professional_request_status' => 'approved',
+        'professional_verified_at' => now(),
+    ]);
+    User::factory()->create([
+        'role' => 'buyer',
+        'professional_request_status' => 'declined',
+        'professional_decline_reason' => 'Documents incomplets',
+    ]);
+    // Never asked — must not show up under any of the three tabs.
+    User::factory()->create(['role' => 'buyer']);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.users.index', ['professional_request_status' => 'pending']))
+        ->assertInertia(
+            fn ($page) => $page
+                ->has('users.data', 1)
+                ->where('users.data.0.id', $pending->id)
+                ->where('professionalRequestCounts.pending', 1)
+                ->where('professionalRequestCounts.approved', 1)
+                ->where('professionalRequestCounts.declined', 1)
+        );
+});
+
+test('the pending professional count only counts pending requests', function () {
+    User::factory()->create([
+        'role' => 'buyer',
+        'professional_request_status' => 'pending',
+    ]);
+    User::factory()->create([
+        'role' => 'professional_buyer',
+        'professional_request_status' => 'approved',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.users.index'))
+        ->assertInertia(
+            fn ($page) => $page->where('pendingProfessionalCount', 1)
+        );
+});
+
 test('non admins cannot list users', function () {
     foreach (['buyer', 'professional_buyer', 'seller'] as $role) {
         $user = User::factory()->create(['role' => $role]);

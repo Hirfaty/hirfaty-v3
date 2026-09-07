@@ -20,7 +20,7 @@ class Order extends Model
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
         'total_amount', 'platform_fee', 'amana_fee', 'seller_earnings',
-        'shipping_address', 'notes', 'delivered_at', 'cancellation_reason',
+        'shipping_address', 'shipping_phone', 'notes', 'delivered_at', 'cancellation_reason',
     ];
 
     protected $casts = [

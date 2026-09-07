@@ -52,10 +52,83 @@ test('buyer can view cart page', function () {
 
     $response = $this->actingAs($buyer)->get(route('cart.show'));
 
+    // `items`, not `cart`: HandleInertiaRequests shares a global `cart` prop on
+    // every response, so asserting on that name would pass even if this page
+    // sent no basket of its own.
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('buyer/cart')
-        ->has('cart')
+        ->has('items', 0)
     );
+});
+
+test('the cart page prices each line for the viewer, with its image', function () {
+    $buyer = createBuyerUser();
+    $store = createStoreForCart();
+    $product = createCartProduct($store, 'Bowl');
+    $product->update(['sale_price' => 15.00]);
+
+    $product->media()->create([
+        'type' => 'image',
+        'path' => 'products/bowl.jpg',
+        'url' => 'https://example.test/bowl.jpg',
+        'disk' => 'public',
+        'order' => 0,
+    ]);
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create([
+        'cart_id' => $cart->id,
+        'product_id' => $product->id,
+        'quantity' => 2,
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('cart.show'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('items', 1)
+            // The sale price, not base_price — and the line total with it.
+            ->where('items.0.unit_price', 15)
+            ->where('items.0.line_total', 30)
+            // base_price, so the page can strike it through.
+            ->where('items.0.original_unit_price', 25)
+            ->where('items.0.image', 'https://example.test/bowl.jpg')
+            ->where('items.0.available_stock', 10)
+            ->etc()
+        );
+});
+
+/**
+ * The reason the page stopped computing prices itself: it read
+ * `sale_price ?? base_price` off the product, so a verified trade account was
+ * quoted retail in the basket and then billed wholesale at the till.
+ */
+test('a verified trade buyer is quoted their wholesale price in the cart', function () {
+    $buyer = User::factory()->verifiedProfessional()->create();
+    $store = createStoreForCart();
+    $product = createCartProduct($store, 'Jar');
+    $product->update([
+        'professional_price' => 12.00,
+        'min_order_qty_professional' => 5,
+    ]);
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create([
+        'cart_id' => $cart->id,
+        'product_id' => $product->id,
+        'quantity' => 5,
+    ]);
+
+    $this->actingAs($buyer)
+        ->get(route('cart.show'))
+        ->assertInertia(fn (Assert $page) => $page
+            // 12 (wholesale), not the 25 retail list price.
+            ->where('items.0.unit_price', 12)
+            ->where('items.0.line_total', 60)
+            // The stepper floors here so it can't dial below what
+            // CartService::assertQuantity would then refuse.
+            ->where('items.0.min_quantity', 5)
+            ->etc()
+        );
 });
 
 test('buyer can add product to cart', function () {

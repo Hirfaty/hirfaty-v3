@@ -64,12 +64,6 @@ return [
     'auth.register.role_seller' => 'An artisan',
     'auth.register.role_seller_hint' => 'To open a workshop',
 
-    'auth.register.buyer_type_question' => 'Buying as',
-    'auth.register.buyer_type_individual' => 'Individual',
-    'auth.register.buyer_type_individual_hint' => 'Retail prices, buy one at a time.',
-    'auth.register.buyer_type_professional' => 'Professional',
-    'auth.register.buyer_type_professional_hint' => 'Bulk pricing, subject to each product\'s minimum order quantity.',
-
     // ── Verify-email screen ──────────────────────────────────────────────
     'auth.verify.eyebrow' => 'Account security',
     'auth.verify.title' => 'Verify your',

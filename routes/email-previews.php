@@ -31,6 +31,20 @@ Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) 
 })->middleware('auth');
 
 /*
+ * Trade-request verdicts, both outcomes and all three locales:
+ *   /preview/email/professional/approved/fr ... /professional/declined/ar
+ */
+Route::get('/preview/email/professional/{outcome}/{locale}', function (string $outcome, string $locale) {
+    abort_unless(in_array($outcome, ['approved', 'declined'], true), 404);
+    abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
+
+    return view("emails.buyer.professional.{$outcome}.{$locale}", [
+        'user' => auth()->user(),
+        'reason' => 'Nous n’avons pas pu confirmer l’existence de l’établissement.',
+    ]);
+})->middleware('auth');
+
+/*
  * Verification email, both audiences and all three locales:
  *   /preview/email/verify/buyer/fr   ...   /preview/email/verify/seller/ar
  */

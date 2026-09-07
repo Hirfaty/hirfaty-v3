@@ -56,6 +56,8 @@ function checkoutAs(User $user, Product $product, int $qty = 2): void
     test()->actingAs($user)->post(route('checkout.store'), [
         'shipping_address' => '1 Rue Test',
         'city_id' => $city->id,
+        // Required now: Amana rings the buyer to deliver.
+        'shipping_phone' => '0600000000',
     ]);
 }
 

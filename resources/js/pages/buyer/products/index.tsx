@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     BadgePercent,
     Check,
@@ -343,6 +343,11 @@ export default function ProductsIndex({
     priceCeiling,
 }: Props) {
     const { t, locale } = useTranslation();
+    // Only needed to decide where the trade CTA below points — a signed-in
+    // buyer goes to the request page, a guest has to register first.
+    const { auth } = usePage().props as unknown as {
+        auth: { user: { id: number } | null };
+    };
     const [search, setSearch] = useState(filters.search);
     const [maxPrice, setMaxPrice] = useState(
         filters.max_price || String(priceCeiling),
@@ -735,8 +740,15 @@ export default function ProductsIndex({
                         <p className="text-souk-brown-deep/80">
                             {t('buyer.products.pro_cta_body')}
                         </p>
+                        {/* Registration no longer offers a professional
+                            option, so a signed-in buyer is sent to the
+                            request page instead of back to signup. */}
                         <Link
-                            href={route('register')}
+                            href={
+                                auth.user
+                                    ? route('professional.show')
+                                    : route('register')
+                            }
                             className="shrink-0 rounded-full bg-souk-brown px-5 py-2 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep"
                         >
                             {t('buyer.products.pro_cta_button')}

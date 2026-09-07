@@ -84,7 +84,12 @@ class HandleInertiaRequests extends Middleware
         }
 
         $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-        $cart->load(['items.product.store', 'items.variant.options']);
+        $cart->load([
+            'items.product.store',
+            'items.product.images',
+            'items.variant.options',
+            'items.variant.media',
+        ]);
 
         /*
          * Same price list the checkout will actually bill, resolved once.
@@ -105,12 +110,24 @@ class HandleInertiaRequests extends Middleware
             $unit = $item->unitPriceFor($audience) ?? 0.0;
             $qty = (int) $item->quantity;
 
+            /*
+             * The chosen variant's own photo wins when the seller uploaded
+             * one — same precedence the product page's gallery uses — so a
+             * "Rouge" line in the header shows red, not whatever colour
+             * happens to be the product's first image. Falls back to the
+             * product's own first image, then null (the header renders a
+             * placeholder rather than an empty <img>).
+             */
+            $image = $item->variant?->media->first()?->url
+                ?? $item->product?->images->first()?->url;
+
             return [
                 'id' => $item->id,
                 'name' => $item->product?->name ?? 'Produit',
                 // e.g. "Rouge / M" — null for a product without variants, so
                 // the header can render it only when there is one.
                 'variant' => $item->variantLabel(),
+                'image' => $image,
                 'seller' => $item->product?->store?->store_name ?? '',
                 'qty' => $qty,
                 'price' => $unit,

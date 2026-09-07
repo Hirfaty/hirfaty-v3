@@ -48,9 +48,26 @@ function productFor(int $storeId, int $categoryId, string $name = 'Vase en terre
 test('admin can delete a product with no order history', function () {
     $product = productFor($this->store->id, $this->category->id);
 
+    // Deleted from the product's own screen, so there is nothing to go back
+    // to — this is the one case that lands on the catalogue.
     $this->actingAs($this->admin)
+        ->from(route('admin.products.show', $product))
         ->delete(route('admin.products.destroy', $product))
         ->assertRedirect(route('admin.products.index'));
+
+    expect(Product::find($product->id))->toBeNull();
+});
+
+test('deleting from elsewhere returns the admin to where they were', function () {
+    $product = productFor($this->store->id, $this->category->id);
+    $sellerPage = route('admin.users.show', $this->store->user_id);
+
+    // The products table on a seller's profile offers the same action; being
+    // thrown to the global catalogue afterwards would lose the admin's place.
+    $this->actingAs($this->admin)
+        ->from($sellerPage)
+        ->delete(route('admin.products.destroy', $product))
+        ->assertRedirect($sellerPage);
 
     expect(Product::find($product->id))->toBeNull();
 });

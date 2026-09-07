@@ -4,6 +4,7 @@ import {
     Ban,
     Calendar,
     CheckCircle2,
+    Clock,
     FileText,
     KeyRound,
     Mail,
@@ -142,6 +143,36 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
     const isProfessional = user.role === 'professional_buyer';
     const isVerified = Boolean(user.professional_verified_at);
 
+    // Trade-request review. `reviewing` guards against a double submit
+    // approving and then declining the same request.
+    const [declining, setDeclining] = useState(false);
+    const [declineReason, setDeclineReason] = useState('');
+    const [reviewing, setReviewing] = useState(false);
+
+    const approveProfessional = () => {
+        setReviewing(true);
+        router.patch(
+            route('admin.users.professional.approve', user.id),
+            {},
+            { onFinish: () => setReviewing(false) },
+        );
+    };
+
+    const declineProfessional = () => {
+        setReviewing(true);
+        router.patch(
+            route('admin.users.professional.decline', user.id),
+            { reason: declineReason },
+            {
+                onFinish: () => setReviewing(false),
+                onSuccess: () => {
+                    setDeclining(false);
+                    setDeclineReason('');
+                },
+            },
+        );
+    };
+
     // Nothing in the buying flow checks this yet — it just lets the admin
     // flag accounts they've reviewed, ahead of that check being wired in.
     const handleVerifyProfessional = () => {
@@ -275,6 +306,102 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                     icon={Ban}
                 />
             </div>
+
+            {/*
+                Trade request queue. Rendered above the fold when pending
+                because it's the one thing on this page that's waiting on the
+                admin — everything else is reference material.
+            */}
+            {user.professional_request_status === 'pending' && (
+                <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-5">
+                    <div className="flex items-start gap-3">
+                        <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                        <div className="min-w-0 flex-1">
+                            <p className="font-medium text-ink">
+                                Demande de compte professionnel
+                            </p>
+                            {user.professional_requested_at && (
+                                <p className="mt-0.5 text-xs text-ink-soft">
+                                    Envoyée le{' '}
+                                    {formatDate(user.professional_requested_at)}
+                                </p>
+                            )}
+
+                            {user.professional_request_message && (
+                                <p className="mt-3 border-l-2 border-amber-300 pl-3 text-sm leading-relaxed whitespace-pre-line text-ink/85">
+                                    {user.professional_request_message}
+                                </p>
+                            )}
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    disabled={reviewing}
+                                    onClick={approveProfessional}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Approuver
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={reviewing}
+                                    onClick={() => setDeclining(true)}
+                                    className="rounded-lg border border-ink/20 px-4 py-2 text-sm font-medium text-ink transition hover:bg-ink/5 disabled:opacity-50"
+                                >
+                                    Refuser
+                                </button>
+                            </div>
+
+                            {/* The reason is required — it's emailed to the
+                                buyer and shown on their account page, so a
+                                refusal always comes with something to act on. */}
+                            {declining && (
+                                <div className="mt-4">
+                                    <label
+                                        htmlFor="decline_reason"
+                                        className="mb-1.5 block text-xs text-ink-soft"
+                                    >
+                                        Motif du refus (envoyé à l’acheteur)
+                                    </label>
+                                    <textarea
+                                        id="decline_reason"
+                                        rows={3}
+                                        autoFocus
+                                        maxLength={500}
+                                        value={declineReason}
+                                        onChange={(e) =>
+                                            setDeclineReason(e.target.value)
+                                        }
+                                        placeholder="Ex : nous n’avons pas pu confirmer l’existence de l’établissement."
+                                        className="w-full rounded-lg border border-ink/20 bg-white px-3 py-2 text-sm text-ink focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                                    />
+                                    <div className="mt-2 flex gap-2">
+                                        <button
+                                            type="button"
+                                            disabled={
+                                                reviewing ||
+                                                declineReason.trim() === ''
+                                            }
+                                            onClick={declineProfessional}
+                                            className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-50"
+                                        >
+                                            Confirmer le refus
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDeclining(false)}
+                                            className="rounded-lg px-4 py-2 text-sm text-ink-soft transition hover:text-ink"
+                                        >
+                                            Annuler
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Body ─────────────────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

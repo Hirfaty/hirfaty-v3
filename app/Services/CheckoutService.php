@@ -151,6 +151,9 @@ class CheckoutService
                     'amana_fee' => $amanaFee,
                     'seller_earnings' => $sellerEarnings,
                     'shipping_address' => $checkoutData['shipping_address'],
+                    // Every order a split basket produces ships to the same
+                    // buyer, so each carries the number its courier should call.
+                    'shipping_phone' => $checkoutData['shipping_phone'] ?? null,
                     'notes' => $checkoutData['notes'] ?? null,
                 ]);
 

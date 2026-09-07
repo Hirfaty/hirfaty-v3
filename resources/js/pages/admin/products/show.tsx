@@ -366,6 +366,45 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                     </Field>
                                 )}
                             </div>
+
+                            {/*
+                             * Professional pricing is optional per product —
+                             * a product sold only at retail simply has no
+                             * professional_price, and there is nothing useful
+                             * to show an admin in that case.
+                             */}
+                            {(product.professional_price ||
+                                product.professional_sale_price) && (
+                                <div className="grid grid-cols-2 gap-5 border-t border-border pt-5">
+                                    <Field label="Prix professionnel">
+                                        {product.professional_price ? (
+                                            <span className="text-xl font-semibold text-olive">
+                                                {product.professional_price}{' '}
+                                                MAD
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm text-ink-soft">
+                                                Non défini — facturé au prix de
+                                                base
+                                            </span>
+                                        )}
+                                    </Field>
+                                    {product.professional_sale_price && (
+                                        <Field label="Prix promo professionnel">
+                                            <span className="text-xl font-semibold text-terracotta">
+                                                {
+                                                    product.professional_sale_price
+                                                }{' '}
+                                                MAD
+                                            </span>
+                                        </Field>
+                                    )}
+                                    <Field label="Commande minimum (pro)">
+                                        {product.min_order_qty_professional}{' '}
+                                        unités
+                                    </Field>
+                                </div>
+                            )}
                         </div>
                     </Card>
 
@@ -420,6 +459,14 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                                     ? `${variant.price_override} MAD`
                                                     : 'Prix hérité'}
                                             </span>
+                                            {variant.professional_price_override && (
+                                                <span className="font-medium text-olive">
+                                                    {
+                                                        variant.professional_price_override
+                                                    }{' '}
+                                                    MAD (pro)
+                                                </span>
+                                            )}
                                             {!variant.is_active && (
                                                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                                                     Inactive

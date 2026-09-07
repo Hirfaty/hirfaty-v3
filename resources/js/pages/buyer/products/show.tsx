@@ -8,6 +8,7 @@ import {
     Heart,
     Home,
     Leaf,
+    LogIn,
     MapPin,
     Minus,
     Package,
@@ -24,7 +25,6 @@ import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
-import { useGuestCart } from '@/hooks/useGuestCart';
 import type { Media } from '@/types';
 import type {
     BuyerProductResource,
@@ -164,7 +164,6 @@ function PriceBlock({
     const trade = product.professional_effective_price ?? null;
     const hasTrade = variant === null && trade !== null && trade < retail;
     const saving = hasTrade ? Math.round((1 - trade / retail) * 100) : 0;
-    const minQty = product.min_order_qty_professional ?? 1;
 
     if (hasTrade) {
         return (
@@ -191,16 +190,12 @@ function PriceBlock({
                         className="mt-0.5 h-3.5 w-3.5 shrink-0 text-olive"
                         strokeWidth={1.5}
                     />
+                    {/*
+                     * The bulk minimum used to be repeated here. It now sits
+                     * on the quantity stepper instead — the one place where
+                     * the buyer can actually run into it.
+                     */}
                     {t('buyer.detail.trade_billed_note')}
-                    {minQty > 1 && (
-                        <>
-                            {' · '}
-                            {t('buyer.detail.trade_min_qty').replace(
-                                ':count',
-                                String(minQty),
-                            )}
-                        </>
-                    )}
                 </p>
             </div>
         );
@@ -372,8 +367,21 @@ const ProductDetail = ({
         ? resolveVariant(variants, selection)
         : null;
 
+    /**
+     * The smallest quantity this viewer is allowed to order.
+     *
+     * Only ever above 1 for a verified trade account: the resource merges
+     * `min_order_qty_professional` in for the professional audience alone, so
+     * a consumer reading the same product simply gets 1. Wholesale rates are
+     * granted on the understanding that the trade buys in bulk, which is why
+     * the floor travels with the price list rather than with the product.
+     */
+    const minQty = product.min_order_qty_professional ?? 1;
+
     const [activeIdx, setActiveIdx] = useState(0);
-    const [qty, setQty] = useState(1);
+    // Opens on the minimum rather than 1, so a trade buyer isn't shown a
+    // quantity their own price list would refuse.
+    const [qty, setQty] = useState(minQty);
     const [wished, setWished] = useState(inWishlist);
     /**
      * Holds the Add-to-Cart button in its confirming state for 3s after a
@@ -393,8 +401,6 @@ const ProductDetail = ({
         // setState on a gone component.
         return () => clearTimeout(timer);
     }, [adding]);
-
-    const guestCart = useGuestCart();
 
     /*
      * Variant photography replaces the product's gallery while that variant is
@@ -423,6 +429,13 @@ const ProductDetail = ({
         ? selectedVariant !== null && !selectedVariant.in_stock
         : Number(product.stock) === 0;
     const needsChoice = hasVariants && selectedVariant === null;
+    /*
+     * In stock, but not by enough to clear the trade minimum. Distinct from
+     * sold out: the piece is available, just not in the quantity this buyer is
+     * obliged to take, and saying "out of stock" would send them away from
+     * something a restock would let them buy.
+     */
+    const belowMinimum = !needsChoice && !soldOut && stock < minQty;
 
     const money = (v: number | string) =>
         new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
@@ -478,7 +491,7 @@ const ProductDetail = ({
 
         // Show that variant's photography from its first frame.
         setActiveIdx(0);
-        setQty(1);
+        setQty(minQty);
     };
 
     /** Name the shopper actually chose, for the confirmation message. */
@@ -486,59 +499,59 @@ const ProductDetail = ({
         ? `${product.name} — ${selectedVariant.label}`
         : product.name;
 
+    /**
+     * Add to cart, or send a guest to sign in first.
+     *
+     * There is no longer a localStorage path here. The basket a guest built
+     * was priced entirely client-side, and with two price lists in play that
+     * is no longer a safe thing to do: which figure a line is worth depends on
+     * whether an admin has verified the account, and whether a product may be
+     * bought in ones or only by the twenty. Neither is knowable before we know
+     * who is shopping, so the basket starts once they have signed in.
+     */
     const handleAddToCart = () => {
-        if (needsChoice || adding) {
+        if (needsChoice || soldOut || belowMinimum || adding) {
             return;
         }
 
-        const unitPrice =
-            selectedVariant?.price ?? product.sale_price ?? product.base_price;
+        if (!auth.user) {
+            router.visit(route('login'));
+
+            return;
+        }
 
         setAdding(true);
 
-        const confirm = () => {
-            toast.success(t('buyer.detail.added_to_cart'), {
-                description: addedLabel,
-            });
-        };
-
-        if (auth.user) {
-            router.post(
-                route('cart.add'),
-                {
-                    product_id: product.id,
-                    variant_id: selectedVariant?.id ?? null,
-                    quantity: qty,
-                },
-                {
-                    preserveScroll: true,
-                    onSuccess: confirm,
-                    /*
-                     * The server still refuses on a stock race or a variant
-                     * pulled mid-visit. Surface its message rather than
-                     * showing a success toast for something that didn't
-                     * happen.
-                     */
-                    onError: (errors) =>
-                        toast.error(
-                            Object.values(errors)[0] ??
-                                t('buyer.detail.add_failed'),
-                        ),
-                },
-            );
-        } else {
-            guestCart.addItem({
+        router.post(
+            route('cart.add'),
+            {
                 product_id: product.id,
                 variant_id: selectedVariant?.id ?? null,
-                variant_label: selectedVariant?.label ?? null,
                 quantity: qty,
-                name: product.name,
-                price: String(unitPrice),
-                image: media[0]?.url ?? null,
-                store_name: product.store.store_name,
-            });
-            confirm();
-        }
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () =>
+                    toast.success(t('buyer.detail.added_to_cart'), {
+                        description: addedLabel,
+                    }),
+                /*
+                 * The server still refuses on a stock race, a variant pulled
+                 * mid-visit, or a quantity under the trade minimum. Surface
+                 * its message rather than showing a success toast for
+                 * something that didn't happen — and drop the confirming
+                 * state, which otherwise sat there reading "added" for three
+                 * seconds after a rejection.
+                 */
+                onError: (errors) => {
+                    setAdding(false);
+                    toast.error(
+                        Object.values(errors)[0] ??
+                            t('buyer.detail.add_failed'),
+                    );
+                },
+            },
+        );
     };
 
     const toggleWishlist = () => {
@@ -562,7 +575,7 @@ const ProductDetail = ({
         );
     };
 
-    const maxQty = Math.max(1, stock || 1);
+    const maxQty = Math.max(minQty, stock || minQty);
 
     return (
         <div className="min-h-screen bg-souk-paper">
@@ -725,12 +738,11 @@ const ProductDetail = ({
                                 <span className="text-terracotta">
                                     {t('buyer.detail.sold_out')}
                                 </span>
-                            ) : stock <= 5 ? (
+                            ) : belowMinimum ? (
                                 <span className="text-terracotta">
-                                    {t('buyer.detail.only_left').replace(
-                                        ':count',
-                                        String(stock),
-                                    )}
+                                    {t('buyer.detail.below_min_stock')
+                                        .replace(':count', String(stock))
+                                        .replace(':min', String(minQty))}
                                 </span>
                             ) : (
                                 <>
@@ -803,13 +815,21 @@ const ProductDetail = ({
                     <div className="mt-7">
                         <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
                             {t('buyer.detail.quantity')}
+                            {minQty > 1 && (
+                                <span className="ms-2 tracking-normal text-olive normal-case">
+                                    {t('buyer.detail.trade_min_qty').replace(
+                                        ':count',
+                                        String(minQty),
+                                    )}
+                                </span>
+                            )}
                         </p>
                         <div className="mt-3 inline-flex items-center rounded-xl border border-souk-brown/20">
                             <button
                                 onClick={() =>
-                                    setQty((q) => Math.max(1, q - 1))
+                                    setQty((q) => Math.max(minQty, q - 1))
                                 }
-                                disabled={qty <= 1}
+                                disabled={qty <= minQty}
                                 aria-label={t('buyer.detail.decrease')}
                                 className="rounded-s-xl px-4 py-3 text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-souk-brown-deep"
                             >
@@ -835,7 +855,19 @@ const ProductDetail = ({
                     <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                         <button
                             onClick={handleAddToCart}
-                            disabled={soldOut || needsChoice || adding}
+                            /*
+                             * A guest is never disabled — the button is their
+                             * way in to signing up, and greying it out would
+                             * leave the page with no route forward at all.
+                             */
+                            disabled={
+                                auth.user
+                                    ? soldOut ||
+                                      needsChoice ||
+                                      belowMinimum ||
+                                      adding
+                                    : false
+                            }
                             aria-live="polite"
                             className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-xl px-6 py-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
                                 adding
@@ -854,11 +886,21 @@ const ProductDetail = ({
                                         strokeWidth={2.2}
                                     />
                                 </>
+                            ) : !auth.user ? (
+                                <>
+                                    {t('buyer.detail.login_to_buy')}
+                                    <LogIn
+                                        className="h-4 w-4"
+                                        strokeWidth={1.6}
+                                    />
+                                </>
                             ) : (
                                 <>
                                     {soldOut
                                         ? t('buyer.detail.sold_out')
-                                        : t('buyer.detail.add_to_cart')}
+                                        : belowMinimum
+                                          ? t('buyer.detail.below_min_qty')
+                                          : t('buyer.detail.add_to_cart')}
                                     <ShoppingBag
                                         className="h-4 w-4"
                                         strokeWidth={1.6}
@@ -880,6 +922,18 @@ const ProductDetail = ({
                                 : t('buyer.detail.wishlist_add')}
                         </button>
                     </div>
+
+                    {!auth.user && (
+                        <p className="mt-3 text-[13px] leading-relaxed text-souk-brown-deep/70">
+                            {t('buyer.detail.login_to_buy_hint')}{' '}
+                            <Link
+                                href={route('register')}
+                                className="text-souk-brown underline underline-offset-4"
+                            >
+                                {t('buyer.detail.login_to_buy_register')}
+                            </Link>
+                        </p>
+                    )}
 
                     {inCart && (
                         <Link
@@ -982,8 +1036,17 @@ const ProductDetail = ({
                             <p className="mt-1.5 text-[13px] leading-relaxed text-souk-brown-deep/75">
                                 {t('buyer.detail.trade_cta_body')}
                             </p>
+                            {/* A signed-in buyer asks for trade access on the
+                                dedicated page; a guest needs an account
+                                first. Registration no longer offers a
+                                professional option, so pointing everyone at
+                                it would be a dead end. */}
                             <Link
-                                href={route('register')}
+                                href={
+                                    auth.user
+                                        ? route('professional.show')
+                                        : route('register')
+                                }
                                 className="mt-4 inline-block rounded-lg bg-olive px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
                             >
                                 {t('buyer.detail.trade_cta_button')}

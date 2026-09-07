@@ -638,6 +638,15 @@ class ProductController extends Controller
     {
         $name = $product->name;
 
+        /*
+         * Captured before the row goes: once it is deleted these routes can no
+         * longer be built from the model.
+         */
+        $ownScreens = [
+            route('admin.products.show', $product),
+            route('admin.products.edit', $product),
+        ];
+
         try {
             $deletions->delete($product);
         } catch (\RuntimeException $e) {
@@ -647,9 +656,20 @@ class ProductController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', "Product \"{$name}\" deleted.");
+        /*
+         * Deleting a product from its own screen leaves nowhere to return to,
+         * so that case lands on the catalogue. Every other caller — the
+         * catalogue itself, and the products table on a seller's profile —
+         * goes back where it was, keeping the admin's place (and any filters
+         * in the URL) instead of being thrown to a different page.
+         */
+        if (Str::startsWith(url()->previous(), $ownScreens)) {
+            return redirect()
+                ->route('admin.products.index')
+                ->with('success', "Product \"{$name}\" deleted.");
+        }
+
+        return back()->with('success', "Product \"{$name}\" deleted.");
     }
 
     public function bulkDestroy(Request $request, ProductDeletionService $deletions)

@@ -9,8 +9,10 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use App\Notifications\WelcomeUser;
+use App\Services\ProfessionalAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -338,6 +340,18 @@ class UserController extends Controller
             $query->where('role', $role);
         }
 
+        /*
+         * A queue view, not a role: the request status outlives the decision
+         * (a declined buyer stays `buyer`, an approved one becomes
+         * `professional_buyer`), so this filters on
+         * `professional_request_status` directly rather than folding it into
+         * the role tabs above. Kept as its own parameter so it composes with
+         * a role filter and a search.
+         */
+        if ($requestStatus = $request->input('professional_request_status')) {
+            $query->where('professional_request_status', $requestStatus);
+        }
+
         $users = $query->latest()->paginate(20)->withQueryString();
 
         // Counts for the "all / buyer / pro / seller" filter tabs — computed
@@ -347,6 +361,14 @@ class UserController extends Controller
             ->groupBy('role')
             ->pluck('count', 'role');
 
+        // Same idea for the trade-request status filter: counted once, over
+        // every role, so a declined buyer and an approved (now professional_
+        // buyer) account both still count towards their tab.
+        $requestStatusCounts = User::whereNotNull('professional_request_status')
+            ->selectRaw('professional_request_status, count(*) as count')
+            ->groupBy('professional_request_status')
+            ->pluck('count', 'professional_request_status');
+
         return Inertia::render('admin/users/index', [
             'users' => $users,
             'totalUsers' => $roleCounts->sum(),
@@ -355,14 +377,34 @@ class UserController extends Controller
                 'professional_buyer' => $roleCounts->get('professional_buyer', 0),
                 'seller' => $roleCounts->get('seller', 0),
             ],
-            'filters' => $request->only(['search', 'role']),
+            'professionalRequestCounts' => [
+                'pending' => $requestStatusCounts->get(User::PRO_REQUEST_PENDING, 0),
+                'approved' => $requestStatusCounts->get(User::PRO_REQUEST_APPROVED, 0),
+                'declined' => $requestStatusCounts->get(User::PRO_REQUEST_DECLINED, 0),
+            ],
+            // Drives the "N waiting" banner above the table.
+            'pendingProfessionalCount' => $requestStatusCounts->get(User::PRO_REQUEST_PENDING, 0),
+            'filters' => $request->only(['search', 'role', 'professional_request_status']),
         ]);
     }
 
     public function show(User $user)
     {
         if ($user->role === 'seller') {
-            $user->load(['store.city', 'store.category', 'store.products.images', 'store.products.category']);
+            $user->load([
+                'store.city',
+                'store.category',
+                /*
+                 * Counted so the products table can grey out Delete on a piece
+                 * that has been ordered. ProductDeletionService refuses those
+                 * outright (order_items cascades, so deleting one would wipe
+                 * the line off historical invoices), and offering an action
+                 * that is guaranteed to fail reads as a broken button.
+                 */
+                'store.products' => fn ($query) => $query->withCount('orderItems'),
+                'store.products.images',
+                'store.products.category',
+            ]);
             // Earnings summary
             $earnings = [
                 'total' => $user->store?->earnings()->sum('net_amount') ?? 0,
@@ -441,9 +483,13 @@ class UserController extends Controller
     }
 
     /**
-     * Toggle whether a professional buyer is marked verified. Nothing in the
-     * buying flow currently checks this — it exists purely so the admin can
-     * flag accounts they've reviewed, ahead of that check being wired in.
+     * Toggle verification on an account that is *already* a professional
+     * buyer — a manual override for accounts the admin set up by hand, or to
+     * revoke trade pricing without changing the role.
+     *
+     * Distinct from approveProfessional() below, which is the buyer-initiated
+     * request flow: that one promotes an ordinary buyer, this one only flips
+     * the stamp on someone already in the role.
      */
     public function verifyProfessional(User $user)
     {
@@ -457,6 +503,34 @@ class UserController extends Controller
         $action = $user->professional_verified_at ? 'verified' : 'unverified';
 
         return back()->with('success', "Professional buyer {$action}.");
+    }
+
+    /**
+     * Grant a pending trade request. Delegated to the service because it is
+     * the single place `role` becomes professional_buyer — see
+     * ProfessionalAccountService for why that matters.
+     */
+    public function approveProfessional(User $user, ProfessionalAccountService $professional)
+    {
+        $professional->approve($user, Auth::user());
+
+        return back()->with('success', 'Compte professionnel activé. L’acheteur a été prévenu.');
+    }
+
+    /**
+     * Refuse a pending trade request. The reason is required: it is emailed
+     * to the buyer and shown on their account page, so "no" always comes with
+     * something they can act on.
+     */
+    public function declineProfessional(Request $request, User $user, ProfessionalAccountService $professional)
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $professional->decline($user, Auth::user(), $data['reason']);
+
+        return back()->with('success', 'Demande refusée. L’acheteur a été prévenu.');
     }
 
     /**

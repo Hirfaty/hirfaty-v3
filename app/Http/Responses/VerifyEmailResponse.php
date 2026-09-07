@@ -33,6 +33,17 @@ class VerifyEmailResponse implements VerifyEmailResponseContract
             return redirect()->route('seller.products.index');
         }
 
+        /*
+         * A brand-new buyer gets the short intro tour first. This hangs off
+         * verification rather than login because it's the one moment we know
+         * they're both new and actively engaged — they just came back from
+         * their inbox and clicked. Nagging on every sign-in would make a
+         * skippable tour feel anything but.
+         */
+        if ($user->needsOnboarding()) {
+            return redirect()->route('onboarding.show');
+        }
+
         return redirect()->route('products.index');
     }
 }

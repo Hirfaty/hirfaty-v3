@@ -18,8 +18,13 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! $request->user() || ! in_array($request->user()->role, $roles, true)) {
+        if (! $request->user()) {
             abort(403);
+        }
+
+        if (! in_array($request->user()->role, $roles, true)) {
+            return redirect()->route('products.index')
+                ->with('error', __('You are not authorized to access that page.'));
         }
 
         return $next($request);

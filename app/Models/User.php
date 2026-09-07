@@ -26,7 +26,14 @@ use Override;
  * @property string|null $last_name
  * @property string|null $phone_number
  * @property string $role
+ * @property CarbonImmutable|null $onboarded_at
  * @property CarbonImmutable|null $professional_verified_at
+ * @property string|null $professional_request_status
+ * @property string|null $professional_request_message
+ * @property CarbonImmutable|null $professional_requested_at
+ * @property CarbonImmutable|null $professional_reviewed_at
+ * @property int|null $professional_reviewed_by
+ * @property string|null $professional_decline_reason
  * @property string|null $avatar
  * @property string|null $bio
  * @property int $is_banned
@@ -71,7 +78,12 @@ use Override;
 // `email_verified_at` is fillable so admin-created users can be pre-verified.
 // Safe because no public endpoint mass-assigns raw request input into User —
 // registration (Actions\Fortify\CreateNewUser) whitelists fields explicitly.
-#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at'])]
+//
+// `onboarded_at` is fillable (harmless: it only silences an intro tour).
+// The professional_* columns deliberately are NOT — they decide which price
+// list an account is billed on, and are written only by
+// ProfessionalAccountService via forceFill, never from request input.
+#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at', 'onboarded_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements AuthMustVerifyEmail
 {
@@ -94,9 +106,88 @@ class User extends Authenticatable implements AuthMustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'professional_verified_at' => 'datetime',
+            'onboarded_at' => 'datetime',
+            'professional_requested_at' => 'datetime',
+            'professional_reviewed_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /** Trade access asked for, awaiting an admin. */
+    public const PRO_REQUEST_PENDING = 'pending';
+
+    /** Granted — the account is a verified professional_buyer. */
+    public const PRO_REQUEST_APPROVED = 'approved';
+
+    /** Refused, with a reason the buyer can read. */
+    public const PRO_REQUEST_DECLINED = 'declined';
+
+    /**
+     * Craft categories picked during onboarding. A preference signal only —
+     * nothing gates on it, and skipping the tour leaves it empty.
+     */
+    public function interests()
+    {
+        return $this->belongsToMany(Category::class);
+    }
+
+    /** The admin who approved or declined the trade request. */
+    public function professionalReviewer()
+    {
+        return $this->belongsTo(self::class, 'professional_reviewed_by');
+    }
+
+    /**
+     * Saved delivery addresses, default first so `->first()` is the one
+     * checkout would pre-fill.
+     */
+    public function addresses()
+    {
+        return $this->hasMany(Address::class)->orderByDesc('is_default')->oldest();
+    }
+
+    /** The address checkout pre-fills, or null if the book is empty. */
+    public function defaultAddress()
+    {
+        return $this->hasOne(Address::class)->where('is_default', true);
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * Whether the post-verification intro still needs showing.
+     *
+     * Sellers are excluded: their first run is the store-setup wizard, which
+     * already does this job and is mandatory rather than skippable.
+     */
+    public function needsOnboarding(): bool
+    {
+        return $this->onboarded_at === null && $this->isBuyer();
+    }
+
+    /** Asked for trade access and still waiting on an admin. */
+    public function hasPendingProfessionalRequest(): bool
+    {
+        return $this->professional_request_status === self::PRO_REQUEST_PENDING;
+    }
+
+    /**
+     * Whether the trade-account form should be offered at all.
+     *
+     * False once there's a live request (nothing to add by asking twice) and
+     * false for an account that is already professional. A *declined* request
+     * does not block: circumstances change, and the refusal reason tells them
+     * what to fix before asking again.
+     */
+    public function canRequestProfessional(): bool
+    {
+        return $this->isBuyer()
+            && ! $this->isProfessionalBuyer()
+            && ! $this->hasPendingProfessionalRequest();
     }
 
     // Role helpers

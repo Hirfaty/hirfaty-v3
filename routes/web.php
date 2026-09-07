@@ -1,10 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\CheckoutController;
+use App\Http\Controllers\Buyer\DashboardController as BuyerDashboardController;
+use App\Http\Controllers\Buyer\OnboardingController;
 use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
+use App\Http\Controllers\Buyer\PaymentMethodController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
+use App\Http\Controllers\Buyer\ProfessionalRequestController;
+use App\Http\Controllers\Buyer\ProfileController as BuyerProfileController;
+use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
@@ -70,6 +77,10 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/users/{user}', [Admin\UserController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
         Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
+        // Buyer-initiated trade requests: approving promotes the account to
+        // professional_buyer, which nothing else outside this pair can do.
+        Route::patch('/users/{user}/professional/approve', [Admin\UserController::class, 'approveProfessional'])->name('users.professional.approve');
+        Route::patch('/users/{user}/professional/decline', [Admin\UserController::class, 'declineProfessional'])->name('users.professional.decline');
         Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
         Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
@@ -169,8 +180,46 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
+    /*
+     * The account area: four sibling pages sharing one left sidebar, defined
+     * in resources/js/layouts/buyer/account-layout.tsx. Each is a real route
+     * rather than a tab, so every section is linkable and the back button
+     * moves between them.
+     */
+    Route::get('/account', BuyerDashboardController::class)->name('buyer.dashboard');
     Route::get('/orders', [BuyerOrderController::class, 'index'])->name('buyer.account.orders.index');
+    Route::get('/wishlists', WishlistController::class)->name('buyer.wishlist');
+    Route::get('/payment_method', PaymentMethodController::class)->name('buyer.payment_methods');
+
+    // Was the wishlist's URL before it was pluralised; kept so existing links
+    // and bookmarks don't 404.
+    Route::get('/wishlist', fn () => redirect()->route('buyer.wishlist'));
+
+    // The identity form on /account. Name only — the password half posts to
+    // `user-password.update`, which already exists and returns back().
+    Route::patch('/account/profile', [BuyerProfileController::class, 'update'])->name('buyer.profile.update');
+
+    Route::post('/account/addresses', [AddressController::class, 'store'])->name('buyer.addresses.store');
+    Route::patch('/account/addresses/{address}', [AddressController::class, 'update'])->name('buyer.addresses.update');
+    Route::patch('/account/addresses/{address}/default', [AddressController::class, 'makeDefault'])->name('buyer.addresses.default');
+    Route::delete('/account/addresses/{address}', [AddressController::class, 'destroy'])->name('buyer.addresses.destroy');
+
     Route::get('/orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');
+
+    /*
+     * First-run tour, shown once after email verification (VerifyEmailResponse
+     * routes new buyers here). Skippable at every step — `skip` and `store`
+     * both end with onboarded_at stamped, so it never reappears.
+     */
+    Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+    Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
+
+    // Trade access, for anyone who skipped the tour or decided later.
+    Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
+    Route::post('/professional-account', [ProfessionalRequestController::class, 'store'])
+        ->middleware('throttle:5,60')
+        ->name('professional.request');
 });
 
 // Public routes — no auth needed

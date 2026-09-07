@@ -171,7 +171,7 @@ export default function VerifyEmail({ status }: { status?: string }) {
                                     <button
                                         type="submit"
                                         disabled={processing}
-                                        className="group inline-flex w-full items-center justify-center gap-2.5 bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="group inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {processing ? (
                                             <Spinner />

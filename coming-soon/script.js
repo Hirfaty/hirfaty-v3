@@ -40,7 +40,10 @@ const STORAGE_KEY = 'hirfaty_coming_soon_lang';
 
 function applyLang(lang) {
   const t = translations[lang];
-  if (!t) return;
+
+  if (!t) {
+return;
+}
 
   document.documentElement.lang = t.htmlLang;
   document.body.setAttribute('dir', t.dir);
@@ -48,7 +51,10 @@ function applyLang(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const value = t[el.getAttribute('data-i18n')];
-    if (value) el.textContent = value;
+
+    if (value) {
+el.textContent = value;
+}
   });
 
   document.querySelectorAll('.lang button').forEach((btn) => {
@@ -69,6 +75,7 @@ document.querySelectorAll('.lang button').forEach((btn) => {
 });
 
 let stored = null;
+
 try {
   stored = localStorage.getItem(STORAGE_KEY);
 } catch {

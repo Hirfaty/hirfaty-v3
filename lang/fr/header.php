@@ -7,4 +7,12 @@ return [
     'search' => 'Rechercher',
     'account' => 'Compte',
     'start_selling' => 'Vendre sur Hirfaty',
+
+    // ── Cart dropdown ──────────────────────────────────────────────
+    'cart_aria' => 'Panier',
+    'cart_title' => 'Votre panier',
+    'cart_empty' => 'Votre panier est vide.',
+    'cart_qty' => 'Qté :count',
+    'cart_subtotal' => 'Sous-total',
+    'cart_checkout' => 'Passer commande',
 ];

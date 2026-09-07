@@ -5,7 +5,9 @@ import {
     Calendar,
     CheckCircle2,
     Clock,
+    EllipsisVertical,
     ExternalLink,
+    Eye,
     KeyRound,
     Mail,
     MapPin,
@@ -14,6 +16,7 @@ import {
     Phone,
     ShoppingBag,
     Store,
+    Trash2,
     UserCheck,
     Wallet,
 } from 'lucide-react';
@@ -21,8 +24,24 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import ResetLinkDialog from '@/components/admin/reset-link-dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Table,
     TableBody,
@@ -84,7 +103,9 @@ interface Props {
             // Category names are stored per locale; the resolved display string
             // is appended server-side as translated_name.
             category: { translated_name: string };
-            products: Product[];
+            // `order_items_count` decides whether Delete is offered: a product
+            // that has ever been ordered can only be archived, never removed.
+            products: (Product & { order_items_count?: number })[];
         };
     };
     earnings: EarningsSummary;
@@ -184,6 +205,43 @@ const ShowSeller = ({
 }: Props) => {
     const [generatingReset, setGeneratingReset] = useState(false);
     const [resetLink, setResetLink] = useState<ResetLinkPayload | null>(null);
+    /** The product awaiting delete confirmation, or null when none is. */
+    const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const confirmDeleteProduct = () => {
+        if (!deleteTarget) {
+            return;
+        }
+
+        setDeleting(true);
+        router.delete(route('admin.products.destroy', deleteTarget.id), {
+            preserveScroll: true,
+            /*
+             * The endpoint replies 200 whether it deleted or refused — a
+             * product with order history is blocked, and that outcome only
+             * shows up in `flash`. Reading it here rather than assuming
+             * success is what stops a refusal reporting as "deleted".
+             */
+            onSuccess: (page) => {
+                const flash = (page.props as unknown as PageProps).flash;
+
+                if (flash?.error) {
+                    toast.error(flash.error);
+
+                    return;
+                }
+
+                toast.success(flash?.success ?? 'Produit supprimé.');
+            },
+            onError: () =>
+                toast.error('Une erreur est survenue lors de la suppression.'),
+            onFinish: () => {
+                setDeleting(false);
+                setDeleteTarget(null);
+            },
+        });
+    };
 
     const handleBan = () => {
         if (
@@ -499,70 +557,183 @@ const ShowSeller = ({
                                     <TableHead>Prix</TableHead>
                                     <TableHead>Stock</TableHead>
                                     <TableHead>Statut</TableHead>
+                                    <TableHead className="text-right">
+                                        Actions
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {(user.store?.products.length ?? 0) === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={4}
+                                            colSpan={5}
                                             className="h-24 text-center text-ink-soft"
                                         >
                                             Aucun produit en ligne.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    user.store?.products.map((product) => (
-                                        <TableRow key={product.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                                                        {product
-                                                            .images?.[0] && (
-                                                            <img
-                                                                src={
-                                                                    product
-                                                                        .images[0]
-                                                                        .url
-                                                                }
-                                                                alt=""
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        )}
+                                    user.store?.products.map((product) => {
+                                        // Guaranteed to fail server-side, so
+                                        // the action is disabled rather than
+                                        // offered — see ProductDeletionService.
+                                        const hasOrders =
+                                            (product.order_items_count ?? 0) >
+                                            0;
+
+                                        return (
+                                            <TableRow key={product.id}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                                                            {product
+                                                                .images?.[0] && (
+                                                                <img
+                                                                    src={
+                                                                        product
+                                                                            .images[0]
+                                                                            .url
+                                                                    }
+                                                                    alt=""
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <Link
+                                                            href={route(
+                                                                'admin.products.show',
+                                                                product.id,
+                                                            )}
+                                                            className="text-sm font-medium text-ink hover:underline"
+                                                        >
+                                                            {product.name}
+                                                        </Link>
                                                     </div>
-                                                    <span className="text-sm font-medium text-ink">
-                                                        {product.name}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-ink">
+                                                    {formatMAD(
+                                                        Number(
+                                                            product.sale_price ||
+                                                                product.base_price,
+                                                        ),
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-ink-soft">
+                                                    {product.has_variants
+                                                        ? 'Géré par déclinaison'
+                                                        : `${product.stock} unités`}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[product.status] ?? 'bg-muted text-ink-soft'}`}
+                                                    >
+                                                        {product.status}
                                                     </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm text-ink">
-                                                {formatMAD(
-                                                    Number(
-                                                        product.sale_price ||
-                                                            product.base_price,
-                                                    ),
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-sm text-ink-soft">
-                                                {product.has_variants
-                                                    ? 'Géré par déclinaison'
-                                                    : `${product.stock} unités`}
-                                            </TableCell>
-                                            <TableCell>
-                                                <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[product.status] ?? 'bg-muted text-ink-soft'}`}
-                                                >
-                                                    {product.status}
-                                                </span>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8"
+                                                                aria-label={`Actions pour ${product.name}`}
+                                                            >
+                                                                <EllipsisVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={route(
+                                                                        'admin.products.show',
+                                                                        product.id,
+                                                                    )}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                    Voir le
+                                                                    produit
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={route(
+                                                                        'admin.products.edit',
+                                                                        product.id,
+                                                                    )}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                    Modifier
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                disabled={
+                                                                    hasOrders
+                                                                }
+                                                                title={
+                                                                    hasOrders
+                                                                        ? 'Ce produit a des commandes — archivez-le plutôt'
+                                                                        : undefined
+                                                                }
+                                                                onSelect={() =>
+                                                                    setDeleteTarget(
+                                                                        product,
+                                                                    )
+                                                                }
+                                                                className="flex items-center gap-2 text-destructive"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                Supprimer
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
                     </Card>
                 </div>
             </div>
+
+            {/* ── Delete confirmation ─────────────────────────── */}
+            <AlertDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Supprimer «&nbsp;{deleteTarget?.name}&nbsp;» ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cette action est irréversible : le produit, ses
+                            photos et ses déclinaisons seront supprimés
+                            définitivement.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDeleteProduct}
+                            disabled={deleting}
+                            className="bg-terracotta text-white hover:bg-terracotta/90"
+                        >
+                            {deleting ? 'Suppression…' : 'Supprimer'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <ResetLinkDialog
                 link={resetLink}

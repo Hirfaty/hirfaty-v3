@@ -64,12 +64,6 @@ return [
     'auth.register.role_seller' => 'حرفي',
     'auth.register.role_seller_hint' => 'لفتح ورشة',
 
-    'auth.register.buyer_type_question' => 'أشتري بصفتي',
-    'auth.register.buyer_type_individual' => 'فرد',
-    'auth.register.buyer_type_individual_hint' => 'أسعار التجزئة، قطعة بقطعة.',
-    'auth.register.buyer_type_professional' => 'محترف',
-    'auth.register.buyer_type_professional_hint' => 'أسعار الجملة، حسب الحد الأدنى للطلب لكل منتج.',
-
     // ── شاشة تفعيل البريد الإلكتروني ─────────────────────────────────────
     'auth.verify.eyebrow' => 'أمان الحساب',
     'auth.verify.title' => 'تحقق من',

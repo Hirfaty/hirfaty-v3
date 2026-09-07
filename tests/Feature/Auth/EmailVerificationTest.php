@@ -127,3 +127,55 @@ test('already verified user visiting verification link is redirected without fir
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 });
+
+/**
+ * A brand-new buyer is sent to the intro tour instead of straight to the
+ * market. This hangs off verification rather than login because it's the one
+ * moment we know they're both new and actively engaged.
+ */
+test('a brand-new buyer lands on the onboarding tour', function () {
+    $user = User::factory()->unverified()->notOnboarded()->create();
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)],
+    );
+
+    $this->actingAs($user)->get($verificationUrl)
+        ->assertRedirect(route('onboarding.show', absolute: false));
+});
+
+/**
+ * ...but only once. Someone who has already been through the tour goes
+ * straight to the market, so re-verifying never replays it.
+ */
+test('a buyer who already did the tour goes straight to the market', function () {
+    $user = User::factory()->unverified()->create(['onboarded_at' => now()]);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)],
+    );
+
+    $this->actingAs($user)->get($verificationUrl)
+        ->assertRedirect(route('products.index', absolute: false));
+});
+
+/**
+ * A seller's first run is the mandatory store-setup wizard, so the buyer tour
+ * must not intercept them even though they've never seen it.
+ */
+test('a new seller still goes to their shop, not the buyer tour', function () {
+    $user = User::factory()->unverified()->notOnboarded()->create(['role' => 'seller']);
+
+    $verificationUrl = URL::temporarySignedRoute(
+        'verification.verify',
+        now()->addMinutes(60),
+        ['id' => $user->id, 'hash' => sha1($user->email)],
+    );
+
+    $this->actingAs($user)->get($verificationUrl)
+        ->assertRedirect(route('seller.products.index', absolute: false));
+});

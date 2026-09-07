@@ -64,12 +64,6 @@ return [
     'auth.register.role_seller' => 'Artisan',
     'auth.register.role_seller_hint' => 'Pour ouvrir un atelier',
 
-    'auth.register.buyer_type_question' => 'J\'achète en tant que',
-    'auth.register.buyer_type_individual' => 'Particulier',
-    'auth.register.buyer_type_individual_hint' => 'Prix de détail, à l\'unité.',
-    'auth.register.buyer_type_professional' => 'Professionnel',
-    'auth.register.buyer_type_professional_hint' => 'Tarifs de gros, selon la quantité minimale de chaque produit.',
-
     // ── Écran de vérification d'e-mail ───────────────────────────────────
     'auth.verify.eyebrow' => 'Sécurité du compte',
     'auth.verify.title' => 'Vérifiez votre',

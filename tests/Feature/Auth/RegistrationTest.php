@@ -79,3 +79,36 @@ test('the terms must be accepted', function () {
 
     $this->assertGuest();
 });
+
+test('sellers can register themselves', function () {
+    $this->post(route('register.store'), registrationPayload([
+        'email' => 'artisan@example.com',
+        'role' => 'seller',
+    ]))->assertSessionHasNoErrors();
+
+    expect(User::firstWhere('email', 'artisan@example.com')->role)->toBe('seller');
+});
+
+/**
+ * Signup used to offer an "individual / professional" toggle that wrote
+ * professional_buyer straight to the column — i.e. anyone could self-declare a
+ * trade account and be billed off the wholesale price list. The toggle is gone
+ * from the form, but the form is not the security boundary: this pins the
+ * server rule, since a hand-rolled POST bypasses the UI entirely.
+ */
+test('a trade account cannot be self-assigned at signup', function () {
+    $this->post(route('register.store'), registrationPayload([
+        'role' => 'professional_buyer',
+    ]))->assertSessionHasErrors('role');
+
+    $this->assertGuest();
+    expect(User::where('email', 'achraf@example.com')->exists())->toBeFalse();
+});
+
+test('an unknown role is rejected at signup', function () {
+    $this->post(route('register.store'), registrationPayload([
+        'role' => 'super_admin',
+    ]))->assertSessionHasErrors('role');
+
+    $this->assertGuest();
+});

@@ -20,8 +20,19 @@ export type User = {
     /** Free-text description: self-written by sellers, admin-written for buyers. */
     bio?: string | null;
     email_verified_at: string | null;
+    /** Set once the buyer has been through (or skipped) the intro tour. */
+    onboarded_at?: string | null;
     /** Only meaningful when role is 'professional_buyer'; null = not reviewed. */
     professional_verified_at?: string | null;
+    /*
+     * The buyer-initiated trade request. Separate from `role`: a buyer stays a
+     * `buyer` while 'pending', and only an admin's approval promotes them to
+     * professional_buyer. null = never asked.
+     */
+    professional_request_status?: 'pending' | 'approved' | 'declined' | null;
+    professional_request_message?: string | null;
+    professional_requested_at?: string | null;
+    professional_decline_reason?: string | null;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;

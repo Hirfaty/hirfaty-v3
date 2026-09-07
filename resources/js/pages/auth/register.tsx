@@ -1,12 +1,5 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    ArrowRight,
-    Building2,
-    Hammer,
-    ShoppingBag,
-    User as UserIcon,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Hammer, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 import VaseIcon from '@/components/home/VaseIcon';
 import InputError from '@/components/input-error';
@@ -22,7 +15,6 @@ import { login } from '@/routes';
 import { store } from '@/routes/register';
 
 type AccountKind = 'buyer' | 'seller';
-type BuyerType = 'individual' | 'professional';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -57,21 +49,13 @@ export default function Register() {
     });
 
     /*
-     * Buyers choose retail vs. bulk pricing at signup — there's no admin
-     * verification gate on this yet (see User::isProfessionalVerified), it's
-     * purely which price list and minimum order quantity apply later. Sellers
-     * don't see this toggle; `role` below ignores it whenever accountKind is
-     * 'seller', so leaving the choice in place if someone switches back and
-     * forth is harmless.
+     * Signup is buyer-or-seller only. Trade accounts used to be a self-serve
+     * sub-choice here, but wholesale pricing shouldn't be handed out on an
+     * unvetted self-declaration — a buyer is upgraded to professional_buyer
+     * by an admin afterwards (Admin\UserController::verifyProfessional), so
+     * the role and the review that justifies it stay together.
      */
-    const [buyerType, setBuyerType] = useState<BuyerType>('individual');
-
-    const role =
-        accountKind === 'seller'
-            ? 'seller'
-            : buyerType === 'professional'
-              ? 'professional_buyer'
-              : 'buyer';
+    const role = accountKind;
 
     const switchLocale = (code: string) =>
         router.post(route('locale.switch', code), {}, { preserveScroll: true });
@@ -79,11 +63,6 @@ export default function Register() {
     const accountKinds = [
         { key: 'buyer' as const, Icon: ShoppingBag },
         { key: 'seller' as const, Icon: Hammer },
-    ];
-
-    const buyerTypes = [
-        { key: 'individual' as const, Icon: UserIcon },
-        { key: 'professional' as const, Icon: Building2 },
     ];
 
     return (
@@ -227,13 +206,11 @@ export default function Register() {
                                 {({ processing, errors }) => (
                                     <>
                                         {/*
-                                         * The account-kind and buyer-type
-                                         * pickers below are UI-only radios
-                                         * (their `name`s aren't validated
-                                         * fields); this hidden input carries
-                                         * the actual computed role — 'buyer',
-                                         * 'seller' or 'professional_buyer' —
-                                         * that the backend expects.
+                                         * The account-kind picker below is a
+                                         * UI-only radio (its `name` isn't a
+                                         * validated field); this hidden input
+                                         * carries the actual role — 'buyer' or
+                                         * 'seller' — that the backend expects.
                                          */}
                                         <input
                                             type="hidden"
@@ -263,7 +240,7 @@ export default function Register() {
                                                         return (
                                                             <label
                                                                 key={key}
-                                                                className={`mb-0 flex cursor-pointer items-center gap-3 border px-4 py-3 tracking-normal normal-case transition-colors ${
+                                                                className={`mb-0 flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 tracking-normal normal-case transition-colors ${
                                                                     active
                                                                         ? 'border-souk-brown bg-souk-brown/5'
                                                                         : 'border-souk-brown/20 hover:border-souk-brown/45'
@@ -313,75 +290,6 @@ export default function Register() {
                                                 className="mt-1.5"
                                             />
                                         </fieldset>
-
-                                        {/* Buyer-only sub-choice: retail vs.
-                                            bulk pricing. Lighter than the
-                                            account-kind cards above since it's
-                                            a secondary decision — a flat
-                                            segmented toggle, not another pair
-                                            of full cards. */}
-                                        {accountKind === 'buyer' && (
-                                            <fieldset className="mt-4">
-                                                <legend
-                                                    className={`${labelClass} mb-2`}
-                                                >
-                                                    {t(
-                                                        'common.auth.register.buyer_type_question',
-                                                    )}
-                                                </legend>
-                                                <div className="inline-flex border border-souk-brown/25">
-                                                    {buyerTypes.map(
-                                                        ({ key, Icon }) => {
-                                                            const active =
-                                                                buyerType ===
-                                                                key;
-
-                                                            return (
-                                                                <label
-                                                                    key={key}
-                                                                    className={`mb-0 flex cursor-pointer items-center gap-2 px-4 py-2 text-sm tracking-normal normal-case transition-colors ${
-                                                                        active
-                                                                            ? 'bg-souk-brown text-souk-cream'
-                                                                            : 'text-souk-brown-deep/70 hover:bg-souk-brown/5'
-                                                                    }`}
-                                                                >
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="buyer_type"
-                                                                        value={
-                                                                            key
-                                                                        }
-                                                                        checked={
-                                                                            active
-                                                                        }
-                                                                        onChange={() =>
-                                                                            setBuyerType(
-                                                                                key,
-                                                                            )
-                                                                        }
-                                                                        className="sr-only"
-                                                                    />
-                                                                    <Icon
-                                                                        className="h-4 w-4 shrink-0"
-                                                                        strokeWidth={
-                                                                            1.5
-                                                                        }
-                                                                    />
-                                                                    {t(
-                                                                        `common.auth.register.buyer_type_${key}`,
-                                                                    )}
-                                                                </label>
-                                                            );
-                                                        },
-                                                    )}
-                                                </div>
-                                                <p className="mt-1.5 text-[11px] leading-relaxed text-souk-brown-deep/50">
-                                                    {t(
-                                                        `common.auth.register.buyer_type_${buyerType}_hint`,
-                                                    )}
-                                                </p>
-                                            </fieldset>
-                                        )}
 
                                         <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3.5">
                                             <div>
@@ -586,7 +494,7 @@ export default function Register() {
                                             type="submit"
                                             disabled={processing}
                                             data-test="register-user-button"
-                                            className="group mt-4 inline-flex w-full items-center justify-center gap-2.5 bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="group mt-4 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             {processing && <Spinner />}
                                             {t(

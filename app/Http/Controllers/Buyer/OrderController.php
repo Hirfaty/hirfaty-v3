@@ -5,21 +5,24 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Notifications\OrderCancelledByBuyer;
+use App\Services\BuyerAccountService;
 use Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    public function index()
-    {
-        $orders = Order::where('buyer_id', Auth::id())
-            ->with(['store', 'items.product.images', 'city'])
-            ->latest()
-            ->paginate(10);
+    public function __construct(private BuyerAccountService $account) {}
 
-        return Inertia::render('buyer/account/orders', [
-            'orders' => $orders,
+    /**
+     * The order history, at /orders — one of the four pages sharing the
+     * account sidebar. The listing is a placeholder for now; the `orders`
+     * prop is already the flattened shape the cards will read.
+     */
+    public function index(Request $request)
+    {
+        return Inertia::render('buyer/orders/index', [
+            'orders' => $this->account->orders($request->user()),
         ]);
     }
 

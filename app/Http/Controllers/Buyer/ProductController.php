@@ -151,10 +151,17 @@ class ProductController extends Controller
         return max(100, (int) (ceil($max / 100) * 100));
     }
 
-    public function show(string $slug)
+    public function show(Request $request, string $slug)
     {
+        $audience = Product::audienceFor($request->user());
+
         $product = Product::storefront()
             ->where('slug', $slug)
+            // The same gate the listing applies. Without it `visibility` was
+            // only enforced on the grid: a trade-only piece stayed reachable
+            // by its slug, so a consumer could open it and add it to the cart
+            // through a link, a search engine or a browser's history.
+            ->whereIn('visibility', ['both', $audience])
             ->with([
                 'store.city',
                 'store.user',
@@ -224,6 +231,37 @@ class ProductController extends Controller
             ->latest()
             ->limit(4)
             ->get();
+    }
+
+    /**
+     * Add or remove a product from the signed-in buyer's wishlist.
+     *
+     * The `products.wishlist` route has pointed here since it was added, but
+     * the method itself was never written — so the heart on the product page
+     * threw on every click and no wishlist could ever be populated.
+     *
+     * firstOrCreate/delete rather than a blind create: the button is a toggle,
+     * and wishlists carries a (user_id, product_id) unique index that a second
+     * click would otherwise trip.
+     */
+    public function toggleWishlist(Product $product)
+    {
+        $existing = Wishlist::where('user_id', Auth::id())
+            ->where('product_id', $product->id)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+
+            return back()->with('success', 'Retiré de vos coups de cœur.');
+        }
+
+        Wishlist::create([
+            'user_id' => Auth::id(),
+            'product_id' => $product->id,
+        ]);
+
+        return back()->with('success', 'Ajouté à vos coups de cœur.');
     }
 
     private function recordView(int $productId): void

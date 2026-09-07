@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -52,6 +53,7 @@ class CartService
         $newQuantity = ($existing?->quantity ?? 0) + $quantity;
 
         $this->assertStockFor($product, $variant, $newQuantity);
+        $this->assertMinimumFor($product, $cart->user, $newQuantity);
 
         if ($existing) {
             $existing->update(['quantity' => $newQuantity]);
@@ -69,13 +71,44 @@ class CartService
     /**
      * Guard a quantity change on an existing line.
      *
+     * Both checks, not just stock: without the minimum a trade buyer could add
+     * the required 20, then edit the line down to 1 and walk straight past the
+     * bulk rule with wholesale pricing intact.
+     *
      * @throws ValidationException
      */
-    public function assertStock(CartItem $item, int $quantity): void
+    public function assertQuantity(CartItem $item, int $quantity): void
     {
-        $item->loadMissing(['product', 'variant']);
+        $item->loadMissing(['product', 'variant', 'cart.user']);
 
         $this->assertStockFor($item->product, $item->variant, $quantity);
+        $this->assertMinimumFor($item->product, $item->cart?->user, $quantity);
+    }
+
+    /**
+     * Hold a line to the minimum its buyer's price list demands.
+     *
+     * Wholesale rates are granted on the understanding that the trade buys in
+     * bulk, so the minimum is part of the bargain rather than a display hint —
+     * `min_order_qty_professional` had been carried on the product and shown on
+     * the page since trade pricing landed, but `minOrderQtyFor()` was never
+     * called by anything, so a verified professional could buy a single piece
+     * at the wholesale price.
+     *
+     * Keyed off the *cart owner*, not the request user, so the merge of a
+     * localStorage cart is held to the same rule as a live click.
+     *
+     * @throws ValidationException
+     */
+    private function assertMinimumFor(Product $product, ?User $user, int $quantity): void
+    {
+        $minimum = $product->minOrderQtyFor(Product::audienceFor($user));
+
+        if ($quantity < $minimum) {
+            throw ValidationException::withMessages([
+                'quantity' => "Commande minimum de {$minimum} pièces pour '{$product->name}' au tarif professionnel.",
+            ]);
+        }
     }
 
     /**

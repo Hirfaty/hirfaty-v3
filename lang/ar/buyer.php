@@ -71,7 +71,6 @@ return [
     'detail.go_to_cart' => 'عرض السلة',
     'detail.sold_out' => 'نفدت الكمية',
     'detail.in_stock' => 'متوفر',
-    'detail.only_left' => 'بقي :count فقط',
     'detail.quantity' => 'الكمية',
     'detail.decrease' => 'إنقاص',
     'detail.increase' => 'زيادة',
@@ -103,6 +102,13 @@ return [
     // Variants
     'detail.select_variant_prompt' => 'اختر خياراً',
 
+    // Sign-in gate
+    'detail.login_to_buy' => 'سجّل الدخول للشراء',
+    'detail.login_to_buy_hint' => 'سلتك وأسعارك مرتبطة بحسابك.',
+    'detail.login_to_buy_register' => 'إنشاء حساب',
+    'detail.below_min_qty' => 'الكمية المتوفرة أقل من حدّك الأدنى للطلب',
+    'detail.below_min_stock' => 'بقي :count فقط — الحد الأدنى لطلبك :min',
+
     // Add to cart feedback
     'detail.adding' => 'أُضيف إلى السلة',
     'detail.added_to_cart' => 'أُضيف إلى سلتك',
@@ -123,4 +129,189 @@ return [
     'detail.trust_durable_body' => 'خزف محروق على حرارة عالية ليدوم طويلاً.',
     'detail.trust_packaging_title' => 'تغليف آمن',
     'detail.trust_packaging_body' => 'يُغلَّف بعناية لضمان وصول سالم.',
+
+    // ── التعريف بالمنصة (أول زيارة للمشتري) ──────────────────────────────
+    'onboarding.title' => 'مرحباً بك في حرفتي',
+    'onboarding.skip' => 'تخطي',
+    'onboarding.back' => 'رجوع',
+    'onboarding.next' => 'متابعة',
+    'onboarding.finish' => 'اكتشف السوق',
+
+    'onboarding.welcome.quote' => 'خلف كل قطعة يدان وحرفة متوارثة.',
+    'onboarding.welcome.title' => 'مرحباً، :name 👋',
+    'onboarding.welcome.body' => 'حرفتي تجمع حرفيي المغرب في مكان واحد. دقيقتان للتعارف، ثم السوق بين يديك.',
+    'onboarding.welcome.point_direct' => 'تشتري مباشرة من الحرفي — بدون وسيط.',
+    'onboarding.welcome.point_authentic' => 'كل قطعة مصنوعة يدوياً، وكل متجر تتحقق منه فريقنا.',
+    'onboarding.welcome.point_delivery' => 'التوصيل إلى كل أنحاء المغرب، مع تتبع من صفحة طلباتك.',
+
+    'onboarding.interests.quote' => 'خزف آسفي، زرابي تازناخت، جلد فاس — للمغرب ألف حرفة.',
+    'onboarding.interests.title' => 'ما الذي يجذبك؟',
+    'onboarding.interests.body' => 'اختر الحرف التي تهمك، وسنستعملها لإبراز ما يناسبك.',
+    'onboarding.interests.optional' => 'اختياري — يمكنك تغيير رأيك في أي وقت.',
+
+    'onboarding.professional.quote' => 'رياضات وفنادق ومتاجر: يؤثثون فضاءاتهم من عند حرفيينا.',
+    'onboarding.professional.title' => 'هل تشتري لحساب مؤسسة؟',
+    'onboarding.professional.body' => 'رياض، فندق، مطعم، متجر… إذا كنت تطلب بكميات، يمكن أن يصبح حسابك مهنياً.',
+    'onboarding.professional.perk' => 'تستفيد الحسابات المهنية من أسعار الجملة. يراجع فريقنا كل طلب قبل تفعيله.',
+    'onboarding.professional.cta' => 'اطلب حساباً مهنياً',
+    'onboarding.professional.label' => 'حدثنا عن نشاطك',
+    'onboarding.professional.placeholder' => 'مثال: أدير رياضاً من 8 غرف في مراكش وأبحث عن مفروشات وأوانٍ مصنوعة يدوياً بكميات.',
+    'onboarding.professional.hint' => '20 حرفاً على الأقل. يمكنك مواصلة الطلب كالمعتاد أثناء مراجعة طلبك.',
+
+    // ── الحساب المهني (صفحة مستقلة) ──────────────────────────────────────
+    'professional.title' => 'الحساب المهني',
+    'professional.intro' => 'رياض، فندق، مطعم، متجر: إذا كنت تشتري بكميات، اطلب الوصول إلى أسعار الجملة.',
+    'professional.label' => 'حدثنا عن نشاطك',
+    'professional.submit' => 'إرسال الطلب',
+    'professional.pending_title' => 'الطلب قيد المراجعة',
+    'professional.pending_body' => 'يدرس فريقنا طلبك. ستصلك رسالة بمجرد اتخاذ القرار — ويمكنك مواصلة الطلب كالمعتاد في انتظار ذلك.',
+    'professional.approved_title' => 'الحساب المهني مفعّل',
+    'professional.approved_body' => 'تُطبَّق أسعار الجملة تلقائياً على المنتجات المعنية.',
+    'professional.declined_title' => 'لم يتم قبول الطلب',
+    'professional.declined_reason' => 'السبب',
+    'professional.declined_retry' => 'يمكنك تقديم طلب جديد.',
+    'professional.submitted_on' => 'أُرسل في :date',
+
+    // ── مساحة الحساب: أربع صفحات تتقاسم الشريط الجانبي ────────────────────
+    'account.title' => 'حسابي',
+    'account.subtitle' => 'معلوماتك وطلباتك والقطع التي احتفظت بها.',
+
+    'account.nav_overview' => 'حسابي',
+    'account.nav_orders' => 'الطلبات',
+    'account.nav_wishlist' => 'المفضلة',
+    'account.nav_payment' => 'الأداء',
+    'account.nav_professional' => 'الحساب المهني',
+    'account.logout' => 'تسجيل الخروج',
+
+    'account.orders_intro' => 'تُقسَّم السلة إلى طلب لكل ورشة، لذا قد تظهر عملية شراء واحدة هنا أكثر من مرة.',
+    'account.wishlist_intro' => 'القطع التي احتفظت بها، تبقى إلى أن تحذفها.',
+    'account.payment_intro' => 'البطاقات ووسائل الأداء المستعملة لتسوية طلباتك.',
+    'account.professional_intro' => 'اطلب الوصول المهني، أو تحقق من حالة طلب سبق إرساله.',
+
+    'account.placeholder' => 'لا شيء لعرضه هنا بعد.',
+
+    // ── ‎/account: الهوية وكلمة المرور والعنوان الافتراضي ─────────────────
+    'account.section_identity' => 'المعلومات الشخصية',
+    'account.section_identity_desc' => 'الاسم الذي تُحرَّر به طلباتك وسندات التسليم.',
+    'account.section_password' => 'كلمة المرور',
+    'account.section_password_desc' => 'اختر كلمة مرور جديدة. ستبقى متصلاً على هذا الجهاز.',
+    'account.section_address' => 'عنوان التوصيل الافتراضي',
+    'account.section_address_desc' => 'المكان الذي تُرسل إليه طلباتك. يملؤه الأداء تلقائياً.',
+
+    'account.field_full_name' => 'الاسم الكامل',
+    'account.field_first_name' => 'الاسم الشخصي',
+    'account.field_last_name' => 'الاسم العائلي',
+    'account.field_email' => 'البريد الإلكتروني',
+    'account.field_phone' => 'الهاتف',
+    'account.locked_note' => 'لا يمكن تغيير بريدك الإلكتروني ورقم هاتفك من هنا حالياً — تواصل معنا وسنحدّثهما لك.',
+
+    'account.field_password' => 'كلمة المرور',
+    'account.change_password' => 'تغيير كلمة المرور',
+    'account.field_current_password' => 'كلمة المرور الحالية',
+    'account.field_new_password' => 'كلمة المرور الجديدة',
+    'account.field_confirm_password' => 'تأكيد كلمة المرور الجديدة',
+
+    'account.no_address' => 'لا يوجد عنوان محفوظ بعد.',
+    'account.add_address' => 'إضافة عنوان',
+    'account.field_address_label' => 'اسم العنوان',
+    'account.field_address_label_hint' => 'اختياري — لتسهيل تمييزه.',
+    'account.field_address_label_ph' => 'المنزل، رياض، متجر…',
+    'account.field_city' => 'المدينة',
+    'account.field_city_ph' => 'اختر مدينة',
+    'account.field_address_line' => 'العنوان',
+    'account.field_address_line_ph' => 'رقم 12، زنقة الخزافين، الحي…',
+    'account.field_recipient' => 'المستلم',
+    'account.field_recipient_phone' => 'هاتف المستلم',
+
+    'account.saved' => 'تم الحفظ.',
+    'account.update_password' => 'تحديث كلمة المرور',
+    'account.password_saved' => 'تم تحديث كلمة المرور.',
+    'account.save_address' => 'حفظ العنوان',
+
+    'account.profile_saved' => 'تم تحديث معلوماتك.',
+    'account.address_saved' => 'تم حفظ عنوان التوصيل.',
+    'account.address_default_saved' => 'تم تحديث عنوان التوصيل الافتراضي.',
+    'account.address_deleted' => 'تم حذف العنوان.',
+
+    'account.err_first_name' => 'أدخل اسمك الشخصي.',
+    'account.err_last_name' => 'أدخل اسمك العائلي.',
+    'account.err_address_line' => 'أدخل عنوان التوصيل.',
+    'account.err_phone' => 'أدخل رقم هاتف للتوصيل.',
+    'account.err_city' => 'اختر مدينة.',
+
+    // ── المفضلة ──────────────────────────────────────────────────────────
+    'wishlist.title' => 'مفضلتي',
+
+    // ── السلة ────────────────────────────────────────────────────────────
+    'cart.title' => 'سلتك',
+    'cart.back' => 'تابع التصفح',
+    'cart.count_one' => 'منتج واحد',
+    'cart.count_many' => ':count منتجات',
+
+    'cart.empty_title' => 'سلتك فارغة',
+    'cart.empty_body' => 'تصفّح السوق ودع أعمال حرفيينا تفاجئك.',
+    'cart.empty_cta' => 'اكتشف السوق',
+
+    'cart.sold_by' => 'من :store',
+    'cart.remove' => 'إزالة',
+    'cart.decrease' => 'إنقاص الكمية',
+    'cart.increase' => 'زيادة الكمية',
+    'cart.per_unit' => 'للقطعة',
+    'cart.stock_left' => 'بقي :count فقط',
+    'cart.min_qty' => 'الحد الأدنى للطلب: :count',
+    'cart.unpriced' => 'السعر قيد التأكيد — أزل هذا المنتج للمتابعة.',
+
+    'cart.summary' => 'الملخص',
+    'cart.subtotal' => 'المجموع الفرعي',
+    'cart.savings' => 'التوفير',
+    'cart.delivery' => 'التوصيل عبر أمانة',
+    'cart.delivery_one_store' => 'ورشة واحدة',
+    'cart.delivery_many_stores' => ':count ورشات',
+    'cart.total' => 'المجموع',
+    'cart.checkout' => 'إتمام الطلب',
+    'cart.secure_payment' => 'دفع آمن',
+    'cart.split_note' => 'ستُقسَّم سلتك إلى طلب لكل ورشة.',
+
+    // ── إتمام الطلب ──────────────────────────────────────────────────────
+    'checkout.title' => 'إتمام الطلب',
+    'checkout.back' => 'العودة إلى السلة',
+
+    'checkout.delivery_heading' => 'التوصيل',
+    'checkout.saved_addresses' => 'عناوينك المحفوظة',
+    'checkout.default_badge' => 'الافتراضي',
+    'checkout.use_new_address' => 'استخدام عنوان آخر',
+    'checkout.new_address' => 'عنوان جديد',
+    'checkout.city' => 'المدينة',
+    'checkout.address_line' => 'العنوان الكامل',
+    'checkout.address_placeholder' => 'الشارع، الحي، رقم المنزل…',
+    'checkout.phone' => 'الهاتف',
+    'checkout.phone_hint' => 'سيتصل بك موصّل أمانة على هذا الرقم.',
+    'checkout.phone_placeholder' => '06 12 34 56 78',
+    'checkout.save_address' => 'احفظ هذا العنوان في دفتر عناويني',
+    'checkout.address_label' => 'اسم العنوان',
+    'checkout.address_label_placeholder' => 'المنزل، المكتب…',
+    'checkout.notes' => 'ملاحظات',
+    'checkout.optional' => 'اختياري',
+    'checkout.notes_placeholder' => 'تعليمات للموصّل…',
+
+    'checkout.shipments_heading' => 'تفاصيل الشحنات',
+    'checkout.shipments_note_one' => 'سلتك من ورشة واحدة: ستصلك طرد واحد.',
+    'checkout.shipments_note_many' => 'سلتك من :count ورشات: ستصلك :count طرود منفصلة.',
+    'checkout.shipped_by' => 'شحن بواسطة :store',
+    'checkout.quantity' => 'الكمية: :count',
+    'checkout.amana_standard' => 'توصيل أمانة (عادي)',
+
+    'checkout.summary' => 'ملخص الطلب',
+    'checkout.products' => 'المنتجات (:count)',
+    'checkout.delivery_fee' => 'رسوم التوصيل (:count طرود)',
+    'checkout.total' => 'المجموع',
+    'checkout.cod_note' => 'الدفع عند الاستلام. تدفع مباشرةً لموصّل أمانة عند وصول طرودك.',
+    'checkout.confirm' => 'تأكيد الطلب',
+    'checkout.processing' => 'جارٍ المعالجة…',
+
+    'checkout.err_address' => 'يرجى تحديد عنوان التوصيل.',
+    'checkout.err_city' => 'اختر مدينة.',
+    'checkout.err_phone' => 'رقم الهاتف مطلوب للتوصيل.',
+    'checkout.err_empty' => 'سلتك فارغة.',
+    'checkout.placed' => 'تم تسجيل :count طلب بنجاح!',
 ];

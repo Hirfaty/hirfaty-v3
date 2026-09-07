@@ -48,6 +48,7 @@ export const SiteHeader = () => {
                 name: string;
                 /** "Rouge / 4m" — absent on a product without variants. */
                 variant?: string | null;
+                image?: string | null;
                 seller: string;
                 qty: number;
                 price: number;
@@ -73,6 +74,7 @@ export const SiteHeader = () => {
                   // it under the same name the server cart uses so the
                   // dropdown renders identically either side of logging in.
                   variant: item.variant_label ?? null,
+                  image: item.image,
                   seller: item.store_name,
                   qty: item.quantity,
                   price: Number(item.price),
@@ -198,7 +200,7 @@ export const SiteHeader = () => {
                     <Popover>
                         <PopoverTrigger asChild>
                             <button
-                                aria-label="Panier"
+                                aria-label={t('header.cart_aria')}
                                 className={`relative ${ICON_BUTTON}`}
                             >
                                 <ShoppingBag
@@ -214,14 +216,16 @@ export const SiteHeader = () => {
                         </PopoverTrigger>
                         <PopoverContent
                             align="end"
-                            className="w-96 rounded-none border-ink/15 bg-paper p-0"
+                            className="w-96 overflow-hidden rounded-xl border-ink/15 bg-paper p-0"
                         >
                             <div className="border-b border-ink/10 px-5 py-4">
-                                <p className="eyebrow">Votre panier</p>
+                                <p className="eyebrow">
+                                    {t('header.cart_title')}
+                                </p>
                             </div>
                             {cartData.items.length === 0 ? (
                                 <div className="px-5 py-10 text-center text-sm text-ink-soft">
-                                    Votre panier est vide.
+                                    {t('header.cart_empty')}
                                 </div>
                             ) : (
                                 <>
@@ -231,7 +235,24 @@ export const SiteHeader = () => {
                                                 key={item.id}
                                                 className="flex gap-3 px-5 py-4"
                                             >
-                                                <div className="h-14 w-14 shrink-0 border border-ink/10 bg-cream-deep/60" />
+                                                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-ink/10 bg-cream-deep/60">
+                                                    {item.image ? (
+                                                        <img
+                                                            src={item.image}
+                                                            alt={item.name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center">
+                                                            <ShoppingBag
+                                                                className="h-5 w-5 text-ink/20"
+                                                                strokeWidth={
+                                                                    1.5
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate font-display text-sm leading-tight text-ink">
                                                         {item.name}
@@ -246,7 +267,12 @@ export const SiteHeader = () => {
                                                         {item.seller}
                                                     </p>
                                                     <p className="mt-1 text-xs text-ink-soft">
-                                                        Qté {item.qty}
+                                                        {t(
+                                                            'header.cart_qty',
+                                                        ).replace(
+                                                            ':count',
+                                                            String(item.qty),
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="flex flex-col items-end justify-between">
@@ -264,7 +290,7 @@ export const SiteHeader = () => {
                                     <div className="space-y-3 px-5 py-4">
                                         <div className="flex items-baseline justify-between">
                                             <span className="text-xs text-ink-soft">
-                                                Sous-total
+                                                {t('header.cart_subtotal')}
                                             </span>
                                             <span className="font-display text-lg text-ink">
                                                 {cartData.subtotal}{' '}
@@ -275,9 +301,9 @@ export const SiteHeader = () => {
                                         </div>
                                         <Link
                                             href={route('cart.show')}
-                                            className="block w-full bg-ink py-2.5 text-center font-display text-sm text-cream transition-colors hover:bg-ink/90"
+                                            className="block w-full rounded-xl bg-ink py-2.5 text-center font-display text-sm text-cream transition-colors hover:bg-ink/90"
                                         >
-                                            Passer commande
+                                            {t('header.cart_checkout')}
                                         </Link>
                                     </div>
                                 </>
@@ -309,13 +335,21 @@ export const SiteHeader = () => {
                                 </p>
                             </div>
                             <div className="p-2">
-                                {user && user.role === 'buyer' ? (
+                                {/* Both buyer kinds, not just 'buyer': a
+                                    professional_buyer used to fall through to
+                                    the guest menu and be offered "sign in"
+                                    while already signed in. */}
+                                {user &&
+                                (user.role === 'buyer' ||
+                                    user.role === 'professional_buyer') ? (
                                     <>
+                                        {/* The four pages of the account area,
+                                            each a route of its own. */}
                                         <Link
-                                            href={route('dashboard')}
+                                            href={route('buyer.dashboard')}
                                             className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                         >
-                                            Tableau de bord
+                                            Mon compte
                                         </Link>
                                         <Link
                                             href={route(
@@ -326,10 +360,18 @@ export const SiteHeader = () => {
                                             Mes commandes
                                         </Link>
                                         <Link
-                                            href="/wishlist"
+                                            href={route('buyer.wishlist')}
                                             className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                         >
-                                            Liste de souhaits
+                                            Mes coups de cœur
+                                        </Link>
+                                        <Link
+                                            href={route(
+                                                'buyer.payment_methods',
+                                            )}
+                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                        >
+                                            Paiement
                                         </Link>
                                         <button
                                             onClick={() =>

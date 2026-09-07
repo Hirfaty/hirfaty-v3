@@ -26,10 +26,15 @@ class CreateNewUser implements CreatesNewUsers
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            // professional_buyer is a self-serve choice at signup (an
-            // "individual / professional" toggle on the buyer flow) — it is
-            // not admin-gated, see User::isProfessionalVerified().
-            'role' => ['required', Rule::in(['seller', 'buyer', 'professional_buyer'])],
+            /*
+             * Buyer or seller only. professional_buyer is deliberately NOT
+             * accepted here: anyone could self-declare a trade account and
+             * help themselves to the wholesale price list. A buyer is
+             * promoted by an admin instead, via Admin\UserController — which
+             * is also what stamps professional_verified_at, so the role and
+             * the review that justifies it can't drift apart.
+             */
+            'role' => ['required', Rule::in(['seller', 'buyer'])],
             /*
              * `unique` is load-bearing: users.phone_number carries a UNIQUE
              * index, so without it a duplicate number sailed past validation

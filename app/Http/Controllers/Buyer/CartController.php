@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CartLineResource;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Services\CartService;
@@ -15,12 +16,24 @@ class CartController extends Controller
 {
     public function __construct(private readonly CartService $cart) {}
 
-    public function show()
+    public function show(Request $request)
     {
         $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
-        $cart->load(['items.product.images', 'items.product.store', 'items.variant.options']);
+        // `variant.media` too: a line shows the chosen variant's own photo when
+        // the seller uploaded one, and without the eager load that is an extra
+        // query per basket line.
+        $cart->load([
+            'items.product.images',
+            'items.product.store',
+            'items.variant.options',
+            'items.variant.media',
+        ]);
 
-        return Inertia::render('buyer/cart', ['cart' => $cart]);
+        return Inertia::render('buyer/cart', [
+            // Priced through CartLineResource rather than handed over raw, so
+            // the page cannot recompute a total the checkout disagrees with.
+            'items' => CartLineResource::collection($cart->items)->resolve($request),
+        ]);
     }
 
     public function add(Request $request)
@@ -55,8 +68,8 @@ class CartController extends Controller
         // Stop a quantity bump sailing past available stock: otherwise the
         // cart sits on an impossible quantity until checkout rejects the
         // entire basket, which reads as a broken checkout rather than as one
-        // line being over-ordered.
-        $this->cart->assertStock($cartItem, (int) $data['quantity']);
+        // line being over-ordered. Also holds a trade line to its bulk minimum.
+        $this->cart->assertQuantity($cartItem, (int) $data['quantity']);
 
         $cartItem->update(['quantity' => $data['quantity']]);
 
