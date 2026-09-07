@@ -92,7 +92,14 @@ services:
       - seaweedfs_data:/data
       - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
     networks:
-      - internal
+      internal:
+      # Also on `edge` (aliased `seaweedfs-staging`) so the proxy container can
+      # reach its filer/master UI — see docker/proxy/vhosts/staging-ssl.conf.
+      # Staging only: prod's SeaweedFS stays off `edge` on purpose, nothing
+      # asked for that exposure there yet.
+      edge:
+        aliases:
+          - seaweedfs-staging
     restart: unless-stopped
 
 volumes:

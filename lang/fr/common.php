@@ -90,4 +90,23 @@ return [
 
     'auth.register.have_account' => 'Vous avez déjà un compte ?',
     'auth.register.sign_in' => 'Se connecter',
+
+    // ── Pages d'erreur ───────────────────────────────────────────────────
+    // Rendues par Inertia via le gestionnaire dans bootstrap/app.php.
+    'errors.eyebrow' => 'Erreur :status',
+
+    'errors.404.title' => 'Cette page a quitté l’atelier',
+    'errors.404.body' => 'Le lien que vous avez suivi ne mène nulle part. La pièce a peut-être été retirée, ou l’adresse comporte une faute.',
+
+    'errors.403.title' => 'Cette porte reste fermée',
+    'errors.403.body' => 'Vous n’avez pas accès à cette page avec ce compte.',
+
+    'errors.500.title' => 'Quelque chose s’est brisé',
+    'errors.500.body' => 'Une erreur est survenue de notre côté. Nous en sommes informés — réessayez dans un instant.',
+
+    'errors.503.title' => 'Nous revenons très vite',
+    'errors.503.body' => 'Le site est en maintenance pour quelques minutes. Merci de votre patience.',
+
+    'errors.back_home' => 'Retour à l’accueil',
+    'errors.browse_market' => 'Explorer le marché',
 ];

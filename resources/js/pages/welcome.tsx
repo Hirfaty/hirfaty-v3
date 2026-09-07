@@ -1,11 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight, BadgeCheck, Building2, Check, Store } from 'lucide-react';
 import ArtisanCta from '@/components/ArtisanCta';
-import {
-    AtelierArchIcon,
-    PotteryIcon,
-    ZellijStarIcon,
-} from '@/components/home/CraftIcons';
+import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import VaseIcon from '@/components/home/VaseIcon';
 import SiteFooter from '@/components/SiteFooter';
@@ -19,6 +15,7 @@ import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
+import heroTextile from '@/images/hero-textile.jpg';
 
 //change
 
@@ -43,16 +40,6 @@ type FeaturedProduct = {
 
 /** Fallback tiles for the product strip before any product is published. */
 const SHOWCASE = [pottery, leather, wood, textile, jewelry, spice];
-
-/**
- * One glyph per claim. They were all the same vase before, which read as a
- * rendering bug rather than a set.
- */
-const QUALITY_CARDS = [
-    { n: 1, Icon: PotteryIcon }, // authentic craftsmanship
-    { n: 2, Icon: AtelierArchIcon }, // straight from the workshop
-    { n: 3, Icon: ZellijStarIcon }, // no two pieces alike
-] as const;
 
 const MARQUEE = [
     'Pottery',
@@ -265,50 +252,51 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* ───────────────────── Quality ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:34px]"
-                    />
+                {/* ───────────────── Craft statement ─────────────────
+                    Full-bleed photograph with the claim laid over it. Sits
+                    outside `container` on purpose — the image runs edge to
+                    edge, while the copy inside it still lines up with every
+                    other section's left margin. */}
+                <section className="relative">
+                    <div className="relative h-[70svh] min-h-[24rem] w-full overflow-hidden lg:h-[80svh]">
+                        <img
+                            src={heroTextile}
+                            alt={t('welcome.statement.alt')}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                        />
 
-                    <div className="relative container">
-                        <div className="max-w-3xl">
-                            <Reveal>
-                                <p className="text-[11px] tracking-[0.22em] text-souk-brown uppercase">
-                                    {t('welcome.quality.eyebrow')}
-                                </p>
-                            </Reveal>
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2.25rem,5vw,4.5rem)] leading-[1.02] tracking-[-0.02em] text-souk-title">
-                                    {t('welcome.quality.heading')}
-                                </h2>
-                            </Reveal>
-                            <Reveal delay={160}>
-                                <p className="mt-6 max-w-xl text-lg leading-relaxed text-souk-brown-deep/80">
-                                    {t('welcome.quality.lead')}
-                                </p>
-                            </Reveal>
-                        </div>
+                        {/*
+                         * Flat scrim plus a vertical gradient, rather than the
+                         * left-to-right falloff this kind of band usually
+                         * gets. A horizontal gradient is a physical direction,
+                         * not a logical one: under `dir="rtl"` the copy moves
+                         * to the right while the dark end stays left, and the
+                         * Arabic sits on the bright half of the photograph.
+                         * Vertical reads the same in both directions.
+                         */}
+                        <div
+                            aria-hidden="true"
+                            className="absolute inset-0 bg-souk-title/55"
+                        />
+                        <div
+                            aria-hidden="true"
+                            className="absolute inset-0 bg-gradient-to-t from-souk-title/65 via-transparent to-souk-title/25"
+                        />
 
-                        <div className="mt-20 grid gap-6 md:grid-cols-3">
-                            {QUALITY_CARDS.map(({ n, Icon }, i) => (
-                                <Reveal key={n} delay={i * 120}>
-                                    <article className="group h-full rounded-3xl border border-souk-brown/12 bg-souk-peach/60 p-9 text-center transition-all duration-500 hover:-translate-y-1.5 hover:border-souk-brown/25 hover:bg-souk-peach hover:shadow-xl hover:shadow-souk-brown/10">
-                                        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-souk-brown/8 text-souk-brown ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:bg-souk-brown group-hover:text-souk-cream">
-                                            <Icon className="h-9 w-9" />
-                                        </span>
-                                        <h3 className="mt-6 font-display text-2xl leading-snug text-souk-title">
-                                            {t(
-                                                `welcome.quality.card${n}.title`,
-                                            )}
-                                        </h3>
-                                        <p className="mt-3.5 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                            {t(`welcome.quality.card${n}.body`)}
-                                        </p>
-                                    </article>
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="container">
+                                <Reveal>
+                                    <h2 className="max-w-2xl font-display text-[clamp(2rem,5.5vw,4.5rem)] leading-[1.04] tracking-[-0.02em] text-white italic">
+                                        {t('welcome.statement.heading')}
+                                    </h2>
                                 </Reveal>
-                            ))}
+                                <Reveal delay={120}>
+                                    <p className="mt-6 max-w-md text-lg leading-relaxed text-souk-cream/85">
+                                        {t('welcome.statement.body')}
+                                    </p>
+                                </Reveal>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -634,7 +622,7 @@ export default function Welcome({
                 </section>
 
                 {/* ───────────────────── Gallery ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-cream py-24 lg:py-28">
+                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-28">
                     <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 motif-zellij motif-fade opacity-60 [--pattern-color:rgba(130,71,42,0.1)] [--pattern-size:58px]"

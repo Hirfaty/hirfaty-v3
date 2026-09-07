@@ -17,6 +17,10 @@ services:
     ports:
       - '80:80'
       - '443:443'
+      # SeaweedFS admin UIs, staging only — basic-auth gated behind the same
+      # credentials as init.hirfaty.com. See staging-ssl.conf for the routes.
+      - '8888:8888' # filer — browse everything uploaded
+      - '9333:9333' # master — cluster/volume health
     environment:
       PROD_DOMAIN: ${PROD_DOMAIN:-hirfaty.com}
       STAGING_DOMAIN: ${STAGING_DOMAIN:-init.hirfaty.com}

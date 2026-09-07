@@ -52,15 +52,13 @@ return [
     'hero.stat_cities' => 'Cities in Morocco',
     'hero.stat_handmade' => 'Handmade, verified',
 
-    'quality.eyebrow' => 'Why Hirfaty',
-    'quality.heading' => 'We have top quality',
-    'quality.lead' => 'Every piece carries the hand that shaped it — and the name of the workshop it came from.',
-    'quality.card1.title' => 'Authentic Moroccan Craftsmanship',
-    'quality.card1.body' => 'Clay, brass, cedar and wool worked with techniques passed down through generations — never mass produced.',
+    // The full-width photo band that replaced the old "quality" section.
+    'statement.heading' => 'Objects made slowly',
+    'statement.body' => 'Clay, wool, cedar and brass, shaped by hand in workshops across Morocco. No two pieces are quite alike - that is the proof a hand made it.',
+    'statement.alt' => 'Wool being woven on a traditional Moroccan loom',
+
+    // Kept: still used by the hero's floating credential chip.
     'quality.card2.title' => 'Straight from the Workshop',
-    'quality.card2.body' => 'You buy from the artisan, not a reseller. A fair price for you, a fair margin for the hands that made it.',
-    'quality.card3.title' => 'No two pieces alike',
-    'quality.card3.body' => 'Shaped by hand, every piece keeps its own small irregularities — the proof that a hand made it, and not a machine.',
 
     'harmony.eyebrow' => 'Our philosophy',
     'harmony.heading' => 'The harmony inside Hirfaty',

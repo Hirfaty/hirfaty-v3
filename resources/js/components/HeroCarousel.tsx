@@ -114,7 +114,7 @@ export default function HeroCarousel({
             {/* Split in half rather than overlaying copy on photography: the
                 type sits on flat cream, so it needs no scrim and stays
                 legible whichever slide is showing. */}
-            <div className="grid overflow-hidden rounded-[1.75rem] bg-souk-peach shadow-xl shadow-souk-brown/10 md:grid-cols-2 md:rounded-[2.25rem]">
+            <div className="grid overflow-hidden bg-souk-peach shadow-xl shadow-souk-brown/10 md:grid-cols-2">
                 {/* Copy. First in the DOM, so it takes the start column and
                     follows RTL without any explicit ordering. */}
                 <div>{children}</div>

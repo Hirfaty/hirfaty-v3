@@ -376,14 +376,16 @@ export default function ProductsIndex({
             {/* ── Hero: a light, inset card. The carousel is the card's
                 background and the copy sits over its start edge, where the
                 scrim keeps dark type legible over any of the photographs. */}
-            <section className="container bg-souk-brown pt-6 pb-2 md:pt-8">
+            {/* <section className="container bg-souk-brown pt-6 pb-2 md:pt-8">
+             */}
+            <section className="continer w-full!">
                 <HeroCarousel
                     slides={HERO_SLIDES.map((slide) => ({
                         src: slide.src,
                         alt: t(slide.altKey),
                     }))}
                 >
-                    <div className="flex min-h-[clamp(22rem,52vh,30rem)] items-center px-7 py-12 sm:px-12 md:px-16">
+                    <div className="flex min-h-[clamp(22rem,52vh,30rem)] w-full items-center px-7 py-12 sm:px-12 md:px-16">
                         <div className="max-w-lg">
                             <h1 className="font-display text-[clamp(2.15rem,4.4vw,3.5rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
                                 <span className="block">

@@ -245,3 +245,17 @@ Route::post('/locale/{locale}', function (string $locale) {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/email-previews.php';
+
+/*
+ * Catch-all for URLs that match nothing above. Must stay last — a fallback
+ * registered earlier would swallow every route declared after it.
+ *
+ * It exists so the 404 page gets the shared Inertia props. An unmatched URL
+ * never enters the `web` group (the router throws before route middleware
+ * runs), so HandleInertiaRequests never fires and the page would render with
+ * no `translations`, `locale` or `auth` — meaning `t()` prints raw keys like
+ * `common.errors.404.title` onto the screen and the header has no user.
+ * Routing through here runs the group first, then aborts, so the exception
+ * handler in bootstrap/app.php renders with everything present.
+ */
+Route::fallback(fn () => abort(404));

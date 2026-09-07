@@ -90,4 +90,23 @@ return [
 
     'auth.register.have_account' => 'Already have an account?',
     'auth.register.sign_in' => 'Sign in',
+
+    // ── Error pages ──────────────────────────────────────────────────────
+    // Rendered through Inertia by the handler in bootstrap/app.php.
+    'errors.eyebrow' => 'Error :status',
+
+    'errors.404.title' => 'This page has left the workshop',
+    'errors.404.body' => 'The link you followed leads nowhere. The piece may have been taken down, or the address has a typo in it.',
+
+    'errors.403.title' => 'This door stays shut',
+    'errors.403.body' => 'This account does not have access to that page.',
+
+    'errors.500.title' => 'Something broke',
+    'errors.500.body' => 'Something went wrong on our side. We have been notified — do try again in a moment.',
+
+    'errors.503.title' => 'Back very shortly',
+    'errors.503.body' => 'The site is down for maintenance for a few minutes. Thank you for your patience.',
+
+    'errors.back_home' => 'Back to home',
+    'errors.browse_market' => 'Explore the market',
 ];

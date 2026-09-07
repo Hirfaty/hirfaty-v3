@@ -53,15 +53,13 @@ return [
     'hero.stat_cities' => 'Villes au Maroc',
     'hero.stat_handmade' => 'Fait main, vérifié',
 
-    'quality.eyebrow' => 'Pourquoi Hirfaty',
-    'quality.heading' => 'Une qualité d\'exception',
-    'quality.lead' => 'Chaque pièce porte la main qui l\'a façonnée — et le nom de l\'atelier dont elle vient.',
-    'quality.card1.title' => 'Artisanat marocain authentique',
-    'quality.card1.body' => 'Argile, laiton, cèdre et laine travaillés selon des techniques transmises de génération en génération — jamais industrialisés.',
-    'quality.card2.title' => 'Directement de l\'atelier',
-    'quality.card2.body' => 'Vous achetez à l\'artisan, pas à un revendeur. Un prix juste pour vous, une marge juste pour les mains qui ont créé la pièce.',
-    'quality.card3.title' => 'Aucune pièce identique',
-    'quality.card3.body' => 'Façonnée à la main, chaque pièce garde ses propres irrégularités — la preuve qu\'une main, et non une machine, l\'a faite.',
+    // Le bandeau photo pleine largeur qui a remplacé la section « qualité ».
+    'statement.heading' => 'Des objets faits lentement',
+    'statement.body' => 'Argile, laine, cèdre et laiton, façonnés à la main dans les ateliers du Maroc. Aucune pièce n’est tout à fait identique à une autre — c’est la preuve qu’une main l’a faite.',
+    'statement.alt' => 'Tissage de laine sur un métier traditionnel marocain',
+
+    // Conservée : encore utilisée par la pastille flottante du hero.
+    'quality.card2.title' => 'Directement de l’atelier',
 
     'harmony.eyebrow' => 'Notre philosophie',
     'harmony.heading' => 'L\'harmonie au cœur de Hirfaty',
