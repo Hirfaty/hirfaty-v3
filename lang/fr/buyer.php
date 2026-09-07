@@ -45,6 +45,9 @@ return [
     'products.badge_sale' => 'Promo',
     'products.badge_sold_out' => 'Épuisé',
     'products.no_image' => 'Sans image',
+    // Demo-only: an unpriced product is temporarily shown in the
+    // storefront rather than hidden — see Product::scopeStorefront().
+    'products.price_coming_soon' => 'Prix à venir',
 
     'products.empty_with_search' => 'Aucune pièce ne correspond à votre recherche.',
     'products.empty' => 'Aucune pièce ne correspond à vos filtres.',
@@ -67,6 +70,7 @@ return [
     'detail.add_to_cart' => 'Ajouter au panier',
     'detail.go_to_cart' => 'Voir le panier',
     'detail.sold_out' => 'Rupture de stock',
+    'detail.price_coming_soon' => 'Prix à venir',
     'detail.in_stock' => 'En stock',
     'detail.quantity' => 'Quantité',
     'detail.decrease' => 'Diminuer',
@@ -311,4 +315,19 @@ return [
     'checkout.err_phone' => 'Un numéro de téléphone est requis pour la livraison.',
     'checkout.err_empty' => 'Votre panier est vide.',
     'checkout.placed' => ':count commande(s) passée(s) avec succès !',
+
+    // ── Page boutique ────────────────────────────────────────────────────
+    'store.back_to_market' => 'Le marché',
+    'store.type_artist' => 'Artisan',
+    'store.type_company' => 'Entreprise',
+    'store.type_cooperative' => 'Coopérative',
+    'store.since' => 'Sur Hirfaty depuis :date',
+    'store.count_one' => ':count pièce',
+    'store.count_many' => ':count pièces',
+    'store.creations' => 'Les créations de l’atelier',
+    'store.empty_title' => 'Aucune pièce en ligne',
+    'store.empty_body' => 'Cet atelier n’a pas encore de pièce publiée. Revenez bientôt.',
+    'store.empty_cta' => 'Explorer le marché',
+    'store.load_more' => 'Voir plus de pièces',
+    'store.loading' => 'Chargement…',
 ];

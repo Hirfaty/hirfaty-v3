@@ -28,7 +28,13 @@ type FeaturedProduct = {
     id: number;
     name: string;
     slug: string;
-    base_price: number | string;
+    /**
+     * Null while an admin has catalogued the piece but not yet agreed its
+     * price. Normally kept off this strip by `Product::scopeStorefront()` —
+     * currently relaxed (`storefront(false)`) as a temporary, demo-only
+     * carve-out. See that scope's docblock.
+     */
+    base_price: number | string | null;
     sale_price: number | string | null;
     category: { id: number; translated_name: string } | null;
     store: { store_name: string | null; city_name: string | null };
@@ -69,7 +75,8 @@ export default function Welcome({
 }) {
     const { t } = useTranslation();
 
-    const price = (p: FeaturedProduct) => Number(p.sale_price ?? p.base_price);
+    const price = (p: FeaturedProduct) =>
+        p.base_price !== null ? Number(p.sale_price ?? p.base_price) : null;
 
     return (
         <>
@@ -563,18 +570,28 @@ export default function Welcome({
                                                     {product.name}
                                                 </h3>
                                                 <div className="mt-1.5 flex items-baseline gap-2">
-                                                    <span className="font-display text-[15px] text-souk-brown">
-                                                        {price(product)}{' '}
-                                                        <span className="text-[10px]">
-                                                            {t(
-                                                                'welcome.products.currency',
+                                                    {price(product) !== null ? (
+                                                        <>
+                                                            <span className="font-display text-[15px] text-souk-brown">
+                                                                {price(product)}{' '}
+                                                                <span className="text-[10px]">
+                                                                    {t(
+                                                                        'welcome.products.currency',
+                                                                    )}
+                                                                </span>
+                                                            </span>
+                                                            {product.sale_price && (
+                                                                <span className="text-xs text-souk-brown-deep/45 line-through">
+                                                                    {Number(
+                                                                        product.base_price,
+                                                                    )}
+                                                                </span>
                                                             )}
-                                                        </span>
-                                                    </span>
-                                                    {product.sale_price && (
-                                                        <span className="text-xs text-souk-brown-deep/45 line-through">
-                                                            {Number(
-                                                                product.base_price,
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-xs text-souk-brown-deep/45 italic">
+                                                            {t(
+                                                                'buyer.products.price_coming_soon',
                                                             )}
                                                         </span>
                                                     )}

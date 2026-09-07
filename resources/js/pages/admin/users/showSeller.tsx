@@ -435,8 +435,19 @@ const ShowSeller = ({
                         title="Boutique"
                         icon={Store}
                         action={
+                            /*
+                             * The shop's public page. Used to point at
+                             * /seller/{slug}, which is the artisan's own back
+                             * office behind `role:seller` — so an admin
+                             * following this link got a 403 rather than the
+                             * shopfront they expected.
+                             */
                             <Link
-                                href={`/seller/${user.store?.slug}`}
+                                href={route(
+                                    'stores.show',
+                                    user.store?.slug ?? '',
+                                )}
+                                target="_blank"
                                 className="inline-flex items-center gap-1 text-xs font-medium text-ink-soft transition hover:text-ink"
                             >
                                 Voir en ligne

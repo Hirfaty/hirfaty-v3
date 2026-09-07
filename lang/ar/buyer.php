@@ -48,6 +48,7 @@ return [
     'products.badge_sale' => 'تخفيض',
     'products.badge_sold_out' => 'نفدت الكمية',
     'products.no_image' => 'بدون صورة',
+    'products.price_coming_soon' => 'السعر قريباً',
 
     'products.empty_with_search' => 'لا توجد قطعة تطابق بحثك.',
     'products.empty' => 'لا توجد قطعة تطابق عوامل التصفية.',
@@ -70,6 +71,7 @@ return [
     'detail.add_to_cart' => 'أضف إلى السلة',
     'detail.go_to_cart' => 'عرض السلة',
     'detail.sold_out' => 'نفدت الكمية',
+    'detail.price_coming_soon' => 'السعر قريباً',
     'detail.in_stock' => 'متوفر',
     'detail.quantity' => 'الكمية',
     'detail.decrease' => 'إنقاص',
@@ -314,4 +316,19 @@ return [
     'checkout.err_phone' => 'رقم الهاتف مطلوب للتوصيل.',
     'checkout.err_empty' => 'سلتك فارغة.',
     'checkout.placed' => 'تم تسجيل :count طلب بنجاح!',
+
+    // ── صفحة المتجر ──────────────────────────────────────────────────────
+    'store.back_to_market' => 'السوق',
+    'store.type_artist' => 'حرفي',
+    'store.type_company' => 'شركة',
+    'store.type_cooperative' => 'تعاونية',
+    'store.since' => 'على حرفتي منذ :date',
+    'store.count_one' => 'قطعة واحدة',
+    'store.count_many' => ':count قطع',
+    'store.creations' => 'إبداعات الورشة',
+    'store.empty_title' => 'لا توجد قطع منشورة',
+    'store.empty_body' => 'لم تنشر هذه الورشة أي قطعة بعد. عد قريباً.',
+    'store.empty_cta' => 'اكتشف السوق',
+    'store.load_more' => 'عرض المزيد',
+    'store.loading' => 'جارٍ التحميل…',
 ];

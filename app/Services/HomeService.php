@@ -19,7 +19,9 @@ class HomeService
     public function featuredProducts(int $limit = 6): Collection
     {
         return Product::query()
-            ->storefront()
+            // storefront(false): temporarily includes unpriced products for
+            // an internal demo — see Product::scopeStorefront()'s docblock.
+            ->storefront(false)
             ->whereHas('store')
             ->with(['store.city', 'category', 'images'])
             ->withCount(['wishlists'])

@@ -11,6 +11,7 @@ use App\Http\Controllers\Buyer\PaymentMethodController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
 use App\Http\Controllers\Buyer\ProfessionalRequestController;
 use App\Http\Controllers\Buyer\ProfileController as BuyerProfileController;
+use App\Http\Controllers\Buyer\StoreController as BuyerStoreController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Seller\DashboardController;
@@ -225,6 +226,13 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 // Public routes — no auth needed
 Route::get('/products', [BuyerProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [BuyerProductController::class, 'show'])->name('products.show');
+
+/*
+ * A shop's public page. Deliberately not under /seller/*, which is the
+ * artisan's own back office behind `role:seller` — pointing shoppers there is
+ * the 403 this route exists to replace.
+ */
+Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('stores.show');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

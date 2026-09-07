@@ -144,6 +144,24 @@ function PriceBlock({
     money: (v: number | string) => string;
     t: (k: string) => string;
 }) {
+    /*
+     * Demo-only state: an admin can catalogue a piece before its price is
+     * agreed, temporarily reachable here via `storefront(false)` — see
+     * `Product::scopeStorefront()`. A selected variant with no override
+     * inherits this same null from the product, which is why the check reads
+     * the variant's own resolved price rather than the product's directly.
+     */
+    const unpriced =
+        variant !== null ? variant.price == null : product.base_price === null;
+
+    if (unpriced) {
+        return (
+            <span className="text-lg text-souk-brown-deep/45 italic">
+                {t('buyer.products.price_coming_soon')}
+            </span>
+        );
+    }
+
     const base = Number(product.base_price);
     const sale = product.sale_price ? Number(product.sale_price) : null;
     const productRetail = sale !== null && sale < base ? sale : base;
@@ -252,10 +270,12 @@ function ProductRow({
     title,
     products,
     money,
+    t,
 }: {
     title: string;
     products: DetailProduct[];
     money: (v: number | string) => string;
+    t: (k: string) => string;
 }) {
     if (!products?.length) {
         return null;
@@ -266,10 +286,17 @@ function ProductRow({
             <h2 className="font-display text-2xl text-souk-title">{title}</h2>
             <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-9 lg:grid-cols-4">
                 {products.map((p) => {
+                    // Demo-only state: see DetailProduct's base_price note
+                    // further down. Nothing else in this card means anything
+                    // without a retail figure to compare against.
+                    const pUnpriced = p.base_price === null;
                     const pSale =
+                        !pUnpriced &&
                         p.sale_price &&
                         Number(p.sale_price) < Number(p.base_price);
-                    const pTrade = p.professional_effective_price ?? null;
+                    const pTrade = pUnpriced
+                        ? null
+                        : (p.professional_effective_price ?? null);
 
                     return (
                         <Link
@@ -295,7 +322,11 @@ function ProductRow({
                                 {p.name}
                             </h3>
                             <p className="mt-1 text-sm">
-                                {pTrade !== null ? (
+                                {pUnpriced ? (
+                                    <span className="text-souk-brown-deep/45 italic">
+                                        {t('buyer.products.price_coming_soon')}
+                                    </span>
+                                ) : pTrade !== null ? (
                                     <span className="text-olive">
                                         {money(pTrade)} MAD
                                     </span>
@@ -430,6 +461,16 @@ const ProductDetail = ({
         : Number(product.stock) === 0;
     const needsChoice = hasVariants && selectedVariant === null;
     /*
+     * Demo-only state: see `Product::scopeStorefront()`'s docblock — an
+     * unpriced product is temporarily reachable here, but nothing downstream
+     * (cart, checkout) will bill it, so the buy actions stay closed. Not
+     * meaningful while `needsChoice` is true: a variant's own price can
+     * differ from the product's, so this only resolves once one is picked.
+     */
+    const unpriced = hasVariants
+        ? selectedVariant !== null && selectedVariant.price == null
+        : product.base_price === null;
+    /*
      * In stock, but not by enough to clear the trade minimum. Distinct from
      * sold out: the piece is available, just not in the quantity this buyer is
      * obliged to take, and saying "out of stock" would send them away from
@@ -510,7 +551,7 @@ const ProductDetail = ({
      * who is shopping, so the basket starts once they have signed in.
      */
     const handleAddToCart = () => {
-        if (needsChoice || soldOut || belowMinimum || adding) {
+        if (needsChoice || unpriced || soldOut || belowMinimum || adding) {
             return;
         }
 
@@ -729,12 +770,18 @@ const ProductDetail = ({
                             t={t}
                         />
 
+                        {/*
+                         * Nothing rendered here while unpriced — PriceBlock
+                         * already says so, and a stock note on top of that
+                         * would be double-stating a piece that can't be
+                         * bought either way yet.
+                         */}
                         <p className="flex items-center gap-1.5 text-sm">
                             {needsChoice ? (
                                 <span className="text-souk-brown-deep/60">
                                     {t('buyer.detail.select_variant_prompt')}
                                 </span>
-                            ) : soldOut ? (
+                            ) : unpriced ? null : soldOut ? (
                                 <span className="text-terracotta">
                                     {t('buyer.detail.sold_out')}
                                 </span>
@@ -864,6 +911,7 @@ const ProductDetail = ({
                                 auth.user
                                     ? soldOut ||
                                       needsChoice ||
+                                      unpriced ||
                                       belowMinimum ||
                                       adding
                                     : false
@@ -890,6 +938,14 @@ const ProductDetail = ({
                                 <>
                                     {t('buyer.detail.login_to_buy')}
                                     <LogIn
+                                        className="h-4 w-4"
+                                        strokeWidth={1.6}
+                                    />
+                                </>
+                            ) : unpriced ? (
+                                <>
+                                    {t('buyer.detail.price_coming_soon')}
+                                    <Clock
                                         className="h-4 w-4"
                                         strokeWidth={1.6}
                                     />
@@ -994,14 +1050,23 @@ const ProductDetail = ({
                                 )}
                             </div>
                             {/*
-                             * No "visit shop" button: there is no public
-                             * storefront route yet. The previous page linked
-                             * to /seller/{slug}, which sits behind the
-                             * `role:seller` middleware and 403s for the
-                             * shoppers this page is built for. Better no
-                             * button than one that errors — restore it here
-                             * once a public store page exists.
+                             * Points at the shop's public page, not
+                             * /seller/{slug} — that one is the artisan's own
+                             * back office behind `role:seller` and 403s for
+                             * the shoppers this page is built for, which is
+                             * why the button was pulled until now.
                              */}
+                            {product.store.slug && (
+                                <Link
+                                    href={route(
+                                        'stores.show',
+                                        product.store.slug,
+                                    )}
+                                    className="shrink-0 rounded-xl border border-souk-brown/25 px-4 py-2 text-xs font-medium text-souk-brown-deep transition-colors hover:border-souk-brown hover:text-souk-brown"
+                                >
+                                    {t('buyer.detail.visit_store')}
+                                </Link>
+                            )}
                         </div>
                         {product.store.description && (
                             <p className="mt-4 text-[13px] leading-relaxed text-souk-brown-deep/70">
@@ -1060,11 +1125,13 @@ const ProductDetail = ({
                 title={t('buyer.detail.more_from_store')}
                 products={moreFromStore}
                 money={money}
+                t={t}
             />
             <ProductRow
                 title={t('buyer.detail.related')}
                 products={relatedProducts}
                 money={money}
+                t={t}
             />
 
             <SiteFooter />

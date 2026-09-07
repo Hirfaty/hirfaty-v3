@@ -80,30 +80,49 @@ test('an unpriced product is kept out of the storefront', function () {
         'base_price' => null,
     ]);
 
+    // The model-level default is still strict — every call site that hasn't
+    // deliberately opted into `storefront(false)` (see below) keeps excluding
+    // an unpriced product, e.g. the wishlist and the shop page.
     $listed = Product::storefront()->pluck('id');
 
     expect($listed)->toContain($priced->id)
         ->and($listed)->not->toContain($unpriced->id);
-
-    // ...and it is not reachable by direct URL either, which is the hole a
-    // listing-only filter would leave open.
-    $this->get(route('products.show', $unpriced->slug))->assertNotFound();
-    $this->get(route('products.show', $priced->slug))->assertSuccessful();
 });
 
-test('the public listing hides unpriced products', function () {
-    publishProduct(['name' => 'Avec prix', 'slug' => 'avec-prix']);
-    publishProduct([
+/**
+ * Buyer\ProductController::index()/show() currently call
+ * `storefront(false)` — a deliberate, temporary carve-out for an internal
+ * demo (see Product::scopeStorefront()'s docblock) so an unpriced product can
+ * be looked at while the catalogue is still being priced up. Flip these
+ * assertions back to "hidden"/"404" once those call sites revert to the
+ * scope's default.
+ *
+ * The money-side guard is untouched and still covered above and below: the
+ * unpriced product still cannot be billed, so this carve-out only ever
+ * widens what can be *looked at*, never what can be *bought*.
+ */
+test('for now, an unpriced product is still browsable on the public site', function () {
+    $priced = publishProduct(['name' => 'Avec prix', 'slug' => 'avec-prix']);
+    $unpriced = publishProduct([
         'name' => 'Sans prix',
         'slug' => 'sans-prix',
         'base_price' => null,
     ]);
 
+    $this->get(route('products.show', $unpriced->slug))->assertSuccessful();
+    $this->get(route('products.show', $priced->slug))->assertSuccessful();
+
     $this->get(route('products.index'))
         ->assertSuccessful()
         ->assertInertia(
-            fn ($page) => $page->has('products', 1)
-                ->where('products.0.name', 'Avec prix')
+            // Not asserting order: the default sort is relevance-scored, not
+            // insertion order, and that ranking isn't what this test is about.
+            fn ($page) => $page->has('products', 2)
+                ->where(
+                    'products',
+                    fn ($products) => collect($products)->pluck('name')->sort()->values()->all()
+                        === ['Avec prix', 'Sans prix']
+                )
         );
 });
 
@@ -214,4 +233,29 @@ test('a price can be filled in later and the product then appears', function () 
 
     expect($product->fresh()->base_price)->toEqual(1200)
         ->and(Product::storefront()->pluck('id'))->toContain($product->id);
+});
+
+/**
+ * Same temporary carve-out as the public listing, on the home page's
+ * "featured" strip (HomeService::featuredProducts()).
+ */
+test('for now, the home page strip includes unpriced products too', function () {
+    publishProduct(['name' => 'Avec prix', 'slug' => 'home-avec-prix']);
+    publishProduct([
+        'name' => 'Sans prix',
+        'slug' => 'home-sans-prix',
+        'base_price' => null,
+    ]);
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->has('featuredProducts', 2));
+
+    /*
+     * The one thing this carve-out must never do is let the unpriced piece be
+     * bought — already covered above by "checkout refuses a basket holding an
+     * unpriced product", which is unaffected by any of this: money safety was
+     * always CheckoutService's job, not the listing/home/detail gate's, and
+     * relaxing where a product can be *looked at* doesn't touch that.
+     */
 });

@@ -90,18 +90,28 @@ class Product extends Model
     /**
      * Everything the storefront is allowed to show and sell.
      *
-     * `published` alone is no longer enough: an admin can publish a product
-     * before its price has been agreed (base_price NULL), and an unpriced
-     * product has no figure to put on a card, sort by, or bill. It stays in
-     * the catalogue and in the admin lists — it just isn't on sale yet.
+     * `published` alone is no longer enough by default: an admin can publish a
+     * product before its price has been agreed (base_price NULL), and an
+     * unpriced product has no figure to put on a card, sort by, or bill.
      *
      * Every public query goes through here rather than repeating the pair of
      * conditions, so "priced" can never be remembered in one listing and
      * forgotten in another.
+     *
+     * `$requirePrice = false` is a deliberate, temporary carve-out for the
+     * buyer-facing browsing surfaces (listing, home strip, product detail)
+     * while the catalogue is still being priced up for an internal demo —
+     * grep for `storefront(false)` to find every call site that opted in, and
+     * flip them back once real pricing is in place. Nothing that moves money
+     * opts in: CartService/CheckoutService still refuse an unpriced line
+     * outright regardless of this flag, so an unpriced product can be looked
+     * at but never bought.
      */
-    public function scopeStorefront($query)
+    public function scopeStorefront($query, bool $requirePrice = true)
     {
-        return $query->where('status', 'published')->whereNotNull('base_price');
+        $query->where('status', 'published');
+
+        return $requirePrice ? $query->whereNotNull('base_price') : $query;
     }
 
     /**
