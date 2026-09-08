@@ -58,9 +58,9 @@ return [
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'Trade*',
     'products.pro_from_qty' => 'from',
-    'products.pro_price_hint' => 'Indicative trade rate — billing remains at the public price for now.',
+    'products.pro_price_hint' => 'Your trade rate — this is what the checkout charges.',
     'products.pro_notice_title' => 'Trade account.',
-    'products.pro_notice_body' => 'Your trade rates appear below the public price. They are indicative: billing remains at the public price for now.',
+    'products.pro_notice_body' => 'Your trade rates appear below the public price, and are what the checkout charges.',
     'products.pro_cta_body' => 'Buying for a riad, a hotel or a shop? Trade rates are available across much of the catalogue.',
     'products.pro_cta_button' => 'Open a trade account',
 

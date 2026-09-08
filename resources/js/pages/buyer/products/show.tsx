@@ -1101,17 +1101,12 @@ const ProductDetail = ({
                             <p className="mt-1.5 text-[13px] leading-relaxed text-souk-brown-deep/75">
                                 {t('buyer.detail.trade_cta_body')}
                             </p>
-                            {/* A signed-in buyer asks for trade access on the
-                                dedicated page; a guest needs an account
-                                first. Registration no longer offers a
-                                professional option, so pointing everyone at
-                                it would be a dead end. */}
+                            {/* One target for everyone: the trade page is
+                                public now, so a guest reads what they would
+                                be signing up for instead of landing on a bare
+                                registration form. */}
                             <Link
-                                href={
-                                    auth.user
-                                        ? route('professional.show')
-                                        : route('register')
-                                }
+                                href={route('professional.show')}
                                 className="mt-4 inline-block rounded-lg bg-olive px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
                             >
                                 {t('buyer.detail.trade_cta_button')}

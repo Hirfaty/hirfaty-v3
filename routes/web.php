@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 
 // Static marketing page — no backend data, so no dedicated controller.
-Route::inertia('/about', 'about')->name('about');
+// Route::inertia('/about', 'about')->name('about');
 
 Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
@@ -216,8 +216,10 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::post('/onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
     Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 
-    // Trade access, for anyone who skipped the tour or decided later.
-    Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
+    /*
+     * Submitting the request stays gated — there is no account to upgrade
+     * without one. Only the GET side is public; see below.
+     */
     Route::post('/professional-account', [ProfessionalRequestController::class, 'store'])
         ->middleware('throttle:5,60')
         ->name('professional.request');
@@ -233,6 +235,20 @@ Route::get('/products/{slug}', [BuyerProductController::class, 'show'])->name('p
  * the 403 this route exists to replace.
  */
 Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('stores.show');
+
+/*
+ * What a trade account is and how to get one.
+ *
+ * Public, unlike its POST counterpart above: this is the page that has to
+ * *sell* the feature, and it was previously behind `role:buyer` — so the one
+ * audience it exists to convince, people who have not signed up yet, were the
+ * only ones who could never read it. A guest following a "buying wholesale?"
+ * prompt landed on the registration form with nothing having explained what
+ * they were signing up for.
+ *
+ * The controller therefore has to tolerate a null user; see its show().
+ */
+Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

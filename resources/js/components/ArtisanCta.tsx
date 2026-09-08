@@ -26,9 +26,9 @@ export default function ArtisanCta() {
                             }}
                         />
                         <div className="relative mx-auto max-w-2xl">
-                            <p className="font-arabic text-lg text-souk-cream/80">
+                            {/* <p className="font-arabic text-lg text-souk-cream/80">
                                 {t('welcome.seller_cta.ar_line')}
-                            </p>
+                            </p> */}
                             <h2 className="mt-5 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-tight text-white">
                                 {t('welcome.seller_cta.title')}{' '}
                                 <span className="text-souk-cream italic">

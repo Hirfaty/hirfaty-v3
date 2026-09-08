@@ -105,7 +105,7 @@ export const SiteHeader = () => {
     const navLinks = [
         { href: '/products', label: t('header.explore') },
         // { href: '/sellers', label: t('header.sellers') },
-        { href: '/about', label: t('header.about') },
+        // { href: '/about', label: t('header.about') },
     ];
 
     // Marks the current section so its nav link can carry the zellij star.

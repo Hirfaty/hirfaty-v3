@@ -20,12 +20,21 @@ class ProfessionalRequestController extends Controller
 
     public function show(Request $request)
     {
+        /*
+         * Null for a guest. This page is public so that the people it exists
+         * to convince — those who have not signed up yet — can actually read
+         * it, so every prop below has a signed-out answer rather than
+         * reaching through $user. The explanation is identical for everyone;
+         * only the call to action differs.
+         */
         $user = $request->user();
 
         return Inertia::render('buyer/professional-account', [
-            'status' => $user->professional_request_status,
-            'canRequest' => $user->canRequestProfessional(),
-            'isProfessional' => $user->isProfessionalBuyer(),
+            'status' => $user?->professional_request_status,
+            // False for a guest: there is no account to upgrade yet, which is
+            // exactly what the page's CTA offers them instead.
+            'canRequest' => (bool) $user?->canRequestProfessional(),
+            'isProfessional' => (bool) $user?->isProfessionalBuyer(),
             /*
              * Separate from isProfessional because the two can legitimately
              * disagree — an admin can set the role by hand without stamping
@@ -33,10 +42,10 @@ class ProfessionalRequestController extends Controller
              * wholesale prices (Product::audienceFor). The page shows a
              * different message for each.
              */
-            'isVerified' => $user->isVerifiedProfessionalBuyer(),
-            'submittedMessage' => $user->professional_request_message,
-            'requestedAt' => $user->professional_requested_at,
-            'declineReason' => $user->professional_decline_reason,
+            'isVerified' => (bool) $user?->isVerifiedProfessionalBuyer(),
+            'submittedMessage' => $user?->professional_request_message,
+            'requestedAt' => $user?->professional_requested_at,
+            'declineReason' => $user?->professional_decline_reason,
         ]);
     }
 

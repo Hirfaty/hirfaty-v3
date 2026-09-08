@@ -60,9 +60,9 @@ return [
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'محترف*',
     'products.pro_from_qty' => 'ابتداءً من',
-    'products.pro_price_hint' => 'سعر احترافي إرشادي — الفوترة تبقى بالسعر العام حالياً.',
+    'products.pro_price_hint' => 'سعرك الاحترافي — وهو ما يفوتره الدفع.',
     'products.pro_notice_title' => 'حساب احترافي.',
-    'products.pro_notice_body' => 'تظهر أسعارك الاحترافية أسفل السعر العام. وهي إرشادية: الفوترة تبقى بالسعر العام حالياً.',
+    'products.pro_notice_body' => 'تظهر أسعارك الاحترافية أسفل السعر العام، وهي ما يفوتره الدفع.',
     'products.pro_cta_body' => 'تشتري لرياض أو فندق أو متجر؟ تتوفر أسعار احترافية على جزء كبير من الكتالوج.',
     'products.pro_cta_button' => 'افتح حساباً احترافياً',
 

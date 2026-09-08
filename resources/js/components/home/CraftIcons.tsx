@@ -188,3 +188,101 @@ export function ZellijStarIcon({ className }: IconProps) {
         </svg>
     );
 }
+
+/* ── Selling-model glyphs ─────────────────────────────────────────────
+ *
+ * The six marks used by the "two ways to sell" section: three for the
+ * retail path, three for the wholesale one. Drawn on the same 64×64 grid
+ * and stroke weight as the craft glyphs above so the two families sit
+ * together, but kept deliberately more geometric — these describe a way of
+ * trading rather than a material, and a hand-drawn look would read as
+ * another craft category.
+ *
+ * The pairs are meant to be read against each other: one tag against a
+ * bundle of them, one parcel against a stack, a single sale against a
+ * repeating one.
+ */
+
+/** Shopfront under its awning — the artisan's own storefront page. */
+export function StorefrontIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* scalloped awning, three bays */}
+            <path d="M10 22h44" />
+            <path d="M10 22c0 4 3.7 7 7.3 7s7.4-3 7.4-7c0 4 3.7 7 7.3 7s7.3-3 7.3-7c0 4 3.7 7 7.4 7s7.3-3 7.3-7" />
+            {/* the shop itself */}
+            <path d="M14 29v25h36V29" />
+            <path d="M8 54h48" />
+            {/* doorway, arched in the Moroccan way */}
+            <path d="M26 54V41a6 6 0 0 1 12 0v13" />
+        </svg>
+    );
+}
+
+/** A single price tag — one piece, one retail price. */
+export function PriceTagIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            <path d="M33 10H15a5 5 0 0 0-5 5v18a5 5 0 0 0 1.46 3.54l19 19a5 5 0 0 0 7.08 0l15-15a5 5 0 0 0 0-7.08l-19-19A5 5 0 0 0 33 10Z" />
+            <circle cx="22" cy="22" r="4" />
+        </svg>
+    );
+}
+
+/** Wrapped parcel — the delivery Hirfaty handles for them. */
+export function ParcelIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            <path d="M32 15 12 24v18l20 9 20-9V24l-20-9Z" />
+            {/* fold lines, so it reads as wrapped rather than as a cube */}
+            <path d="M12 24l20 9 20-9" />
+            <path d="M32 33v18" />
+            {/* ribbon over the lid */}
+            <path d="M22 19.5 42 28.5" />
+        </svg>
+    );
+}
+
+/** Stacked crates — the same piece, ordered by the dozen. */
+export function CratesIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* back crate, offset so the stack has depth */}
+            <path d="M20 12h24v16H20z" />
+            <path d="M32 12v16" />
+            {/* front row, two crates */}
+            <path d="M10 34h22v18H10z" />
+            <path d="M21 34v18" />
+            <path d="M32 34h22v18H32z" />
+            <path d="M43 34v18" />
+        </svg>
+    );
+}
+
+/** A bundle of tags — the wholesale list, not a single price. */
+export function WholesaleTagIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* two tags behind, fanned */}
+            <path d="M40 12H26a4 4 0 0 0-4 4v3" />
+            <path d="M46 19H34a4 4 0 0 0-4 4v3" />
+            {/* the tag in front */}
+            <path d="M34 26H20a4 4 0 0 0-4 4v14a4 4 0 0 0 1.17 2.83l13 13a4 4 0 0 0 5.66 0l11-11a4 4 0 0 0 0-5.66l-13-13A4 4 0 0 0 34 26Z" />
+            <circle cx="25.5" cy="35.5" r="3" />
+        </svg>
+    );
+}
+
+/** Closed loop of arrows — the order that comes back every season. */
+export function RepeatOrderIcon({ className }: IconProps) {
+    return (
+        <svg {...BASE} className={className}>
+            {/* upper arc, running right */}
+            <path d="M14 26a20 20 0 0 1 34-6" />
+            <path d="M48 10v10H38" />
+            {/* lower arc, running back */}
+            <path d="M50 38a20 20 0 0 1-34 6" />
+            <path d="M16 54V44h10" />
+        </svg>
+    );
+}

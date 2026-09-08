@@ -1,7 +1,15 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, BadgeCheck, Building2, Check, Store } from 'lucide-react';
+import { ArrowRight, BadgeCheck } from 'lucide-react';
 import ArtisanCta from '@/components/ArtisanCta';
-import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import {
+    CratesIcon,
+    ParcelIcon,
+    PriceTagIcon,
+    RepeatOrderIcon,
+    StorefrontIcon,
+    WholesaleTagIcon,
+    ZellijStarIcon,
+} from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import VaseIcon from '@/components/home/VaseIcon';
 import SiteFooter from '@/components/SiteFooter';
@@ -54,6 +62,187 @@ const MARQUEE = [
     'Raffia',
 ];
 
+/**
+ * The drifting gallery strip.
+ *
+ * Heights and vertical offsets vary per tile on purpose: an even row of
+ * identical cards reads as a filmstrip, whereas the staggered arrangement
+ * reads as pieces hung on a wall. `pottery` is the tallest and sits level,
+ * so the eye has one fixed point to settle on as the rest drifts past.
+ *
+ * Rendered twice at half speed each pass — see the `animate-gallery` note in
+ * app.css and the duplication in the markup below.
+ */
+const GALLERY = [
+    {
+        src: jewelry,
+        alt: 'Silver Moroccan jewellery',
+        box: 'h-64 md:h-72',
+        shift: 'translate-y-6',
+    },
+    {
+        src: wood,
+        alt: 'Carved cedar wood detail',
+        box: 'h-72 md:h-88',
+        shift: '-translate-y-4',
+    },
+    {
+        src: pottery,
+        alt: 'A potter at the wheel',
+        box: 'h-80 md:h-96',
+        shift: 'translate-y-0',
+    },
+    {
+        src: textile,
+        alt: 'Handwoven Moroccan textile',
+        box: 'h-64 md:h-80',
+        shift: 'translate-y-8',
+    },
+    {
+        src: accessories,
+        alt: 'Handmade artisan accessories',
+        box: 'h-72 md:h-88',
+        shift: '-translate-y-2',
+    },
+    {
+        src: spice,
+        alt: 'Moroccan spices at the souk',
+        box: 'h-64 md:h-72',
+        shift: 'translate-y-5',
+    },
+] as const;
+
+/**
+ * The two selling models, as content rather than markup — the branches are
+ * mirror images of each other, so describing them as data keeps the single
+ * `AudienceBranch` below honest about that. `chips` are the abstract traces
+ * of each model: retail shows individual pieces with a price, wholesale
+ * shows the same piece by the crate.
+ */
+const AUDIENCE = {
+    retail: {
+        key: 'b2c',
+        features: [StorefrontIcon, PriceTagIcon, ParcelIcon],
+        thumbs: [leather, textile, jewelry],
+    },
+    wholesale: {
+        key: 'b2b',
+        features: [WholesaleTagIcon, CratesIcon, RepeatOrderIcon],
+        thumbs: [wood, spice, accessories],
+    },
+} as const;
+
+type AudienceModel = (typeof AUDIENCE)[keyof typeof AUDIENCE];
+
+/**
+ * One arm of the composition.
+ *
+ * `side` is the edge it hangs off — `start` for the retail branch, `end` for
+ * wholesale — expressed logically rather than as left/right so the whole
+ * thing mirrors under `dir="rtl"` without a second set of classes. It drives
+ * three things at `lg`: which way the connector runs back to the workshop,
+ * which way the text aligns, and which direction the content travels in from
+ * as it reveals.
+ */
+function AudienceBranch({
+    side,
+    model,
+    t,
+}: {
+    side: 'start' | 'end';
+    model: AudienceModel;
+    t: (key: string) => string;
+}) {
+    const isStart = side === 'start';
+    const { key, features, thumbs } = model;
+
+    return (
+        <div
+            className={`flex flex-col ${isStart ? 'lg:items-end lg:text-end' : 'lg:items-start lg:text-start'}`}
+        >
+            {/*
+             * The connector, drawn only once the columns sit side by side —
+             * stacked, there is nothing horizontal to connect. It slides out
+             * of the workshop rather than fading in place: `overflow-hidden`
+             * plus a reveal travelling from the workshop's side makes the
+             * rule read as being drawn outward from it.
+             */}
+            <div
+                aria-hidden="true"
+                className={`hidden lg:mb-10 lg:block lg:w-full lg:overflow-hidden ${isStart ? 'lg:ps-6 lg:pe-0' : 'lg:ps-0 lg:pe-6'}`}
+            >
+                <Reveal from={isStart ? 'right' : 'left'} delay={260}>
+                    <span className="flex items-center gap-2">
+                        {isStart && (
+                            <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-souk-brown/40" />
+                        )}
+                        <span className="h-px flex-1 bg-souk-brown/25" />
+                        {!isStart && (
+                            <span className="h-1.5 w-1.5 shrink-0 rotate-45 border border-souk-brown/40" />
+                        )}
+                    </span>
+                </Reveal>
+            </div>
+
+            <Reveal from={isStart ? 'right' : 'left'} delay={300}>
+                <p className="text-[11px] tracking-[0.24em] text-souk-brown/70 uppercase">
+                    {t(`welcome.audience.${key}.tag`)}
+                </p>
+
+                <h3 className="mt-4 font-display text-[clamp(1.6rem,2.6vw,2.25rem)] leading-tight text-souk-title">
+                    {t(`welcome.audience.${key}.title`)}
+                </h3>
+
+                <p className="mt-4 max-w-sm leading-relaxed text-souk-brown-deep/75">
+                    {t(`welcome.audience.${key}.body`)}
+                </p>
+
+                {/*
+                 * The abstract trace of the model. Retail drifts as three
+                 * separate pieces; wholesale carries a quantity over the
+                 * stack — the same photographs, read two different ways.
+                 */}
+                <div
+                    className={`mt-8 flex items-end gap-3 ${isStart ? 'lg:justify-end' : 'lg:justify-start'}`}
+                >
+                    {thumbs.map((src, i) => (
+                        <span
+                            key={src}
+                            className="relative block h-16 w-14 overflow-hidden rounded-sm ring-1 ring-souk-brown/15 motion-safe:animate-float-slow"
+                            /* Offset so the three drift independently rather
+                               than bobbing as one block. */
+                            style={{ animationDelay: `${i * 900}ms` }}
+                        >
+                            <img
+                                src={src}
+                                alt=""
+                                loading="lazy"
+                                className="h-full w-full object-cover"
+                            />
+                        </span>
+                    ))}
+
+                    <span className="ms-1 self-center border border-souk-brown/20 px-2.5 py-1 font-display text-sm text-souk-brown-deep">
+                        {t(`welcome.audience.${key}.chip`)}
+                    </span>
+                </div>
+
+                <ul className="mt-9 space-y-4 border-t border-souk-brown/12 pt-7">
+                    {features.map((Icon, i) => (
+                        <li
+                            key={i}
+                            className={`flex items-center gap-3.5 text-sm text-souk-brown-deep/85 ${isStart ? 'lg:flex-row-reverse' : ''}`}
+                        >
+                            <Icon className="h-6 w-6 shrink-0 text-souk-brown" />
+                            {t(`welcome.audience.${key}.point${i + 1}`)}
+                        </li>
+                    ))}
+                </ul>
+            </Reveal>
+        </div>
+    );
+}
+
 export default function Welcome({
     featuredProducts = [],
 }: {
@@ -86,7 +275,18 @@ export default function Welcome({
                             className="pointer-events-none absolute inset-0 motif-zellij opacity-[0.55] [--pattern-color:rgba(240,228,201,0.16)] [--pattern-size:76px]"
                         />
 
-                        <div className="relative container grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
+                        {/*
+                         * `lg:min-h-[calc(100svh-5.75rem)]` rather than a flat
+                         * `h-screen`: this is a *floor* tied to the actual
+                         * viewport, with `items-center` doing the vertical
+                         * centring, so a laptop viewport gets the hero sized
+                         * to fit without scrolling while a longer translation
+                         * (Arabic runs bulkier) simply grows the section
+                         * instead of clipping. 5.75rem is SiteHeader's own
+                         * rendered height (logo + py-5 + the zellij frise),
+                         * so the two together land on exactly one screen.
+                         */}
+                        <div className="relative container grid items-center gap-10 py-14 lg:min-h-[calc(100svh-5.75rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-10">
                             {/* Copy */}
                             <div>
                                 {/* <Reveal>
@@ -99,7 +299,14 @@ export default function Welcome({
                                     </span>
                                 </Reveal> */}
 
-                                <h1 className="mt-7 font-display text-[clamp(3rem,8vw,7rem)] leading-[0.92] tracking-[-0.02em] text-white">
+                                {/*
+                                 * Ceiling brought down from 7rem to 4.75rem —
+                                 * at 8vw on a real laptop width that line was
+                                 * ~110px tall on its own and, together with
+                                 * the arch photo's height, was what pushed the
+                                 * section past the fold.
+                                 */}
+                                <h1 className="mt-4 font-display text-[clamp(2.75rem,5vw,4.75rem)] leading-[0.95] tracking-[-0.02em] text-white lg:leading-[0.92]">
                                     <Reveal delay={80}>
                                         <span className="block">
                                             {t('welcome.hero.line1')}
@@ -113,13 +320,13 @@ export default function Welcome({
                                 </h1>
 
                                 <Reveal delay={280}>
-                                    <p className="mt-7 max-w-lg text-lg leading-relaxed text-souk-cream/85">
+                                    <p className="mt-4 max-w-lg text-lg leading-relaxed text-souk-cream/85 lg:mt-5">
                                         {t('welcome.hero.lead')}
                                     </p>
                                 </Reveal>
 
                                 <Reveal delay={360}>
-                                    <div className="mt-10 flex flex-wrap items-center gap-4">
+                                    <div className="mt-7 flex flex-wrap items-center gap-4">
                                         <Link
                                             href="/products"
                                             className="group relative inline-flex items-center gap-3 overflow-hidden rounded-xl bg-souk-cream px-8 py-4 font-display text-lg text-souk-brown-deep shadow-lg shadow-black/10 transition-transform duration-300 hover:-translate-y-0.5"
@@ -144,7 +351,7 @@ export default function Welcome({
                                 </Reveal>
 
                                 <Reveal delay={440}>
-                                    <dl className="mt-14 grid max-w-lg grid-cols-3 gap-6 border-t border-souk-cream/20 pt-8">
+                                    <dl className="mt-8 grid max-w-lg grid-cols-3 gap-6 border-t border-souk-cream/20 pt-5 lg:mt-9">
                                         {[
                                             [
                                                 '120+',
@@ -160,7 +367,7 @@ export default function Welcome({
                                             ],
                                         ].map(([value, label]) => (
                                             <div key={label}>
-                                                <dt className="font-display text-3xl text-white">
+                                                <dt className="font-display text-2xl text-white lg:text-3xl">
                                                     {value}
                                                 </dt>
                                                 <dd className="mt-1 text-xs leading-snug text-souk-cream/70">
@@ -172,13 +379,18 @@ export default function Welcome({
                                 </Reveal>
                             </div>
 
-                            {/* Arch-framed hero image */}
+                            {/* Arch-framed hero image. Capped narrower at
+                                `lg` than below it — its height follows from
+                                its width via the aspect ratio, and this is
+                                what actually keeps the section within one
+                                screen; a phone or tablet has room to spare, so
+                                it stays at full size there. */}
                             <Reveal
                                 from="scale"
                                 delay={200}
                                 className="relative"
                             >
-                                <div className="relative mx-auto w-full max-w-[30rem]">
+                                <div className="relative mx-auto w-full max-w-[24rem] lg:max-w-[19rem] xl:max-w-[22rem]">
                                     {/* offset outline arch, as drawn in the design */}
                                     <div
                                         aria-hidden="true"
@@ -310,12 +522,6 @@ export default function Welcome({
 
                     <div className="relative container grid items-center gap-16 lg:grid-cols-[0.92fr_1.08fr]">
                         <div>
-                            <Reveal>
-                                <p className="flex items-center gap-3 text-[11px] tracking-[0.22em] text-souk-brown uppercase">
-                                    <span className="h-px w-8 bg-souk-brown/40" />
-                                    {t('welcome.harmony.eyebrow')}
-                                </p>
-                            </Reveal>
                             <Reveal delay={80}>
                                 <h2 className="mt-4 font-display text-[clamp(2.25rem,4.6vw,4rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
                                     {t('welcome.harmony.heading')}
@@ -381,81 +587,105 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* ──────────────── B2B / B2C — the Hirfaty model ──────────────── */}
-                <section className="relative overflow-hidden bg-souk-brown py-24 text-souk-cream lg:py-32">
+                {/* ───────────── One workshop, two ways to sell ─────────────
+                    Not two cards side by side: the artisan's single shop sits
+                    in the middle and the two selling models branch off it, so
+                    the composition itself carries the claim — one shop, two
+                    kinds of customer. `AUDIENCE` below holds each branch's
+                    content; the centre is shared. */}
+                <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-24 lg:py-32">
                     <div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-khayamiya motif-fade"
+                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
                     />
 
                     <div className="relative container">
+                        {/* ── Introduction ── */}
                         <div className="mx-auto max-w-3xl text-center">
-                            <Reveal>
-                                <p className="text-[11px] tracking-[0.22em] text-souk-cream/70 uppercase">
-                                    {t('welcome.audience.eyebrow')}
-                                </p>
-                            </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.04] tracking-[-0.02em] text-white">
+                                <h2 className="mt-5 font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.02] tracking-[-0.02em] text-souk-title">
                                     {t('welcome.audience.heading')}
                                 </h2>
                             </Reveal>
                             <Reveal delay={160}>
-                                <p className="mt-6 text-lg leading-relaxed text-souk-cream/80">
+                                <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-souk-brown-deep/75">
                                     {t('welcome.audience.lead')}
                                 </p>
                             </Reveal>
                         </div>
 
-                        <div className="mt-16 grid gap-8 md:grid-cols-2">
-                            {[
-                                { key: 'b2c', Icon: Store },
-                                { key: 'b2b', Icon: Building2 },
-                            ].map(({ key, Icon }, i) => (
-                                <Reveal key={key} delay={i * 140}>
-                                    <article className="group h-full rounded-3xl border border-souk-cream/20 bg-souk-cream/[0.06] p-10 backdrop-blur transition-all duration-500 hover:-translate-y-2 hover:border-souk-cream/40 hover:bg-souk-cream/10">
-                                        <div className="flex items-center gap-4">
-                                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-souk-cream/15 text-souk-cream transition-transform duration-500 group-hover:scale-110">
-                                                <Icon
-                                                    className="h-7 w-7"
-                                                    strokeWidth={1.5}
-                                                />
-                                            </span>
+                        {/*
+                         * The composition. Three tracks at `lg`: branch,
+                         * workshop, branch — with the middle column sized to
+                         * its content so the two branches stay balanced
+                         * either side of it. Below `lg` the same three parts
+                         * stack into a vertical sequence, workshop first, so
+                         * it reads as a story rather than as a squeezed
+                         * desktop layout.
+                         */}
+                        <div className="mt-20 grid items-center gap-14 lg:mt-24 lg:grid-cols-[1fr_auto_1fr] lg:gap-0">
+                            {/* ── Retail branch ── */}
+                            <AudienceBranch
+                                side="start"
+                                model={AUDIENCE.retail}
+                                t={t}
+                            />
+
+                            {/* ── The workshop itself ── */}
+                            <div className="order-first flex flex-col items-center lg:order-none lg:px-10">
+                                <Reveal from="scale">
+                                    <div className="relative">
+                                        {/* Arch-topped, as everywhere else on
+                                            the site — the workshop doorway
+                                            rather than a rounded rectangle. */}
+                                        <div className="relative h-[19rem] w-[14rem] overflow-hidden rounded-t-full rounded-b-lg ring-1 ring-souk-brown/15 sm:h-[22rem] sm:w-[16.5rem]">
+                                            <img
+                                                src={pottery}
+                                                alt={t(
+                                                    'welcome.audience.hub_alt',
+                                                )}
+                                                loading="lazy"
+                                                className="h-full w-full object-cover"
+                                            />
+                                            <div
+                                                aria-hidden="true"
+                                                className="absolute inset-0 bg-souk-title/15"
+                                            />
                                         </div>
 
-                                        <h3 className="mt-8 font-display text-3xl text-white">
-                                            {t(`welcome.audience.${key}.title`)}
-                                        </h3>
-                                        <p className="mt-4 leading-relaxed text-souk-cream/75">
-                                            {t(`welcome.audience.${key}.body`)}
-                                        </p>
-
-                                        <ul className="mt-8 space-y-3 border-t border-souk-cream/15 pt-7">
-                                            {[1, 2, 3].map((p) => (
-                                                <li
-                                                    key={p}
-                                                    className="flex items-start gap-3 text-sm text-souk-cream/85"
-                                                >
-                                                    <Check
-                                                        className="mt-0.5 h-4 w-4 shrink-0 text-souk-cream"
-                                                        strokeWidth={2}
-                                                    />
-                                                    {t(
-                                                        `welcome.audience.${key}.point${p}`,
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </article>
+                                        {/* Offset outline arch, echoing the
+                                            hero's framing. */}
+                                        <div
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute -top-4 -right-3 h-full w-full rounded-t-full rounded-b-lg border border-souk-brown/25"
+                                        />
+                                    </div>
                                 </Reveal>
-                            ))}
+
+                                <Reveal delay={140}>
+                                    <p className="mt-7 max-w-[13rem] text-center font-display text-lg leading-snug text-souk-title">
+                                        {t('welcome.audience.hub')}
+                                    </p>
+                                    <span
+                                        aria-hidden="true"
+                                        className="mx-auto mt-4 block h-px w-10 bg-souk-brown/30"
+                                    />
+                                </Reveal>
+                            </div>
+
+                            {/* ── Wholesale branch ── */}
+                            <AudienceBranch
+                                side="end"
+                                model={AUDIENCE.wholesale}
+                                t={t}
+                            />
                         </div>
 
                         <Reveal delay={220}>
-                            <div className="mt-14 text-center">
+                            <div className="mt-20 text-center">
                                 <Link
                                     href="/seller/onboarding"
-                                    className="group inline-flex items-center gap-3 rounded-xl bg-souk-cream px-9 py-4 font-display text-lg text-souk-brown-deep transition-transform duration-300 hover:-translate-y-0.5"
+                                    className="group inline-flex items-center gap-3 rounded-lg bg-souk-brown px-9 py-4 font-display text-lg text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep"
                                 >
                                     {t('welcome.audience.cta')}
                                     <ArrowRight
@@ -478,11 +708,6 @@ export default function Welcome({
                     <div className="relative container">
                         <div className="flex flex-wrap items-end justify-between gap-6">
                             <div className="max-w-2xl">
-                                <Reveal>
-                                    <p className="text-[11px] tracking-[0.22em] text-souk-brown uppercase">
-                                        {t('welcome.products.eyebrow')}
-                                    </p>
-                                </Reveal>
                                 <Reveal delay={80}>
                                     <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
                                         {t('welcome.products.heading')}
@@ -629,11 +854,6 @@ export default function Welcome({
                     />
 
                     <div className="relative container text-center">
-                        <Reveal>
-                            <p className="text-[11px] tracking-[0.22em] text-souk-brown uppercase">
-                                {t('welcome.gallery.eyebrow')}
-                            </p>
-                        </Reveal>
                         <Reveal delay={80}>
                             <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-none tracking-[-0.02em] text-souk-title">
                                 {t('welcome.gallery.heading')}
@@ -646,62 +866,62 @@ export default function Welcome({
                         </Reveal>
                     </div>
 
-                    {/* Contained rather than full-bleed, and on a 12-column
-                        track so the tiles stay small and the uneven widths
-                        still read as a woven strip. */}
-                    <div className="relative container mt-12 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-12 md:gap-3">
-                        {[
-                            {
-                                src: jewelry,
-                                span: 'md:col-span-3',
-                                alt: 'Silver Moroccan jewellery',
-                            },
-                            {
-                                src: wood,
-                                span: 'md:col-span-4',
-                                alt: 'Carved cedar wood detail',
-                            },
-                            {
-                                src: pottery,
-                                span: 'md:col-span-5',
-                                alt: 'A potter at the wheel',
-                            },
-                            {
-                                src: textile,
-                                span: 'md:col-span-4',
-                                alt: 'Handwoven Moroccan textile',
-                            },
-                            {
-                                src: accessories,
-                                span: 'md:col-span-5',
-                                alt: 'Handmade artisan accessories',
-                            },
-                            {
-                                src: spice,
-                                span: 'md:col-span-3',
-                                alt: 'Moroccan spices at the souk',
-                            },
-                        ].map(({ src, span, alt }, i) => (
-                            <Reveal
-                                key={alt}
-                                delay={(i % 3) * 90}
-                                from="scale"
-                                className={span}
-                            >
-                                <div className="group relative aspect-square overflow-hidden rounded-xl md:aspect-[5/4]">
-                                    <img
-                                        src={src}
-                                        alt={alt}
-                                        className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-110"
-                                        loading="lazy"
-                                    />
-                                    <div
-                                        aria-hidden="true"
-                                        className="absolute inset-0 bg-souk-brown/0 transition-colors duration-500 group-hover:bg-souk-brown/20"
-                                    />
-                                </div>
-                            </Reveal>
-                        ))}
+                    {/* Full-bleed rather than contained: the strip has to run
+                        off both edges for the drift to read as continuous
+                        rather than as a row that stops. */}
+                    <div className="relative mt-14 overflow-hidden">
+                        {/*
+                         * `motion-safe:` as on the word marquee — anyone who
+                         * has asked their OS for reduced motion gets a still
+                         * strip instead. Pauses on hover so a piece that
+                         * catches the eye can actually be looked at.
+                         */}
+                        <div className="flex w-max hover:[animation-play-state:paused] motion-safe:animate-gallery">
+                            {[0, 1].map((copy) => (
+                                <ul
+                                    key={copy}
+                                    className="flex items-center"
+                                    /*
+                                     * The loop needs two identical copies to
+                                     * translate across seamlessly, but a
+                                     * screen reader should hear the set once.
+                                     */
+                                    aria-hidden={copy === 1 || undefined}
+                                >
+                                    {GALLERY.map(({ src, alt, box, shift }) => (
+                                        <li
+                                            key={`${copy}-${alt}`}
+                                            className={`px-2 md:px-3 ${shift}`}
+                                        >
+                                            <div
+                                                className={`group relative w-44 overflow-hidden rounded-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10 md:w-60 ${box}`}
+                                            >
+                                                <img
+                                                    src={src}
+                                                    alt={copy === 0 ? alt : ''}
+                                                    className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-105"
+                                                    loading="lazy"
+                                                />
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ))}
+                        </div>
+
+                        {/*
+                         * Feathered edges, so tiles enter and leave the strip
+                         * instead of being clipped off mid-drift against a
+                         * hard border.
+                         */}
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 start-0 w-16 bg-gradient-to-r from-souk-paper to-transparent md:w-28 rtl:bg-gradient-to-l"
+                        />
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 end-0 w-16 bg-gradient-to-l from-souk-paper to-transparent md:w-28 rtl:bg-gradient-to-r"
+                        />
                     </div>
                 </section>
 

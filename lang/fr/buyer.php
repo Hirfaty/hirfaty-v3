@@ -59,9 +59,9 @@ return [
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'Pro*',
     'products.pro_from_qty' => 'dès',
-    'products.pro_price_hint' => 'Tarif professionnel indicatif — la facturation reste au prix public pour le moment.',
+    'products.pro_price_hint' => 'Votre tarif professionnel — c’est ce que le paiement facture.',
     'products.pro_notice_title' => 'Compte professionnel.',
-    'products.pro_notice_body' => 'Vos tarifs pro apparaissent sous le prix public. Ils sont indicatifs : la facturation reste au prix public pour le moment.',
+    'products.pro_notice_body' => 'Vos tarifs pro apparaissent sous le prix public, et c’est bien ce que le paiement facture.',
     'products.pro_cta_body' => 'Vous achetez pour un riad, un hôtel ou une boutique ? Des tarifs professionnels existent sur une grande partie du catalogue.',
     'products.pro_cta_button' => 'Ouvrir un compte pro',
 
