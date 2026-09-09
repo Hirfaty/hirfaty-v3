@@ -55,6 +55,24 @@ return [
     'new.browse_all' => 'Parcourir toute la collection',
     'new.empty' => 'Rien n’a encore été mis en ligne — revenez très bientôt.',
 
+    // ── Historique des commandes ──────────────────────────────────
+    'orders.status_pending' => 'En attente',
+    'orders.status_confirmed' => 'Confirmée',
+    'orders.status_shipped' => 'Expédiée',
+    'orders.status_delivered' => 'Livrée',
+    'orders.status_cancelled' => 'Annulée',
+
+    // ── Évaluations ───────────────────────────────────────────────
+    // Proposées uniquement sur une commande livrée — voir ReviewService.
+    'reviews.heading' => 'Comment cela s’est-il passé ?',
+    'reviews.edit_heading' => 'Votre évaluation',
+    'reviews.rate_product' => 'Noter cette pièce',
+    'reviews.rate_shop' => 'L’atelier',
+    'reviews.star_label' => ':count sur 5',
+    'reviews.comment_placeholder' => 'Quelque chose à ajouter ? (facultatif)',
+    'reviews.submit' => 'Envoyer',
+    'reviews.thanks' => 'Merci.',
+
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'Le marché',
     'detail.add_to_cart' => 'Ajouter au panier',

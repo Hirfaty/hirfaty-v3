@@ -11,6 +11,7 @@ use App\Models\ProductView;
 use App\Models\Wishlist;
 use App\Services\NewArrivalsService;
 use App\Services\ProductScoringService;
+use App\Services\ProductSearchService;
 use App\Services\WishlistService;
 use Auth;
 use Illuminate\Database\Eloquent\Collection;
@@ -22,6 +23,7 @@ class ProductController extends Controller
     public function __construct(
         private ProductScoringService $scoring,
         private WishlistService $wishlist,
+        private ProductSearchService $search,
     ) {}
 
     public function index(Request $request)
@@ -41,23 +43,9 @@ class ProductController extends Controller
             ->withCount(['wishlists', 'orderItems']);
 
         if ($search = trim((string) $request->input('search'))) {
-            /*
-             * Case-folded on both sides rather than a bare LIKE: Postgres —
-             * which this app runs — treats LIKE as case-sensitive, so a
-             * shopper typing "tajine" matched nothing against "Tajine".
-             * LOWER() is understood by Postgres, MySQL and the SQLite used
-             * in tests alike, unlike ILIKE.
-             */
-            $needle = '%'.mb_strtolower($search).'%';
-
-            $query->where(function ($q) use ($needle) {
-                $q->whereRaw('LOWER(products.name) LIKE ?', [$needle])
-                    ->orWhereRaw('LOWER(products.description) LIKE ?', [$needle])
-                    ->orWhereHas(
-                        'store',
-                        fn ($s) => $s->whereRaw('LOWER(stores.store_name) LIKE ?', [$needle])
-                    );
-            });
+            // Shared with the header's live suggestions, so the panel and the
+            // listing it hands off to can never disagree on what matches.
+            $this->search->applyTerm($query, $search);
         }
 
         if ($catId = $request->input('category_id')) {

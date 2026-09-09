@@ -11,6 +11,8 @@ use App\Http\Controllers\Buyer\PaymentMethodController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
 use App\Http\Controllers\Buyer\ProfessionalRequestController;
 use App\Http\Controllers\Buyer\ProfileController as BuyerProfileController;
+use App\Http\Controllers\Buyer\ReviewController;
+use App\Http\Controllers\Buyer\SearchController;
 use App\Http\Controllers\Buyer\StoreController as BuyerStoreController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
@@ -208,6 +210,14 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::get('/orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');
 
     /*
+     * Ratings for one delivered order — every piece in it, plus the shop, in a
+     * single submission. Behind `role:buyer` with the rest of this group, but
+     * that only establishes *a* buyer; ReviewService re-checks that it is
+     * this order's buyer and that the order actually arrived.
+     */
+    Route::post('/orders/{order}/reviews', [ReviewController::class, 'store'])->name('buyer.orders.reviews.store');
+
+    /*
      * First-run tour, shown once after email verification (VerifyEmailResponse
      * routes new buyers here). Skippable at every step — `skip` and `store`
      * both end with onboarded_at stamped, so it never reappears.
@@ -227,6 +237,14 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 
 // Public routes — no auth needed
 Route::get('/products', [BuyerProductController::class, 'index'])->name('products.index');
+
+/*
+ * Live results behind the header's search field. Public, like the listing it
+ * previews, and throttled because it fires as the shopper types.
+ */
+Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
+    ->middleware('throttle:60,1')
+    ->name('search.suggestions');
 
 /*
  * Deliberately its own path rather than /products/new: that would be captured

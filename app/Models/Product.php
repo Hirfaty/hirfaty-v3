@@ -36,6 +36,24 @@ class Product extends Model
         return $this->belongsTo(Store::class);
     }
 
+    /**
+     * Buyers' ratings of this piece.
+     *
+     * Distinct from `reviewed_by`/`reviewed_at` in `$fillable` above, which is
+     * the *admin* moderation stamp on the listing rather than any customer's
+     * opinion of it.
+     *
+     * `average_rating` is derived from these and should only ever be written
+     * by `ReviewService`. It sits in `$fillable` above for historical reasons
+     * — nothing currently submits it — but it is mass-assignable, so a future
+     * form that innocently includes it would let the cached figure drift from
+     * the rows below.
+     */
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);

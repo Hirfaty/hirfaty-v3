@@ -54,7 +54,21 @@ class Store extends Model
     protected $casts = [
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
+        'average_rating' => 'decimal:2',
     ];
+
+    /**
+     * Ratings left by buyers for delivered orders from this shop.
+     *
+     * `average_rating` is deliberately absent from `$fillable`: it is derived
+     * from these rows and is only ever written by `ReviewService`, so allowing
+     * a mass assignment to set it would let the cached figure disagree with
+     * the reviews it summarises.
+     */
+    public function reviews()
+    {
+        return $this->hasMany(StoreReview::class);
+    }
 
     public function isArtist(): bool
     {

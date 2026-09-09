@@ -3,6 +3,7 @@ import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import CartSync from '@/components/CartSync';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import SearchPanel from '@/components/SearchPanel';
 import {
     Popover,
     PopoverContent,
@@ -140,6 +141,9 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
      */
     const [menuOpen, setMenuOpen] = useState(false);
 
+    /** The search sheet under the bar — see SearchPanel. */
+    const [searchOpen, setSearchOpen] = useState(false);
+
     const switchLocale = (code: string) => {
         setMenuOpen(false);
         router.post(route('locale.switch', code), {}, { preserveScroll: true });
@@ -193,15 +197,19 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
         return () => window.removeEventListener('scroll', onScroll);
     }, [variant]);
 
-    /** Transparent bar over a dark hero — flip the type and icons to white. */
-    const light = variant === 'overlay' && !scrolled;
+    /*
+     * Transparent bar over a dark hero — flip the type and icons to white.
+     * Suspended while the search sheet is open: the sheet is cream, and a
+     * transparent bar sitting on top of it would put white type on cream.
+     */
+    const light = variant === 'overlay' && !scrolled && !searchOpen;
 
     return (
         <header
             className={`z-50 transition-colors duration-300 ${
                 variant === 'overlay'
                     ? `fixed inset-x-0 top-0 ${
-                          scrolled
+                          scrolled || searchOpen
                               ? 'bg-cream shadow-sm shadow-ink/5'
                               : 'bg-transparent'
                       }`
@@ -377,7 +385,9 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                 <div className="flex items-center gap-2 md:gap-4">
                     <button
                         aria-label={t('header.search')}
-                        className={iconButton(light)}
+                        aria-expanded={searchOpen}
+                        onClick={() => setSearchOpen((value) => !value)}
+                        className={`cursor-pointer ${iconButton(light)}`}
                     >
                         <Search
                             className="h-[18px] w-[18px]"
@@ -511,7 +521,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                         </PopoverTrigger>
                         <PopoverContent
                             align="end"
-                            className="w-64 rounded-none border-ink/15 bg-paper p-0"
+                            className="w-64 rounded-none rounded-xl border-ink/15 bg-paper p-0"
                         >
                             <div className="border-b border-ink/10 px-5 py-4">
                                 <p className="eyebrow">Mon compte</p>
@@ -820,6 +830,16 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                     </Sheet>
                 </div>
             </div>
+
+            {/*
+             * Outside the container so the sheet spans the full width of the
+             * bar, and a sibling of it so it hangs from the header's own box
+             * (`top-full`) on both the in-flow and the pinned variant.
+             *
+             * Mounted only while open, rather than kept mounted and hidden, so
+             * the typed term and its results are dropped on close.
+             */}
+            {searchOpen && <SearchPanel onClose={() => setSearchOpen(false)} />}
         </header>
     );
 };

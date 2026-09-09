@@ -71,7 +71,7 @@ export default function NewArrivals({
         <>
             <Head title={t('buyer.new.title')} />
 
-            <div className="min-h-screen bg-souk-peach">
+            <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />
 
                 {/* Same traced arcade as the marketplace hero, at half the

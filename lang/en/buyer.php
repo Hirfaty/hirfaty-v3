@@ -54,6 +54,24 @@ return [
     'new.browse_all' => 'Browse the full collection',
     'new.empty' => 'Nothing has been listed yet — come back very soon.',
 
+    // ── Order history ─────────────────────────────────────────────
+    'orders.status_pending' => 'Pending',
+    'orders.status_confirmed' => 'Confirmed',
+    'orders.status_shipped' => 'Shipped',
+    'orders.status_delivered' => 'Delivered',
+    'orders.status_cancelled' => 'Cancelled',
+
+    // ── Ratings ───────────────────────────────────────────────────
+    // Only offered on a delivered order — see ReviewService.
+    'reviews.heading' => 'How did it go?',
+    'reviews.edit_heading' => 'Your rating',
+    'reviews.rate_product' => 'Rate this piece',
+    'reviews.rate_shop' => 'The workshop',
+    'reviews.star_label' => ':count out of 5',
+    'reviews.comment_placeholder' => 'Anything to add? (optional)',
+    'reviews.submit' => 'Send',
+    'reviews.thanks' => 'Thank you.',
+
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'The market',
     'detail.add_to_cart' => 'Add to basket',

@@ -56,6 +56,23 @@ return [
     'new.browse_all' => 'تصفّح المجموعة الكاملة',
     'new.empty' => 'لم يُنشر شيء بعد — عُد قريباً جداً.',
 
+    // ── سجل الطلبات ───────────────────────────────────────────────
+    'orders.status_pending' => 'قيد الانتظار',
+    'orders.status_confirmed' => 'مؤكد',
+    'orders.status_shipped' => 'تم الشحن',
+    'orders.status_delivered' => 'تم التسليم',
+    'orders.status_cancelled' => 'ملغى',
+
+    // ── التقييمات ─────────────────────────────────────────────────
+    'reviews.heading' => 'كيف كانت التجربة؟',
+    'reviews.edit_heading' => 'تقييمك',
+    'reviews.rate_product' => 'قيّم هذه القطعة',
+    'reviews.rate_shop' => 'الورشة',
+    'reviews.star_label' => ':count من 5',
+    'reviews.comment_placeholder' => 'هل تودّ إضافة شيء؟ (اختياري)',
+    'reviews.submit' => 'إرسال',
+    'reviews.thanks' => 'شكراً لك.',
+
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'السوق',
     'detail.add_to_cart' => 'أضف إلى السلة',

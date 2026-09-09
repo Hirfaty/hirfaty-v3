@@ -22,4 +22,13 @@ return [
     'cart_qty' => 'Qté :count',
     'cart_subtotal' => 'Sous-total',
     'cart_checkout' => 'Passer commande',
+
+    // ── Panneau de recherche ───────────────────────────────────────
+    'search_placeholder' => 'Rechercher une pièce, un métier, un artisan…',
+    'search_hint' => 'Saisissez au moins 2 caractères pour lancer la recherche.',
+    'search_empty' => 'Aucun résultat pour « :term ».',
+    'search_all' => 'Voir les :count résultats',
+    'search_all_one' => 'Voir le résultat',
+    'search_close' => 'Fermer la recherche',
+    'search_searching' => 'Recherche…',
 ];

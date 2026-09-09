@@ -7,6 +7,8 @@ use App\Models\Address;
 use App\Models\City;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductReview;
+use App\Models\StoreReview;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -119,35 +121,89 @@ class BuyerAccountService
      */
     public function orders(User $user): array
     {
-        return Order::where('buyer_id', $user->id)
+        $orders = Order::where('buyer_id', $user->id)
             ->with(['store', 'city', 'items.product.images'])
             ->latest()
+            ->get();
+
+        /*
+         * Ratings this buyer has already left, fetched once for the whole
+         * history rather than per order — the page renders every order at
+         * once, so a per-order lookup would be a query per card.
+         *
+         * Keyed for O(1) lookup below: product reviews by product id (the
+         * unique index is per buyer *per product*, so it spans orders), shop
+         * reviews by order id (scoped per delivery).
+         */
+        $productReviews = ProductReview::where('user_id', $user->id)
             ->get()
-            ->map(fn (Order $order) => [
-                'id' => $order->id,
-                'reference' => $order->reference,
-                'status' => $order->status,
-                'total_amount' => $order->total_amount,
-                'tracking_number' => $order->tracking_number,
-                'created_at' => $order->created_at,
-                'delivered_at' => $order->delivered_at,
-                'shipping_address' => $order->shipping_address,
-                'city' => $order->city?->name,
-                'store' => [
-                    'store_name' => $order->store?->store_name,
-                ],
-                'items' => $order->items->map(fn ($item) => [
-                    'id' => $item->id,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'subtotal' => $item->subtotal,
-                    'product' => [
-                        'name' => $item->product?->name,
-                        'slug' => $item->product?->slug,
-                        'image' => $item->product?->images->first()?->url,
+            ->keyBy('product_id');
+
+        $storeReviews = StoreReview::where('user_id', $user->id)
+            ->get()
+            ->keyBy('order_id');
+
+        return $orders
+            ->map(function (Order $order) use ($productReviews, $storeReviews) {
+                $storeReview = $storeReviews->get($order->id);
+
+                return [
+                    'id' => $order->id,
+                    'reference' => $order->reference,
+                    'status' => $order->status,
+                    'total_amount' => $order->total_amount,
+                    'tracking_number' => $order->tracking_number,
+                    'created_at' => $order->created_at,
+                    'delivered_at' => $order->delivered_at,
+                    'shipping_address' => $order->shipping_address,
+                    'city' => $order->city?->name,
+                    'store' => [
+                        'store_name' => $order->store?->store_name,
                     ],
-                ])->all(),
-            ])
+
+                    /*
+                     * Whether the rating panel is offered at all. Mirrors
+                     * ReviewService::canReview — the buyer check is implicit
+                     * here since the query is already scoped to them, so this
+                     * is only the delivered half. The server re-checks both on
+                     * submit; this just decides what to draw.
+                     */
+                    'can_review' => $order->status === 'delivered',
+
+                    // Pre-fills the form so an existing rating shows as
+                    // already given rather than as an empty row the buyer is
+                    // being asked for a second time.
+                    'store_review' => $storeReview ? [
+                        'rating' => $storeReview->rating,
+                        'comment' => $storeReview->comment,
+                    ] : null,
+
+                    'items' => $order->items->map(function ($item) use ($productReviews) {
+                        $review = $item->product_id
+                            ? $productReviews->get($item->product_id)
+                            : null;
+
+                        return [
+                            'id' => $item->id,
+                            // The form posts ratings keyed by product, so the
+                            // page needs the id rather than just the label.
+                            'product_id' => $item->product_id,
+                            'quantity' => $item->quantity,
+                            'unit_price' => $item->unit_price,
+                            'subtotal' => $item->subtotal,
+                            'product' => [
+                                'name' => $item->product?->name,
+                                'slug' => $item->product?->slug,
+                                'image' => $item->product?->images->first()?->url,
+                            ],
+                            'review' => $review ? [
+                                'rating' => $review->rating,
+                                'comment' => $review->comment,
+                            ] : null,
+                        ];
+                    })->all(),
+                ];
+            })
             ->all();
     }
 

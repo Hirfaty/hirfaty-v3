@@ -627,7 +627,7 @@ const ProductDetail = ({
              * pins at top-0, so a padded row would leave a strip of page
              * showing above it once it sticks.
              */}
-            <section className="container grid grid-cols-12 gap-8 pt-6 pb-12 lg:gap-14 lg:pt-0">
+            <section className="container mt-8 grid grid-cols-12 gap-8 pt-6 pb-12 lg:gap-14 lg:pt-0">
                 {/*
                  * Gallery. Sticky and a full viewport tall, so the piece holds
                  * the screen while the buying details scroll past it. The
