@@ -47,6 +47,14 @@ return [
     'products.pro_from_qty' => 'dès',
     'products.pro_price_hint' => 'Votre tarif professionnel — c’est ce que le paiement facture.',
 
+    // ── Nouveautés ────────────────────────────────────────────────
+    'new.title' => 'Nouveautés — Hirfaty',
+    'new.eyebrow' => 'Tout juste en ligne',
+    'new.heading' => 'Sorties d’atelier',
+    'new.lead' => 'Les pièces les plus récemment mises en ligne par nos artisans, les plus nouvelles d’abord.',
+    'new.browse_all' => 'Parcourir toute la collection',
+    'new.empty' => 'Rien n’a encore été mis en ligne — revenez très bientôt.',
+
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'Le marché',
     'detail.add_to_cart' => 'Ajouter au panier',

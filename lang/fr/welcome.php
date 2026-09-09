@@ -62,6 +62,9 @@ return [
     'hero.stat_cities' => 'Villes',
     'hero.scroll' => 'Explorer',
     'hero.alt' => 'Un artisan marocain façonnant un vase en argile à la main',
+    'hero.alt_textile' => 'Tissage de laine sur un métier traditionnel',
+    'hero.alt_zellige' => 'Zellige taillé à la main, motif géométrique',
+    'hero.slides_label' => 'Choisir une photographie',
 
     // ── Les trois piliers ────────────────────────────────────────────────
     // `*.title_script` reprend `hero.badge_script` : le nom arabe du pilier,
@@ -129,11 +132,13 @@ return [
     'map.eyebrow' => 'Partout au Maroc',
     'map.heading_line1' => 'Là où le travail',
     'map.heading_line2' => 'se fait vraiment',
-    'map.lead' => 'Nos ateliers s\'étendent du Rif au Sahara. Voici cinq des villes dont vous retrouverez les métiers sur Hirfaty.',
-    'map.body' => 'Chacune porte son métier — Tanger le tissage, Meknès le métal damasquiné, Safi sa colline des potiers, Agadir l\'argan et l\'argent, Laâyoune le cuir saharien. Acheter à un atelier, c\'est acheter à un lieu, pas à un entrepôt.',
+    'map.lead' => 'Nos ateliers s\'étendent du Rif au Sahara. Voici sept des villes dont vous retrouverez les métiers sur Hirfaty.',
+    'map.body' => 'Chacune porte son métier — Tanger le tissage, Fès sa céramique bleue et ses tanneries, Meknès le métal damasquiné, Safi sa colline des potiers, Marrakech ses lanternes et son cuir, Agadir l\'argan et l\'argent, Laâyoune le cuir saharien. Acheter à un atelier, c\'est acheter à un lieu, pas à un entrepôt.',
     'map.city.tanger' => 'Tanger',
+    'map.city.fes' => 'Fès',
     'map.city.meknes' => 'Meknès',
     'map.city.safi' => 'Safi',
+    'map.city.marrakech' => 'Marrakech',
     'map.city.agadir' => 'Agadir',
     'map.city.laayoune' => 'Laâyoune',
 
@@ -143,6 +148,8 @@ return [
     'products.view_all' => 'Voir tous les produits',
     'products.empty' => 'De nouvelles pièces sont en cours de photographie — revenez très bientôt.',
     'products.currency' => 'MAD',
+    'products.prev' => 'Produits précédents',
+    'products.next' => 'Produits suivants',
 
     'gallery.eyebrow' => 'Dans les ateliers',
     'gallery.heading' => 'Galerie',

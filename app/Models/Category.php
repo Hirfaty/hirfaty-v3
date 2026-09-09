@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * @property int $id
@@ -48,6 +49,23 @@ class Category extends Model
      * JSON) carries a display string — `name` itself is a per-locale map.
      */
     protected $appends = ['translated_name'];
+
+    /**
+     * The header's category menu is cached per locale on the hot path of every
+     * response — see HandleInertiaRequests::getNavCategories(). Without this
+     * an admin's edit would not show up in the nav for up to an hour.
+     */
+    protected static function booted(): void
+    {
+        $forget = function (): void {
+            foreach (self::LOCALES as $locale) {
+                Cache::forget("nav_categories_{$locale}");
+            }
+        };
+
+        static::saved($forget);
+        static::deleted($forget);
+    }
 
     protected function casts(): array
     {

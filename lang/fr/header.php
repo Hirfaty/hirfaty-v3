@@ -2,6 +2,9 @@
 
 return [
     'marketplace' => 'Marché',
+    'new_products' => 'Nouveautés',
+    'categories' => 'Catégories',
+    'all_categories' => 'Parcourir tous les métiers',
     'sellers' => 'Vendeurs',
     'about' => 'À propos',
     'search' => 'Rechercher',

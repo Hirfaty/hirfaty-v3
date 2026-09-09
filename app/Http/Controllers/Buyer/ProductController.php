@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\Wishlist;
+use App\Services\NewArrivalsService;
 use App\Services\ProductScoringService;
 use Auth;
 use Illuminate\Database\Eloquent\Collection;
@@ -114,6 +115,35 @@ class ProductController extends Controller
             'wishlisted' => $this->wishlistedIds($request, $paginator->items()),
             // The wishlist route sits behind `role:buyer`; anyone else is sent
             // to log in rather than issuing a request that would 403.
+            'canWishlist' => (bool) $request->user()?->isBuyer(),
+        ]);
+    }
+
+    /**
+     * The newest pieces in the catalogue, on their own page.
+     *
+     * Separate from index() rather than an ordering on it: the listing no
+     * longer offers a sort control, and this is a destination in the nav with
+     * copy of its own — not a state of the marketplace page.
+     */
+    public function newArrivals(Request $request, NewArrivalsService $newArrivals)
+    {
+        $paginator = $newArrivals->paginate($request->user());
+
+        return Inertia::render('buyer/products/new', [
+            // Merged rather than replaced so "load more" appends a page
+            // instead of swapping the grid out — same contract as index().
+            'products' => Inertia::merge(
+                BuyerProductResource::collection($paginator->items())->resolve($request)
+            ),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+                'has_more' => $paginator->hasMorePages(),
+            ],
+            'audience' => Product::audienceFor($request->user()),
+            'wishlisted' => $this->wishlistedIds($request, $paginator->items()),
             'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
     }

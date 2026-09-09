@@ -227,6 +227,15 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 
 // Public routes — no auth needed
 Route::get('/products', [BuyerProductController::class, 'index'])->name('products.index');
+
+/*
+ * Deliberately its own path rather than /products/new: that would be captured
+ * by the {slug} route below and looked up as a product named "new", so the
+ * page would 404 for as long as no such slug existed and silently open the
+ * wrong product the moment one did.
+ */
+Route::get('/new-arrivals', [BuyerProductController::class, 'newArrivals'])->name('products.new');
+
 Route::get('/products/{slug}', [BuyerProductController::class, 'show'])->name('products.show');
 
 /*

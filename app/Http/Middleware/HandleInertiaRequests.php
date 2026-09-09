@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Models\Cart;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -57,7 +59,42 @@ class HandleInertiaRequests extends Middleware
             'translations' => $this->getTranslations(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'cart' => fn () => $this->getSharedCart($request),
+            'navCategories' => fn () => $this->getNavCategories(),
         ];
+    }
+
+    /**
+     * The crafts behind the header's "Categories" menu.
+     *
+     * Shared rather than passed per page because SiteHeader renders on every
+     * public route, so the menu would otherwise be empty everywhere except
+     * the listing. Top level only — the menu is a browse shortcut, not the
+     * full taxonomy tree.
+     *
+     * Cached because this is now on the hot path of every response: the set
+     * changes when an admin edits the taxonomy, which is rare enough that an
+     * hour of staleness is cheaper than the query. `translated_name` is
+     * resolved per locale, so the key has to be too — otherwise the first
+     * visitor's language would be served to everyone.
+     */
+    private function getNavCategories(): array
+    {
+        $locale = app()->getLocale();
+
+        return Cache::remember(
+            "nav_categories_{$locale}",
+            now()->addHour(),
+            fn () => Category::whereNull('parent_id')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Category $category) => [
+                    'id' => $category->id,
+                    'slug' => $category->slug,
+                    // `name` is a per-locale map on the model; never leak it raw.
+                    'translated_name' => $category->translated_name,
+                ])
+                ->all(),
+        );
     }
 
     private function getTranslations(): array

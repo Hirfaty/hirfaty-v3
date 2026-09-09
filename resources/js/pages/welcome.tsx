@@ -11,12 +11,14 @@ import {
     WholesaleTagIcon,
     ZellijStarIcon,
 } from '@/components/home/CraftIcons';
+import HeroBackdrop from '@/components/home/HeroBackdrop';
 import MoroccoMap, {
     MOROCCO_ASPECT,
     projectMorocco,
 } from '@/components/home/MoroccoMap';
+import type { RailProduct } from '@/components/home/ProductRail';
+import ProductRail from '@/components/home/ProductRail';
 import Reveal from '@/components/home/Reveal';
-import VaseIcon from '@/components/home/VaseIcon';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
@@ -28,30 +30,26 @@ import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
+import heroTextile from '@/images/hero-textile.jpg';
+import heroZellige from '@/images/hero-zellige.jpg';
 
 //change
 
-type Media = { id: number; url: string; type: string };
-
-type FeaturedProduct = {
-    id: number;
-    name: string;
-    slug: string;
-    /**
-     * Null while an admin has catalogued the piece but not yet agreed its
-     * price. Normally kept off this strip by `Product::scopeStorefront()` —
-     * currently relaxed (`storefront(false)`) as a temporary, demo-only
-     * carve-out. See that scope's docblock.
-     */
-    base_price: number | string | null;
-    sale_price: number | string | null;
-    category: { id: number; translated_name: string } | null;
-    store: { store_name: string | null; city_name: string | null };
-    images: Media[];
-};
-
 /** Fallback tiles for the product strip before any product is published. */
 const SHOWCASE = [pottery, leather, wood, textile, jewelry, spice];
+
+/**
+ * The hero's crossfading backdrop. Three rather than more: each is a full
+ * viewport of photography, and a fourth would be downloaded by everyone but
+ * seen by almost nobody — the section is usually scrolled past inside two
+ * rotations. Alt text is a translation key resolved at render, so the
+ * descriptions follow the active locale like the rest of the page.
+ */
+const HERO_SLIDES = [
+    { src: heroMain, altKey: 'welcome.hero.alt' },
+    { src: heroTextile, altKey: 'welcome.hero.alt_textile' },
+    { src: heroZellige, altKey: 'welcome.hero.alt_zellige' },
+] as const;
 
 /*
  * The hero's proof line. Figures are hardcoded rather than counted from the
@@ -116,13 +114,22 @@ const PILLARS = [
  * `key` is the translation suffix (`welcome.map.city.<key>`) — the names are
  * transliterated differently per locale (Tangier / Tanger / طنجة), so they
  * are content, not constants.
+ *
+ * `labelAbove` lifts a name over its pin instead of hanging it underneath.
+ * Only Meknes needs it: it sits ~50 km from Fes, so at the size this draws
+ * the two pins are a few pixels apart and their labels, both centred under
+ * their own pin, overlapped into an unreadable smear. Separating them
+ * vertically is what makes both legible — nudging them sideways would only
+ * have moved the collision.
  */
 const MAP_CITIES = [
-    { key: 'tanger', lat: 35.7595, lon: -5.7998 },
-    { key: 'meknes', lat: 33.8935, lon: -5.5473 },
-    { key: 'safi', lat: 32.2994, lon: -9.2372 },
-    { key: 'agadir', lat: 30.4278, lon: -9.5981 },
-    { key: 'laayoune', lat: 27.1536, lon: -13.2033 },
+    { key: 'tanger', lat: 35.7595, lon: -5.7998, labelAbove: false },
+    { key: 'fes', lat: 34.0331, lon: -5.0003, labelAbove: false },
+    { key: 'meknes', lat: 33.8935, lon: -5.5473, labelAbove: true },
+    { key: 'safi', lat: 32.2994, lon: -9.2372, labelAbove: false },
+    { key: 'marrakech', lat: 31.6295, lon: -7.9811, labelAbove: false },
+    { key: 'agadir', lat: 30.4278, lon: -9.5981, labelAbove: false },
+    { key: 'laayoune', lat: 27.1536, lon: -13.2033, labelAbove: false },
 ] as const;
 
 /**
@@ -220,8 +227,20 @@ function AudienceBranch({
     const { key, features, thumbs } = model;
 
     return (
+        /*
+         * Centred until the three tracks actually form, then pushed against
+         * the workshop in the middle.
+         *
+         * Below `lg` the branches stack under the workshop rather than
+         * flanking it, so hanging them off an edge left them adrift against a
+         * centred heading and a centred workshop — most visible on a tablet,
+         * which is wide enough to show the misalignment but too narrow for the
+         * three-column layout that would justify it. `lg:text-start` has to be
+         * spelled out on the trailing branch because `text-center` here would
+         * otherwise cascade past it.
+         */
         <div
-            className={`flex flex-col ${isStart ? 'lg:items-end lg:text-end' : 'lg:items-start lg:text-start'}`}
+            className={`flex flex-col items-center text-center ${isStart ? 'lg:items-end lg:text-end' : 'lg:items-start lg:text-start'}`}
         >
             {/*
              * The connector, drawn only once the columns sit side by side —
@@ -256,7 +275,10 @@ function AudienceBranch({
                     {t(`welcome.audience.${key}.title`)}
                 </h3>
 
-                <p className="mt-4 max-w-sm leading-relaxed text-souk-brown-deep/75">
+                {/* `mx-auto` so the measure stays centred under the heading
+                    while the branch is stacked, rather than hugging one edge
+                    of a box that is itself centred. */}
+                <p className="mx-auto mt-4 max-w-sm leading-relaxed text-souk-brown-deep/75 lg:mx-0">
                     {t(`welcome.audience.${key}.body`)}
                 </p>
 
@@ -266,7 +288,7 @@ function AudienceBranch({
                  * wholesale carries a quantity over the pair.
                  */}
                 <div
-                    className={`mt-8 flex items-end gap-3 ${isStart ? 'lg:justify-end' : 'lg:justify-start'}`}
+                    className={`mt-8 flex items-end justify-center gap-3 ${isStart ? 'lg:justify-end' : 'lg:justify-start'}`}
                 >
                     {thumbs.map((src) => (
                         <span
@@ -291,7 +313,7 @@ function AudienceBranch({
                     {features.map((Icon, i) => (
                         <li
                             key={i}
-                            className={`flex items-center gap-3.5 text-sm text-souk-brown-deep/85 ${isStart ? 'lg:flex-row-reverse' : ''}`}
+                            className={`flex items-center justify-center gap-3.5 text-sm text-souk-brown-deep/85 lg:justify-start ${isStart ? 'lg:flex-row-reverse' : ''}`}
                         >
                             <Icon className="h-6 w-6 shrink-0 text-souk-brown" />
                             {t(`welcome.audience.${key}.point${i + 1}`)}
@@ -307,18 +329,17 @@ export default function Welcome({
     featuredProducts = [],
 }: {
     canRegister?: boolean;
-    featuredProducts?: FeaturedProduct[];
+    featuredProducts?: RailProduct[];
 }) {
     /*
-     * `isRTL` drives the map section's reveal directions only. `Reveal`'s
-     * `from` is a physical translate (`translate-x-*` has no logical form),
-     * so a two-column block that swaps sides under `dir="rtl"` has to swap
-     * its travel directions with it.
+     * `isRTL` drives two things. `Reveal`'s `from` is a physical translate
+     * (`translate-x-*` has no logical form), so a two-column block that swaps
+     * sides under `dir="rtl"` — the map section — has to swap its travel
+     * directions with it. The product rail needs it for a different reason:
+     * `scrollLeft` runs negative in a right-to-left container, so its arrows
+     * page the other way.
      */
     const { t, isRTL } = useTranslation();
-
-    const price = (p: FeaturedProduct) =>
-        p.base_price !== null ? Number(p.sale_price ?? p.base_price) : null;
 
     return (
         <>
@@ -330,31 +351,17 @@ export default function Welcome({
                 <SiteHeader variant="overlay" />
 
                 {/* ───────────────────────── Hero ─────────────────────────
-                    Full-bleed photograph with the claim laid over it.
-
-                    The scrim is a flat wash plus a *vertical* gradient rather
-                    than the side-weighted falloff the design draws: a
-                    horizontal gradient is a physical direction, not a logical
-                    one, so under `dir="rtl"` the copy swings to the right
-                    while the dark end stays left and the Arabic ends up on
-                    the bright half of the photograph. Vertical reads the same
-                    in both directions. Same reasoning as the old craft
-                    statement band this replaced. */}
+                    Three full-bleed photographs crossfading behind the claim,
+                    rather than one still: the page opens on the range of the
+                    catalogue instead of a single craft. The stack carries its
+                    own scrim — see HeroBackdrop. */}
                 <section className="relative overflow-hidden">
-                    <img
-                        src={heroMain}
-                        alt={t('welcome.hero.alt')}
-                        className="absolute inset-0 h-full w-full object-cover"
-                        loading="eager"
-                    />
-
-                    <div
-                        aria-hidden="true"
-                        className="absolute inset-0 bg-souk-title/65"
-                    />
-                    <div
-                        aria-hidden="true"
-                        className="absolute inset-0 bg-gradient-to-t from-souk-title/80 via-souk-title/30 to-souk-title/55"
+                    <HeroBackdrop
+                        slides={HERO_SLIDES.map((slide) => ({
+                            src: slide.src,
+                            alt: t(slide.altKey),
+                        }))}
+                        label={t('welcome.hero.slides_label')}
                     />
 
                     {/*
@@ -430,6 +437,75 @@ export default function Welcome({
                                 </dl>
                             </Reveal> */}
                         </div>
+                    </div>
+                </section>
+
+                {/* ───────────────── Explore our products ─────────────────
+                    Directly under the hero: the first thing a visitor should
+                    see is what is actually for sale, not an explanation of
+                    the marketplace. A rail rather than a grid so a full row
+                    of stock is reachable without the section swallowing a
+                    screen and a half. */}
+                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
+                    <div className="relative container">
+                        <div className="flex flex-wrap items-end justify-between gap-6">
+                            <div className="max-w-2xl">
+                                <Reveal delay={80}>
+                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
+                                        {t('welcome.products.heading')}
+                                    </h2>
+                                </Reveal>
+                                <Reveal delay={140}>
+                                    <p className="mt-5 text-lg text-souk-brown-deep/75">
+                                        {t('welcome.products.lead')}
+                                    </p>
+                                </Reveal>
+                            </div>
+                            <Reveal delay={200}>
+                                <Link
+                                    href="/products"
+                                    className="group inline-flex items-center gap-2 border-b border-souk-brown/40 pb-1 text-souk-brown transition-colors hover:border-souk-brown"
+                                >
+                                    {t('welcome.products.view_all')}
+                                    <ArrowRight
+                                        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                                        strokeWidth={1.75}
+                                    />
+                                </Link>
+                            </Reveal>
+                        </div>
+
+                        {featuredProducts.length > 0 ? (
+                            <div className="mt-14">
+                                <ProductRail
+                                    products={featuredProducts}
+                                    isRTL={isRTL}
+                                    currency={t('welcome.products.currency')}
+                                    prevLabel={t('welcome.products.prev')}
+                                    nextLabel={t('welcome.products.next')}
+                                />
+                            </div>
+                        ) : (
+                            <div className="mt-14">
+                                <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                                    {SHOWCASE.slice(0, 4).map((src, i) => (
+                                        <Reveal key={src} delay={i * 100}>
+                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
+                                                <img
+                                                    src={src}
+                                                    alt=""
+                                                    className="h-full w-full object-cover opacity-70"
+                                                    loading="lazy"
+                                                />
+                                            </div>
+                                        </Reveal>
+                                    ))}
+                                </div>
+                                <p className="mt-12 text-center text-souk-brown-deep/70">
+                                    {t('welcome.products.empty')}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -830,182 +906,50 @@ export default function Welcome({
                              * Tangier is north whichever way the page
                              * reads.
                              */}
-                            {MAP_CITIES.map(({ key, lon, lat }, i) => {
-                                const { left, top } = projectMorocco(lon, lat);
+                            {MAP_CITIES.map(
+                                ({ key, lon, lat, labelAbove }, i) => {
+                                    const { left, top } = projectMorocco(
+                                        lon,
+                                        lat,
+                                    );
 
-                                return (
-                                    <div
-                                        key={key}
-                                        className="absolute -translate-x-1/2 -translate-y-1/2"
-                                        style={{
-                                            left: `${left}%`,
-                                            top: `${top}%`,
-                                        }}
-                                    >
-                                        <span className="relative flex h-2.5 w-2.5">
-                                            <span
-                                                className="absolute inline-flex h-full w-full rounded-full bg-souk-brown/60 motion-safe:animate-ping"
-                                                /* Offset so the four pulse in
+                                    return (
+                                        <div
+                                            key={key}
+                                            className="absolute -translate-x-1/2 -translate-y-1/2"
+                                            style={{
+                                                left: `${left}%`,
+                                                top: `${top}%`,
+                                            }}
+                                        >
+                                            <span className="relative flex h-2.5 w-2.5">
+                                                <span
+                                                    className="absolute inline-flex h-full w-full rounded-full bg-souk-brown/60 motion-safe:animate-ping"
+                                                    /* Offset so the four pulse in
                                                    turn rather than as one
                                                    flashing block. */
-                                                style={{
-                                                    animationDelay: `${i * 600}ms`,
-                                                }}
-                                            />
-                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-souk-brown ring-2 ring-souk-peach" />
-                                        </span>
+                                                    style={{
+                                                        animationDelay: `${i * 600}ms`,
+                                                    }}
+                                                />
+                                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-souk-brown ring-2 ring-souk-peach" />
+                                            </span>
 
-                                        <span className="absolute top-4 left-1/2 -translate-x-1/2 font-display text-xs font-semibold whitespace-nowrap text-souk-brown-deep sm:text-sm">
-                                            {t(`welcome.map.city.${key}`)}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                            <span
+                                                className={`absolute left-1/2 -translate-x-1/2 font-display text-xs font-semibold whitespace-nowrap text-souk-brown-deep sm:text-sm ${
+                                                    labelAbove
+                                                        ? 'bottom-4'
+                                                        : 'top-4'
+                                                }`}
+                                            >
+                                                {t(`welcome.map.city.${key}`)}
+                                            </span>
+                                        </div>
+                                    );
+                                },
+                            )}
                         </div>
                     </Reveal>
-                </section>
-
-                {/* ───────────────── Explore our products ───────────────── */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div className="relative container">
-                        <div className="flex flex-wrap items-end justify-between gap-6">
-                            <div className="max-w-2xl">
-                                <Reveal delay={80}>
-                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                                        {t('welcome.products.heading')}
-                                    </h2>
-                                </Reveal>
-                                <Reveal delay={140}>
-                                    <p className="mt-5 text-lg text-souk-brown-deep/75">
-                                        {t('welcome.products.lead')}
-                                    </p>
-                                </Reveal>
-                            </div>
-                            <Reveal delay={200}>
-                                <Link
-                                    href="/products"
-                                    className="group inline-flex items-center gap-2 border-b border-souk-brown/40 pb-1 text-souk-brown transition-colors hover:border-souk-brown"
-                                >
-                                    {t('welcome.products.view_all')}
-                                    <ArrowRight
-                                        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                                        strokeWidth={1.75}
-                                    />
-                                </Link>
-                            </Reveal>
-                        </div>
-
-                        {featuredProducts.length > 0 ? (
-                            <div className="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-                                {featuredProducts.map((product, i) => (
-                                    <Reveal
-                                        key={product.id}
-                                        delay={(i % 4) * 100}
-                                    >
-                                        <Link
-                                            href={`/products/${product.slug}`}
-                                            className="group block"
-                                        >
-                                            {/* Arch-topped, but only a half-arch
-                                                now — a full rounded-t-full on a
-                                                square made every tile read as a
-                                                giant dome. */}
-                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
-                                                {product.images?.[0]?.url ? (
-                                                    <img
-                                                        src={
-                                                            product.images[0]
-                                                                .url
-                                                        }
-                                                        alt={product.name}
-                                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                                        loading="lazy"
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-full w-full items-center justify-center">
-                                                        <VaseIcon className="h-14 w-14 text-souk-brown/25" />
-                                                    </div>
-                                                )}
-                                                <div
-                                                    aria-hidden="true"
-                                                    className="absolute inset-0 rounded-t-[8rem] rounded-b-2xl ring-1 ring-souk-brown/10 ring-inset"
-                                                />
-                                            </div>
-
-                                            <div className="mt-4">
-                                                {product.store.city_name && (
-                                                    <p className="text-[10px] tracking-[0.18em] text-souk-brown/70 uppercase">
-                                                        {
-                                                            product.store
-                                                                .city_name
-                                                        }
-                                                    </p>
-                                                )}
-                                                <h3 className="mt-1.5 font-display text-base leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
-                                                    {product.name}
-                                                </h3>
-                                                <div className="mt-1.5 flex items-baseline gap-2">
-                                                    {price(product) !== null ? (
-                                                        <>
-                                                            <span className="font-display text-[15px] text-souk-brown">
-                                                                {price(product)}{' '}
-                                                                <span className="text-[10px]">
-                                                                    {t(
-                                                                        'welcome.products.currency',
-                                                                    )}
-                                                                </span>
-                                                            </span>
-                                                            {product.sale_price && (
-                                                                <span className="text-xs text-souk-brown-deep/45 line-through">
-                                                                    {Number(
-                                                                        product.base_price,
-                                                                    )}
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-xs text-souk-brown-deep/45 italic">
-                                                            {t(
-                                                                'buyer.products.price_coming_soon',
-                                                            )}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {product.store.store_name && (
-                                                    <p className="mt-1 text-xs text-souk-brown-deep/60">
-                                                        {
-                                                            product.store
-                                                                .store_name
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </Link>
-                                    </Reveal>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="mt-14">
-                                <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-                                    {SHOWCASE.slice(0, 4).map((src, i) => (
-                                        <Reveal key={src} delay={i * 100}>
-                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
-                                                <img
-                                                    src={src}
-                                                    alt=""
-                                                    className="h-full w-full object-cover opacity-70"
-                                                    loading="lazy"
-                                                />
-                                            </div>
-                                        </Reveal>
-                                    ))}
-                                </div>
-                                <p className="mt-12 text-center text-souk-brown-deep/70">
-                                    {t('welcome.products.empty')}
-                                </p>
-                            </div>
-                        )}
-                    </div>
                 </section>
 
                 {/* ───────────────────── Gallery ───────────────────── */}

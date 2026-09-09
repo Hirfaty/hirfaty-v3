@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useSlideshow } from '@/hooks/use-slideshow';
 
 export type HeroSlide = {
     src: string;
@@ -34,83 +34,28 @@ type Props = {
  * know about RTL — a translating track would need its direction flipped for
  * Arabic.
  *
- * Motion rules:
- *  - `prefers-reduced-motion` disables both the auto-advance and the Ken
- *    Burns drift. The first slide is shown statically and the controls still
- *    work, so the content is never withheld from anyone.
- *  - The timer pauses on hover and on keyboard focus, so the image can't
- *    change out from under someone reading or tabbing through the controls.
- *  - It also pauses while the tab is hidden, so a backgrounded tab doesn't
- *    burn a timer and animation frames for nobody.
+ * Motion rules live in `useSlideshow`, which the home page's full-bleed
+ * backdrop shares — see that hook for what pauses the timer and why.
  */
 export default function HeroCarousel({
     slides,
-    interval = 3500,
+    interval = 3000,
     className = '',
     children,
 }: Props) {
-    const [index, setIndex] = useState(0);
-
-    // Seeded from the current visibility rather than plain `false`: the
-    // listener below only fires on *change*, so a page opened in a background
-    // tab would otherwise run the timer and the Ken Burns animation until the
-    // tab was first focused.
-    const [paused, setPaused] = useState(
-        () => typeof document !== 'undefined' && document.hidden,
-    );
-
-    // Resolved at first render, not in an effect: starting the timer and then
-    // tearing it down would already have moved the slide for someone who asked
-    // for no motion.
-    const [reducedMotion] = useState(
-        () =>
-            typeof window !== 'undefined' &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    );
-
-    // Held in a ref so restarting the timer (on manual navigation) doesn't
-    // depend on `index` being in the effect's dependency list, which would
-    // re-create the interval on every automatic tick too.
-    const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    useEffect(() => {
-        if (reducedMotion || paused || slides.length < 2) {
-            return;
-        }
-
-        timer.current = setInterval(
-            () => setIndex((i) => (i + 1) % slides.length),
-            interval,
-        );
-
-        return () => {
-            if (timer.current) {
-                clearInterval(timer.current);
-            }
-        };
-    }, [reducedMotion, paused, slides.length, interval]);
-
-    useEffect(() => {
-        const onVisibility = () => setPaused(document.hidden);
-
-        document.addEventListener('visibilitychange', onVisibility);
-
-        return () =>
-            document.removeEventListener('visibilitychange', onVisibility);
-    }, []);
+    const {
+        index,
+        goTo,
+        reduced: reducedMotion,
+        pauseProps,
+    } = useSlideshow(slides.length, interval);
 
     if (slides.length === 0) {
         return null;
     }
 
     return (
-        <div
-            className={className}
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-            onFocusCapture={() => setPaused(true)}
-            onBlurCapture={() => setPaused(false)}
-        >
+        <div className={className} {...pauseProps}>
             {/* Split in half rather than overlaying copy on photography: the
                 type sits on a flat panel, so it needs no scrim and stays
                 legible whichever slide is showing. Brown rather than peach —
@@ -174,7 +119,7 @@ export default function HeroCarousel({
                             <button
                                 key={slide.src}
                                 type="button"
-                                onClick={() => setIndex(i)}
+                                onClick={() => goTo(i)}
                                 aria-label={slide.alt}
                                 aria-current={active}
                                 className={`h-2 w-2 rounded-full transition-colors duration-300 ${

@@ -62,6 +62,9 @@ return [
     'hero.stat_cities' => 'Cities',
     'hero.scroll' => 'Explore',
     'hero.alt' => 'A Moroccan artisan shaping a clay vessel by hand',
+    'hero.alt_textile' => 'Wool being woven on a traditional loom',
+    'hero.alt_zellige' => 'Hand-cut zellige tilework, geometric pattern',
+    'hero.slides_label' => 'Choose a photograph',
 
     // ── Three pillars ────────────────────────────────────────────────────
     // `*.title_script` mirrors `hero.badge_script`: the Arabic name of the
@@ -129,11 +132,13 @@ return [
     'map.eyebrow' => 'Across Morocco',
     'map.heading_line1' => 'Where the work',
     'map.heading_line2' => 'actually happens',
-    'map.lead' => 'Our workshops are spread from the Rif to the Sahara. These are five of the cities whose trades you will find on Hirfaty.',
-    'map.body' => 'Each one carries its own craft — Tangier its weaving, Meknes its damascened metal, Safi its potters\' hill, Agadir its argan and silver, Laayoune its Saharan leather. Buy from a workshop and you are buying from a place, not a warehouse.',
+    'map.lead' => 'Our workshops are spread from the Rif to the Sahara. These are seven of the cities whose trades you will find on Hirfaty.',
+    'map.body' => 'Each one carries its own craft — Tangier its weaving, Fes its blue ceramic and its tanneries, Meknes its damascened metal, Safi its potters\' hill, Marrakesh its lanterns and leather, Agadir its argan and silver, Laayoune its Saharan leather. Buy from a workshop and you are buying from a place, not a warehouse.',
     'map.city.tanger' => 'Tangier',
+    'map.city.fes' => 'Fes',
     'map.city.meknes' => 'Meknes',
     'map.city.safi' => 'Safi',
+    'map.city.marrakech' => 'Marrakesh',
     'map.city.agadir' => 'Agadir',
     'map.city.laayoune' => 'Laayoune',
 
@@ -143,6 +148,8 @@ return [
     'products.view_all' => 'See all products',
     'products.empty' => 'New pieces are being photographed right now — come back very soon.',
     'products.currency' => 'MAD',
+    'products.prev' => 'Previous products',
+    'products.next' => 'Next products',
 
     'gallery.eyebrow' => 'In the workshops',
     'gallery.heading' => 'Gallery',

@@ -2,6 +2,9 @@
 
 return [
     'marketplace' => 'Marketplace',
+    'new_products' => 'New in',
+    'categories' => 'Categories',
+    'all_categories' => 'Browse every craft',
     'sellers' => 'Sellers',
     'about' => 'About',
     'search' => 'Search',

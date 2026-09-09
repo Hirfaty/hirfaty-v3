@@ -2,6 +2,9 @@
 
 return [
     'marketplace' => 'السوق',
+    'new_products' => 'الجديد',
+    'categories' => 'الفئات',
+    'all_categories' => 'تصفّح كل الحرف',
     'sellers' => 'البائعون',
     'about' => 'من نحن',
     'search' => 'بحث',

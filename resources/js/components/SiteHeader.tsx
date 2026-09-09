@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Menu, Search, ShoppingBag, User } from 'lucide-react';
+import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import CartSync from '@/components/CartSync';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
@@ -57,7 +57,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
     const { t, locale, isRTL } = useTranslation();
     const { getItems, count: getGuestCount } = useGuestCart();
     // const [guestItems, setGuestItems] = useState(getItems());
-    const { cart, auth } = usePage<{
+    const { cart, auth, navCategories } = usePage<{
         auth: {
             user: {
                 id: number;
@@ -67,6 +67,16 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                 role: string;
             } | null;
         };
+        /**
+         * Top-level crafts behind the "Categories" menu, shared from
+         * HandleInertiaRequests so the header has them on every route.
+         * Optional because a partial reload may not carry it.
+         */
+        navCategories?: Array<{
+            id: number;
+            slug: string;
+            translated_name: string;
+        }>;
         cart?: {
             items: Array<{
                 id: number;
@@ -137,13 +147,29 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
 
     const navLinks = [
         { href: '/products', label: t('header.marketplace') },
+        { href: '/new-arrivals', label: t('header.new_products') },
         // { href: '/sellers', label: t('header.sellers') },
         // { href: '/about', label: t('header.about') },
     ];
 
+    const categories = navCategories ?? [];
+
     // Marks the current section so its nav link can carry the zellij star.
     const isActive = (href: string) =>
         currentUrl === href || currentUrl.startsWith(`${href}/`);
+
+    /*
+     * The categories menu lights up on the listing whenever a category is
+     * actually selected. Read off the live query string rather than a prop:
+     * SiteHeader is shared by every page and cannot depend on the listing's
+     * own `filters`, and `usePage().url` already carries it.
+     */
+    const activeCategoryId = new URLSearchParams(
+        usePage().url.split('?')[1] ?? '',
+    ).get('category_id');
+
+    /** Deep-link into the listing, pre-filtered to one craft. */
+    const categoryHref = (id: number) => `/products?category_id=${id}`;
 
     /*
      * Only meaningful in `overlay`: whether the page has moved far enough for
@@ -262,6 +288,90 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                             )}
                         </Link>
                     ))}
+
+                    {/*
+                     * Categories as a menu rather than as more top-level
+                     * links: there are eight crafts, and spelling them out in
+                     * the bar would crowd out everything else at every width.
+                     *
+                     * A Popover rather than a hover-only flyout so it works
+                     * on a touch screen, where there is no hover, and can be
+                     * driven from the keyboard.
+                     */}
+                    {categories.length > 0 && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button
+                                    className={`group relative flex cursor-pointer items-center gap-1.5 py-1 transition-colors ${
+                                        light
+                                            ? 'text-white/85 hover:text-white'
+                                            : 'text-ink/80 hover:text-ink'
+                                    }`}
+                                >
+                                    {t('header.categories')}
+                                    <ChevronDown
+                                        className="h-3.5 w-3.5 transition-transform duration-300 group-data-[state=open]:rotate-180"
+                                        strokeWidth={1.75}
+                                    />
+                                    <span
+                                        aria-hidden
+                                        className={`pointer-events-none absolute -bottom-1 left-1/2 h-px -translate-x-1/2 ${light ? 'bg-white/60' : 'bg-terracotta/45'} transition-all duration-300 ${
+                                            activeCategoryId
+                                                ? 'w-full'
+                                                : 'w-0 group-hover:w-full'
+                                        }`}
+                                    />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="start"
+                                className="w-72 rounded-xl border-ink/15 bg-paper p-2"
+                            >
+                                <ul className="grid gap-0.5">
+                                    {categories.map((category) => {
+                                        const current =
+                                            activeCategoryId ===
+                                            String(category.id);
+
+                                        return (
+                                            <li key={category.id}>
+                                                <Link
+                                                    href={categoryHref(
+                                                        category.id,
+                                                    )}
+                                                    aria-current={
+                                                        current
+                                                            ? 'page'
+                                                            : undefined
+                                                    }
+                                                    className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+                                                        current
+                                                            ? 'bg-sand/45 text-ink'
+                                                            : 'text-ink/80 hover:bg-cream-deep/60 hover:text-ink'
+                                                    }`}
+                                                >
+                                                    <ZellijStarIcon
+                                                        aria-hidden
+                                                        className="h-2.5 w-2.5 shrink-0 text-terracotta/70"
+                                                    />
+                                                    {category.translated_name}
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+
+                                <Separator className="my-2 bg-ink/10" />
+
+                                <Link
+                                    href="/products"
+                                    className="block rounded-md px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-cream-deep/60 hover:text-ink"
+                                >
+                                    {t('header.all_categories')}
+                                </Link>
+                            </PopoverContent>
+                        </Popover>
+                    )}
                 </nav>
 
                 <div className="flex items-center gap-2 md:gap-4">
@@ -615,7 +725,9 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                                     </SheetTitle>
                                 </div>
 
-                                <nav className="flex flex-col px-3 py-4">
+                                {/* Scrolls: with the crafts listed out, the
+                                    panel is taller than a phone. */}
+                                <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
                                     {navLinks.map((l) => (
                                         <Link
                                             key={l.href}
@@ -635,6 +747,43 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                                             {l.label}
                                         </Link>
                                     ))}
+
+                                    {/* Listed flat rather than behind a second
+                                        disclosure: the drawer is already the
+                                        disclosure, and nesting one inside it
+                                        buys nothing but an extra tap. */}
+                                    {categories.length > 0 && (
+                                        <>
+                                            <p className="mt-5 px-3 pb-1 text-[11px] tracking-[0.18em] text-ink/50 uppercase">
+                                                {t('header.categories')}
+                                            </p>
+                                            {categories.map((category) => (
+                                                <Link
+                                                    key={category.id}
+                                                    href={categoryHref(
+                                                        category.id,
+                                                    )}
+                                                    onClick={() =>
+                                                        setMenuOpen(false)
+                                                    }
+                                                    aria-current={
+                                                        activeCategoryId ===
+                                                        String(category.id)
+                                                            ? 'page'
+                                                            : undefined
+                                                    }
+                                                    className={`rounded-md px-3 py-2.5 text-sm transition-colors ${
+                                                        activeCategoryId ===
+                                                        String(category.id)
+                                                            ? 'bg-sand/40 text-ink'
+                                                            : 'text-ink/75 hover:bg-sand/30 hover:text-ink'
+                                                    }`}
+                                                >
+                                                    {category.translated_name}
+                                                </Link>
+                                            ))}
+                                        </>
+                                    )}
                                 </nav>
 
                                 {/* Pushed to the foot of the panel: language is

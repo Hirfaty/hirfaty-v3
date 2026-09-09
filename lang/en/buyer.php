@@ -46,6 +46,14 @@ return [
     'products.pro_from_qty' => 'from',
     'products.pro_price_hint' => 'Your trade rate — this is what the checkout charges.',
 
+    // ── New arrivals ──────────────────────────────────────────────
+    'new.title' => 'New in — Hirfaty',
+    'new.eyebrow' => 'Just listed',
+    'new.heading' => 'Fresh from the workshops',
+    'new.lead' => 'The most recent pieces our artisans have put up, newest first.',
+    'new.browse_all' => 'Browse the full collection',
+    'new.empty' => 'Nothing has been listed yet — come back very soon.',
+
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'The market',
     'detail.add_to_cart' => 'Add to basket',
