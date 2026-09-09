@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Truck } from 'lucide-react';
 import Reveal from '@/components/home/Reveal';
+import ZellijStarsPattern from '@/components/home/ZellijStarsPattern';
 import { useTranslation } from '@/hooks/use-translation';
-import zellij from '@/images/zellij-pattern.png';
 
 /**
  * The closing "become a seller" banner — shared by the home and about pages
@@ -14,22 +14,22 @@ export default function ArtisanCta() {
 
     return (
         <section className="bg-souk-paper py-24 lg:py-28">
-            <div className="container">
+            <div className="container px-2!">
                 <Reveal from="scale">
                     <div className="relative overflow-hidden rounded-[2rem] bg-souk-brown px-8 py-16 text-center sm:px-16">
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 opacity-10"
-                            style={{
-                                backgroundImage: `url(${zellij})`,
-                                backgroundSize: '300px',
-                            }}
+                        {/* Texture, not decoration: small enough that the
+                            stars read as a woven surface behind the copy
+                            rather than as a row of large motifs competing
+                            with the headline. */}
+                        <ZellijStarsPattern
+                            className="pointer-events-none absolute inset-0 h-full w-full text-souk-cream/15"
+                            size={46}
                         />
                         <div className="relative mx-auto max-w-2xl">
                             {/* <p className="font-arabic text-lg text-souk-cream/80">
                                 {t('welcome.seller_cta.ar_line')}
                             </p> */}
-                            <h2 className="mt-5 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-tight text-white">
+                            <h2 className="mt-5 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-tight font-bold text-white">
                                 {t('welcome.seller_cta.title')}{' '}
                                 <span className="text-souk-cream italic">
                                     {t('welcome.seller_cta.subtitle')}

@@ -420,6 +420,19 @@
 }
 
 /*
+ * The horseshoe-arch silhouette itself, as a shape rather than a pattern — a
+ * doorway instead of a rectangle. Used for the listing's product tiles, where
+ * a plain rounded corner reads as a generic card.
+ *
+ * Percentage radii rather than a fixed length so the curve keeps its
+ * proportion at any tile size: a `rem` radius that looks like an arch on a
+ * wide tile flattens to a nub on a narrow one.
+ */
+@utility portal-frame {
+    border-radius: 48% 48% 4px 4px / 18% 18% 4px 4px;
+}
+
+/*
  * Zellij frise — the tiled border strip that edges a Moroccan wall or
  * doorway. Meant for a short, wide element (6–10px tall) used as a decorative
  * rule in place of a flat 1px border.

@@ -282,7 +282,7 @@ export default function ProfessionalAccount({
                                     </p>
                                 </Reveal>
 
-                                <h1 className="mt-6 font-display text-[clamp(2.5rem,6vw,5rem)] leading-[0.98] tracking-[-0.02em] text-white">
+                                <h1 className="mt-6 font-display text-[clamp(2.5rem,6vw,5rem)] leading-[0.98] font-bold tracking-[-0.02em] text-white">
                                     <Reveal delay={80}>
                                         <span className="block">
                                             {t('pro.hero.title1')}
@@ -401,7 +401,7 @@ export default function ProfessionalAccount({
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('pro.demo.heading')}
                                 </h2>
                             </Reveal>
@@ -454,7 +454,7 @@ export default function ProfessionalAccount({
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('pro.perks.heading')}
                                 </h2>
                             </Reveal>
@@ -498,7 +498,7 @@ export default function ProfessionalAccount({
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('pro.steps.heading')}
                                 </h2>
                             </Reveal>
@@ -547,7 +547,7 @@ export default function ProfessionalAccount({
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('pro.notes.heading')}
                                 </h2>
                             </Reveal>
@@ -589,7 +589,7 @@ export default function ProfessionalAccount({
 
                                     {isVerified ? (
                                         <>
-                                            <h2 className="mt-5 font-display text-2xl text-souk-title">
+                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
                                                 {t(
                                                     'buyer.professional.approved_title',
                                                 )}
@@ -602,7 +602,7 @@ export default function ProfessionalAccount({
                                         </>
                                     ) : status === 'pending' ? (
                                         <>
-                                            <h2 className="mt-5 font-display text-2xl text-souk-title">
+                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
                                                 {t(
                                                     'buyer.professional.pending_title',
                                                 )}
@@ -622,7 +622,7 @@ export default function ProfessionalAccount({
                                         </>
                                     ) : isGuest ? (
                                         <>
-                                            <h2 className="mt-5 font-display text-2xl text-souk-title">
+                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
                                                 {t('pro.cta.heading')}
                                             </h2>
                                             <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
@@ -641,7 +641,7 @@ export default function ProfessionalAccount({
                                         </>
                                     ) : canRequest ? (
                                         <>
-                                            <h2 className="mt-5 font-display text-2xl text-souk-title">
+                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
                                                 {t('buyer.professional.title')}
                                             </h2>
                                             <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
@@ -717,7 +717,7 @@ export default function ProfessionalAccount({
                                            can hold trade access — a seller or
                                            an admin reading out of interest. */
                                         <>
-                                            <h2 className="mt-5 font-display text-2xl text-souk-title">
+                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
                                                 {t('pro.cta.heading')}
                                             </h2>
                                             <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">

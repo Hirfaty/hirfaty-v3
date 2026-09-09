@@ -41,24 +41,59 @@ return [
     'categories.home.name' => 'Home & Kitchen',
     'categories.terroir.name' => 'Terroir products',
 
-    // ── Home page (Figma "Desktop - 1") ──────────────────────────────────
-    'hero.badge' => 'Handmade in Morocco',
-    'hero.line1' => 'Designed',
-    'hero.line2' => 'by Artisans',
-    'hero.lead' => 'Explore pieces shaped by hand in Fès, Marrakech and Chefchaouen — sold directly by the workshops that make them.',
-    'hero.cta_primary' => 'Explore the market',
+    // ── Home page ────────────────────────────────────────────────────────
+    /*
+     * `hero.badge_script` is the brand word set in Arabic script as an
+     * ornament beside the Latin badge line. Deliberately empty in the ar
+     * locale — there the badge text is already Arabic, so repeating the word
+     * reads as a stutter rather than as decoration. The markup skips it when
+     * the string is empty.
+     */
+    'hero.badge_script' => 'حرفتي',
+    'hero.badge' => 'My craft · Moroccan artisans',
+    'hero.line1' => 'Where Ancient Craft',
+    'hero.line2' => 'Meets Modern Lives',
+    'hero.lead' => 'Discover Morocco’s living heritage — connect with master artisans, shop authentic handmade goods, and immerse yourself in centuries of tradition.',
+    'hero.cta_primary' => 'Shop the marketplace',
     'hero.cta_secondary' => 'Sell on Hirfaty',
-    'hero.stat_artisans' => 'Artisan workshops',
-    'hero.stat_cities' => 'Cities in Morocco',
-    'hero.stat_handmade' => 'Handmade, verified',
+    'hero.stat_artisans' => 'Artisans',
+    'hero.stat_products' => 'Products',
+    'hero.stat_crafts' => 'Crafts',
+    'hero.stat_cities' => 'Cities',
+    'hero.scroll' => 'Explore',
+    'hero.alt' => 'A Moroccan artisan shaping a clay vessel by hand',
 
-    // The full-width photo band that replaced the old "quality" section.
-    'statement.heading' => 'Objects made slowly',
-    'statement.body' => 'Clay, wool, cedar and brass, shaped by hand in workshops across Morocco. No two pieces are quite alike - that is the proof a hand made it.',
-    'statement.alt' => 'Wool being woven on a traditional Moroccan loom',
+    // ── Three pillars ────────────────────────────────────────────────────
+    // `*.title_script` mirrors `hero.badge_script`: the Arabic name of the
+    // pillar, set under the Latin one as an ornament. Empty in ar.
+    'pillars.eyebrow' => 'What we offer',
+    'pillars.heading_line1' => 'Three Ways to Experience',
+    'pillars.heading_line2' => 'Moroccan Craft',
+    'pillars.cta' => 'Explore',
 
-    // Kept: still used by the hero's floating credential chip.
-    'quality.card2.title' => 'Straight from the Workshop',
+    'pillars.retail.title' => 'Marketplace',
+    'pillars.retail.title_script' => 'السوق',
+    'pillars.retail.desc' => 'Shop directly from Moroccan artisans. No intermediaries — fair prices, authentic pieces, and full transparency about who made yours and how.',
+    'pillars.retail.tag1' => 'Pottery',
+    'pillars.retail.tag2' => 'Zellige',
+    'pillars.retail.tag3' => 'Weaving',
+    'pillars.retail.tag4' => 'Leather',
+
+    'pillars.wholesale.title' => 'Wholesale',
+    'pillars.wholesale.title_script' => 'الجملة',
+    'pillars.wholesale.desc' => 'Buy by the crate for your shop or hotel. Trade pricing, repeatable orders, and a direct line to the workshop that fills them.',
+    'pillars.wholesale.tag1' => 'Trade prices',
+    'pillars.wholesale.tag2' => 'By the crate',
+    'pillars.wholesale.tag3' => 'Repeat orders',
+    'pillars.wholesale.tag4' => 'Direct contact',
+
+    'pillars.seller.title' => 'Sell your craft',
+    'pillars.seller.title_script' => 'بيع حرفتك',
+    'pillars.seller.desc' => 'Open a workshop storefront in minutes. Keep your prices, tell your story, and reach buyers across Morocco and beyond.',
+    'pillars.seller.tag1' => 'Free storefront',
+    'pillars.seller.tag2' => 'Your prices',
+    'pillars.seller.tag3' => 'Shipping help',
+    'pillars.seller.tag4' => 'Verified',
 
     'harmony.eyebrow' => 'Our philosophy',
     'harmony.heading' => 'The harmony inside Hirfaty',
@@ -89,6 +124,18 @@ return [
     'audience.b2b.point2' => 'Minimum order quantities',
     'audience.b2b.point3' => 'Bulk & recurring orders',
     'audience.cta' => 'Open your workshop',
+
+    // ── Map ──────────────────────────────────────────────────────────────
+    'map.eyebrow' => 'Across Morocco',
+    'map.heading_line1' => 'Where the work',
+    'map.heading_line2' => 'actually happens',
+    'map.lead' => 'Our workshops are spread from the Rif to the Sahara. These are five of the cities whose trades you will find on Hirfaty.',
+    'map.body' => 'Each one carries its own craft — Tangier its weaving, Meknes its damascened metal, Safi its potters\' hill, Agadir its argan and silver, Laayoune its Saharan leather. Buy from a workshop and you are buying from a place, not a warehouse.',
+    'map.city.tanger' => 'Tangier',
+    'map.city.meknes' => 'Meknes',
+    'map.city.safi' => 'Safi',
+    'map.city.agadir' => 'Agadir',
+    'map.city.laayoune' => 'Laayoune',
 
     'products.eyebrow' => 'Fresh from the souk',
     'products.heading' => 'Explore our products',

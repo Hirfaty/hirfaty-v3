@@ -19,9 +19,6 @@ class ProductController extends Controller
 {
     public function __construct(private ProductScoringService $scoring) {}
 
-    /** Sort keys the listing accepts; anything else falls back to relevance. */
-    private const SORTS = ['score', 'latest', 'price_asc', 'price_desc', 'rating'];
-
     public function index(Request $request)
     {
         $audience = Product::audienceFor($request->user());
@@ -67,36 +64,7 @@ class ProductController extends Controller
             });
         }
 
-        if ($max = $request->input('max_price')) {
-            $query->where('base_price', '<=', $max);
-        }
-
-        if ($min = $request->input('min_rating')) {
-            $query->where('average_rating', '>=', $min);
-        }
-
-        if ($request->boolean('in_stock')) {
-            $query->where('stock', '>', 0);
-        }
-
-        $sort = in_array($request->input('sort'), self::SORTS, true)
-            ? $request->input('sort')
-            : 'score';
-
-        // Order on the figure the card actually shows, not on base_price —
-        // otherwise a discounted piece sorts by its struck-through price and
-        // appears out of sequence to the shopper.
-        $effectivePrice = 'COALESCE(products.sale_price, products.base_price)';
-
-        $query = match ($sort) {
-            'latest' => $query->latest(),
-            'price_asc' => $query->orderByRaw("{$effectivePrice} ASC"),
-            'price_desc' => $query->orderByRaw("{$effectivePrice} DESC"),
-            'rating' => $query->orderByDesc('average_rating'),
-            default => $this->scoring->apply($query),
-        };
-
-        $paginator = $query->paginate(12)->withQueryString();
+        $paginator = $this->scoring->apply($query)->paginate(12)->withQueryString();
 
         return Inertia::render('buyer/products/index', [
             /*
@@ -115,9 +83,9 @@ class ProductController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-            // Drives the category strip under the hero. Top level only — the
-            // strip is a browse row, not a full taxonomy tree. `translated_name`
-            // is appended by the model accessor, since `name` is a per-locale
+            // Drives the tab row above the grid. Top level only — the row is a
+            // browse control, not a full taxonomy tree. `translated_name` is
+            // appended by the model accessor, since `name` is a per-locale
             // object that must never be rendered raw.
             'categories' => Category::whereNull('parent_id')
                 ->orderBy('id')
@@ -130,28 +98,42 @@ class ProductController extends Controller
             'filters' => [
                 'search' => $request->input('search', ''),
                 'category_id' => $request->input('category_id', ''),
-                'max_price' => $request->input('max_price', ''),
-                'min_rating' => $request->input('min_rating', ''),
-                'in_stock' => $request->boolean('in_stock'),
-                'sort' => $sort,
             ],
-            // Drives which price list the grid renders, and the pro banner.
+            // Drives which price list the grid renders.
             'audience' => $audience,
-            'priceCeiling' => $this->priceCeiling($audience),
+            /*
+             * Which hearts start filled. Scoped to the page just rendered
+             * rather than the buyer's whole list, so a long-standing wishlist
+             * doesn't grow the payload of every visit.
+             *
+             * Not merged like `products`: "load more" re-requests only
+             * `products` and `pagination`, so this would go stale — hence the
+             * `only:` list on the client stays as it is and appended tiles
+             * fall back to unfilled until the next full visit.
+             */
+            'wishlisted' => $this->wishlistedIds($request, $paginator->items()),
+            // The wishlist route sits behind `role:buyer`; anyone else is sent
+            // to log in rather than issuing a request that would 403.
+            'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
     }
 
     /**
-     * Upper bound for the price filter, rounded up to a clean step so the
-     * slider's maximum always sits just past the dearest listed piece.
+     * Ids, among the products on this page, already on the buyer's wishlist.
+     *
+     * @param  array<int, Product>  $products
+     * @return array<int, int>
      */
-    private function priceCeiling(string $audience): int
+    private function wishlistedIds(Request $request, array $products): array
     {
-        $max = (float) Product::storefront()
-            ->whereIn('visibility', ['both', $audience])
-            ->max('base_price');
+        if (! $request->user()?->isBuyer()) {
+            return [];
+        }
 
-        return max(100, (int) (ceil($max / 100) * 100));
+        return Wishlist::where('user_id', $request->user()->id)
+            ->whereIn('product_id', array_column($products, 'id'))
+            ->pluck('product_id')
+            ->all();
     }
 
     public function show(Request $request, string $slug)

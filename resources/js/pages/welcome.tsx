@@ -1,7 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, BadgeCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import ArtisanCta from '@/components/ArtisanCta';
 import {
+    AtelierArchIcon,
     CratesIcon,
     ParcelIcon,
     PriceTagIcon,
@@ -10,6 +11,10 @@ import {
     WholesaleTagIcon,
     ZellijStarIcon,
 } from '@/components/home/CraftIcons';
+import MoroccoMap, {
+    MOROCCO_ASPECT,
+    projectMorocco,
+} from '@/components/home/MoroccoMap';
 import Reveal from '@/components/home/Reveal';
 import VaseIcon from '@/components/home/VaseIcon';
 import SiteFooter from '@/components/SiteFooter';
@@ -23,7 +28,6 @@ import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
-import heroTextile from '@/images/hero-textile.jpg';
 
 //change
 
@@ -49,18 +53,77 @@ type FeaturedProduct = {
 /** Fallback tiles for the product strip before any product is published. */
 const SHOWCASE = [pottery, leather, wood, textile, jewelry, spice];
 
-const MARQUEE = [
-    'Pottery',
-    'Zellige',
-    'Leather',
-    'Cedar wood',
-    'Brass',
-    'Wool rugs',
-    'Babouches',
-    'Argan',
-    'Silver',
-    'Raffia',
-];
+/*
+ * The hero's proof line. Figures are hardcoded rather than counted from the
+ * database on purpose — they are a marketing claim about the marketplace as a
+ * whole, not a live count, and the home page should not pay for four
+ * aggregate queries to render them. Only the labels are translated.
+ *
+ * Commented out alongside the <dl> that consumed it, further down in the
+ * hero — left in place rather than deleted so the pair can be restored
+ * together. The `welcome.hero.stat_*` keys are still defined in all three
+ * locales.
+ */
+// const HERO_STATS = [
+//     ['200+', 'stat_artisans'],
+//     ['1,400+', 'stat_products'],
+//     ['18', 'stat_crafts'],
+//     ['50+', 'stat_cities'],
+// ] as const;
+
+/**
+ * The three things a visitor can actually do here, as content rather than
+ * markup — the cards are structurally identical, so describing them as data
+ * keeps the single card template below honest about that.
+ *
+ * `key` is both the React key and the translation namespace
+ * (`welcome.pillars.<key>.*`), so a card's copy is found in one place.
+ */
+const PILLARS = [
+    {
+        key: 'retail',
+        href: '/products',
+        Icon: StorefrontIcon,
+        image: pottery,
+    },
+    {
+        key: 'wholesale',
+        href: '/professional-account',
+        Icon: WholesaleTagIcon,
+        image: spice,
+    },
+    {
+        key: 'seller',
+        href: '/seller/onboarding',
+        Icon: AtelierArchIcon,
+        image: leather,
+    },
+] as const;
+
+/**
+ * The cities pinned on the map, as real coordinates.
+ *
+ * Kept as longitude/latitude rather than as pixels so they stay meaningful:
+ * `projectMorocco` turns them into positions on the artwork, so the pins
+ * cannot drift out of register with the coastline the way hand-placed
+ * pixel offsets would.
+ *
+ * Mind the order of the pair. Every Moroccan city is west of Greenwich and
+ * north of the equator, so `lon` is always negative and `lat` always
+ * positive — a swapped pair projects clean off the canvas rather than
+ * failing loudly, and the pin simply vanishes.
+ *
+ * `key` is the translation suffix (`welcome.map.city.<key>`) — the names are
+ * transliterated differently per locale (Tangier / Tanger / طنجة), so they
+ * are content, not constants.
+ */
+const MAP_CITIES = [
+    { key: 'tanger', lat: 35.7595, lon: -5.7998 },
+    { key: 'meknes', lat: 33.8935, lon: -5.5473 },
+    { key: 'safi', lat: 32.2994, lon: -9.2372 },
+    { key: 'agadir', lat: 30.4278, lon: -9.5981 },
+    { key: 'laayoune', lat: 27.1536, lon: -13.2033 },
+] as const;
 
 /**
  * The drifting gallery strip.
@@ -123,12 +186,12 @@ const AUDIENCE = {
     retail: {
         key: 'b2c',
         features: [StorefrontIcon, PriceTagIcon, ParcelIcon],
-        thumbs: [leather, textile, jewelry],
+        thumbs: [leather, textile],
     },
     wholesale: {
         key: 'b2b',
         features: [WholesaleTagIcon, CratesIcon, RepeatOrderIcon],
-        thumbs: [wood, spice, accessories],
+        thumbs: [wood, spice],
     },
 } as const;
 
@@ -198,20 +261,17 @@ function AudienceBranch({
                 </p>
 
                 {/*
-                 * The abstract trace of the model. Retail drifts as three
-                 * separate pieces; wholesale carries a quantity over the
-                 * stack — the same photographs, read two different ways.
+                 * The abstract trace of the model — the same two photographs
+                 * read two different ways: retail prices a single piece,
+                 * wholesale carries a quantity over the pair.
                  */}
                 <div
                     className={`mt-8 flex items-end gap-3 ${isStart ? 'lg:justify-end' : 'lg:justify-start'}`}
                 >
-                    {thumbs.map((src, i) => (
+                    {thumbs.map((src) => (
                         <span
                             key={src}
-                            className="relative block h-16 w-14 overflow-hidden rounded-sm ring-1 ring-souk-brown/15 motion-safe:animate-float-slow"
-                            /* Offset so the three drift independently rather
-                               than bobbing as one block. */
-                            style={{ animationDelay: `${i * 900}ms` }}
+                            className="relative block h-32 w-28 overflow-hidden rounded-lg ring-1 ring-souk-brown/15"
                         >
                             <img
                                 src={src}
@@ -249,7 +309,13 @@ export default function Welcome({
     canRegister?: boolean;
     featuredProducts?: FeaturedProduct[];
 }) {
-    const { t } = useTranslation();
+    /*
+     * `isRTL` drives the map section's reveal directions only. `Reveal`'s
+     * `from` is a physical translate (`translate-x-*` has no logical form),
+     * so a two-column block that swaps sides under `dir="rtl"` has to swap
+     * its travel directions with it.
+     */
+    const { t, isRTL } = useTranslation();
 
     const price = (p: FeaturedProduct) =>
         p.base_price !== null ? Number(p.sale_price ?? p.base_price) : null;
@@ -259,271 +325,242 @@ export default function Welcome({
             <Head title="Hirfaty — Moroccan craft, direct from the artisans" />
 
             <div className="min-h-screen bg-souk-paper">
-                <SiteHeader />
+                {/* Pinned and transparent until the page scrolls, so the hero
+                    photograph runs the full height of the viewport behind it. */}
+                <SiteHeader variant="overlay" />
 
-                {/* ───────────────────────── Hero ───────────────────────── */}
+                {/* ───────────────────────── Hero ─────────────────────────
+                    Full-bleed photograph with the claim laid over it.
+
+                    The scrim is a flat wash plus a *vertical* gradient rather
+                    than the side-weighted falloff the design draws: a
+                    horizontal gradient is a physical direction, not a logical
+                    one, so under `dir="rtl"` the copy swings to the right
+                    while the dark end stays left and the Arabic ends up on
+                    the bright half of the photograph. Vertical reads the same
+                    in both directions. Same reasoning as the old craft
+                    statement band this replaced. */}
                 <section className="relative overflow-hidden">
-                    <div className="relative overflow-hidden bg-souk-brown lg:rounded-br-[20rem]">
-                        {/* Warm pool of light behind the copy, so the flat brown
-                            reads as a lit room rather than a solid block. */}
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute -top-1/3 -left-1/4 h-[120%] w-[80%] rounded-full bg-[radial-gradient(closest-side,rgba(240,228,201,0.16),transparent)]"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 motif-zellij opacity-[0.55] [--pattern-color:rgba(240,228,201,0.16)] [--pattern-size:76px]"
-                        />
+                    <img
+                        src={heroMain}
+                        alt={t('welcome.hero.alt')}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        loading="eager"
+                    />
 
-                        {/*
-                         * `lg:min-h-[calc(100svh-5.75rem)]` rather than a flat
-                         * `h-screen`: this is a *floor* tied to the actual
-                         * viewport, with `items-center` doing the vertical
-                         * centring, so a laptop viewport gets the hero sized
-                         * to fit without scrolling while a longer translation
-                         * (Arabic runs bulkier) simply grows the section
-                         * instead of clipping. 5.75rem is SiteHeader's own
-                         * rendered height (logo + py-5 + the zellij frise),
-                         * so the two together land on exactly one screen.
-                         */}
-                        <div className="relative container grid items-center gap-10 py-14 lg:min-h-[calc(100svh-5.75rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-10">
-                            {/* Copy */}
-                            <div>
-                                {/* <Reveal>
-                                    <span className="inline-flex items-center gap-2 rounded-full border border-souk-cream/30 bg-souk-cream/10 px-4 py-1.5 text-[11px] tracking-[0.18em] text-souk-cream uppercase backdrop-blur">
-                                        <Sparkles
-                                            className="h-3.5 w-3.5"
-                                            strokeWidth={1.5}
-                                        />
-                                        {t('welcome.hero.badge')}
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-souk-title/65"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-gradient-to-t from-souk-title/80 via-souk-title/30 to-souk-title/55"
+                    />
+
+                    {/*
+                     * `lg:min-h-svh` rather than a flat `h-screen`: this is a
+                     * *floor* tied to the actual viewport, with `items-center`
+                     * doing the vertical centring, so a laptop gets a hero
+                     * sized to fit without scrolling while a longer
+                     * translation (Arabic runs bulkier) simply grows the
+                     * section instead of clipping.
+                     *
+                     * A full viewport rather than one minus the header,
+                     * because the header is now `overlay` — pinned on top of
+                     * this section rather than stacked above it. The extra top
+                     * padding is what keeps the copy clear of the bar; 5.75rem
+                     * is SiteHeader's own rendered height.
+                     */}
+                    <div className="relative container flex items-center py-20 pt-32 lg:min-h-svh lg:py-24 lg:pt-36">
+                        <div className="max-w-[42.5rem]">
+                            <h1 className="mt-6 font-display text-[clamp(2.25rem,6vw,4.5rem)] leading-[1.1] font-bold tracking-[-0.02em] text-white">
+                                <Reveal delay={80}>
+                                    <span className="block">
+                                        {t('welcome.hero.line1')}
                                     </span>
-                                </Reveal> */}
-
-                                {/*
-                                 * Ceiling brought down from 7rem to 4.75rem —
-                                 * at 8vw on a real laptop width that line was
-                                 * ~110px tall on its own and, together with
-                                 * the arch photo's height, was what pushed the
-                                 * section past the fold.
-                                 */}
-                                <h1 className="mt-4 font-display text-[clamp(2.75rem,5vw,4.75rem)] leading-[0.95] tracking-[-0.02em] text-white lg:leading-[0.92]">
-                                    <Reveal delay={80}>
-                                        <span className="block">
-                                            {t('welcome.hero.line1')}
-                                        </span>
-                                    </Reveal>
-                                    <Reveal delay={180}>
-                                        <span className="block text-souk-cream italic">
-                                            {t('welcome.hero.line2')}
-                                        </span>
-                                    </Reveal>
-                                </h1>
-
-                                <Reveal delay={280}>
-                                    <p className="mt-4 max-w-lg text-lg leading-relaxed text-souk-cream/85 lg:mt-5">
-                                        {t('welcome.hero.lead')}
-                                    </p>
                                 </Reveal>
-
-                                <Reveal delay={360}>
-                                    <div className="mt-7 flex flex-wrap items-center gap-4">
-                                        <Link
-                                            href="/products"
-                                            className="group relative inline-flex items-center gap-3 overflow-hidden rounded-xl bg-souk-cream px-8 py-4 font-display text-lg text-souk-brown-deep shadow-lg shadow-black/10 transition-transform duration-300 hover:-translate-y-0.5"
-                                        >
-                                            <span
-                                                aria-hidden="true"
-                                                className="absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 opacity-0 group-hover:animate-sheen group-hover:opacity-100"
-                                            />
-                                            {t('welcome.hero.cta_primary')}
-                                            <ArrowRight
-                                                className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
-                                                strokeWidth={1.75}
-                                            />
-                                        </Link>
-                                        <Link
-                                            href="/seller/onboarding"
-                                            className="inline-flex items-center gap-2 rounded-xl border border-souk-cream/40 px-7 py-4 text-souk-cream transition-colors duration-300 hover:bg-souk-cream/10"
-                                        >
-                                            {t('welcome.hero.cta_secondary')}
-                                        </Link>
-                                    </div>
+                                <Reveal delay={180}>
+                                    <span className="block text-souk-cream italic">
+                                        {t('welcome.hero.line2')}
+                                    </span>
                                 </Reveal>
+                            </h1>
 
-                                <Reveal delay={440}>
-                                    <dl className="mt-8 grid max-w-lg grid-cols-3 gap-6 border-t border-souk-cream/20 pt-5 lg:mt-9">
-                                        {[
-                                            [
-                                                '120+',
-                                                t('welcome.hero.stat_artisans'),
-                                            ],
-                                            [
-                                                '14',
-                                                t('welcome.hero.stat_cities'),
-                                            ],
-                                            [
-                                                '100%',
-                                                t('welcome.hero.stat_handmade'),
-                                            ],
-                                        ].map(([value, label]) => (
-                                            <div key={label}>
-                                                <dt className="font-display text-2xl text-white lg:text-3xl">
-                                                    {value}
-                                                </dt>
-                                                <dd className="mt-1 text-xs leading-snug text-souk-cream/70">
-                                                    {label}
-                                                </dd>
-                                            </div>
-                                        ))}
-                                    </dl>
-                                </Reveal>
-                            </div>
+                            <Reveal delay={280}>
+                                <p className="mt-6 max-w-lg text-lg leading-relaxed text-souk-cream/85">
+                                    {t('welcome.hero.lead')}
+                                </p>
+                            </Reveal>
 
-                            {/* Arch-framed hero image. Capped narrower at
-                                `lg` than below it — its height follows from
-                                its width via the aspect ratio, and this is
-                                what actually keeps the section within one
-                                screen; a phone or tablet has room to spare, so
-                                it stays at full size there. */}
-                            <Reveal
-                                from="scale"
-                                delay={200}
-                                className="relative"
-                            >
-                                <div className="relative mx-auto w-full max-w-[24rem] lg:max-w-[19rem] xl:max-w-[22rem]">
-                                    {/* offset outline arch, as drawn in the design */}
-                                    <div
-                                        aria-hidden="true"
-                                        className="absolute -top-6 -right-5 h-full w-full rounded-t-full rounded-bl-3xl border-[3px] border-souk-cream/60"
-                                    />
-                                    <div className="relative aspect-[530/686] w-full overflow-hidden rounded-t-full rounded-bl-3xl shadow-2xl shadow-black/25 motion-safe:animate-float-slow">
-                                        <img
-                                            src={heroMain}
-                                            alt="A Moroccan artisan shaping a clay vessel by hand"
-                                            className="h-full w-full object-cover"
-                                            loading="eager"
-                                        />
-                                        <div
+                            <Reveal delay={360}>
+                                <div className="mt-9 flex flex-wrap items-center gap-3">
+                                    <Link
+                                        href="/products"
+                                        className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 transition-transform duration-300 hover:-translate-y-0.5"
+                                    >
+                                        <span
                                             aria-hidden="true"
-                                            className="absolute inset-0 bg-gradient-to-t from-souk-brown/45 via-transparent to-transparent"
+                                            className="absolute inset-y-0 -left-1/3 w-1/3 bg-white/30 opacity-0 group-hover:animate-sheen group-hover:opacity-100"
                                         />
-                                    </div>
-
-                                    {/* floating credential chip */}
-                                    <div className="absolute -bottom-5 left-0 flex items-center gap-3 rounded-2xl bg-souk-paper/95 px-5 py-3.5 shadow-xl shadow-black/15 backdrop-blur sm:-left-8">
-                                        <BadgeCheck
-                                            className="h-6 w-6 shrink-0 text-souk-brown"
-                                            strokeWidth={1.5}
-                                        />
-                                        <div className="leading-tight">
-                                            <p className="font-display text-sm text-souk-title">
-                                                {t(
-                                                    'welcome.quality.card2.title',
-                                                )}
-                                            </p>
-                                            <p className="text-[11px] text-souk-brown-deep/70">
-                                                Fès · Marrakech · Chefchaouen
-                                            </p>
-                                        </div>
-                                    </div>
+                                        <StorefrontIcon className="h-5 w-5 shrink-0" />
+                                        {t('welcome.hero.cta_primary')}
+                                    </Link>
+                                    <Link
+                                        href="/seller/onboarding"
+                                        className="inline-flex items-center gap-2.5 rounded-xl border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-7 py-3.5 font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25"
+                                    >
+                                        <AtelierArchIcon className="h-5 w-5 shrink-0" />
+                                        {t('welcome.hero.cta_secondary')}
+                                    </Link>
                                 </div>
                             </Reveal>
+
+                            {/* <Reveal delay={440}>
+                                <dl className="mt-13 flex flex-wrap gap-x-10 gap-y-6">
+                                    {HERO_STATS.map(([value, key]) => (
+                                        <div key={key}>
+                                            <dt className="font-display text-3xl font-bold text-souk-cream">
+                                                {value}
+                                            </dt>
+                                            <dd className="mt-1 text-xs tracking-[0.08em] text-white/60 uppercase">
+                                                {t(`welcome.hero.${key}`)}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </Reveal> */}
                         </div>
                     </div>
                 </section>
 
-                {/* ─────────────────── Craft marquee ───────────────────
-                    Sits on cream rather than paper: coming straight off the
-                    dark hero, a near-white band gave no landing step, and the
-                    marquee is what carries the eye down into the light half of
-                    the page. */}
-                <section
-                    aria-hidden="true"
-                    className="relative overflow-hidden border-y border-souk-brown/15 bg-souk-cream py-5"
-                >
+                {/* ────────────────── Three ways in ──────────────────
+                    The three things a visitor can actually do here, as
+                    cards. Content lives in `PILLARS` above so the three stay
+                    structurally identical — the only differences that matter
+                    are the destination, the icon and the photograph. */}
+                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
                     <div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-weave opacity-40 [--pattern-color:rgba(130,71,42,0.12)]"
+                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
                     />
-                    <div className="relative flex w-max motion-safe:animate-marquee">
-                        {[0, 1].map((copy) => (
-                            <ul key={copy} className="flex items-center">
-                                {MARQUEE.map((word) => (
-                                    <li
-                                        key={`${copy}-${word}`}
-                                        className="flex items-center gap-8 px-8"
+
+                    <div className="relative container">
+                        <div className="mx-auto max-w-3xl text-center">
+                            <Reveal delay={80}>
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4.6vw,3.75rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title">
+                                    <span className="block">
+                                        {t('welcome.pillars.heading_line1')}
+                                    </span>
+                                    <span className="block text-souk-brown italic">
+                                        {t('welcome.pillars.heading_line2')}
+                                    </span>
+                                </h2>
+                            </Reveal>
+                        </div>
+
+                        <div className="mt-14 grid gap-7 sm:grid-cols-2 lg:mt-16 lg:grid-cols-3">
+                            {PILLARS.map(({ key, href, Icon, image }, i) => (
+                                <Reveal key={key} delay={i * 150}>
+                                    <Link
+                                        href={href}
+                                        className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-lg ring-1 shadow-souk-brown/10 ring-souk-brown/10 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-souk-brown/20"
                                     >
-                                        <span className="font-display text-xl whitespace-nowrap text-souk-brown-deep/70">
-                                            {word}
-                                        </span>
-                                        <ZellijStarIcon className="h-3 w-3 shrink-0 text-souk-brown/40" />
-                                    </li>
-                                ))}
-                            </ul>
-                        ))}
-                    </div>
-                </section>
+                                        <div className="relative h-52 shrink-0 overflow-hidden">
+                                            <img
+                                                src={image}
+                                                alt=""
+                                                loading="lazy"
+                                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                            />
+                                            <div
+                                                aria-hidden="true"
+                                                className="absolute inset-0 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
+                                            />
 
-                {/* ───────────────── Craft statement ─────────────────
-                    Full-bleed photograph with the claim laid over it. Sits
-                    outside `container` on purpose — the image runs edge to
-                    edge, while the copy inside it still lines up with every
-                    other section's left margin. */}
-                <section className="relative">
-                    <div className="relative h-[70svh] min-h-[24rem] w-full overflow-hidden lg:h-[80svh]">
-                        <img
-                            src={heroTextile}
-                            alt={t('welcome.statement.alt')}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                        />
+                                            <span className="absolute start-4 top-4 flex h-12 w-12 items-center justify-center rounded-xl border border-souk-cream/40 bg-souk-brown/70 text-souk-cream backdrop-blur">
+                                                <Icon className="h-6 w-6" />
+                                            </span>
 
-                        {/*
-                         * Flat scrim plus a vertical gradient, rather than the
-                         * left-to-right falloff this kind of band usually
-                         * gets. A horizontal gradient is a physical direction,
-                         * not a logical one: under `dir="rtl"` the copy moves
-                         * to the right while the dark end stays left, and the
-                         * Arabic sits on the bright half of the photograph.
-                         * Vertical reads the same in both directions.
-                         */}
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-0 bg-souk-title/55"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-0 bg-gradient-to-t from-souk-title/65 via-transparent to-souk-title/25"
-                        />
+                                            <div className="absolute start-4 end-4 bottom-3">
+                                                <h3 className="font-display text-[1.375rem] leading-tight font-bold text-white">
+                                                    {t(
+                                                        `welcome.pillars.${key}.title`,
+                                                    )}
+                                                </h3>
+                                                {/* Empty in ar — see `hero.badge_script`. */}
+                                                {t(
+                                                    `welcome.pillars.${key}.title_script`,
+                                                ) && (
+                                                    <span
+                                                        dir="rtl"
+                                                        className="font-arabic text-base text-white/70"
+                                                    >
+                                                        {t(
+                                                            `welcome.pillars.${key}.title_script`,
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
 
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="container">
-                                <Reveal>
-                                    <h2 className="max-w-2xl font-display text-[clamp(2rem,5.5vw,4.5rem)] leading-[1.04] tracking-[-0.02em] text-white italic">
-                                        {t('welcome.statement.heading')}
-                                    </h2>
+                                        <div className="flex flex-1 flex-col p-6">
+                                            <p className="text-sm leading-relaxed text-souk-brown-deep/80">
+                                                {t(
+                                                    `welcome.pillars.${key}.desc`,
+                                                )}
+                                            </p>
+
+                                            <ul className="mt-4 flex flex-wrap gap-1.5">
+                                                {[1, 2, 3, 4].map((n) => (
+                                                    <li
+                                                        key={n}
+                                                        className="rounded-full border border-souk-brown/20 bg-souk-brown/5 px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-souk-brown"
+                                                    >
+                                                        {t(
+                                                            `welcome.pillars.${key}.tag${n}`,
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                            {/* `mt-auto` so the cue sits on the
+                                                card's bottom edge whatever the
+                                                description's length — the three
+                                                translations are not the same
+                                                number of lines. */}
+                                            <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-souk-brown">
+                                                {t('welcome.pillars.cta')}
+                                                {/*
+                                                 * `rtl:rotate-180` because the
+                                                 * glyph is a direction, not an
+                                                 * ornament: under `dir="rtl"`
+                                                 * flex reverses the row so the
+                                                 * arrow sits to the *left* of
+                                                 * the label, and an unrotated
+                                                 * one would then point back at
+                                                 * the text it is leading away
+                                                 * from. The hover nudge is
+                                                 * mirrored for the same reason.
+                                                 */}
+                                                <ArrowRight
+                                                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                                                    strokeWidth={1.75}
+                                                />
+                                            </span>
+                                        </div>
+                                    </Link>
                                 </Reveal>
-                                <Reveal delay={120}>
-                                    <p className="mt-6 max-w-md text-lg leading-relaxed text-souk-cream/85">
-                                        {t('welcome.statement.body')}
-                                    </p>
-                                </Reveal>
-                            </div>
+                            ))}
                         </div>
                     </div>
                 </section>
 
                 {/* ───────────────────── Harmony ───────────────────── */}
                 <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-arches motif-fade [--pattern-color:rgba(130,71,42,0.13)] [--pattern-size:52px]"
-                    />
-
                     <div className="relative container grid items-center gap-16 lg:grid-cols-[0.92fr_1.08fr]">
                         <div>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2.25rem,4.6vw,4rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2.25rem,4.6vw,4rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('welcome.harmony.heading')}
                                 </h2>
                             </Reveal>
@@ -554,14 +591,10 @@ export default function Welcome({
                             </ol>
                         </div>
 
-                        {/* Arch-topped pair, echoing the hero frame and the
-                            arcade motif behind it. */}
+                        {/* Arch-topped pair — the doorway shape that recurs
+                            across the site. */}
                         <Reveal from="right" delay={120}>
                             <div className="relative mx-auto aspect-[5/4] w-full max-w-[34rem]">
-                                <div
-                                    aria-hidden="true"
-                                    className="absolute -top-4 left-[6%] h-[86%] w-[56%] rounded-t-full rounded-b-3xl border border-souk-brown/25"
-                                />
                                 <div className="absolute top-0 left-0 h-[86%] w-[56%] overflow-hidden rounded-t-full rounded-b-3xl shadow-2xl shadow-souk-brown/25">
                                     <img
                                         src={leather}
@@ -603,7 +636,7 @@ export default function Welcome({
                         {/* ── Introduction ── */}
                         <div className="mx-auto max-w-3xl text-center">
                             <Reveal delay={80}>
-                                <h2 className="mt-5 font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.02] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-5 font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.02] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('welcome.audience.heading')}
                                 </h2>
                             </Reveal>
@@ -652,13 +685,6 @@ export default function Welcome({
                                                 className="absolute inset-0 bg-souk-title/15"
                                             />
                                         </div>
-
-                                        {/* Offset outline arch, echoing the
-                                            hero's framing. */}
-                                        <div
-                                            aria-hidden="true"
-                                            className="pointer-events-none absolute -top-4 -right-3 h-full w-full rounded-t-full rounded-b-lg border border-souk-brown/25"
-                                        />
                                     </div>
                                 </Reveal>
 
@@ -698,18 +724,154 @@ export default function Welcome({
                     </div>
                 </section>
 
+                {/* ───────────────────── Where they work ─────────────────────
+                    A diagram, not a map service: a flat silhouette with four
+                    pins. Nothing here is tiled, geocoded or fetched, so the
+                    section costs one inline path and no third-party script. */}
+                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
+                    <div className="relative z-10 container">
+                        {/*
+                         * Copy beside the map rather than stacked above it, so
+                         * the two halves travel toward each other as the
+                         * section scrolls in.
+                         *
+                         * Under `dir="rtl"` the copy moves to the other side,
+                         * so the reveal directions are swapped with it —
+                         * `Reveal`'s `from` is a physical translate, and
+                         * left/right would otherwise be the wrong way round
+                         * in Arabic, each half sliding in across the other.
+                         */}
+                        <div className="lg:w-[50%]">
+                            <Reveal from={isRTL ? 'right' : 'left'}>
+                                {/* <p className="text-[11px] font-semibold tracking-[0.24em] text-souk-brown uppercase">
+                                    {t('welcome.map.eyebrow')}
+                                </p> */}
+
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4.2vw,3.5rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title">
+                                    <span className="block">
+                                        {t('welcome.map.heading_line1')}
+                                    </span>
+                                    <span className="block text-souk-brown italic">
+                                        {t('welcome.map.heading_line2')}
+                                    </span>
+                                </h2>
+
+                                <p className="mt-6 max-w-md text-lg leading-relaxed text-souk-brown-deep/80">
+                                    {t('welcome.map.lead')}
+                                </p>
+                                <p className="mt-4 max-w-md leading-relaxed text-souk-brown-deep/70">
+                                    {t('welcome.map.body')}
+                                </p>
+
+                                {/* The pins, restated as a list — the map's
+                                    own labels are small, and this gives the
+                                    four names a readable form on a phone
+                                    where the panel shrinks. */}
+                                {/* <ul className="mt-8 flex flex-wrap gap-2">
+                                    {MAP_CITIES.map(({ key }) => (
+                                        <li
+                                            key={key}
+                                            className="inline-flex items-center gap-2 rounded-full border border-souk-brown/20 bg-souk-brown/5 px-3.5 py-1.5 text-sm text-souk-brown-deep"
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-souk-brown"
+                                            />
+                                            {t(`welcome.map.city.${key}`)}
+                                        </li>
+                                    ))}
+                                </ul> */}
+                            </Reveal>
+                        </div>
+                    </div>
+
+                    {/*
+                     * The map, as the section's own side background.
+                     *
+                     * One element in two modes rather than two copies: below
+                     * `lg` it is an ordinary block under the copy, and from
+                     * `lg` it becomes absolute and full-bleed against the
+                     * trailing edge. `inset-y-0` sets its height from the
+                     * section, and the aspect ratio derives the width — so the
+                     * artwork is never letterboxed and the pins, which are
+                     * percentages of this same box, stay in register in both
+                     * modes.
+                     *
+                     * `end-0` is logical, so the map moves to the other side
+                     * in Arabic along with the copy. The artwork inside does
+                     * not mirror — only which edge it hangs off.
+                     */}
+                    <Reveal
+                        from={isRTL ? 'left' : 'right'}
+                        delay={120}
+                        className="relative z-0 mt-14 px-6 lg:absolute lg:inset-y-0 lg:end-0 lg:mt-0 lg:px-0"
+                    >
+                        <div
+                            className="relative mx-auto w-full max-w-xs lg:h-full lg:w-auto lg:max-w-none"
+                            style={{ aspectRatio: MOROCCO_ASPECT }}
+                        >
+                            <MoroccoMap
+                                className="h-full w-full text-souk-brown"
+                                fillOpacity={0.14}
+                                strokeOpacity={0.4}
+                            />
+
+                            {/*
+                             * Pins are HTML over the SVG rather than
+                             * <circle>/<text> inside it: that way the
+                             * labels are real text in the page font and
+                             * `motion-safe:` can switch the pulse off,
+                             * neither of which SMIL inside the SVG would
+                             * give.
+                             *
+                             * `left`/`top` are physical on purpose. Every
+                             * other offset on this page is logical so it
+                             * mirrors under `dir="rtl"` — a map must not.
+                             * Tangier is north whichever way the page
+                             * reads.
+                             */}
+                            {MAP_CITIES.map(({ key, lon, lat }, i) => {
+                                const { left, top } = projectMorocco(lon, lat);
+
+                                return (
+                                    <div
+                                        key={key}
+                                        className="absolute -translate-x-1/2 -translate-y-1/2"
+                                        style={{
+                                            left: `${left}%`,
+                                            top: `${top}%`,
+                                        }}
+                                    >
+                                        <span className="relative flex h-2.5 w-2.5">
+                                            <span
+                                                className="absolute inline-flex h-full w-full rounded-full bg-souk-brown/60 motion-safe:animate-ping"
+                                                /* Offset so the four pulse in
+                                                   turn rather than as one
+                                                   flashing block. */
+                                                style={{
+                                                    animationDelay: `${i * 600}ms`,
+                                                }}
+                                            />
+                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-souk-brown ring-2 ring-souk-peach" />
+                                        </span>
+
+                                        <span className="absolute top-4 left-1/2 -translate-x-1/2 font-display text-xs font-semibold whitespace-nowrap text-souk-brown-deep sm:text-sm">
+                                            {t(`welcome.map.city.${key}`)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Reveal>
+                </section>
+
                 {/* ───────────────── Explore our products ───────────────── */}
                 <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-weave motif-fade opacity-50 [--pattern-color:rgba(130,71,42,0.07)] [--pattern-size:46px]"
-                    />
-
                     <div className="relative container">
                         <div className="flex flex-wrap items-end justify-between gap-6">
                             <div className="max-w-2xl">
                                 <Reveal delay={80}>
-                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] tracking-[-0.02em] text-souk-title">
+                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                         {t('welcome.products.heading')}
                                     </h2>
                                 </Reveal>
@@ -734,7 +896,7 @@ export default function Welcome({
                         </div>
 
                         {featuredProducts.length > 0 ? (
-                            <div className="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            <div className="mt-14 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
                                 {featuredProducts.map((product, i) => (
                                     <Reveal
                                         key={product.id}
@@ -848,14 +1010,9 @@ export default function Welcome({
 
                 {/* ───────────────────── Gallery ───────────────────── */}
                 <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-28">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-zellij motif-fade opacity-60 [--pattern-color:rgba(130,71,42,0.1)] [--pattern-size:58px]"
-                    />
-
                     <div className="relative container text-center">
                         <Reveal delay={80}>
-                            <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-none tracking-[-0.02em] text-souk-title">
+                            <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-none font-bold tracking-[-0.02em] text-souk-title">
                                 {t('welcome.gallery.heading')}
                             </h2>
                         </Reveal>

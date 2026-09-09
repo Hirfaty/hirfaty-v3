@@ -41,22 +41,55 @@ return [
     'categories.home.name' => 'بيت ومطبخ',
     'categories.terroir.name' => 'منتجات الأرض',
 
-    // ── الصفحة الرئيسية (Figma "Desktop - 1") ────────────────────────────
-    'hero.badge' => 'صنع يدويًا في المغرب',
-    'hero.line1' => 'من تصميم',
-    'hero.line2' => 'أيدي الحرفيين',
-    'hero.lead' => 'اكتشف قطعًا صُنعت يدويًا في فاس ومراكش وشفشاون — تُباع مباشرة من الورشات التي أبدعتها.',
+    // ── الصفحة الرئيسية ──────────────────────────────────────────────────
+    /*
+     * `hero.badge_script` و `pillars.*.title_script` تبقى فارغة هنا عمداً:
+     * في العربية النصّ الأصلي عربي أصلاً، وتكرار الكلمة كزخرفة يقرأ كتلعثم لا
+     * كزينة. الواجهة تتخطّى العنصر كلياً حين تكون السلسلة فارغة.
+     */
+    'hero.badge_script' => '',
+    'hero.badge' => 'حرفتي · حرفيّون مغاربة',
+    'hero.line1' => 'حين تلتقي الحرفة العريقة',
+    'hero.line2' => 'بحياتنا اليوم',
+    'hero.lead' => 'اكتشف التراث الحيّ للمغرب — تواصل مع كبار الحرفيين، واقتنِ قطعاً يدوية أصيلة، وانغمس في قرون من التقاليد.',
     'hero.cta_primary' => 'استكشف السوق',
     'hero.cta_secondary' => 'بِع على حرفتي',
-    'hero.stat_artisans' => 'ورشة حرفية',
-    'hero.stat_cities' => 'مدينة مغربية',
-    'hero.stat_handmade' => 'صناعة يدوية موثقة',
+    'hero.stat_artisans' => 'حرفي',
+    'hero.stat_products' => 'منتج',
+    'hero.stat_crafts' => 'حرفة',
+    'hero.stat_cities' => 'مدينة',
+    'hero.scroll' => 'استكشف',
+    'hero.alt' => 'حرفي مغربي يشكّل إناءً من الطين بيديه',
 
-    'statement.heading' => 'أشياء صُنعت على مهل',
-    'statement.body' => 'طين وصوف وأرز ونحاس، تُشكّل باليد في ورشات المغرب. لا توجد قطعتان متشابهتان تماماً — وهذا دليل أن يداً صنعتها.',
-    'statement.alt' => 'نسج الصوف على نول مغربي تقليدي',
+    // ── الركائز الثلاث ───────────────────────────────────────────────────
+    'pillars.eyebrow' => 'ما نقدّمه',
+    'pillars.heading_line1' => 'ثلاث طرق لتعيش',
+    'pillars.heading_line2' => 'الحرفة المغربية',
+    'pillars.cta' => 'اكتشف',
 
-    'quality.card2.title' => 'مباشرة من الورشة',
+    'pillars.retail.title' => 'السوق',
+    'pillars.retail.title_script' => '',
+    'pillars.retail.desc' => 'اشترِ مباشرة من الحرفيين المغاربة. بلا وسطاء — أسعار عادلة، وقطع أصيلة، ووضوح تامّ حول من صنع قطعتك وكيف.',
+    'pillars.retail.tag1' => 'فخار',
+    'pillars.retail.tag2' => 'زليج',
+    'pillars.retail.tag3' => 'نسيج',
+    'pillars.retail.tag4' => 'جلد',
+
+    'pillars.wholesale.title' => 'الجملة',
+    'pillars.wholesale.title_script' => '',
+    'pillars.wholesale.desc' => 'اطلب بالصناديق لمتجرك أو فندقك. أسعار للمحترفين، وطلبات متكرّرة، وخطّ مباشر مع الورشة التي تنفّذها.',
+    'pillars.wholesale.tag1' => 'أسعار المحترفين',
+    'pillars.wholesale.tag2' => 'بالصندوق',
+    'pillars.wholesale.tag3' => 'طلبات متكرّرة',
+    'pillars.wholesale.tag4' => 'تواصل مباشر',
+
+    'pillars.seller.title' => 'بِع حرفتك',
+    'pillars.seller.title_script' => '',
+    'pillars.seller.desc' => 'افتح واجهة ورشتك في دقائق. احتفظ بأسعارك، واروِ حكايتك، وصِل إلى مشترين في المغرب وخارجه.',
+    'pillars.seller.tag1' => 'واجهة مجانية',
+    'pillars.seller.tag2' => 'أسعارك أنت',
+    'pillars.seller.tag3' => 'دعم الشحن',
+    'pillars.seller.tag4' => 'موثّق',
 
     'harmony.eyebrow' => 'فلسفتنا',
     'harmony.heading' => 'الانسجام في قلب حرفتي',
@@ -84,6 +117,18 @@ return [
     'audience.b2b.point2' => 'حد أدنى للطلب',
     'audience.b2b.point3' => 'طلبات بالجملة ومتكررة',
     'audience.cta' => 'افتح ورشتك',
+
+    // ── الخريطة ──────────────────────────────────────────────────────────
+    'map.eyebrow' => 'في كل أنحاء المغرب',
+    'map.heading_line1' => 'حيث يجري العمل',
+    'map.heading_line2' => 'على أرض الواقع',
+    'map.lead' => 'ورشاتنا ممتدة من الريف إلى الصحراء. هذه خمس من المدن التي تجد حرفها على حرفتي.',
+    'map.body' => 'لكل مدينة حرفتها — طنجة ونسيجها، مكناس وتلقيمها على المعدن، آسفي وتلّة خزّافيها، أكادير وأركانها وفضّتها، العيون وجلدها الصحراوي. حين تشتري من ورشة فأنت تشتري من مكان، لا من مستودع.',
+    'map.city.tanger' => 'طنجة',
+    'map.city.meknes' => 'مكناس',
+    'map.city.safi' => 'آسفي',
+    'map.city.agadir' => 'أكادير',
+    'map.city.laayoune' => 'العيون',
 
     'products.eyebrow' => 'جديد السوق',
     'products.heading' => 'استكشف منتجاتنا',

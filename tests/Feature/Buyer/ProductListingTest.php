@@ -41,14 +41,14 @@ function listed(array $attributes = []): Product
     ], $attributes));
 }
 
-// ── The default sort must actually run ───────────────────────────────
+// ── The relevance ordering must actually run ─────────────────────────
 
-test('the listing renders on the default relevance sort', function () {
+test('the listing renders on the relevance ordering', function () {
     listed();
 
     // Regression: the scoring query used MySQL's DATEDIFF/GREATEST, which do
-    // not exist on Postgres — the page 500'd for every visitor who did not
-    // pick an explicit sort.
+    // not exist on Postgres — the page 500'd for every visitor. Relevance is
+    // now the only ordering the listing offers, so this covers every visit.
     $this->get(route('products.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -56,12 +56,6 @@ test('the listing renders on the default relevance sort', function () {
             ->has('products', 1)
         );
 });
-
-test('every sort option returns a successful response', function (string $sort) {
-    listed();
-
-    $this->get(route('products.index', ['sort' => $sort]))->assertOk();
-})->with(['score', 'latest', 'price_asc', 'price_desc', 'rating']);
 
 // ── Visibility is scoped to the viewer's audience ────────────────────
 
@@ -174,27 +168,32 @@ test('search matches the product name, its description and its shop', function (
         ->assertInertia(fn (Assert $page) => $page->has('products', 3));
 });
 
-test('price sorting uses the discounted price the card displays', function () {
-    listed(['name' => 'Plein tarif', 'base_price' => 140, 'sale_price' => null]);
-    listed(['name' => 'Soldé', 'base_price' => 300, 'sale_price' => 90]);
+// ── Which hearts start filled ────────────────────────────────────────
 
-    // Sorted on base_price the discounted piece (300) would land last, even
-    // though the shopper sees 90 on its card.
-    $this->get(route('products.index', ['sort' => 'price_asc']))
+test('a guest is offered no wishlist state', function () {
+    listed();
+
+    // The wishlist route is behind `role:buyer`, so the card must send a
+    // guest to log in rather than fire a request that would be rejected.
+    $this->get(route('products.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('products.0.name', 'Soldé')
-            ->where('products.1.name', 'Plein tarif')
+            ->where('canWishlist', false)
+            ->where('wishlisted', [])
         );
 });
 
-test('the in-stock filter hides sold-out pieces', function () {
-    listed(['name' => 'Disponible', 'stock' => 3]);
-    listed(['name' => 'Épuisé', 'stock' => 0]);
+test('a buyer sees their own wishlisted pieces on this page marked', function () {
+    $wanted = listed(['name' => 'Convoitée']);
+    listed(['name' => 'Ignorée']);
 
-    $this->get(route('products.index', ['in_stock' => 1]))
+    $buyer = User::factory()->create(['role' => 'buyer']);
+    $buyer->wishlists()->create(['product_id' => $wanted->id]);
+
+    $this->actingAs($buyer)
+        ->get(route('products.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('products', 1)
-            ->where('products.0.name', 'Disponible')
+            ->where('canWishlist', true)
+            ->where('wishlisted', [$wanted->id])
         );
 });
 

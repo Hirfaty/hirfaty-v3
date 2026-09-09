@@ -42,24 +42,58 @@ return [
     'categories.home.name' => 'Maison & Cuisine',
     'categories.terroir.name' => 'Produits de Terroir',
 
-    // ── Page d'accueil (Figma « Desktop - 1 ») ───────────────────────────
-    'hero.badge' => 'Fait main au Maroc',
-    'hero.line1' => 'Créé par',
-    'hero.line2' => 'des artisans',
-    'hero.lead' => 'Découvrez des pièces façonnées à la main à Fès, Marrakech et Chefchaouen — vendues directement par les ateliers qui les créent.',
+    // ── Page d'accueil ───────────────────────────────────────────────────
+    /*
+     * `hero.badge_script` est le nom de la marque en écriture arabe, posé
+     * comme ornement à côté de la ligne latine. Volontairement vide en ar :
+     * là-bas le badge est déjà en arabe, répéter le mot bégaierait au lieu de
+     * décorer. Le balisage l'omet quand la chaîne est vide.
+     */
+    'hero.badge_script' => 'حرفتي',
+    'hero.badge' => 'Mon artisanat · Artisans marocains',
+    'hero.line1' => 'Quand l’artisanat ancien',
+    'hero.line2' => 'rencontre nos vies',
+    'hero.lead' => 'Découvrez le patrimoine vivant du Maroc — rencontrez des maîtres artisans, achetez des pièces authentiques faites main et plongez dans des siècles de tradition.',
     'hero.cta_primary' => 'Explorer le marché',
     'hero.cta_secondary' => 'Vendre sur Hirfaty',
-    'hero.stat_artisans' => 'Ateliers d\'artisans',
-    'hero.stat_cities' => 'Villes au Maroc',
-    'hero.stat_handmade' => 'Fait main, vérifié',
+    'hero.stat_artisans' => 'Artisans',
+    'hero.stat_products' => 'Produits',
+    'hero.stat_crafts' => 'Métiers',
+    'hero.stat_cities' => 'Villes',
+    'hero.scroll' => 'Explorer',
+    'hero.alt' => 'Un artisan marocain façonnant un vase en argile à la main',
 
-    // Le bandeau photo pleine largeur qui a remplacé la section « qualité ».
-    'statement.heading' => 'Des objets faits lentement',
-    'statement.body' => 'Argile, laine, cèdre et laiton, façonnés à la main dans les ateliers du Maroc. Aucune pièce n’est tout à fait identique à une autre — c’est la preuve qu’une main l’a faite.',
-    'statement.alt' => 'Tissage de laine sur un métier traditionnel marocain',
+    // ── Les trois piliers ────────────────────────────────────────────────
+    // `*.title_script` reprend `hero.badge_script` : le nom arabe du pilier,
+    // posé sous le nom latin comme ornement. Vide en ar.
+    'pillars.eyebrow' => 'Ce que nous proposons',
+    'pillars.heading_line1' => 'Trois façons de vivre',
+    'pillars.heading_line2' => 'l’artisanat marocain',
+    'pillars.cta' => 'Découvrir',
 
-    // Conservée : encore utilisée par la pastille flottante du hero.
-    'quality.card2.title' => 'Directement de l’atelier',
+    'pillars.retail.title' => 'Le marché',
+    'pillars.retail.title_script' => 'السوق',
+    'pillars.retail.desc' => 'Achetez directement auprès des artisans marocains. Sans intermédiaire — prix justes, pièces authentiques et transparence totale sur qui a fait la vôtre, et comment.',
+    'pillars.retail.tag1' => 'Poterie',
+    'pillars.retail.tag2' => 'Zellige',
+    'pillars.retail.tag3' => 'Tissage',
+    'pillars.retail.tag4' => 'Cuir',
+
+    'pillars.wholesale.title' => 'La vente en gros',
+    'pillars.wholesale.title_script' => 'الجملة',
+    'pillars.wholesale.desc' => 'Commandez à la caisse pour votre boutique ou votre hôtel. Tarifs professionnels, commandes renouvelables et lien direct avec l’atelier qui les honore.',
+    'pillars.wholesale.tag1' => 'Tarifs pros',
+    'pillars.wholesale.tag2' => 'À la caisse',
+    'pillars.wholesale.tag3' => 'Réassort',
+    'pillars.wholesale.tag4' => 'Contact direct',
+
+    'pillars.seller.title' => 'Vendre son artisanat',
+    'pillars.seller.title_script' => 'بيع حرفتك',
+    'pillars.seller.desc' => 'Ouvrez la vitrine de votre atelier en quelques minutes. Gardez vos prix, racontez votre histoire et touchez des acheteurs au Maroc et au-delà.',
+    'pillars.seller.tag1' => 'Vitrine gratuite',
+    'pillars.seller.tag2' => 'Vos prix',
+    'pillars.seller.tag3' => 'Aide à l’envoi',
+    'pillars.seller.tag4' => 'Vérifié',
 
     'harmony.eyebrow' => 'Notre philosophie',
     'harmony.heading' => 'L\'harmonie au cœur de Hirfaty',
@@ -90,6 +124,18 @@ return [
     'audience.b2b.point2' => 'Quantités minimales de commande',
     'audience.b2b.point3' => 'Commandes en gros et récurrentes',
     'audience.cta' => 'Ouvrir votre atelier',
+
+    // ── Carte ────────────────────────────────────────────────────────────
+    'map.eyebrow' => 'Partout au Maroc',
+    'map.heading_line1' => 'Là où le travail',
+    'map.heading_line2' => 'se fait vraiment',
+    'map.lead' => 'Nos ateliers s\'étendent du Rif au Sahara. Voici cinq des villes dont vous retrouverez les métiers sur Hirfaty.',
+    'map.body' => 'Chacune porte son métier — Tanger le tissage, Meknès le métal damasquiné, Safi sa colline des potiers, Agadir l\'argan et l\'argent, Laâyoune le cuir saharien. Acheter à un atelier, c\'est acheter à un lieu, pas à un entrepôt.',
+    'map.city.tanger' => 'Tanger',
+    'map.city.meknes' => 'Meknès',
+    'map.city.safi' => 'Safi',
+    'map.city.agadir' => 'Agadir',
+    'map.city.laayoune' => 'Laâyoune',
 
     'products.eyebrow' => 'Frais du souk',
     'products.heading' => 'Explorez nos produits',

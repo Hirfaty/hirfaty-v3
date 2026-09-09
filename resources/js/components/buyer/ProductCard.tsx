@@ -28,6 +28,12 @@ export type ListingProduct = {
     sale_price: string | null;
     stock: number;
     has_variants: boolean;
+    /**
+     * Whether anything is actually buyable, resolved server-side. Prefer this
+     * over comparing `stock` to 0 — a variant product's own stock column is
+     * always 0 and its availability lives on the variants.
+     */
+    in_stock: boolean;
     average_rating: string | null;
     category: { id: number; translated_name: string } | null;
     store: {
@@ -73,7 +79,7 @@ function PriceBlock({
     // figure to apply it to, so this short-circuits before any of that.
     if (product.base_price === null) {
         return (
-            <span className="text-xs text-souk-brown-deep/45 italic">
+            <span className="text-xs text-souk-cream/75 italic">
                 {t('buyer.products.price_coming_soon')}
             </span>
         );
@@ -93,13 +99,13 @@ function PriceBlock({
         <div className="text-end">
             <div className="flex items-baseline justify-end gap-2">
                 <span
-                    className={`font-display text-lg leading-none ${onSale ? 'text-terracotta' : 'text-souk-title'}`}
+                    className={`font-display text-lg leading-none ${onSale ? 'text-white' : 'text-souk-cream'}`}
                 >
                     {money(retail)}
                     <span className="ms-1 text-[11px]">MAD</span>
                 </span>
                 {onSale && (
-                    <span className="text-xs text-souk-brown-deep/45 line-through">
+                    <span className="text-xs text-souk-cream/60 line-through">
                         {money(base)}
                     </span>
                 )}
@@ -107,22 +113,22 @@ function PriceBlock({
 
             {showPro && (
                 <div
-                    className="mt-1.5 inline-flex flex-wrap items-baseline justify-end gap-x-1.5 rounded-full bg-olive/10 px-2.5 py-1"
+                    className="mt-1.5 inline-flex flex-wrap items-baseline justify-end gap-x-1.5 rounded-full bg-souk-cream/12 px-2.5 py-1"
                     title={t('buyer.products.pro_price_hint')}
                 >
-                    <span className="text-[9px] tracking-[0.16em] text-olive/80 uppercase">
+                    <span className="text-[9px] tracking-[0.16em] text-souk-cream/75 uppercase">
                         {t('buyer.products.pro_short')}
                     </span>
-                    <span className="font-display text-sm leading-none text-olive">
+                    <span className="font-display text-sm leading-none text-souk-cream">
                         {money(pro)}
                     </span>
                     {saving > 0 && (
-                        <span className="text-[10px] font-medium text-olive">
+                        <span className="text-[10px] font-medium text-souk-cream">
                             −{saving}%
                         </span>
                     )}
                     {minQty > 1 && (
-                        <span className="text-[10px] text-olive/70">
+                        <span className="text-[10px] text-souk-cream/70">
                             {t('buyer.products.pro_from_qty')} {minQty}
                         </span>
                     )}
@@ -137,10 +143,17 @@ function PriceBlock({
  * in the `motif-arches` background — the shape is the brand's signature, and
  * keeps the grid free of the hard corners the old listing had.
  *
+ * The tile carries its own souk-brown surface rather than floating on the
+ * page, so the listing is not wall-to-wall light. Everything inside is
+ * therefore cream-on-brown, `PriceBlock` included — note the pro-price pill
+ * trades its olive for a cream wash there, because olive on brown reads as
+ * mud. The photograph is inset by the panel's padding, so it always has a
+ * margin of its own rather than sitting brown-on-brown.
+ *
  * Shared by the product listing and a shop's own page rather than copied into
  * each: the price block below encodes which audience sees which figure, and a
  * second copy of that rule is exactly how one grid ends up quoting a trade
- * buyer a number the other doesn't.
+ * buyer a number the other doesn't. The brown surface therefore lands on both.
  *
  * `showStore` is off on a shop's own page, where repeating the shop's name
  * under every tile says nothing.
@@ -174,8 +187,11 @@ export function ProductCard({
         : (product.category?.translated_name ?? '');
 
     return (
-        <Link href={`/products/${product.slug}`} className="group block">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[6rem] rounded-b-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-souk-brown/15 group-hover:ring-souk-brown/25">
+        <Link
+            href={`/products/${product.slug}`}
+            className="group block rounded-[1.75rem] bg-souk-brown p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-souk-brown-deep hover:shadow-xl hover:shadow-souk-brown/25"
+        >
+            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[5.25rem] rounded-b-2xl bg-souk-cream/8 ring-1 ring-souk-cream/15 transition-colors duration-500 group-hover:ring-souk-cream/30">
                 {cover ? (
                     <img
                         src={cover}
@@ -184,7 +200,7 @@ export function ProductCard({
                         className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05] ${soldOut ? 'opacity-60' : ''}`}
                     />
                 ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-souk-brown/30">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-souk-cream/30">
                         <ZellijStarIcon className="h-8 w-8" />
                         <span className="text-[10px] tracking-[0.16em] uppercase">
                             {t('buyer.products.no_image')}
@@ -208,17 +224,15 @@ export function ProductCard({
                 )}
             </div>
 
-            <div className="mt-4 px-1">
+            <div className="mt-4 px-2 pb-1">
                 {caption && (
-                    <p
-                        className={`truncate text-souk-brown-deep/55 ${EYEBROW}`}
-                    >
+                    <p className={`truncate text-souk-cream/85 ${EYEBROW}`}>
                         {caption}
                     </p>
                 )}
 
                 <div className="mt-2 flex items-start justify-between gap-3">
-                    <h3 className="font-display text-lg leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
+                    <h3 className="font-display text-lg leading-snug text-souk-cream transition-colors group-hover:text-white">
                         {product.name}
                     </h3>
                     <div className="shrink-0">

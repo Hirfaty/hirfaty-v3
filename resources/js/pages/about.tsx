@@ -50,7 +50,7 @@ export default function About() {
                                     </p>
                                 </Reveal>
 
-                                <h1 className="mt-6 font-display text-[clamp(2.75rem,7vw,6rem)] leading-[0.96] tracking-[-0.02em] text-white">
+                                <h1 className="mt-6 font-display text-[clamp(2.75rem,7vw,6rem)] leading-[0.96] font-bold tracking-[-0.02em] text-white">
                                     <Reveal delay={80}>
                                         <span className="block">
                                             {t('about.hero.title1')}
@@ -140,7 +140,7 @@ export default function About() {
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('about.values.heading')}
                                 </h2>
                             </Reveal>
@@ -205,7 +205,7 @@ export default function About() {
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('about.story.heading')}
                                 </h2>
                             </Reveal>
@@ -242,7 +242,7 @@ export default function About() {
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] tracking-[-0.02em] text-white">
+                                <h2 className="mt-4 font-display text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-bold tracking-[-0.02em] text-white">
                                     {t('about.how.heading')}
                                 </h2>
                             </Reveal>
@@ -277,7 +277,7 @@ export default function About() {
                             </p>
                         </Reveal>
                         <Reveal delay={80}>
-                            <h2 className="mt-4 text-center font-display text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight tracking-[-0.02em] text-souk-title">
+                            <h2 className="mt-4 text-center font-display text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight font-bold tracking-[-0.02em] text-souk-title">
                                 {t('about.stats.heading')}
                             </h2>
                         </Reveal>

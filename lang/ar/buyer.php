@@ -10,40 +10,24 @@
 
 return [
     // ── Product listing ───────────────────────────────────────────
-    'products.hero_title_l1' => 'أصيل.',
-    'products.hero_title_l2' => 'مصنوع يدوياً.',
-    'products.hero_title_l3' => 'صُنع بشغف.',
-    'products.hero_subtitle' => 'اكتشف قطعاً فريدة صنعتها أيادٍ ماهرة.',
-    'products.feature_handmade' => 'صناعة يدوية',
-    'products.feature_handmade_sub' => 'بعناية',
-    'products.feature_natural' => 'مواد',
-    'products.feature_natural_sub' => 'طبيعية',
-    'products.feature_unique' => 'فريد',
-    'products.feature_unique_sub' => 'وأصيل',
-    'products.feature_artisans' => 'دعم',
-    'products.feature_artisans_sub' => 'الحرفيين',
-    'products.hero_slide_pottery' => 'خزّاف مغربي يشكّل قطعة في ورشته',
-    'products.hero_slide_textile' => 'نسج الصوف على نول تقليدي',
-    'products.hero_slide_zellige' => 'زليج منحوت يدوياً بزخرفة هندسية',
-    'products.hero_slide_spice' => 'توابل مغربية معروضة في السوق',
+    'products.hero_eyebrow' => 'صُنع على مهل · يُتوارث عبر الأجيال',
+    'products.hero_title' => 'اكتشف الحرف المغربية',
+    'products.hero_subtitle' => 'قطع مصنوعة يدوياً على يد حرفيين مغاربة، تحمل طابع حرفتهم إلى بيتك.',
 
-    'products.search_placeholder' => 'ابحث عن قطعة أو ورشة…',
+    'products.collection_eyebrow' => 'المجموعة الكاملة',
+    'products.collection_title' => 'قطع لها حكاية',
+    'products.category_all' => 'الكل',
+    'products.count_pieces' => 'قطعة مصنوعة يدوياً',
+    'products.made_in_morocco' => 'صنع في المغرب',
+
+    'products.search_placeholder' => 'ابحث عن منتج مصنوع يدوياً…',
     'products.search_label' => 'البحث عن منتج',
-    'products.search_clear' => 'مسح البحث',
 
-    'products.refine' => 'تصفية',
-    'products.refine_open' => 'فتح',
-    'products.sort' => 'ترتيب',
-    'products.sort_score' => 'الأنسب',
-    'products.sort_latest' => 'الجديد',
-    'products.sort_price_asc' => 'السعر: من الأقل',
-    'products.sort_price_desc' => 'السعر: من الأعلى',
-    'products.sort_rating' => 'الأعلى تقييماً',
-
-    'products.price' => 'السعر',
-    'products.price_max_label' => 'السعر الأقصى',
-    'products.in_stock_only' => 'المتوفر فقط',
     'products.reset_all' => 'إعادة تعيين الكل',
+
+    'products.view_product' => 'عرض القطعة',
+    'products.wishlist_add' => 'أضف إلى المفضلة',
+    'products.wishlist_remove' => 'أزل من المفضلة',
 
     'products.badge_sale' => 'تخفيض',
     'products.badge_sold_out' => 'نفدت الكمية',
@@ -55,16 +39,14 @@ return [
 
     'products.load_more' => 'عرض المزيد',
     'products.loading' => 'جارٍ التحميل…',
-    'products.count_of' => 'من',
+
+    'products.closing_title' => 'الحرفة تحمل الذاكرة.',
+    'products.closing_subtitle' => 'مختارة بعناية من ورشات مستقلة في مختلف أنحاء المغرب.',
 
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'محترف*',
     'products.pro_from_qty' => 'ابتداءً من',
     'products.pro_price_hint' => 'سعرك الاحترافي — وهو ما يفوتره الدفع.',
-    'products.pro_notice_title' => 'حساب احترافي.',
-    'products.pro_notice_body' => 'تظهر أسعارك الاحترافية أسفل السعر العام، وهي ما يفوتره الدفع.',
-    'products.pro_cta_body' => 'تشتري لرياض أو فندق أو متجر؟ تتوفر أسعار احترافية على جزء كبير من الكتالوج.',
-    'products.pro_cta_button' => 'افتح حساباً احترافياً',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'السوق',

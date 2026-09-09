@@ -1,12 +1,16 @@
 <?php
 
 return [
-    'explore' => 'Explorer',
+    'marketplace' => 'Marché',
     'sellers' => 'Vendeurs',
     'about' => 'À propos',
     'search' => 'Rechercher',
     'account' => 'Compte',
     'start_selling' => 'Vendre sur Hirfaty',
+
+    // ── Menu des petits écrans ─────────────────────────────────────
+    'menu' => 'Menu',
+    'language' => 'Langue',
 
     // ── Cart dropdown ──────────────────────────────────────────────
     'cart_aria' => 'Panier',

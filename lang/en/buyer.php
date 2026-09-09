@@ -6,40 +6,24 @@
 
 return [
     // ── Product listing ───────────────────────────────────────────
-    'products.hero_title_l1' => 'Authentic.',
-    'products.hero_title_l2' => 'Handmade.',
-    'products.hero_title_l3' => 'Made with heart.',
-    'products.hero_subtitle' => 'Discover unique pieces, crafted by talented hands.',
-    'products.feature_handmade' => 'Handmade',
-    'products.feature_handmade_sub' => 'with care',
-    'products.feature_natural' => 'Natural',
-    'products.feature_natural_sub' => 'materials',
-    'products.feature_unique' => 'Unique',
-    'products.feature_unique_sub' => '& authentic',
-    'products.feature_artisans' => 'Supporting',
-    'products.feature_artisans_sub' => 'artisans',
-    'products.hero_slide_pottery' => 'Moroccan potter shaping a piece in their workshop',
-    'products.hero_slide_textile' => 'Wool being woven on a traditional loom',
-    'products.hero_slide_zellige' => 'Hand-cut zellige tilework, geometric pattern',
-    'products.hero_slide_spice' => 'Moroccan spices displayed at the souk',
+    'products.hero_eyebrow' => 'Made slowly · Kept for generations',
+    'products.hero_title' => 'Discover Moroccan Craftsmanship',
+    'products.hero_subtitle' => 'Handmade pieces created by Moroccan artisans, carrying the character of their craft into your home.',
 
-    'products.search_placeholder' => 'Search a piece, a workshop…',
+    'products.collection_eyebrow' => 'The full collection',
+    'products.collection_title' => 'Objects with a story',
+    'products.category_all' => 'All',
+    'products.count_pieces' => 'handcrafted pieces',
+    'products.made_in_morocco' => 'Made in Morocco',
+
+    'products.search_placeholder' => 'Search handmade products…',
     'products.search_label' => 'Search products',
-    'products.search_clear' => 'Clear search',
 
-    'products.refine' => 'Refine',
-    'products.refine_open' => 'Open',
-    'products.sort' => 'Sort',
-    'products.sort_score' => 'Relevance',
-    'products.sort_latest' => 'New in',
-    'products.sort_price_asc' => 'Price: low to high',
-    'products.sort_price_desc' => 'Price: high to low',
-    'products.sort_rating' => 'Top rated',
-
-    'products.price' => 'Price',
-    'products.price_max_label' => 'Maximum price',
-    'products.in_stock_only' => 'In stock only',
     'products.reset_all' => 'Reset all',
+
+    'products.view_product' => 'View product',
+    'products.wishlist_add' => 'Add to your favourites',
+    'products.wishlist_remove' => 'Remove from your favourites',
 
     'products.badge_sale' => 'Sale',
     'products.badge_sold_out' => 'Sold out',
@@ -53,16 +37,14 @@ return [
 
     'products.load_more' => 'Show more pieces',
     'products.loading' => 'Loading…',
-    'products.count_of' => 'of',
+
+    'products.closing_title' => 'Craft carries memory.',
+    'products.closing_subtitle' => 'Thoughtfully sourced from independent workshops across Morocco.',
 
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'Trade*',
     'products.pro_from_qty' => 'from',
     'products.pro_price_hint' => 'Your trade rate — this is what the checkout charges.',
-    'products.pro_notice_title' => 'Trade account.',
-    'products.pro_notice_body' => 'Your trade rates appear below the public price, and are what the checkout charges.',
-    'products.pro_cta_body' => 'Buying for a riad, a hotel or a shop? Trade rates are available across much of the catalogue.',
-    'products.pro_cta_button' => 'Open a trade account',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'The market',

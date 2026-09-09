@@ -112,9 +112,11 @@ export default function HeroCarousel({
             onBlurCapture={() => setPaused(false)}
         >
             {/* Split in half rather than overlaying copy on photography: the
-                type sits on flat cream, so it needs no scrim and stays
-                legible whichever slide is showing. */}
-            <div className="grid overflow-hidden bg-souk-peach shadow-xl shadow-souk-brown/10 md:grid-cols-2">
+                type sits on a flat panel, so it needs no scrim and stays
+                legible whichever slide is showing. Brown rather than peach —
+                the listing is otherwise wall-to-wall light, and this is the
+                one band big enough to balance it. */}
+            <div className="grid overflow-hidden bg-souk-brown shadow-xl shadow-souk-brown/20 md:grid-cols-2">
                 {/* Copy. First in the DOM, so it takes the start column and
                     follows RTL without any explicit ordering. */}
                 <div>{children}</div>

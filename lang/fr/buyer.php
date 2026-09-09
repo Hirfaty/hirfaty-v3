@@ -7,40 +7,24 @@
 
 return [
     // ── Product listing ───────────────────────────────────────────
-    'products.hero_title_l1' => 'Authentique.',
-    'products.hero_title_l2' => 'Fait main.',
-    'products.hero_title_l3' => 'Fait avec cœur.',
-    'products.hero_subtitle' => 'Découvrez des pièces uniques, façonnées par des mains talentueuses.',
-    'products.feature_handmade' => 'Fait main',
-    'products.feature_handmade_sub' => 'avec soin',
-    'products.feature_natural' => 'Matières',
-    'products.feature_natural_sub' => 'naturelles',
-    'products.feature_unique' => 'Unique',
-    'products.feature_unique_sub' => '& authentique',
-    'products.feature_artisans' => 'Soutenir',
-    'products.feature_artisans_sub' => 'les artisans',
-    'products.hero_slide_pottery' => 'Potier marocain tournant une pièce dans son atelier',
-    'products.hero_slide_textile' => 'Tissage de laine sur un métier traditionnel',
-    'products.hero_slide_zellige' => 'Zellige taillé à la main, motif géométrique',
-    'products.hero_slide_spice' => 'Épices marocaines présentées au souk',
+    'products.hero_eyebrow' => 'Façonné lentement · Transmis de génération en génération',
+    'products.hero_title' => 'Découvrez l’artisanat marocain',
+    'products.hero_subtitle' => 'Des pièces faites main par des artisans marocains, qui portent le caractère de leur métier jusque chez vous.',
 
-    'products.search_placeholder' => 'Rechercher une pièce, un atelier…',
+    'products.collection_eyebrow' => 'La collection complète',
+    'products.collection_title' => 'Des objets qui ont une histoire',
+    'products.category_all' => 'Tout',
+    'products.count_pieces' => 'pièces faites main',
+    'products.made_in_morocco' => 'Fabriqué au Maroc',
+
+    'products.search_placeholder' => 'Rechercher un produit fait main…',
     'products.search_label' => 'Rechercher un produit',
-    'products.search_clear' => 'Effacer la recherche',
 
-    'products.refine' => 'Affiner',
-    'products.refine_open' => 'Ouvrir',
-    'products.sort' => 'Trier',
-    'products.sort_score' => 'Pertinence',
-    'products.sort_latest' => 'Nouveautés',
-    'products.sort_price_asc' => 'Prix croissant',
-    'products.sort_price_desc' => 'Prix décroissant',
-    'products.sort_rating' => 'Mieux notés',
-
-    'products.price' => 'Prix',
-    'products.price_max_label' => 'Prix maximum',
-    'products.in_stock_only' => 'En stock uniquement',
     'products.reset_all' => 'Tout réinitialiser',
+
+    'products.view_product' => 'Voir la pièce',
+    'products.wishlist_add' => 'Ajouter à vos coups de cœur',
+    'products.wishlist_remove' => 'Retirer de vos coups de cœur',
 
     'products.badge_sale' => 'Promo',
     'products.badge_sold_out' => 'Épuisé',
@@ -54,16 +38,14 @@ return [
 
     'products.load_more' => 'Voir plus de pièces',
     'products.loading' => 'Chargement…',
-    'products.count_of' => 'sur',
+
+    'products.closing_title' => 'L’artisanat porte la mémoire.',
+    'products.closing_subtitle' => 'Sourcé avec soin auprès d’ateliers indépendants partout au Maroc.',
 
     // ── Professional / trade pricing ──────────────────────────────
     'products.pro_short' => 'Pro*',
     'products.pro_from_qty' => 'dès',
     'products.pro_price_hint' => 'Votre tarif professionnel — c’est ce que le paiement facture.',
-    'products.pro_notice_title' => 'Compte professionnel.',
-    'products.pro_notice_body' => 'Vos tarifs pro apparaissent sous le prix public, et c’est bien ce que le paiement facture.',
-    'products.pro_cta_body' => 'Vous achetez pour un riad, un hôtel ou une boutique ? Des tarifs professionnels existent sur une grande partie du catalogue.',
-    'products.pro_cta_button' => 'Ouvrir un compte pro',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'Le marché',
