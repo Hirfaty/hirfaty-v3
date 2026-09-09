@@ -134,6 +134,36 @@ test('an unknown slug 404s', function () {
 });
 
 /**
+ * Same wishlist contract as the marketplace listing and new arrivals — all
+ * three share `WishlistService::idsFor()`, which this guards against
+ * drifting silently for just this one page.
+ */
+test('a guest is offered no wishlist state on a shop page', function () {
+    storeProduct($this->store);
+
+    $this->get(route('stores.show', $this->store->slug))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canWishlist', false)
+            ->where('wishlisted', [])
+        );
+});
+
+test('a buyer sees their own wishlisted pieces marked on a shop page', function () {
+    $wanted = storeProduct($this->store, ['name' => 'Convoitée']);
+    storeProduct($this->store, ['name' => 'Ignorée']);
+
+    $buyer = User::factory()->create(['role' => 'buyer']);
+    $buyer->wishlists()->create(['product_id' => $wanted->id]);
+
+    $this->actingAs($buyer)
+        ->get(route('stores.show', $this->store->slug))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canWishlist', true)
+            ->where('wishlisted', [$wanted->id])
+        );
+});
+
+/**
  * The whole point of the route: it must be reachable without the
  * `role:seller` middleware that made the old /seller/{slug} link 403.
  */

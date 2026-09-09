@@ -1,8 +1,8 @@
 import { Link, router } from '@inertiajs/react';
 import { Loader2, MapPin, Package, Store as StoreIcon } from 'lucide-react';
 import { useState } from 'react';
+import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
-import { ProductCard } from '@/components/buyer/ProductCard';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -42,6 +42,10 @@ type Props = {
         has_more: boolean;
     };
     audience: Audience;
+    /** Product ids the signed-in buyer has already wishlisted. */
+    wishlisted: number[];
+    /** False for guests and non-buyers, whom the wishlist route rejects. */
+    canWishlist: boolean;
 };
 
 export default function StoreShow({
@@ -49,9 +53,13 @@ export default function StoreShow({
     products,
     pagination,
     audience,
+    wishlisted,
+    canWishlist,
 }: Props) {
     const { t, locale } = useTranslation();
     const [loadingMore, setLoadingMore] = useState(false);
+
+    const wished = new Set(wishlisted);
 
     const tag = LOCALE_TAGS[locale as string] ?? 'fr-MA';
 
@@ -85,13 +93,13 @@ export default function StoreShow({
             <SiteHeader />
 
             {/* ── Shop head ─────────────────────────────────── */}
-            <header className="relative">
+            <header className="relative mt-24">
                 {/*
                  * Cover strip. Falls back to the zellij motif rather than a
                  * flat block, so a shop that never uploaded one still reads as
                  * part of the marketplace rather than as a broken image.
                  */}
-                <div className="relative h-44 overflow-hidden bg-souk-brown/10 sm:h-60 lg:h-72">
+                {/* <div className="relative h-44 overflow-hidden bg-souk-brown/10 sm:h-60 lg:h-72">
                     {store.banner ? (
                         <img
                             src={store.banner}
@@ -112,7 +120,7 @@ export default function StoreShow({
                         />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-souk-paper/90 to-transparent" />
-                </div>
+                </div> */}
 
                 <div className="container">
                     <div className="-mt-14 flex flex-col gap-5 sm:-mt-16 sm:flex-row sm:items-end">
@@ -120,7 +128,7 @@ export default function StoreShow({
                          * Arch-topped frame, the same horseshoe silhouette the
                          * header mark and product tiles use.
                          */}
-                        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-t-[3rem] rounded-b-2xl bg-souk-peach ring-1 ring-souk-brown/15 sm:h-32 sm:w-32">
+                        <div className="h-28 w-28 shrink-0 overflow-hidden rounded-t-[3rem] rounded-b-2xl bg-souk-peach ring-1 ring-souk-brown/15 sm:h-48 sm:w-48">
                             {store.logo ? (
                                 <img
                                     src={store.logo}
@@ -217,18 +225,21 @@ export default function StoreShow({
                     </div>
                 ) : (
                     <>
-                        <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4">
+                        {/* Same tile and the same grid rhythm as the
+                            marketplace listing — see
+                            `pages/buyer/products/index.tsx` — so a shop's own
+                            page reads as a filtered view of the same
+                            catalogue rather than a different product. */}
+                        <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-7">
                             {products.map((product) => (
-                                <ProductCard
+                                <CollectionCard
                                     key={product.id}
                                     product={product}
                                     audience={audience}
                                     money={money}
                                     t={t}
-                                    /* The shop name is the page title —
-                                       repeating it under every tile says
-                                       nothing. */
-                                    showStore={false}
+                                    wishlisted={wished.has(product.id)}
+                                    canWishlist={canWishlist}
                                 />
                             ))}
                         </div>

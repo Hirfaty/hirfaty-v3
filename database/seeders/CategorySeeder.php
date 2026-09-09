@@ -13,6 +13,13 @@ class CategorySeeder extends Seeder
      *
      * Names are stored per locale; the slug is derived once from the French
      * name and stays stable across locales because it is the URL key.
+     *
+     * Purely additive: `firstOrCreate` means dropping an entry from the array
+     * below stops *new* environments creating it, but does nothing to a
+     * database that already has the row. Retiring a category from a live
+     * environment is therefore a deliberate deletion, not a re-seed — and it
+     * nulls `category_id` on every product and store pointing at it, so it is
+     * not something this seeder should ever do implicitly.
      */
     public function run(): void
     {
@@ -43,19 +50,9 @@ class CategorySeeder extends Seeder
                 'en' => 'Wood & Carpentry',
             ],
             [
-                'fr' => 'Épices & Alimentation',
-                'ar' => 'التوابل والأغذية',
-                'en' => 'Spices & Food',
-            ],
-            [
                 'fr' => 'Peinture & Art',
                 'ar' => 'الرسم والفن',
                 'en' => 'Painting & Art',
-            ],
-            [
-                'fr' => 'Cosmétiques & Argan',
-                'ar' => 'مستحضرات التجميل والأركان',
-                'en' => 'Cosmetics & Argan',
             ],
         ];
 

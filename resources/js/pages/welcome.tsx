@@ -125,7 +125,7 @@ const PILLARS = [
 const MAP_CITIES = [
     { key: 'tanger', lat: 35.7595, lon: -5.7998, labelAbove: false },
     { key: 'fes', lat: 34.0331, lon: -5.0003, labelAbove: false },
-    { key: 'meknes', lat: 33.8935, lon: -5.5473, labelAbove: true },
+    // { key: 'meknes', lat: 33.8935, lon: -5.5473, labelAbove: true },
     { key: 'safi', lat: 32.2994, lon: -9.2372, labelAbove: false },
     { key: 'marrakech', lat: 31.6295, lon: -7.9811, labelAbove: false },
     { key: 'agadir', lat: 30.4278, lon: -9.5981, labelAbove: false },

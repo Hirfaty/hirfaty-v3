@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerProductResource;
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\WishlistService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -22,6 +23,8 @@ use Inertia\Inertia;
  */
 class StoreController extends Controller
 {
+    public function __construct(private WishlistService $wishlist) {}
+
     public function show(Request $request, string $slug)
     {
         $store = Store::query()
@@ -76,6 +79,12 @@ class StoreController extends Controller
 
             // Drives which price list the grid renders, as on the listing.
             'audience' => $audience,
+
+            // Same contract as the marketplace listing: scoped to the page
+            // just rendered, and empty for a guest or non-buyer, both of
+            // whom `products.wishlist` (behind `role:buyer`) would reject.
+            'wishlisted' => $this->wishlist->idsFor($request->user(), $products->items()),
+            'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
     }
 }

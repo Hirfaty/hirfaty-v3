@@ -3,20 +3,23 @@ import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import { useHoverGallery } from '@/hooks/use-hover-gallery';
 
 /** Museum-caption label, shared with the page this card sits on. */
 const EYEBROW =
     'text-[9px] font-semibold uppercase tracking-[0.16em] sm:text-[10px]';
 
 /**
- * A tile for the "Objects with a story" grid.
+ * A tile for the "Objects with a story" grid — the light, double-arched
+ * frame the listing was redesigned around. Now the one product tile every
+ * buyer-facing grid uses: the marketplace listing, new arrivals, and a
+ * shop's own page all render this, so a shop page reads as a filtered view
+ * of the same catalogue rather than a visually distinct product.
  *
- * Deliberately a second card rather than a variant of `ProductCard`: that one
- * is a cream-on-brown panel and still dresses a shop's own page, where the
- * dark tile is what separates the grid from the shop header. This one is the
- * light, double-arched frame the listing was redesigned around. Folding both
- * into one component would mean a `variant` prop threaded through every call
- * site to pick between two entirely different skins.
+ * `ProductCard` (a cream-on-brown panel, `@/components/buyer/ProductCard`)
+ * is this component's predecessor and is no longer rendered anywhere — only
+ * its `Audience`/`ListingProduct` types are still imported from that module.
+ * Left in place rather than deleted since nobody has asked for it to go.
  *
  * The frame is doubled on purpose — an outer paper mat and an inner arch
  * holding the photograph — which is what gives the grid the look of a row of
@@ -40,8 +43,10 @@ export function CollectionCard({
     canWishlist: boolean;
 }) {
     const [wished, setWished] = useState(wishlisted);
+    const { index, previous, hoverProps } = useHoverGallery(
+        product.images.length,
+    );
 
-    const cover = product.images[0]?.url;
     const base =
         product.base_price !== null ? Number(product.base_price) : null;
     const sale = product.sale_price ? Number(product.sale_price) : null;
@@ -91,16 +96,61 @@ export function CollectionCard({
     };
 
     return (
-        <article className="group relative min-w-0 transition-transform duration-500 ease-out hover:-translate-y-1">
+        <article
+            {...hoverProps}
+            className="group relative min-w-0 transition-transform duration-500 ease-out hover:-translate-y-1"
+        >
             <div className="relative overflow-hidden portal-frame border border-souk-brown/25 bg-souk-paper p-1.5 transition-[border-color,box-shadow] duration-500 group-hover:border-souk-brown/60 group-hover:shadow-[0_18px_45px_-30px_var(--color-souk-brown)] sm:p-2">
                 <div className="relative aspect-4/5 overflow-hidden portal-frame border border-souk-brown/20 bg-white">
-                    {cover ? (
-                        <img
-                            src={cover}
-                            alt={product.name}
-                            loading="lazy"
-                            className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045] ${soldOut ? 'opacity-55' : ''}`}
-                        />
+                    {product.images.length > 0 ? (
+                        /* `isolate` scopes the stack's own z-index ranking to
+                           itself, so it can't compete with the wishlist
+                           button's `z-10` (which exists for an unrelated
+                           reason — see its comment) or leak past this box at
+                           all. Being the first child already puts it under
+                           every later sibling in normal DOM order, so the
+                           isolation is a safety net rather than load-bearing
+                           today — but a stack that can silently climb above
+                           its own badges the next time someone edits either
+                           block is exactly the kind of bug that isn't caught
+                           until a screenshot review, so it stays explicit. */
+                        <div className="absolute inset-0 isolate">
+                            {product.images.map((image, i) => {
+                                const active = i === index;
+                                // Stays fully opaque *underneath* the
+                                // incoming frame while it fades in, so the
+                                // crossfade never dips through a moment where
+                                // both layers are half-transparent and the
+                                // tile visibly darkens — same technique as
+                                // the home hero's `HeroBackdrop`.
+                                const outgoing = i === previous && i !== index;
+
+                                return (
+                                    <div
+                                        key={image.id}
+                                        className={`absolute inset-0 ${
+                                            active
+                                                ? 'z-20 opacity-100 transition-opacity duration-500 ease-out'
+                                                : outgoing
+                                                  ? 'z-10 opacity-100'
+                                                  : 'z-0 opacity-0'
+                                        }`}
+                                    >
+                                        <img
+                                            src={image.url}
+                                            // One description per card is
+                                            // enough — a screen reader
+                                            // linearises the DOM once, not
+                                            // per hover frame, so the other
+                                            // layers would only repeat it.
+                                            alt={i === 0 ? product.name : ''}
+                                            loading="lazy"
+                                            className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.045] ${soldOut ? 'opacity-55' : ''}`}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-souk-brown/25">
                             <ZellijStarIcon className="h-8 w-8" />
@@ -177,8 +227,22 @@ export function CollectionCard({
                     </Link>
                 </h3>
 
+                {/* Clamped rather than measured: `line-clamp-3` sets
+                    `-webkit-line-clamp`, which every current browser already
+                    renders with a trailing ellipsis when the text overflows
+                    the third line — no manual "…" needed. Still hidden below
+                    `sm`, where the grid drops to two columns and a card has
+                    no room to spare for three lines of body copy.
+                    No `sm:block` here: Tailwind emits `.block` right after
+                    `.line-clamp-3` in the utilities layer, so at equal
+                    specificity it would win the cascade and silently reset
+                    `display` back from `-webkit-box` to `block` — which
+                    disables the clamp entirely while leaving the `-webkit-
+                    line-clamp` declaration inert. `line-clamp-3` already sets
+                    its own non-`none` display, so it needs no help clearing
+                    `hidden`. */}
                 {product.description && (
-                    <p className="mt-2 hidden text-xs leading-relaxed text-souk-brown-deep/75 sm:line-clamp-2 sm:block">
+                    <p className="mt-2 hidden text-xs leading-relaxed text-souk-brown-deep/75 sm:line-clamp-3">
                         {product.description}
                     </p>
                 )}

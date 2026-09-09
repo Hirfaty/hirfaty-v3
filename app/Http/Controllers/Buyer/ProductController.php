@@ -11,6 +11,7 @@ use App\Models\ProductView;
 use App\Models\Wishlist;
 use App\Services\NewArrivalsService;
 use App\Services\ProductScoringService;
+use App\Services\WishlistService;
 use Auth;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function __construct(private ProductScoringService $scoring) {}
+    public function __construct(
+        private ProductScoringService $scoring,
+        private WishlistService $wishlist,
+    ) {}
 
     public function index(Request $request)
     {
@@ -112,7 +116,7 @@ class ProductController extends Controller
              * `only:` list on the client stays as it is and appended tiles
              * fall back to unfilled until the next full visit.
              */
-            'wishlisted' => $this->wishlistedIds($request, $paginator->items()),
+            'wishlisted' => $this->wishlist->idsFor($request->user(), $paginator->items()),
             // The wishlist route sits behind `role:buyer`; anyone else is sent
             // to log in rather than issuing a request that would 403.
             'canWishlist' => (bool) $request->user()?->isBuyer(),
@@ -143,27 +147,9 @@ class ProductController extends Controller
                 'has_more' => $paginator->hasMorePages(),
             ],
             'audience' => Product::audienceFor($request->user()),
-            'wishlisted' => $this->wishlistedIds($request, $paginator->items()),
+            'wishlisted' => $this->wishlist->idsFor($request->user(), $paginator->items()),
             'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
-    }
-
-    /**
-     * Ids, among the products on this page, already on the buyer's wishlist.
-     *
-     * @param  array<int, Product>  $products
-     * @return array<int, int>
-     */
-    private function wishlistedIds(Request $request, array $products): array
-    {
-        if (! $request->user()?->isBuyer()) {
-            return [];
-        }
-
-        return Wishlist::where('user_id', $request->user()->id)
-            ->whereIn('product_id', array_column($products, 'id'))
-            ->pluck('product_id')
-            ->all();
     }
 
     public function show(Request $request, string $slug)
