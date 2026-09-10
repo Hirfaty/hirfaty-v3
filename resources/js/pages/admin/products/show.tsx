@@ -379,8 +379,7 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                     <Field label="Prix professionnel">
                                         {product.professional_price ? (
                                             <span className="text-xl font-semibold text-olive">
-                                                {product.professional_price}{' '}
-                                                MAD
+                                                {product.professional_price} MAD
                                             </span>
                                         ) : (
                                             <span className="text-sm text-ink-soft">

@@ -21,64 +21,62 @@ const Edit = ({
     };
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
+        <div className="flex flex-col gap-6 p-6 md:p-8">
             <Head title={`Modifier — ${blog.title}`} />
 
-            <div className="mx-auto max-w-7xl">
-                <header className="mb-10 flex flex-wrap items-end justify-between gap-4">
-                    <div>
-                        <Link
-                            href={route('admin.blogs.index')}
-                            className="inline-flex items-center gap-1.5 text-xs tracking-wider text-ink-soft uppercase transition-colors hover:text-terracotta"
-                        >
-                            <ArrowLeft className="h-3.5 w-3.5" />
-                            Journal
-                        </Link>
-                        <h1 className="mt-3 h-editorial text-4xl text-ink md:text-5xl">
-                            {blog.title}
-                        </h1>
-                        <p className="mt-2 text-xs text-ink-soft">
-                            {blog.author?.name ?? 'Auteur supprimé'} ·{' '}
-                            {blog.published_at
-                                ? `Paru le ${formatDate(blog.published_at)}`
-                                : 'Jamais publié'}
-                            {' · '}
-                            {blog.reading_minutes} min de lecture
-                        </p>
-                    </div>
+            <header className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <Link
+                        href={route('admin.blogs.index')}
+                        className="inline-flex items-center gap-1.5 text-sm text-ink-soft transition-colors hover:text-ink"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Journal
+                    </Link>
+                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+                        {blog.title}
+                    </h1>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {blog.author?.name ?? 'Auteur supprimé'} ·{' '}
+                        {blog.published_at
+                            ? `Paru le ${formatDate(blog.published_at)}`
+                            : 'Jamais publié'}
+                        {' · '}
+                        {blog.reading_minutes} min de lecture
+                    </p>
+                </div>
 
-                    <div className="flex items-center gap-2">
-                        {/* Only a live article has a public URL that resolves —
-                            the show route is scoped to published posts. */}
-                        {blog.is_published && (
-                            <a
-                                href={route('blog.show', blog.slug)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 border border-ink/10 px-4 py-2.5 text-[11px] font-bold tracking-widest text-ink-soft uppercase transition-colors hover:border-terracotta hover:text-terracotta"
-                            >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Voir en ligne
-                            </a>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleDelete}
-                            className="flex items-center gap-1.5 border border-red-200 px-4 py-2.5 text-[11px] font-bold tracking-widest text-red-600 uppercase transition-colors hover:bg-red-50"
+                <div className="flex items-center gap-2">
+                    {/* Only a live article has a public URL that resolves —
+                        the show route is scoped to published posts. */}
+                    {blog.is_published && (
+                        <a
+                            href={route('blog.show', blog.slug)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition hover:border-ink/30 hover:text-ink"
                         >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Supprimer
-                        </button>
-                    </div>
-                </header>
+                            <ExternalLink className="h-4 w-4" />
+                            Voir en ligne
+                        </a>
+                    )}
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-4 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/5"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        Supprimer
+                    </button>
+                </div>
+            </header>
 
-                <BlogForm
-                    blog={blog}
-                    statuses={statuses}
-                    action={route('admin.blogs.update', blog.id)}
-                    uploadUrl={route('admin.blogs.images.store')}
-                />
-            </div>
+            <BlogForm
+                blog={blog}
+                statuses={statuses}
+                action={route('admin.blogs.update', blog.id)}
+                uploadUrl={route('admin.blogs.images.store')}
+            />
         </div>
     );
 };

@@ -144,6 +144,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/blogs', [Admin\BlogController::class, 'store'])->name('blogs.store');
         Route::get('/blogs/{blog}/edit', [Admin\BlogController::class, 'edit'])->name('blogs.edit');
         Route::get('/blogs/{blog}/preview', [Admin\BlogController::class, 'preview'])->name('blogs.preview');
+        Route::patch('/blogs/{blog}/archive', [Admin\BlogController::class, 'archive'])->name('blogs.archive');
+        Route::patch('/blogs/{blog}/publish', [Admin\BlogController::class, 'publishNow'])->name('blogs.publish');
         // POST, not PUT: the form ships the cover image as multipart, which
         // browsers can only send on a POST.
         Route::post('/blogs/{blog}', [Admin\BlogController::class, 'update'])->name('blogs.update');

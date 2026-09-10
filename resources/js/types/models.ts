@@ -63,6 +63,8 @@ export interface Blog {
     status: BlogStatus;
     /** False for a draft, an archived post, or one dated into the future. */
     is_published: boolean;
+    /** Published, but dated forward — queued rather than live. */
+    is_scheduled: boolean;
     published_at: string | null;
     cover_url: string | null;
     reading_minutes: number;

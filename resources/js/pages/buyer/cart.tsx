@@ -188,7 +188,10 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                             className="mt-7 inline-flex items-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep"
                         >
                             {t('buyer.cart.empty_cta')}
-                            <ShoppingBag className="h-4 w-4" strokeWidth={1.6} />
+                            <ShoppingBag
+                                className="h-4 w-4"
+                                strokeWidth={1.6}
+                            />
                         </Link>
                     </div>
                 </section>
@@ -372,9 +375,7 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                                                         className="inline-flex items-center gap-1.5 text-xs text-souk-brown-deep/65 transition-colors hover:text-terracotta disabled:opacity-50"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
-                                                        {t(
-                                                            'buyer.cart.remove',
-                                                        )}
+                                                        {t('buyer.cart.remove')}
                                                     </button>
 
                                                     {/* Only worth saying while

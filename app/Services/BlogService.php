@@ -86,6 +86,53 @@ class BlogService
     }
 
     /**
+     * Take an article off the public journal without destroying it.
+     *
+     * `published_at` is deliberately left alone: it is the article's parution
+     * date, not a visibility flag, and keeping it means un-archiving restores
+     * the post to its original place in the listing rather than to the top.
+     */
+    public function archive(Blog $blog): Blog
+    {
+        $blog->update(['status' => Blog::STATUS_ARCHIVED]);
+
+        return $blog->refresh();
+    }
+
+    /**
+     * Pull an archived article back into the editing flow.
+     *
+     * Returns it as a draft rather than straight to published: an admin who
+     * archived a post almost certainly wants to look at it again before it is
+     * publicly readable a second time.
+     */
+    public function unarchive(Blog $blog): Blog
+    {
+        $blog->update(['status' => Blog::STATUS_DRAFT]);
+
+        return $blog->refresh();
+    }
+
+    /**
+     * Release a scheduled article immediately, by pulling its parution date
+     * back to now.
+     *
+     * Only the date moves when the post is already `published` — that is the
+     * whole scheduled case. A draft or archived post handed to this method is
+     * also flipped to `published`, so the action means the same thing wherever
+     * it is offered.
+     */
+    public function publishNow(Blog $blog): Blog
+    {
+        $blog->update([
+            'status' => Blog::STATUS_PUBLISHED,
+            'published_at' => now(),
+        ]);
+
+        return $blog->refresh();
+    }
+
+    /**
      * Store an image dropped into the editor body and hand back its public URL.
      *
      * These are deliberately not Media rows: the editor uploads them while the

@@ -82,12 +82,12 @@ export default function BlogShow({
                                 </p>
                             )}
 
-                            {blog.author && (
+                            {/* {blog.author && (
                                 <p className="mt-6 flex items-center gap-2 text-sm text-souk-brown-deep">
                                     <PenLine className="h-3.5 w-3.5 text-souk-brown/60" />
                                     Par {blog.author.name}
                                 </p>
-                            )}
+                            )} */}
                         </header>
 
                         {blog.cover_url && (

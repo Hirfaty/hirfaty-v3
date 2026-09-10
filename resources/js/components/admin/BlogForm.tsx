@@ -30,6 +30,11 @@ interface BlogFormProps {
 /**
  * The write screen, shared by create and edit so the two can never drift.
  *
+ * A single column on purpose: the fields read as one ordered checklist —
+ * title, chapô, cover, body, publication — rather than a form split across
+ * a main pane and a sidebar, which hid the publication controls off to the
+ * side while the admin was still writing.
+ *
  * Always POSTs (never PUT): the cover image travels as multipart, which
  * browsers only send on a POST — the update route is declared POST to match.
  */
@@ -81,68 +86,126 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
-            {/* ── Main column: title, body ── */}
-            <div className="space-y-6 lg:col-span-2">
-                <div className="border border-ink/5 bg-white p-6 shadow-sm">
-                    <label htmlFor="title">Titre de l’article</label>
-                    <input
-                        id="title"
-                        value={form.data.title}
-                        onChange={(e) => form.setData('title', e.target.value)}
-                        placeholder="La poterie de Safi, de la terre au four"
-                        className="w-full border border-ink/10 bg-cream/5 px-3 py-2.5 font-display text-xl text-ink focus:border-terracotta focus:outline-none"
-                    />
-                    {form.errors.title && (
-                        <FieldError>{form.errors.title}</FieldError>
-                    )}
+        <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
+            {/* ── 1. Title ── */}
+            <Section title="Titre" step={1}>
+                <input
+                    id="title"
+                    value={form.data.title}
+                    onChange={(e) => form.setData('title', e.target.value)}
+                    placeholder="La poterie de Safi, de la terre au four"
+                    className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-lg font-medium text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                />
+                {form.errors.title && (
+                    <FieldError>{form.errors.title}</FieldError>
+                )}
+            </Section>
 
-                    <div className="mt-5">
-                        <label htmlFor="excerpt">
-                            Chapô — résumé affiché sur la liste
-                        </label>
-                        <textarea
-                            id="excerpt"
-                            rows={3}
-                            maxLength={500}
-                            value={form.data.excerpt}
-                            onChange={(e) =>
-                                form.setData('excerpt', e.target.value)
-                            }
-                            placeholder="Deux phrases qui donnent envie de lire la suite."
-                            className="w-full resize-y border border-ink/10 bg-cream/5 px-3 py-2 text-sm text-ink focus:border-terracotta focus:outline-none"
+            {/* ── 2. Excerpt ── */}
+            <Section
+                title="Chapô"
+                step={2}
+                hint="Le résumé affiché sur la liste des articles."
+            >
+                <textarea
+                    id="excerpt"
+                    rows={3}
+                    maxLength={500}
+                    value={form.data.excerpt}
+                    onChange={(e) => form.setData('excerpt', e.target.value)}
+                    placeholder="Deux phrases qui donnent envie de lire la suite."
+                    className="w-full resize-y rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                />
+                <p className="mt-1 text-right text-[11px] text-ink-soft">
+                    {form.data.excerpt.length}/500
+                </p>
+                {form.errors.excerpt && (
+                    <FieldError>{form.errors.excerpt}</FieldError>
+                )}
+            </Section>
+
+            {/* ── 3. Cover ── */}
+            <Section
+                title="Image de couverture"
+                step={3}
+                hint="JPEG, PNG ou WebP — 4 Mo maximum."
+            >
+                {coverPreview ? (
+                    <div className="relative overflow-hidden rounded-lg">
+                        <img
+                            src={coverPreview}
+                            alt=""
+                            className="aspect-16/6 w-full object-cover"
                         />
-                        <p className="mt-1 text-right text-[11px] text-ink-soft">
-                            {form.data.excerpt.length}/500
-                        </p>
-                        {form.errors.excerpt && (
-                            <FieldError>{form.errors.excerpt}</FieldError>
-                        )}
+                        <button
+                            type="button"
+                            onClick={clearCover}
+                            className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md bg-ink/80 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur transition-colors hover:bg-destructive"
+                        >
+                            <ImageOff className="h-3.5 w-3.5" />
+                            Retirer
+                        </button>
                     </div>
-                </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="flex aspect-16/6 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 text-ink-soft transition-colors hover:border-ink/40 hover:text-ink"
+                    >
+                        <ImagePlus className="h-6 w-6" />
+                        <span className="text-xs">Choisir une image</span>
+                    </button>
+                )}
 
-                <div>
-                    <label htmlFor="content">Contenu</label>
-                    <RichTextEditor
-                        value={blog?.content ?? ''}
-                        onChange={(html) => form.setData('content', html)}
-                        uploadUrl={uploadUrl}
-                    />
-                    {form.errors.content && (
-                        <FieldError>{form.errors.content}</FieldError>
-                    )}
-                </div>
-            </div>
+                <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => pickCover(e.target.files?.[0])}
+                />
 
-            {/* ── Sidebar: publication, cover ── */}
-            <aside className="space-y-6">
-                <div className="border border-ink/5 bg-white p-6 shadow-sm">
-                    <h2 className="font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                        Publication
-                    </h2>
+                {coverPreview && (
+                    <button
+                        type="button"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="mt-3 w-full rounded-lg border border-border py-2 text-xs font-medium text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+                    >
+                        Remplacer l’image
+                    </button>
+                )}
 
-                    <div className="mt-5">
-                        <label htmlFor="status">Statut</label>
+                {form.errors.cover && (
+                    <FieldError>{form.errors.cover}</FieldError>
+                )}
+            </Section>
+
+            {/* ── 4. Body ── */}
+            <Section
+                title="Contenu"
+                step={4}
+                hint="La barre d’outils reste visible pendant que vous écrivez."
+            >
+                <RichTextEditor
+                    value={blog?.content ?? ''}
+                    onChange={(html) => form.setData('content', html)}
+                    uploadUrl={uploadUrl}
+                />
+                {form.errors.content && (
+                    <FieldError>{form.errors.content}</FieldError>
+                )}
+            </Section>
+
+            {/* ── 5. Publication ── */}
+            <Section title="Publication" step={5}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label
+                            htmlFor="status"
+                            className="mb-1.5 block text-sm font-medium text-ink"
+                        >
+                            Statut
+                        </label>
                         <select
                             id="status"
                             value={form.data.status}
@@ -152,7 +215,7 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                                     e.target.value as BlogStatus,
                                 )
                             }
-                            className="w-full border border-ink/10 bg-cream/5 px-3 py-2 text-sm text-ink focus:border-terracotta focus:outline-none"
+                            className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                         >
                             {statuses.map((status) => (
                                 <option key={status} value={status}>
@@ -165,8 +228,13 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                         </p>
                     </div>
 
-                    <div className="mt-5">
-                        <label htmlFor="published_at">Date de parution</label>
+                    <div>
+                        <label
+                            htmlFor="published_at"
+                            className="mb-1.5 block text-sm font-medium text-ink"
+                        >
+                            Date de parution
+                        </label>
                         <input
                             id="published_at"
                             type="datetime-local"
@@ -174,7 +242,7 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                             onChange={(e) =>
                                 form.setData('published_at', e.target.value)
                             }
-                            className="w-full border border-ink/10 bg-cream/5 px-3 py-2 text-sm text-ink focus:border-terracotta focus:outline-none"
+                            className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                         />
                         <p className="mt-2 text-xs text-ink-soft">
                             Laissez vide pour dater à la publication. Une date
@@ -185,104 +253,79 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                         )}
                     </div>
                 </div>
+            </Section>
 
-                <div className="border border-ink/5 bg-white p-6 shadow-sm">
-                    <h2 className="font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                        Image de couverture
-                    </h2>
+            {/* ── 6. Actions ── */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-5 shadow-sm">
+                <button
+                    type="submit"
+                    disabled={form.processing || !form.data.title.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90 disabled:opacity-50"
+                >
+                    {form.processing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Save className="h-4 w-4" />
+                    )}
+                    {isEdit ? 'Enregistrer' : 'Créer l’article'}
+                </button>
 
-                    <div className="mt-4">
-                        {coverPreview ? (
-                            <div className="relative">
-                                <img
-                                    src={coverPreview}
-                                    alt=""
-                                    className="aspect-16/10 w-full object-cover"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={clearCover}
-                                    className="absolute top-2 right-2 flex items-center gap-1.5 bg-ink/80 px-2.5 py-1.5 text-[11px] font-medium text-cream backdrop-blur transition-colors hover:bg-terracotta"
-                                >
-                                    <ImageOff className="h-3.5 w-3.5" />
-                                    Retirer
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => coverInputRef.current?.click()}
-                                className="flex aspect-16/10 w-full flex-col items-center justify-center gap-2 border border-dashed border-ink/20 bg-cream/20 text-ink-soft transition-colors hover:border-terracotta hover:text-terracotta"
-                            >
-                                <ImagePlus className="h-6 w-6" />
-                                <span className="text-xs">
-                                    Choisir une image
-                                </span>
-                            </button>
-                        )}
-
-                        <input
-                            ref={coverInputRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            className="hidden"
-                            onChange={(e) => pickCover(e.target.files?.[0])}
-                        />
-
-                        {coverPreview && (
-                            <button
-                                type="button"
-                                onClick={() => coverInputRef.current?.click()}
-                                className="mt-3 w-full border border-ink/10 py-2 text-xs tracking-wider text-ink-soft uppercase transition-colors hover:border-terracotta hover:text-terracotta"
-                            >
-                                Remplacer
-                            </button>
-                        )}
-
-                        {form.errors.cover && (
-                            <FieldError>{form.errors.cover}</FieldError>
-                        )}
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <button
-                        type="submit"
-                        disabled={form.processing || !form.data.title.trim()}
-                        className="flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
+                {isEdit && (
+                    <Link
+                        href={route('admin.blogs.preview', blog.id)}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-ink-soft transition hover:border-ink/30 hover:text-ink"
                     >
-                        {form.processing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Save className="h-4 w-4" />
-                        )}
-                        {isEdit ? 'Enregistrer' : 'Créer l’article'}
-                    </button>
+                        <Eye className="h-4 w-4" />
+                        Aperçu
+                    </Link>
+                )}
 
-                    {isEdit && (
-                        <Link
-                            href={route('admin.blogs.preview', blog.id)}
-                            className="flex w-full items-center justify-center gap-2 border border-ink/10 py-3.5 text-xs font-bold tracking-widest text-ink-soft uppercase transition-colors hover:border-terracotta hover:text-terracotta"
-                        >
-                            <Eye className="h-4 w-4" />
-                            Aperçu
-                        </Link>
-                    )}
-
-                    {isEdit && form.isDirty && (
-                        <p className="text-center text-[11px] text-terracotta">
-                            Enregistrez avant d’ouvrir l’aperçu — il affiche la
-                            version sauvegardée.
-                        </p>
-                    )}
-                </div>
-            </aside>
+                {isEdit && form.isDirty && (
+                    <p className="text-xs text-amber-700">
+                        Enregistrez avant d’ouvrir l’aperçu — il affiche la
+                        version sauvegardée.
+                    </p>
+                )}
+            </div>
         </form>
     );
 }
 
+/**
+ * One numbered block of the form. The step number is what makes the single
+ * column read as an ordered sequence rather than a wall of inputs.
+ */
+function Section({
+    title,
+    step,
+    hint,
+    children,
+}: {
+    title: string;
+    step: number;
+    hint?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm md:p-6">
+            <div className="mb-4 flex items-baseline gap-2.5">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-ink-soft">
+                    {step}
+                </span>
+                <div>
+                    <h2 className="text-sm font-semibold text-ink">{title}</h2>
+                    {hint && (
+                        <p className="mt-0.5 text-xs text-ink-soft">{hint}</p>
+                    )}
+                </div>
+            </div>
+            {children}
+        </section>
+    );
+}
+
 function FieldError({ children }: { children: React.ReactNode }) {
-    return <p className="mt-1.5 text-xs text-red-600">{children}</p>;
+    return <p className="mt-1.5 text-xs text-destructive">{children}</p>;
 }
 
 export default BlogForm;

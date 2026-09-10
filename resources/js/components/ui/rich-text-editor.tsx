@@ -187,9 +187,14 @@ export function RichTextEditor({
     }
 
     return (
+        /*
+         * No `overflow-hidden` here, deliberately: it would make the sticky
+         * toolbar below scroll away with the document instead of pinning. The
+         * corners are rounded on the toolbar and the content edges instead.
+         */
         <div
             className={cn(
-                'overflow-hidden rounded-xl border border-border bg-white',
+                'rounded-xl border border-border bg-white',
                 className,
             )}
         >
@@ -268,8 +273,16 @@ function Toolbar({
         }),
     });
 
+    /*
+     * Pinned while the body scrolls, so the formatting controls stay reachable
+     * in a long article instead of being left at the top of the page.
+     *
+     * `top-14` clears the admin layout's own sticky header (h-14), and the
+     * background is fully opaque rather than the previous cream/40 — a
+     * translucent bar would show the article text sliding underneath it.
+     */
     return (
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-cream/40 px-2 py-1.5">
+        <div className="sticky top-14 z-20 flex flex-wrap items-center gap-0.5 rounded-t-xl border-b border-border bg-cream px-2 py-1.5">
             <ToolbarButton
                 label="Gras"
                 active={state.bold}

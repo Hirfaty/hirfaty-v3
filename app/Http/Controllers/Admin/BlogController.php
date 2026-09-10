@@ -60,6 +60,10 @@ class BlogController extends Controller
     {
         return Inertia::render('admin/blogs/create', [
             'statuses' => Blog::STATUSES,
+            // Set for exactly one render, by the redirect store() issues on
+            // success. The page shows a confirmation panel and sends itself
+            // back to the listing a few seconds later.
+            'justCreated' => session('just_created'),
         ]);
     }
 
@@ -73,9 +77,15 @@ class BlogController extends Controller
             $request->file('cover'),
         );
 
+        // Back to the create screen rather than straight to the listing: it
+        // owns the "article créé" confirmation and the delayed hand-off to
+        // the index, so the admin actually sees the write succeed.
         return redirect()
-            ->route('admin.blogs.edit', $blog)
-            ->with('success', "Article « {$blog->title} » créé.");
+            ->route('admin.blogs.create')
+            ->with('just_created', [
+                'id' => $blog->id,
+                'title' => $blog->title,
+            ]);
     }
 
     public function edit(Blog $blog)
@@ -121,6 +131,32 @@ class BlogController extends Controller
             // Drives the "you are previewing a draft" banner and the back link.
             'preview' => true,
         ]);
+    }
+
+    /**
+     * Take an article off the journal, or put an archived one back into
+     * drafts. One endpoint for both directions because the row offers whichever
+     * of the two applies, never both.
+     */
+    public function archive(Blog $blog)
+    {
+        if ($blog->isArchived()) {
+            $this->blogs->unarchive($blog);
+
+            return back()->with('success', "Article « {$blog->title} » remis en brouillon.");
+        }
+
+        $this->blogs->archive($blog);
+
+        return back()->with('success', "Article « {$blog->title} » archivé.");
+    }
+
+    /** Release a scheduled article ahead of its own parution date. */
+    public function publishNow(Blog $blog)
+    {
+        $this->blogs->publishNow($blog);
+
+        return back()->with('success', "Article « {$blog->title} » publié.");
     }
 
     public function destroy(Blog $blog)

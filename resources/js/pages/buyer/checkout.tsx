@@ -232,7 +232,10 @@ const Checkout = ({
                     </div>
                 )}
 
-                <form onSubmit={submit} className="grid grid-cols-12 gap-8 lg:gap-12">
+                <form
+                    onSubmit={submit}
+                    className="grid grid-cols-12 gap-8 lg:gap-12"
+                >
                     {/* ── Delivery ──────────────────────────────── */}
                     <div className="col-span-12 space-y-10 lg:col-span-7">
                         <div>
@@ -478,7 +481,10 @@ const Checkout = ({
                                     required
                                     value={data.shipping_phone}
                                     onChange={(e) =>
-                                        setData('shipping_phone', e.target.value)
+                                        setData(
+                                            'shipping_phone',
+                                            e.target.value,
+                                        )
                                     }
                                     placeholder={t(
                                         'buyer.checkout.phone_placeholder',
@@ -636,9 +642,7 @@ const Checkout = ({
                             <div className="mt-5 space-y-3 text-sm">
                                 <div className="flex items-baseline justify-between">
                                     <span className="text-souk-brown-deep/75">
-                                        {t(
-                                            'buyer.checkout.products',
-                                        ).replace(
+                                        {t('buyer.checkout.products').replace(
                                             ':count',
                                             String(items.length),
                                         )}
@@ -652,10 +656,7 @@ const Checkout = ({
                                     <span className="text-souk-brown-deep/75">
                                         {t(
                                             'buyer.checkout.delivery_fee',
-                                        ).replace(
-                                            ':count',
-                                            String(storeCount),
-                                        )}
+                                        ).replace(':count', String(storeCount))}
                                     </span>
                                     <span className="text-souk-title">
                                         {money(deliveryTotal)} MAD

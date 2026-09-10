@@ -88,6 +88,24 @@ class Blog extends Model
         return $this->status === self::STATUS_DRAFT;
     }
 
+    public function isArchived(): bool
+    {
+        return $this->status === self::STATUS_ARCHIVED;
+    }
+
+    /**
+     * Marked published but dated forward — queued, not readable yet.
+     *
+     * The complement of isPublished() within the `published` status, which is
+     * what makes "publier maintenant" a meaningful action on such a row.
+     */
+    public function isScheduled(): bool
+    {
+        return $this->status === self::STATUS_PUBLISHED
+            && $this->published_at !== null
+            && $this->published_at->isFuture();
+    }
+
     public function coverUrl(): ?string
     {
         return $this->media->first()?->url;
