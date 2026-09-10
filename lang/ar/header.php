@@ -3,6 +3,7 @@
 return [
     'marketplace' => 'السوق',
     'new_products' => 'الجديد',
+    'journal' => 'المجلة',
     'categories' => 'الفئات',
     'all_categories' => 'تصفّح كل الحرف',
     'sellers' => 'البائعون',

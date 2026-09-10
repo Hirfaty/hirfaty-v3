@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\CheckoutController;
@@ -25,6 +26,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+// Public journal. Open to guests, like the product listing.
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
 // Static marketing page — no backend data, so no dedicated controller.
 // Route::inertia('/about', 'about')->name('about');
@@ -128,6 +133,21 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
         Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
+
+        // Blogs
+        Route::get('/blogs', [Admin\BlogController::class, 'index'])->name('blogs.index');
+        // `create` and the image endpoint must stay above `{blog}` or they are
+        // matched as an id — which on Postgres errors on the bigint cast
+        // rather than 404ing cleanly.
+        Route::get('/blogs/create', [Admin\BlogController::class, 'create'])->name('blogs.create');
+        Route::post('/blogs/images', [Admin\BlogController::class, 'uploadImage'])->name('blogs.images.store');
+        Route::post('/blogs', [Admin\BlogController::class, 'store'])->name('blogs.store');
+        Route::get('/blogs/{blog}/edit', [Admin\BlogController::class, 'edit'])->name('blogs.edit');
+        Route::get('/blogs/{blog}/preview', [Admin\BlogController::class, 'preview'])->name('blogs.preview');
+        // POST, not PUT: the form ships the cover image as multipart, which
+        // browsers can only send on a POST.
+        Route::post('/blogs/{blog}', [Admin\BlogController::class, 'update'])->name('blogs.update');
+        Route::delete('/blogs/{blog}', [Admin\BlogController::class, 'destroy'])->name('blogs.destroy');
 
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');

@@ -152,6 +152,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
     const navLinks = [
         { href: '/products', label: t('header.marketplace') },
         { href: '/new-arrivals', label: t('header.new_products') },
+        { href: '/blog', label: t('header.journal') },
         // { href: '/sellers', label: t('header.sellers') },
         // { href: '/about', label: t('header.about') },
     ];

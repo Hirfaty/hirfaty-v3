@@ -547,3 +547,161 @@
 [lang='ar'] .italic {
     font-style: normal;
 }
+
+/*
+ * Article typography for blog posts.
+ *
+ * The body of a post is HTML produced by the Tiptap editor, so its tags carry
+ * no classes for Tailwind to hook onto — the styling has to be descendant
+ * rules like these. Deliberately one shared class rather than the typography
+ * plugin's `prose`: the admin editor surface and the public article must look
+ * identical (that is the entire point of the preview), and a single definition
+ * is what guarantees it.
+ *
+ * Unlayered on purpose, for the same reason as the Arabic block above: these
+ * target bare tags, and anything in @layer base would lose to utilities.
+ */
+.blog-article {
+    color: var(--color-souk-brown-deep);
+    font-size: 1.0625rem;
+    line-height: 1.85;
+}
+
+.blog-article > :first-child {
+    margin-top: 0;
+}
+
+.blog-article > :last-child {
+    margin-bottom: 0;
+}
+
+.blog-article p {
+    margin: 1.15em 0;
+}
+
+.blog-article h1,
+.blog-article h2,
+.blog-article h3,
+.blog-article h4 {
+    color: var(--color-souk-title);
+    font-family: var(--font-display);
+    line-height: 1.25;
+    margin: 1.9em 0 0.6em;
+}
+
+.blog-article h1 {
+    font-size: 2rem;
+}
+
+.blog-article h2 {
+    font-size: 1.6rem;
+}
+
+.blog-article h3 {
+    font-size: 1.3rem;
+}
+
+.blog-article h4 {
+    font-size: 1.1rem;
+}
+
+.blog-article strong {
+    color: var(--color-souk-title);
+    font-weight: 600;
+}
+
+.blog-article a {
+    color: var(--color-souk-brown);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.blog-article ul,
+.blog-article ol {
+    margin: 1.15em 0;
+    padding-inline-start: 1.4em;
+}
+
+.blog-article ul {
+    list-style: disc;
+}
+
+.blog-article ol {
+    list-style: decimal;
+}
+
+.blog-article li {
+    margin: 0.4em 0;
+}
+
+.blog-article blockquote {
+    /* Logical border so the rule flips to the right side in Arabic. */
+    border-inline-start: 3px solid var(--color-souk-brown);
+    color: var(--color-souk-title);
+    font-style: italic;
+    margin: 1.6em 0;
+    padding-inline-start: 1.2em;
+}
+
+.blog-article img {
+    border-radius: 0.75rem;
+    height: auto;
+    margin: 1.8em 0;
+    max-width: 100%;
+}
+
+.blog-article hr {
+    border: 0;
+    border-top: 1px solid var(--color-sand);
+    margin: 2.4em 0;
+}
+
+.blog-article code {
+    background: var(--color-souk-peach);
+    border-radius: 0.3rem;
+    font-family: ui-monospace, monospace;
+    font-size: 0.9em;
+    padding: 0.15em 0.4em;
+}
+
+.blog-article pre {
+    background: var(--color-souk-title);
+    border-radius: 0.75rem;
+    color: var(--color-souk-cream);
+    margin: 1.6em 0;
+    overflow-x: auto;
+    padding: 1rem 1.25rem;
+}
+
+.blog-article pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+/*
+ * Tiptap renders the caret into a contenteditable div that fills its wrapper;
+ * without a min-height an empty document is a 0px-tall click target.
+ */
+.blog-article.ProseMirror {
+    min-height: 22rem;
+    outline: none;
+}
+
+/*
+ * The editor's empty-state hint. Placeholder ships the class and the data
+ * attribute; the text itself comes from the extension's config.
+ */
+.blog-article .is-editor-empty:first-child::before {
+    color: var(--color-ink-soft);
+    content: attr(data-placeholder);
+    float: inline-start;
+    height: 0;
+    pointer-events: none;
+}
+
+/* A selected image reads as selected rather than merely focused. */
+.blog-article img.ProseMirror-selectednode {
+    outline: 3px solid var(--color-souk-brown);
+    outline-offset: 2px;
+}

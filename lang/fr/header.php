@@ -3,6 +3,7 @@
 return [
     'marketplace' => 'Marché',
     'new_products' => 'Nouveautés',
+    'journal' => 'Journal',
     'categories' => 'Catégories',
     'all_categories' => 'Parcourir tous les métiers',
     'sellers' => 'Vendeurs',

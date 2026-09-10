@@ -3,6 +3,7 @@
 return [
     'marketplace' => 'Marketplace',
     'new_products' => 'New in',
+    'journal' => 'Journal',
     'categories' => 'Categories',
     'all_categories' => 'Browse every craft',
     'sellers' => 'Sellers',

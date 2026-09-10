@@ -42,6 +42,35 @@ export interface City {
     region: string | null;
 }
 
+/** Where an article sits in its lifecycle. Mirrors Blog::STATUSES. */
+export type BlogStatus = 'draft' | 'published' | 'archived';
+
+/**
+ * An editorial article, as shaped by App\Http\Resources\BlogResource — not the
+ * raw model.
+ */
+export interface Blog {
+    id: number;
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    /**
+     * Sanitised HTML from the rich text editor, rendered with
+     * dangerouslySetInnerHTML. Only sent by the screens that display an
+     * article — the listings omit it, hence optional.
+     */
+    content?: string | null;
+    status: BlogStatus;
+    /** False for a draft, an archived post, or one dated into the future. */
+    is_published: boolean;
+    published_at: string | null;
+    cover_url: string | null;
+    reading_minutes: number;
+    author?: { id: number; name: string } | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
 export interface Media {
     id: number;
     mediable_id: number;

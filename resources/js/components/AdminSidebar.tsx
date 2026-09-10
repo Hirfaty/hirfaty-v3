@@ -3,6 +3,7 @@ import {
     LayoutDashboard,
     LogOut,
     MapPin,
+    Newspaper,
     Package,
     ShieldCheck,
     ShoppingBag,
@@ -55,6 +56,14 @@ const catalogItems: NavItem[] = [
         title: 'Catégories',
         url: route('admin.categories.index', undefined, false),
         icon: Tag,
+    },
+];
+
+const contentItems: NavItem[] = [
+    {
+        title: 'Journal',
+        url: route('admin.blogs.index', undefined, false),
+        icon: Newspaper,
     },
 ];
 
@@ -178,6 +187,12 @@ export function AdminSidebar() {
                 <NavGroup
                     label="Catalogue"
                     items={catalogItems}
+                    isActive={isActive}
+                    collapsed={collapsed}
+                />
+                <NavGroup
+                    label="Contenu"
+                    items={contentItems}
                     isActive={isActive}
                     collapsed={collapsed}
                 />
