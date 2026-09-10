@@ -26,9 +26,11 @@ test('does not send verification notification if email is verified', function ()
 
     $user = User::factory()->create();
 
+    // Same RedirectAsIntended('email-verification') fallback as the prompt
+    // controller — not role-based, always config('fortify.home').
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect(config('fortify.home'));
 
     Notification::assertNothingSent();
 });

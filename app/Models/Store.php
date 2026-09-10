@@ -45,9 +45,35 @@ class Store extends Model
     /** How the seller behind the shop is legally organised. */
     public const TYPES = ['artist', 'company', 'cooperative'];
 
+    /** Filled in but never looked at by an admin. Cannot sell yet. */
+    public const VERIFICATION_PENDING = 'pending';
+
+    /** Reviewed and cleared. The only state that may publish products. */
+    public const VERIFICATION_APPROVED = 'approved';
+
+    /** Reviewed and turned down; `rejection_reason` says why. */
+    public const VERIFICATION_REJECTED = 'rejected';
+
+    public const VERIFICATION_STATUSES = [
+        self::VERIFICATION_PENDING,
+        self::VERIFICATION_APPROVED,
+        self::VERIFICATION_REJECTED,
+    ];
+
+    /**
+     * What a shop must have filled in before it is worth an admin's time.
+     *
+     * Deliberately the same list the seller is nagged about in the status bar
+     * and the same list Seller\SettingsController requires — one definition, so
+     * "complete" cannot mean different things in the two places.
+     */
+    public const REQUIRED_PROFILE_FIELDS = [
+        'store_name', 'category_id', 'city_id', 'description',
+    ];
+
     protected $fillable = [
         'user_id', 'category_id', 'city_id', 'type', 'store_name', 'slug',
-        'description', 'logo', 'banner', 'status',
+        'description', 'logo', 'banner', 'status', 'verification_status',
         'submitted_at', 'approved_at', 'approved_by', 'rejection_reason',
     ];
 
@@ -68,6 +94,57 @@ class Store extends Model
     public function reviews()
     {
         return $this->hasMany(StoreReview::class);
+    }
+
+    // ── Verification ─────────────────────────────────────────────────
+
+    public function isPendingVerification(): bool
+    {
+        return $this->verification_status === self::VERIFICATION_PENDING;
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->verification_status === self::VERIFICATION_APPROVED;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->verification_status === self::VERIFICATION_REJECTED;
+    }
+
+    /**
+     * Every field in REQUIRED_PROFILE_FIELDS is filled in.
+     *
+     * `blank()` rather than `=== null` so a description saved as whitespace
+     * counts as missing — otherwise a space bar gets a shop into the review
+     * queue with nothing to review.
+     *
+     * @return array<int, string> The missing field names, empty when complete.
+     */
+    public function missingProfileFields(): array
+    {
+        return array_values(array_filter(
+            self::REQUIRED_PROFILE_FIELDS,
+            fn (string $field) => blank($this->{$field}),
+        ));
+    }
+
+    public function hasCompleteProfile(): bool
+    {
+        return $this->missingProfileFields() === [];
+    }
+
+    /**
+     * Whether this shop may put products in front of buyers.
+     *
+     * Both halves matter and they are checked together on purpose: a complete
+     * profile that no admin has cleared is not sellable, and an approved shop
+     * whose details were later emptied out is not either.
+     */
+    public function canSell(): bool
+    {
+        return $this->isApproved() && $this->hasCompleteProfile();
     }
 
     public function isArtist(): bool

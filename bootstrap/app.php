@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureStoreCanSell;
 use App\Http\Middleware\EnsureStoreIsSetup;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'store.setup' => EnsureStoreIsSetup::class,
+            'store.sellable' => EnsureStoreCanSell::class,
         ]);
 
         $middleware->web(append: [

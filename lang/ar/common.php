@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'تأكيد كلمة المرور',
     'auth.register.password_hint' => '12 حرفًا على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
 
+    // ── مقياس قوة كلمة المرور — تسمية لكل شريط مُفعّل ────────────────
+    'auth.register.password_strength_very_weak' => 'ضعيفة جدًا',
+    'auth.register.password_strength_weak' => 'ضعيفة',
+    'auth.register.password_strength_fair' => 'متوسطة',
+    'auth.register.password_strength_good' => 'جيدة',
+    'auth.register.password_strength_strong' => 'ممتازة',
+
     'auth.register.terms_prefix' => 'أوافق على',
     'auth.register.terms_privacy' => 'سياسة الخصوصية',
     'auth.register.terms_and' => 'و',

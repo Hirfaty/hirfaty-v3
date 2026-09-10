@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'Confirmer le mot de passe',
     'auth.register.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
 
+    // ── Jauge de robustesse — un libellé par barre remplie ──────────
+    'auth.register.password_strength_very_weak' => 'Très faible',
+    'auth.register.password_strength_weak' => 'Faible',
+    'auth.register.password_strength_fair' => 'Moyenne',
+    'auth.register.password_strength_good' => 'Bonne',
+    'auth.register.password_strength_strong' => 'Excellente',
+
     'auth.register.terms_prefix' => 'J\'accepte la',
     'auth.register.terms_privacy' => 'politique de confidentialité',
     'auth.register.terms_and' => 'et les',

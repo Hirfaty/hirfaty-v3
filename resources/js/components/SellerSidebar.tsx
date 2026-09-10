@@ -1,6 +1,14 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { LogOut, Package, PlusCircle, Store, Settings } from 'lucide-react';
-import { ShoppingBag } from 'lucide-react';
+import {
+    Coins,
+    LayoutDashboard,
+    LogOut,
+    Package,
+    PlusCircle,
+    Settings,
+    ShoppingBag,
+    Store,
+} from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -14,53 +22,156 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
+import type { PageProps } from '@/types';
 
-const dashboardItems = [
-    { title: 'Tableau de bord', url: '/seller/dashboard', icon: Store },
-];
+interface NavItem {
+    title: string;
+    /**
+     * Relative path, e.g. "/seller/products" — deliberately not an absolute
+     * URL. Ziggy's route() defaults to absolute (http://host/...) while
+     * Inertia's usePage().url is always relative, so comparing the two would
+     * never match. route(name, undefined, false) forces a relative path.
+     */
+    url: string;
+    icon: typeof LayoutDashboard;
+    /** Hidden while the shop cannot sell — see Store::canSell(). */
+    requiresSellable?: boolean;
+}
 
-const catalogueItems = [
-    { title: 'Produits', url: '/seller/products', icon: Package },
+const overviewItems: NavItem[] = [
     {
-        title: 'Ajouter un produit',
-        url: '/seller/products/create',
-        icon: PlusCircle,
+        title: 'Tableau de bord',
+        url: route('seller.dashboard', undefined, false),
+        icon: LayoutDashboard,
     },
 ];
 
-const salesItems = [
-    { title: 'Commandes', url: '/seller/orders', icon: ShoppingBag },
+const catalogItems: NavItem[] = [
+    {
+        title: 'Produits',
+        url: route('seller.products.index', undefined, false),
+        icon: Package,
+    },
+    {
+        title: 'Ajouter un produit',
+        url: route('seller.products.create', undefined, false),
+        icon: PlusCircle,
+        requiresSellable: true,
+    },
 ];
 
-const settingsItems = [
-    { title: 'Paramètres', url: '/seller/settings', icon: Settings },
+const salesItems: NavItem[] = [
+    {
+        title: 'Commandes',
+        url: route('seller.orders.index', undefined, false),
+        icon: ShoppingBag,
+    },
+    {
+        title: 'Revenus',
+        url: route('seller.earnings.index', undefined, false),
+        icon: Coins,
+    },
 ];
+
+const accountItems: NavItem[] = [
+    {
+        title: 'Mon atelier',
+        url: route('seller.settings.index', undefined, false),
+        icon: Settings,
+    },
+];
+
+function NavGroup({
+    label,
+    items,
+    isActive,
+    collapsed,
+}: {
+    label: string;
+    items: NavItem[];
+    isActive: (path: string) => boolean;
+    collapsed: boolean;
+}) {
+    if (items.length === 0) {
+        return null;
+    }
+
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>{label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+                <SidebarMenu>
+                    {items.map((item) => {
+                        const active = isActive(item.url);
+
+                        return (
+                            <SidebarMenuItem key={item.url}>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={active}
+                                    className="rounded-lg"
+                                >
+                                    <Link
+                                        href={item.url}
+                                        className="flex items-center gap-2.5"
+                                    >
+                                        <item.icon
+                                            className={`h-4 w-4 ${active ? 'text-sidebar-primary' : ''}`}
+                                        />
+                                        {!collapsed && (
+                                            <span>{item.title}</span>
+                                        )}
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        );
+                    })}
+                </SidebarMenu>
+            </SidebarGroupContent>
+        </SidebarGroup>
+    );
+}
 
 export function SellerSidebar() {
     const { state } = useSidebar();
     const collapsed = state === 'collapsed';
-    const { url } = usePage();
+    const { url, props } = usePage<PageProps>();
+    const { auth, sellerStore } = props;
 
-    // const isActive = (path: string) => url === path;
+    /*
+     * "Ajouter un produit" is dropped rather than shown disabled while the
+     * shop is unverified: the route is blocked by `store.sellable` anyway, so
+     * a visible link would only bounce the seller back with an error. The
+     * status bar above already explains why it is not there.
+     */
+    const canSell = sellerStore?.can_sell ?? false;
+    const visible = (items: NavItem[]) =>
+        items.filter((i) => !i.requiresSellable || canSell);
+
+    // Exact match for the dashboard root, prefix match elsewhere — otherwise
+    // "Produits" would stay lit while viewing a single product.
+    const dashboardUrl = route('seller.dashboard', undefined, false);
     const isActive = (path: string) => {
-        // Escapes special characters and ensures the string ends
-        // after the path or continues with a query parameter
-        const regex = new RegExp(`^${path}$`);
+        const current = url.split('?')[0];
 
-        return regex.test(url.split('?')[0]); // split to ignore query strings
+        return path === dashboardUrl
+            ? current === path
+            : current === path || current.startsWith(`${path}/`);
     };
 
     return (
-        <Sidebar collapsible="icon" className="border-r border-border">
-            <SidebarHeader className="border-b border-border">
-                <div className="flex items-center gap-2 px-2 py-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10">
-                        <Store className="h-4 w-4 text-primary" />
+        <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+            <SidebarHeader className="border-b border-sidebar-border">
+                <div className="flex items-center gap-2.5 px-2 py-2">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary/15">
+                        <Store className="h-4 w-4 text-sidebar-primary" />
                     </div>
                     {!collapsed && (
-                        <div className="leading-tight">
-                            <p className="font-display text-sm">Hirfaty</p>
-                            <p className="text-[11px] tracking-wider text-muted-foreground uppercase">
+                        <div className="min-w-0 leading-tight">
+                            <p className="truncate font-display text-sm text-sidebar-foreground">
+                                {sellerStore?.store_name ?? 'Hirfaty'}
+                            </p>
+                            <p className="truncate text-[11px] tracking-wider text-sidebar-foreground/60 uppercase">
                                 Espace vendeur
                             </p>
                         </div>
@@ -69,170 +180,54 @@ export function SellerSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <SidebarGroup className="p-0 px-1">
-                    <SidebarGroupLabel>Catalogue</SidebarGroupLabel>
-                    <SidebarGroupContent className="p-0">
-                        <SidebarMenu className="rounded-none p-0">
-                            {dashboardItems.map((item) => (
-                                <SidebarMenuItem key={item.url}>
-                                    {(() => {
-                                        const active = isActive(item.url);
-
-                                        return (
-                                            <SidebarMenuButton
-                                                asChild
-                                                isActive={active}
-                                                className={
-                                                    active
-                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
-                                                        : undefined
-                                                }
-                                            >
-                                                <Link
-                                                    className="flex items-center gap-2 rounded-none"
-                                                    href={item.url}
-                                                >
-                                                    <item.icon className="h-4 w-4" />
-
-                                                    {!collapsed && (
-                                                        <span>
-                                                            {item.title}
-                                                        </span>
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        );
-                                    })()}
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Catalogue</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {catalogueItems.map((item) => (
-                                <SidebarMenuItem key={item.url}>
-                                    {(() => {
-                                        const active = isActive(item.url);
-
-                                        return (
-                                            <SidebarMenuButton
-                                                asChild
-                                                isActive={active}
-                                                className={
-                                                    active
-                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
-                                                        : undefined
-                                                }
-                                            >
-                                                <Link
-                                                    className="flex items-center gap-2 rounded-none"
-                                                    href={item.url}
-                                                >
-                                                    <item.icon className="h-4 w-4" />
-
-                                                    {!collapsed && (
-                                                        <span>
-                                                            {item.title}
-                                                        </span>
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        );
-                                    })()}
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-
-                <SidebarGroup>
-                    <SidebarGroupLabel>Ventes</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {salesItems.map((item) => (
-                                <SidebarMenuItem key={item.url}>
-                                    {(() => {
-                                        const active = isActive(item.url);
-
-                                        return (
-                                            <SidebarMenuButton
-                                                asChild
-                                                isActive={active}
-                                                className={
-                                                    active
-                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
-                                                        : undefined
-                                                }
-                                            >
-                                                <Link
-                                                    href={item.url}
-                                                    className="flex items-center gap-2 rounded-none"
-                                                >
-                                                    <item.icon className="h-4 w-4" />
-                                                    {!collapsed && (
-                                                        <span>
-                                                            {item.title}
-                                                        </span>
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        );
-                                    })()}
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-
-                <SidebarGroup>
-                    <SidebarGroupLabel>Compte</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {settingsItems.map((item) => (
-                                <SidebarMenuItem key={item.url}>
-                                    {(() => {
-                                        const active = isActive(item.url);
-
-                                        return (
-                                            <SidebarMenuButton
-                                                asChild
-                                                isActive={active}
-                                                className={
-                                                    active
-                                                        ? 'rounded-none border-r-4 border-r-primary bg-primary/10 p-0 !py-6 text-primary hover:bg-primary/15 hover:text-primary'
-                                                        : undefined
-                                                }
-                                            >
-                                                <Link
-                                                    href={item.url}
-                                                    className="flex items-center gap-2 rounded-none"
-                                                >
-                                                    <item.icon className="h-4 w-4" />
-                                                    {!collapsed && (
-                                                        <span>
-                                                            {item.title}
-                                                        </span>
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        );
-                                    })()}
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                <NavGroup
+                    label="Tableau"
+                    items={overviewItems}
+                    isActive={isActive}
+                    collapsed={collapsed}
+                />
+                <NavGroup
+                    label="Catalogue"
+                    items={visible(catalogItems)}
+                    isActive={isActive}
+                    collapsed={collapsed}
+                />
+                <NavGroup
+                    label="Ventes"
+                    items={salesItems}
+                    isActive={isActive}
+                    collapsed={collapsed}
+                />
+                <NavGroup
+                    label="Compte"
+                    items={accountItems}
+                    isActive={isActive}
+                    collapsed={collapsed}
+                />
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-border">
+            <SidebarFooter className="border-t border-sidebar-border">
+                {!collapsed && auth?.user && (
+                    <div className="flex items-center gap-2.5 px-2 py-1.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
+                            {auth.user.first_name?.[0]}
+                            {auth.user.last_name?.[0]}
+                        </div>
+                        <div className="min-w-0 leading-tight">
+                            <p className="truncate text-sm text-sidebar-foreground">
+                                {auth.user.first_name} {auth.user.last_name}
+                            </p>
+                            <p className="truncate text-xs text-sidebar-foreground/60">
+                                {auth.user.email}
+                            </p>
+                        </div>
+                    </div>
+                )}
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             onClick={() => router.post(route('logout'))}
-                            className="flex items-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded-lg text-red-300 hover:bg-red-500/10 hover:text-red-300"
                         >
                             <LogOut className="h-4 w-4" />
                             {!collapsed && <span>Déconnexion</span>}

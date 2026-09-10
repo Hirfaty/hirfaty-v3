@@ -73,7 +73,16 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    /*
+     * Only a fallback: LoginResponse and VerifyEmailResponse are overridden
+     * with role-based redirects (App\Http\Responses), but RegisterResponse
+     * and TwoFactorLoginResponse are stock Fortify and fall through to this
+     * when there is no "intended" URL. It used to point at `/dashboard`, a
+     * starter-kit page nobody linked to — removing that route without
+     * updating this would have 404'd every fresh registration and every
+     * 2FA-protected login.
+     */
+    'home' => '/',
 
     /*
     |--------------------------------------------------------------------------

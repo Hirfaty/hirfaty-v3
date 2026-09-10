@@ -51,13 +51,16 @@ test('the generated link carries a token that actually resets the password', fun
     $this->post(route('password.update'), [
         'token' => $matches[1],
         'email' => $buyer->email,
-        'password' => 'a-brand-new-password',
-        'password_confirmation' => 'a-brand-new-password',
+        // Must satisfy Password::defaults() (min 12, mixed case, a number, a
+        // symbol) — the reset endpoint validates it exactly like registration
+        // does.
+        'password' => 'NewPass!2345',
+        'password_confirmation' => 'NewPass!2345',
     ])->assertSessionHasNoErrors();
 
     expect(auth()->validate([
         'email' => $buyer->email,
-        'password' => 'a-brand-new-password',
+        'password' => 'NewPass!2345',
     ]))->toBeTrue();
 });
 

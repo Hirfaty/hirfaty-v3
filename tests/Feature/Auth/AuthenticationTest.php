@@ -19,7 +19,10 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    // Role-based redirect — App\Http\Responses\LoginResponse — not Fortify's
+    // stock "/dashboard". The factory default role is 'buyer', which lands
+    // on the marketplace, same as anyone browsing without an account.
+    $response->assertRedirect(route('products.index'));
 });
 
 test('users with two factor enabled are redirected to two factor challenge', function () {

@@ -99,7 +99,7 @@ test('email is not verified with invalid user id', function () {
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
-test('verified user is redirected to dashboard from verification prompt', function () {
+test('verified user visiting the verification prompt is sent to config(fortify.home)', function () {
     $user = User::factory()->create();
 
     Event::fake();
@@ -107,7 +107,15 @@ test('verified user is redirected to dashboard from verification prompt', functi
     $response = $this->actingAs($user)->get(route('verification.notice'));
 
     Event::assertNotDispatched(Verified::class);
-    $response->assertRedirect(route('dashboard', absolute: false));
+    /*
+     * This one specific redirect — Fortify's EmailVerificationPromptController
+     * bouncing an already-verified visitor off the prompt — is not
+     * role-based. It calls RedirectAsIntended directly rather than through a
+     * swappable contract, so unlike login and the verification *link*
+     * (both overridden in App\Http\Responses), it always falls back to
+     * config('fortify.home'), currently '/'.
+     */
+    $response->assertRedirect(config('fortify.home'));
 });
 
 test('already verified user visiting verification link is redirected without firing event again', function () {

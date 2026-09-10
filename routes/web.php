@@ -20,6 +20,7 @@ use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\StoreSetupController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -28,10 +29,6 @@ Route::get('/', HomeController::class)->name('home');
 
 // Static marketing page — no backend data, so no dedicated controller.
 // Route::inertia('/about', 'about')->name('about');
-
-Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
 
 /*
  * No app-level `verification.verify` route here on purpose — Fortify already
@@ -129,6 +126,11 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
 
+        // Stores — the review queue a shop sits in before it may sell.
+        Route::get('/stores', [Admin\StoreController::class, 'index'])->name('stores.index');
+        Route::patch('/stores/{store}/approve', [Admin\StoreController::class, 'approve'])->name('stores.approve');
+        Route::patch('/stores/{store}/reject', [Admin\StoreController::class, 'reject'])->name('stores.reject');
+
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
         Route::post('/cities', [Admin\CityController::class, 'store'])->name('cities.store');
@@ -151,12 +153,40 @@ Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
     ->name('seller.')
     ->group(function () {
 
-        // Dashboard
-        // Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::redirect('/dashboard', '/seller/orders')->name('dashboard');
+        // Where setup-store lands once the shop exists. In this group, not the
+        // one above: it is the confirmation for a shop that was just created,
+        // so `store.setup` passing is exactly the precondition.
+        Route::get('/store-created', [StoreSetupController::class, 'created'])->name('store.created');
 
-        // Products
-        Route::resource('products', ProductController::class);
+        // Dashboard. Was a redirect to /seller/orders while the real overview
+        // sat unrouted; the page exists and is the natural landing, so it is
+        // wired up again.
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        /*
+         * Products. Reading the catalogue is always allowed — that page is
+         * where the status bar explains what is still outstanding. Anything
+         * that creates or changes a listing is gated on the shop being both
+         * complete and approved (Store::canSell()).
+         */
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+
+        /*
+         * `create` stays above `{product}` or it is matched as an id — which
+         * on Postgres errors on the bigint cast rather than 404ing cleanly.
+         */
+        Route::middleware('store.sellable')->group(function () {
+            Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+            Route::post('products', [ProductController::class, 'store'])->name('products.store');
+            Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+            // One route matching both verbs, not two separate declarations:
+            // Wayfinder generates a helper per route, and two routes sharing
+            // the name emit a duplicate key into the generated action file.
+            Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
+            Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        });
+
+        Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
 
         // Orders
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
@@ -165,6 +195,19 @@ Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
 
         // Earnings
         Route::get('earnings', [EarningController::class, 'index'])->name('earnings.index');
+
+        /*
+         * Settings. The controller and the page have both existed for a while
+         * but were never routed — SellerSidebar already linked to
+         * /seller/settings, which 404'd. It is also where a seller finishes a
+         * shop they skipped through at setup (craft, city, description), so
+         * the "complete it later" promise depends on these existing.
+         */
+        Route::get('settings', [SellerSettingsController::class, 'index'])->name('settings.index');
+        Route::patch('settings/profile', [SellerSettingsController::class, 'updateProfile'])->name('settings.profile.update');
+        Route::patch('settings/store', [SellerSettingsController::class, 'updateStore'])->name('settings.store.update');
+        Route::patch('settings/locale', [SellerSettingsController::class, 'updateLocale'])->name('settings.locale.update');
+        Route::patch('settings/password', [SellerSettingsController::class, 'updatePassword'])->name('settings.password.update');
     });
 
 Route::middleware('auth')->group(function () {

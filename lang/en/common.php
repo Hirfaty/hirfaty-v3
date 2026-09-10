@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'Confirm password',
     'auth.register.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
 
+    // ── Strength meter — one label per bar filled ───────────────────
+    'auth.register.password_strength_very_weak' => 'Very weak',
+    'auth.register.password_strength_weak' => 'Weak',
+    'auth.register.password_strength_fair' => 'Fair',
+    'auth.register.password_strength_good' => 'Good',
+    'auth.register.password_strength_strong' => 'Strong',
+
     'auth.register.terms_prefix' => 'I accept the',
     'auth.register.terms_privacy' => 'privacy policy',
     'auth.register.terms_and' => 'and the',

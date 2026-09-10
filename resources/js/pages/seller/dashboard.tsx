@@ -1,54 +1,22 @@
-// import SellerLayout from '@/layouts/seller/layout';
-
-// export default function SellerDashboard() {
-//     return (
-//         <main className="p-margin-page w-full flex-grow md:ml-72">
-//             <div className="mb-gutter flex items-end justify-between">
-//                 <div>
-//                     <h1 className="font-h1 text-h1 text-on-surface">
-//                         Seller Overview
-//                     </h1>
-//                     <p className="text-body-lg text-on-surface-variant">
-//                         Manage your artisan creations and track store
-//                         performance.
-//                     </p>
-//                 </div>
-//                 <div className="gap-stack-sm hidden items-center sm:flex">
-//                     <button className="px-stack-lg border-outline font-label-md text-label-md hover:bg-surface-container-low rounded-lg border border-terracotta bg-white py-2 text-secondary transition-all">
-//                         Export Report
-//                     </button>
-//                     <button className="px-stack-lg font-label-md text-label-md rounded-lg bg-primary py-2 text-white shadow-sm transition-all hover:opacity-90">
-//                         + Add Product
-//                     </button>
-//                 </div>
-//             </div>
-//         </main>
-//     );
-// }
-
-// SellerDashboard.layout = (page: React.ReactNode) => (
-//     <SellerLayout>{page}</SellerLayout>
-// );
-
-import { Link } from '@inertiajs/react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
-    BarChart3,
-    TrendingUp,
-    Package,
-    ShoppingCart,
-    Eye,
-    AlertCircle,
+    ArrowRight,
     CheckCircle2,
     Clock,
+    Coins,
+    Eye,
+    Package,
+    ShoppingCart,
+    TrendingUp,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import SellerLayout from '@/layouts/seller/layout';
+import { formatDate } from '@/lib/utils';
 
 interface Store {
     id: number;
     store_name: string;
-    description: string;
+    description: string | null;
 }
 
 interface Stats {
@@ -69,14 +37,6 @@ interface RevenueChartItem {
     total: number;
 }
 
-interface OrderItem {
-    id: number;
-    quantity: number;
-    product: {
-        name: string;
-    };
-}
-
 interface RecentOrder {
     id: number;
     /** Public-facing identifier — display this rather than `id`. */
@@ -84,11 +44,12 @@ interface RecentOrder {
     status: string;
     total: number;
     created_at: string;
-    buyer: {
-        first_name: string;
-        last_name: string;
-    };
-    items: OrderItem[];
+    buyer: { first_name: string; last_name: string } | null;
+    items: Array<{
+        id: number;
+        quantity: number;
+        product: { name: string } | null;
+    }>;
 }
 
 interface TopProduct {
@@ -108,47 +69,21 @@ interface DashboardProps {
     topProducts: TopProduct[];
 }
 
-function formatMAD(value: number) {
-    return new Intl.NumberFormat('fr-MA', {
-        style: 'currency',
-        currency: 'MAD',
-    }).format(value);
-}
+const ORDER_STATUS: Record<string, { label: string; className: string }> = {
+    pending: { label: 'En attente', className: 'bg-amber-100 text-amber-700' },
+    confirmed: { label: 'Confirmée', className: 'bg-sky-100 text-sky-700' },
+    shipped: { label: 'Expédiée', className: 'bg-violet-100 text-violet-700' },
+    delivered: {
+        label: 'Livrée',
+        className: 'bg-emerald-100 text-emerald-700',
+    },
+    cancelled: { label: 'Annulée', className: 'bg-rose-100 text-rose-700' },
+};
 
-function StatCard({
-    icon: Icon,
-    label,
-    value,
-    subtext,
-}: {
-    icon: React.ReactNode;
-    label: string;
-    value: string | number;
-    subtext?: string;
-}) {
-    return (
-        <div className="border border-border bg-card p-6">
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">{label}</p>
-                    <p className="mt-2 text-2xl font-semibold text-foreground">
-                        {value}
-                    </p>
-                    {subtext && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            {subtext}
-                        </p>
-                    )}
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    {Icon}
-                </div>
-            </div>
-        </div>
-    );
-}
+const money = (n: number) =>
+    `${new Intl.NumberFormat('fr-MA').format(Math.round(n))} MAD`;
 
-export default function Dashboard({
+export default function SellerDashboard({
     store,
     stats,
     revenueChart,
@@ -156,335 +91,330 @@ export default function Dashboard({
     recentOrders,
     topProducts,
 }: DashboardProps) {
-    const maxRevenue = Math.max(...revenueChart.map((item) => item.total), 1);
+    // Scale the bars against the tallest month so a flat run of small months
+    // still reads as a chart rather than a row of slivers.
+    const peak = Math.max(...revenueChart.map((r) => r.total), 1);
 
     return (
-        <>
-            <Head title="Seller Dashboard" />
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title="Tableau de bord" />
 
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                {/* Header */}
-                <div className="mb-8">
-                    <p className="text-xs font-semibold tracking-[0.3em] text-muted-foreground uppercase">
-                        Tableau de bord
-                    </p>
-                    <h1 className="font-display text-3xl tracking-tight text-foreground sm:text-4xl">
-                        Bienvenue, {store.store_name}
+            <header className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                        {store.store_name}
                     </h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Suivez vos ventes, commandes et performance.
+                    <p className="mt-1 text-sm text-ink-soft">
+                        Votre activité en un coup d’œil.
                     </p>
                 </div>
+                <Link
+                    href={route('seller.orders.index')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-ink-soft transition hover:border-ink/30 hover:text-ink"
+                >
+                    Voir les commandes
+                    <ArrowRight className="h-4 w-4 rtl:rotate-180" />
+                </Link>
+            </header>
 
-                {/* Stats Grid */}
-                <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-                    <StatCard
-                        icon={<TrendingUp className="h-6 w-6 text-green-600" />}
-                        label="Revenus totaux"
-                        value={formatMAD(stats.total_revenue)}
-                    />
-                    <StatCard
-                        icon={
-                            <AlertCircle className="h-6 w-6 text-amber-600" />
-                        }
-                        label="Payout en attente"
-                        value={formatMAD(stats.pending_payout)}
-                    />
-                    <StatCard
-                        icon={
-                            <ShoppingCart className="h-6 w-6 text-blue-600" />
-                        }
-                        label="Total commandes"
-                        value={stats.total_orders}
-                        subtext={`${stats.orders_today} aujourd'hui`}
-                    />
-                    <StatCard
-                        icon={<Package className="h-6 w-6 text-purple-600" />}
-                        label="Published Produits"
-                        value={stats.published}
-                        subtext={`${stats.pending_review} en attente`}
-                    />
-                    <StatCard
-                        icon={<Eye className="h-6 w-6 text-pink-600" />}
-                        label="Vues produits"
-                        value={stats.total_views}
-                    />
-                </div>
+            {/* ── Headline figures ─────────────────────────── */}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <StatCard
+                    Icon={Coins}
+                    label="Total encaissé"
+                    value={money(stats.total_revenue)}
+                    hint={`${money(stats.pending_payout)} en attente de versement`}
+                    accent="text-emerald-600 bg-emerald-50"
+                />
+                <StatCard
+                    Icon={ShoppingCart}
+                    label="Commandes"
+                    value={String(stats.total_orders)}
+                    hint={`${stats.orders_today} aujourd’hui · ${stats.orders_month} ce mois`}
+                    accent="text-sky-600 bg-sky-50"
+                />
+                <StatCard
+                    Icon={Package}
+                    label="Produits"
+                    value={String(stats.total_products)}
+                    hint={`${stats.published} en ligne · ${stats.pending_review} en revue`}
+                    accent="text-violet-600 bg-violet-50"
+                />
+                <StatCard
+                    Icon={Eye}
+                    label="Vues produits"
+                    value={new Intl.NumberFormat('fr-MA').format(
+                        stats.total_views,
+                    )}
+                    hint="Depuis la création de l’atelier"
+                    accent="text-amber-600 bg-amber-50"
+                />
+            </div>
 
-                {/* Charts and Tables Grid */}
-                <div className="grid gap-8 lg:grid-cols-3">
-                    {/* Revenue Chart */}
-                    <div className="rounded-lg border border-border bg-card p-6 lg:col-span-2">
-                        <div className="mb-6 flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                Revenus (6 derniers mois)
-                            </h2>
-                            <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                        </div>
-
-                        <div className="flex h-64 items-end justify-between gap-2">
-                            {revenueChart.map((item, idx) => (
+            <div className="grid gap-6 lg:grid-cols-3">
+                {/* ── Revenue chart ────────────────────────── */}
+                <Panel
+                    className="lg:col-span-2"
+                    title="Revenus"
+                    hint="Six derniers mois"
+                    Icon={TrendingUp}
+                >
+                    {revenueChart.length === 0 ? (
+                        <Empty>Aucun revenu enregistré pour l’instant.</Empty>
+                    ) : (
+                        <div className="flex h-52 items-end gap-3 pt-2">
+                            {revenueChart.map((row) => (
                                 <div
-                                    key={idx}
+                                    key={row.label}
                                     className="flex flex-1 flex-col items-center gap-2"
                                 >
-                                    <div className="w-full">
-                                        <div
-                                            className="w-full rounded-sm bg-gradient-to-t from-blue-500 to-blue-400 transition-all hover:from-blue-600 hover:to-blue-500"
-                                            style={{
-                                                height: `${(item.total / maxRevenue) * 100}%`,
-                                                minHeight:
-                                                    item.total > 0
-                                                        ? '8px'
-                                                        : '0',
-                                            }}
-                                            title={formatMAD(item.total)}
-                                        />
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">
-                                        {item.label}
+                                    <span className="text-[11px] text-ink-soft tabular-nums">
+                                        {Math.round(row.total)}
+                                    </span>
+                                    <div
+                                        className="w-full rounded-t-md bg-ink/80 transition-all"
+                                        style={{
+                                            height: `${Math.max((row.total / peak) * 100, 2)}%`,
+                                        }}
+                                    />
+                                    <span className="text-xs text-ink-soft">
+                                        {row.label}
                                     </span>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    )}
+                </Panel>
 
-                    {/* Order Status Breakdown */}
-                    <div className="rounded-lg border border-border bg-card p-6">
-                        <h2 className="mb-6 text-lg font-semibold text-foreground">
-                            Statut des commandes
-                        </h2>
-
-                        <div className="space-y-4">
+                {/* ── Order breakdown ──────────────────────── */}
+                <Panel title="Répartition" hint="Par statut" Icon={Clock}>
+                    {Object.keys(orderBreakdown).length === 0 ? (
+                        <Empty>Aucune commande pour l’instant.</Empty>
+                    ) : (
+                        <ul className="space-y-3">
                             {Object.entries(orderBreakdown).map(
-                                ([status, count]) => (
-                                    <div key={status}>
-                                        <div className="mb-1 flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground capitalize">
-                                                {status === 'pending'
-                                                    ? 'En attente'
-                                                    : status === 'confirmed'
-                                                      ? 'Confirmée'
-                                                      : status === 'shipped'
-                                                        ? 'Expédiée'
-                                                        : status === 'delivered'
-                                                          ? 'Livrée'
-                                                          : status ===
-                                                              'cancelled'
-                                                            ? 'Annulée'
-                                                            : status}
+                                ([status, count]) => {
+                                    const meta = ORDER_STATUS[status] ?? {
+                                        label: status,
+                                        className:
+                                            'bg-slate-100 text-slate-700',
+                                    };
+
+                                    return (
+                                        <li
+                                            key={status}
+                                            className="flex items-center justify-between gap-3"
+                                        >
+                                            <span
+                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
+                                            >
+                                                {meta.label}
                                             </span>
-                                            <span className="font-semibold text-foreground">
+                                            <span className="text-sm text-ink tabular-nums">
                                                 {count}
                                             </span>
-                                        </div>
-                                        <div className="h-2 w-full rounded-full bg-muted">
-                                            <div
-                                                className={`h-full rounded-full transition-all ${
-                                                    status === 'pending'
-                                                        ? 'bg-amber-500'
-                                                        : status === 'confirmed'
-                                                          ? 'bg-blue-500'
-                                                          : status === 'shipped'
-                                                            ? 'bg-purple-500'
-                                                            : status ===
-                                                                'delivered'
-                                                              ? 'bg-green-500'
-                                                              : status ===
-                                                                  'cancelled'
-                                                                ? 'bg-red-500'
-                                                                : 'bg-gray-500'
-                                                }`}
-                                                style={{
-                                                    width: `${(count / Math.max(...Object.values(orderBreakdown), 1)) * 100}%`,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ),
+                                        </li>
+                                    );
+                                },
                             )}
-                        </div>
-                    </div>
-                </div>
+                        </ul>
+                    )}
+                </Panel>
+            </div>
 
-                {/* Recent Orders */}
-                <div className="mt-8 rounded-lg border border-border bg-card p-6">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            Commandes récentes
-                        </h2>
+            <div className="grid gap-6 lg:grid-cols-2">
+                {/* ── Recent orders ────────────────────────── */}
+                <Panel
+                    title="Dernières commandes"
+                    Icon={ShoppingCart}
+                    action={
                         <Link
                             href={route('seller.orders.index')}
-                            className="text-sm text-blue-600 hover:text-blue-700"
+                            className="text-sm text-ink-soft transition-colors hover:text-ink"
                         >
-                            Voir tout →
+                            Tout voir
                         </Link>
-                    </div>
+                    }
+                >
+                    {recentOrders.length === 0 ? (
+                        <Empty>Aucune commande pour l’instant.</Empty>
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {recentOrders.map((order) => {
+                                const meta = ORDER_STATUS[order.status] ?? {
+                                    label: order.status,
+                                    className: 'bg-slate-100 text-slate-700',
+                                };
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="border-b border-border">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                                        Commande
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                                        Client
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                                        Montant
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                                        Statut
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-semibold text-foreground">
-                                        Date
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentOrders.length > 0 ? (
-                                    recentOrders.map((order) => (
-                                        <tr
-                                            key={order.id}
-                                            className="border-b border-border/50 hover:bg-muted/50"
+                                return (
+                                    <li key={order.id}>
+                                        <Link
+                                            href={route(
+                                                'seller.orders.show',
+                                                order.id,
+                                            )}
+                                            className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-muted/40"
                                         >
-                                            <td className="px-4 py-3 text-foreground">
-                                                <Link
-                                                    href={route(
-                                                        'seller.orders.show',
-                                                        order.reference,
-                                                    )}
-                                                    className="font-mono text-sm font-medium text-blue-600 hover:text-blue-700"
-                                                >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-ink">
                                                     {order.reference}
-                                                </Link>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {order.buyer.first_name}{' '}
-                                                {order.buyer.last_name}
-                                            </td>
-                                            <td className="px-4 py-3 font-semibold text-foreground">
-                                                {formatMAD(order.total)}
-                                            </td>
-                                            <td className="px-4 py-3">
+                                                </p>
+                                                <p className="mt-0.5 truncate text-xs text-ink-soft">
+                                                    {order.buyer
+                                                        ? `${order.buyer.first_name} ${order.buyer.last_name}`
+                                                        : 'Acheteur supprimé'}
+                                                    {' · '}
+                                                    {formatDate(
+                                                        order.created_at,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-3">
                                                 <span
-                                                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                                                        order.status ===
-                                                        'pending'
-                                                            ? 'bg-amber-100 text-amber-800'
-                                                            : order.status ===
-                                                                'confirmed'
-                                                              ? 'bg-blue-100 text-blue-800'
-                                                              : order.status ===
-                                                                  'shipped'
-                                                                ? 'bg-purple-100 text-purple-800'
-                                                                : order.status ===
-                                                                    'delivered'
-                                                                  ? 'bg-green-100 text-green-800'
-                                                                  : 'bg-red-100 text-red-800'
-                                                    }`}
+                                                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
                                                 >
-                                                    {order.status ===
-                                                    'pending' ? (
-                                                        <Clock className="h-3 w-3" />
-                                                    ) : order.status ===
-                                                      'delivered' ? (
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                    ) : null}
-                                                    {order.status === 'pending'
-                                                        ? 'En attente'
-                                                        : order.status ===
-                                                            'confirmed'
-                                                          ? 'Confirmée'
-                                                          : order.status ===
-                                                              'shipped'
-                                                            ? 'Expédiée'
-                                                            : order.status ===
-                                                                'delivered'
-                                                              ? 'Livrée'
-                                                              : 'Annulée'}
+                                                    {meta.label}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {new Date(
-                                                    order.created_at,
-                                                ).toLocaleDateString('fr-FR')}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            className="px-4 py-8 text-center text-muted-foreground"
-                                        >
-                                            Aucune commande pour le moment
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                                <span className="text-sm text-ink tabular-nums">
+                                                    {money(order.total)}
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </Panel>
 
-                {/* Top Products */}
-                <div className="mt-8 rounded-lg border border-border bg-card p-6">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            Produits populaires
-                        </h2>
+                {/* ── Top products ─────────────────────────── */}
+                <Panel
+                    title="Produits les plus vendus"
+                    Icon={CheckCircle2}
+                    action={
                         <Link
                             href={route('seller.products.index')}
-                            className="text-sm text-blue-600 hover:text-blue-700"
+                            className="text-sm text-ink-soft transition-colors hover:text-ink"
                         >
-                            Voir tout →
+                            Tout voir
                         </Link>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                        {topProducts.length > 0 ? (
-                            topProducts.map((product) => (
-                                <Link
+                    }
+                >
+                    {topProducts.length === 0 ? (
+                        <Empty>Aucune vente pour l’instant.</Empty>
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {topProducts.map((product) => (
+                                <li
                                     key={product.id}
-                                    href={route(
-                                        'seller.products.show',
-                                        product.id,
-                                    )}
-                                    className="rounded-lg border border-border p-4 transition-colors hover:bg-muted"
+                                    className="flex items-center gap-3 py-3"
                                 >
-                                    <div className="mb-3 aspect-square overflow-hidden rounded-md bg-muted">
-                                        {product.images[0] && (
+                                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                        {product.images?.[0] && (
                                             <img
                                                 src={product.images[0].url}
-                                                alt={product.name}
+                                                alt=""
                                                 className="h-full w-full object-cover"
                                             />
                                         )}
                                     </div>
-                                    <p className="line-clamp-2 text-sm font-medium text-foreground">
-                                        {product.name}
-                                    </p>
-                                    <p className="mt-2 text-xs text-muted-foreground">
-                                        {product.order_items_count}{' '}
-                                        {product.order_items_count > 1
-                                            ? 'ventes'
-                                            : 'vente'}
-                                    </p>
-                                </Link>
-                            ))
-                        ) : (
-                            <div className="col-span-full py-8 text-center text-muted-foreground">
-                                Aucun produit pour le moment
-                            </div>
-                        )}
-                    </div>
-                </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium text-ink">
+                                            {product.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {product.order_items_count} vendu
+                                            {product.order_items_count > 1
+                                                ? 's'
+                                                : ''}
+                                        </p>
+                                    </div>
+                                    <span className="shrink-0 text-sm text-ink tabular-nums">
+                                        {money(product.price)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
             </div>
-        </>
+        </div>
     );
 }
 
-Dashboard.layout = (page: React.ReactNode) => (
+function StatCard({
+    Icon,
+    label,
+    value,
+    hint,
+    accent,
+}: {
+    Icon: ComponentType<{ className?: string }>;
+    label: string;
+    value: string;
+    hint: string;
+    accent: string;
+}) {
+    return (
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-sm text-ink-soft">{label}</p>
+                <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${accent}`}
+                >
+                    <Icon className="h-4 w-4" />
+                </span>
+            </div>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-ink tabular-nums">
+                {value}
+            </p>
+            <p className="mt-1 text-xs text-ink-soft">{hint}</p>
+        </div>
+    );
+}
+
+function Panel({
+    title,
+    hint,
+    Icon,
+    action,
+    className,
+    children,
+}: {
+    title: string;
+    hint?: string;
+    Icon: ComponentType<{ className?: string }>;
+    action?: ReactNode;
+    className?: string;
+    children: ReactNode;
+}) {
+    return (
+        <section
+            className={`rounded-xl border border-border bg-card p-5 shadow-sm ${className ?? ''}`}
+        >
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                    <Icon className="h-4 w-4 text-ink-soft" />
+                    <div>
+                        <h2 className="text-sm font-semibold text-ink">
+                            {title}
+                        </h2>
+                        {hint && (
+                            <p className="text-xs text-ink-soft">{hint}</p>
+                        )}
+                    </div>
+                </div>
+                {action}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function Empty({ children }: { children: ReactNode }) {
+    return <p className="py-8 text-center text-sm text-ink-soft">{children}</p>;
+}
+
+SellerDashboard.layout = (page: ReactNode) => (
     <SellerLayout>{page}</SellerLayout>
 );

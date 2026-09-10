@@ -60,6 +60,42 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'cart' => fn () => $this->getSharedCart($request),
             'navCategories' => fn () => $this->getNavCategories(),
+            // Drives the seller status bar. Lazy, so the query only runs on
+            // responses that actually read it.
+            'sellerStore' => fn () => $this->getSellerStoreStatus($request),
+        ];
+    }
+
+    /**
+     * The signed-in seller's shop, reduced to what the status bar needs.
+     *
+     * Shared globally rather than passed per page because SellerLayout renders
+     * the bar on every /seller route, and threading the same four values
+     * through eleven controllers is how one of them ends up forgetting.
+     *
+     * Null for everyone who is not a seller with a shop, which is what the
+     * layout checks before rendering anything.
+     */
+    private function getSellerStoreStatus(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user || $user->role !== 'seller') {
+            return null;
+        }
+
+        $store = $user->store;
+
+        if (! $store) {
+            return null;
+        }
+
+        return [
+            'store_name' => $store->store_name,
+            'verification_status' => $store->verification_status,
+            'rejection_reason' => $store->rejection_reason,
+            'missing_fields' => $store->missingProfileFields(),
+            'can_sell' => $store->canSell(),
         ];
     }
 
