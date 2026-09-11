@@ -387,7 +387,7 @@ export default function Welcome({
                                     </span>
                                 </Reveal>
                                 <Reveal delay={180}>
-                                    <span className="block text-souk-cream italic">
+                                    <span className="block text-souk-cream">
                                         {t('welcome.hero.line2')}
                                     </span>
                                 </Reveal>

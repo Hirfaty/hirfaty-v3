@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Hirfaty staging media backup daily
+
+[Timer]
+# Offset from staging's database dump at 03:00 (hirfaty-staging-backup.timer)
+# so the two don't compete for disk/CPU at once.
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

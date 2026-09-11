@@ -1,0 +1,26 @@
+# Paired with hirfaty-staging-backup-media.timer. Install both:
+#   sudo cp docker/systemd/hirfaty-staging-backup-media.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hirfaty-staging-backup-media.timer
+#
+# Archives land in /var/backups/hirfaty-staging, alongside the database
+# dumps from hirfaty-staging-backup.service.
+# Check history with: systemctl status hirfaty-staging-backup-media.service
+#                      journalctl -u hirfaty-staging-backup-media.service
+#
+# Optional, same reasoning as hirfaty-staging-backup.service — staging is
+# disposable, so this isn't installed by default. Install it if staging
+# starts holding media worth not losing between resets.
+# Runs as root so it can write to /var/backups.
+
+[Unit]
+Description=Backup the Hirfaty staging media (SeaweedFS)
+# There's one hirfaty.service (docker/systemd/hirfaty.service) bringing up
+# both the prod and staging stacks together — no separate staging-only unit
+# to order after.
+After=hirfaty.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/hirfaty/staging-hirfaty
+ExecStart=/usr/bin/make stage-backup-media
