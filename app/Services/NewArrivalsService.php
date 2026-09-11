@@ -31,7 +31,10 @@ class NewArrivalsService
             ->whereIn('visibility', ['both', $audience])
             // BuyerProductResource reaches through to `store->city->name`;
             // without the eager load every card fires two extra queries.
-            ->with(['store.city', 'category', 'images'])
+            // `variants.media` lets it fold variant photography into
+            // `gallery_images` too — see HomeService::featuredProducts() for
+            // the same reasoning.
+            ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists'])
             ->orderByDesc('id')
             ->paginate($perPage)

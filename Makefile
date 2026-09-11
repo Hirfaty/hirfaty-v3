@@ -51,7 +51,7 @@ EDGE_NETWORK = hirfaty-edge
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
 	prod-deploy prod-backup \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
-	stage-migrate stage-db-reset stage-seed stage-artisan \
+	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup \
 	stage-pull stage-release stage-deploy \
 	proxy-build proxy-up proxy-down proxy-restart proxy-logs proxy-reload \
 	proxy-htpasswd proxy-cert-prod proxy-cert-staging proxy-cert-renew
@@ -233,6 +233,15 @@ stage-seed:
 # Usage: make stage-artisan CMD="queue:restart"
 stage-artisan:
 	$(COMPOSE_STAGE) exec app php artisan $(CMD)
+
+# Same script as prod-backup, pointed at the staging container and a
+# separate directory — staging is still disposable (stage-db-reset wipes it
+# without ceremony) but that's not the same as "not worth a backup you can
+# grab before trying something risky against init.hirfaty.com". Not on a
+# timer by default the way prod is; run by hand, or install
+# hirfaty-staging-backup.timer if it needs to become routine.
+stage-backup:
+	CONTAINER=hirfaty-staging-db BACKUP_DIR=/var/backups/hirfaty-staging ./docker/scripts/backup-db.sh
 
 # Rebuild, migrate and restart from whatever is already checked out — the
 # deploy itself, with no git step. Split out so CI can own the git side (it

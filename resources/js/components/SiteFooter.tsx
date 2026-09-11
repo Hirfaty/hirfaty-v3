@@ -1,10 +1,18 @@
 import { Link } from '@inertiajs/react';
+import VaseIcon from '@/components/home/VaseIcon';
 import logo from '@/images/logo.png';
 
 export const SiteFooter = () => {
     return (
-        <footer className="mt-32 border-t border-ink/15 bg-cream">
-            <div className="container grid grid-cols-2 gap-10 py-16 md:grid-cols-12">
+        <footer className="relative mt-32 overflow-hidden border-t border-ink/15 bg-cream">
+            {/* Watermark, not an illustration: faint enough to read as paper
+                texture rather than compete with the columns above it, and
+                clipped by the footer's own edges so it never leaks into the
+                page above. `pointer-events-none` keeps it out of the way of
+                the links sitting over it. */}
+            <VaseIcon className="pointer-events-none absolute -bottom-10 -left-10 h-64 w-64 text-ink/5 md:h-80 md:w-80" />
+
+            <div className="relative container grid grid-cols-2 gap-10 py-16 md:grid-cols-12">
                 <div className="col-span-2 md:col-span-4">
                     <div className="flex items-center gap-2">
                         <img

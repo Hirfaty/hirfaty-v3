@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Hirfaty staging database backup daily
+
+[Timer]
+# Offset from prod's 02:30 run (hirfaty-backup.timer) so the two dumps don't
+# land on top of each other.
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

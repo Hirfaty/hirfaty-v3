@@ -46,7 +46,10 @@ class StoreController extends Controller
              * consumers.
              */
             ->whereIn('visibility', ['both', $audience])
-            ->with(['store.city', 'category', 'images'])
+            // `variants.media` lets BuyerProductResource fold each variant's
+            // own photography into `gallery_images` — see
+            // HomeService::featuredProducts() for the same reasoning.
+            ->with(['store.city', 'category', 'images', 'variants.media'])
             ->latest()
             ->paginate(12)
             ->withQueryString();

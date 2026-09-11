@@ -105,7 +105,7 @@ export default function Login({
                             {t('common.auth.login.quote')}
                         </p>
 
-                        <dl className="mt-6 flex gap-10 border-t border-souk-cream/20 pt-5">
+                        {/* <dl className="mt-6 flex gap-10 border-t border-souk-cream/20 pt-5">
                             <div>
                                 <dt className="font-display text-xl text-white">
                                     120+
@@ -122,7 +122,7 @@ export default function Login({
                                     {t('common.auth.login.trust_cities')}
                                 </dd>
                             </div>
-                        </dl>
+                        </dl> */}
                     </div>
                 </aside>
 

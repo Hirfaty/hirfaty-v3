@@ -490,7 +490,7 @@ export default function Welcome({
                                 <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
                                     {SHOWCASE.slice(0, 4).map((src, i) => (
                                         <Reveal key={src} delay={i * 100}>
-                                            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[8rem] rounded-b-2xl bg-souk-brown/5">
+                                            <div className="relative aspect-[4/5] overflow-hidden bg-souk-brown/5">
                                                 <img
                                                     src={src}
                                                     alt=""

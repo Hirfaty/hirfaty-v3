@@ -1,0 +1,27 @@
+# Paired with hirfaty-staging-backup.timer. Install both:
+#   sudo cp docker/systemd/hirfaty-staging-backup.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hirfaty-staging-backup.timer
+#
+# Dumps land in /var/backups/hirfaty-staging (override BACKUP_DIR in
+# `make stage-backup` if that ever needs to move).
+# Check history with: systemctl status hirfaty-staging-backup.service
+#                      journalctl -u hirfaty-staging-backup.service
+#
+# Optional — staging is disposable (stage-db-reset wipes it without
+# ceremony) so this timer is not installed by default the way prod's is.
+# Install it if staging starts holding anything worth not losing between
+# resets (a demo seeded by hand, data a client is reviewing, etc).
+# Runs as root so it can write to /var/backups.
+
+[Unit]
+Description=Backup the Hirfaty staging database
+# There's one hirfaty.service (docker/systemd/hirfaty.service) bringing up
+# both the prod and staging stacks together — no separate staging-only unit
+# to order after.
+After=hirfaty.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/hirfaty/staging-hirfaty
+ExecStart=/usr/bin/make stage-backup

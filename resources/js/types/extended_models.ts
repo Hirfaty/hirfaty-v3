@@ -55,6 +55,12 @@ export type BuyerProductResource = Omit<
     | 'variants'
 > & {
     images: Media[];
+    /**
+     * Own images plus every variant's, deduplicated — present only when the
+     * backend eager-loaded `variants.media` for this response. Falls back to
+     * `images` where absent.
+     */
+    gallery_images?: Media[];
     videos: Media[];
     category: Category;
     /**

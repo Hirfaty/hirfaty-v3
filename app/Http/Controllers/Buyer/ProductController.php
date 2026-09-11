@@ -39,7 +39,11 @@ class ProductController extends Controller
             // Without this the storefront showed wholesale-only items to
             // guests — `visibility` existed but was never enforced.
             ->whereIn('visibility', ['both', $audience])
-            ->with(['store.city', 'category', 'images'])
+            // `variants.media` lets BuyerProductResource fold each variant's
+            // own photography into `gallery_images`, so the grid's hover
+            // gallery cycles a variant product's full set of photos rather
+            // than only the ones attached to the product itself.
+            ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists', 'orderItems']);
 
         if ($search = trim((string) $request->input('search'))) {
@@ -194,7 +198,7 @@ class ProductController extends Controller
         return Product::storefront(false)
             ->where('store_id', $product->store_id)
             ->where('id', '!=', $product->id)
-            ->with(['images'])
+            ->with(['images', 'variants.media'])
             ->latest()
             ->limit(4)
             ->get();
@@ -216,7 +220,7 @@ class ProductController extends Controller
                 $product->category_id,
                 fn ($q) => $q->where('category_id', $product->category_id),
             )
-            ->with(['images', 'store'])
+            ->with(['images', 'store', 'variants.media'])
             ->latest()
             ->limit(4)
             ->get();
