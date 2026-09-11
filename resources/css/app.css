@@ -6,24 +6,100 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * ── Didot ───────────────────────────────────────────────────────────
+ *
+ * The brand face, self-hosted from `resources/fonts/didot/` rather than
+ * pulled from a CDN: these are licensed desktop cuts, not a webfont anyone
+ * else serves. Converted OTF → WOFF2 (~100 KB → ~42 KB each); the .otf
+ * originals are not shipped, every browser the app targets reads WOFF2.
+ *
+ * Under `resources/` and referenced relatively — NOT `public/` with a
+ * `/fonts/...` URL. laravel-vite-plugin sets `publicDir: false`, so in dev
+ * the stylesheet is served from the Vite origin where `/fonts/...` 404s.
+ * This way Vite resolves and content-hashes them, and they work in both
+ * dev and build.
+ *
+ * Two families, because the licence ships two: `Didot` (text cut) and
+ * `Didot Title` (titling cut — tighter sidebearings, finer hairlines, meant
+ * for large sizes). See the --font-sans / --font-display note below.
+ *
+ * Weight *ranges* rather than single values on purpose. Only 400 and 700 are
+ * drawn, but call sites use `font-medium` (500) and `font-semibold` (600)
+ * freely; without the ranges the browser would synthesise those by smearing
+ * the outline, which wrecks a didone's thin/thick contrast. The ranges pin
+ * 500 to the real regular and 600 to the real bold instead.
+ *
+ * `Didot Title` has no bold or italic cut of its own, so it borrows the text
+ * family's — same superfamily, and a real bold beats a fake one.
+ */
+@font-face {
+    font-family: 'Didot';
+    src: url('../fonts/didot/didot-regular.woff2') format('woff2');
+    font-weight: 400 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Didot';
+    src: url('../fonts/didot/didot-bold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Didot';
+    src: url('../fonts/didot/didot-italic.woff2') format('woff2');
+    font-weight: 400 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Didot Title';
+    src: url('../fonts/didot/didot-title.woff2') format('woff2');
+    font-weight: 400 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Didot Title';
+    src: url('../fonts/didot/didot-bold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Didot Title';
+    src: url('../fonts/didot/didot-italic.woff2') format('woff2');
+    font-weight: 400 900;
+    font-style: italic;
+    font-display: swap;
+}
+
 @theme {
     /*
-     * Brand font — Bodoni Moda everywhere, body and display alike. The two
-     * tokens are kept as separate names (rather than collapsing to one)
-     * because ~112 call sites use `font-display`/`h-editorial` for headings;
-     * pointing both at the same family gives a single typeface today without
-     * having to touch that markup, and leaves the seam intact if a distinct
-     * display face is ever wanted again.
+     * Brand font — Didot everywhere, body and display alike.
      *
-     * Only the generic `serif` trails it, as the fallback for the moment
-     * before the webfont loads (or if fonts.bunny.net is unreachable).
+     * The two tokens stay separate names because ~156 call sites already use
+     * `font-display`/`h-editorial` for headings, and that seam is now doing
+     * real work: headings get the titling cut, body copy gets the text cut.
+     * Same typeface, the size-appropriate drawing of it.
      *
-     * --font-arabic stays: Bodoni Moda ships no Arabic glyphs at all, so the
-     * ar locale physically cannot render in it. See the [lang='ar'] block
-     * near the bottom of this file.
+     * Only the generic `serif` trails them, as the fallback for the moment
+     * before the webfont loads.
+     *
+     * --font-arabic stays: Didot ships no Arabic glyphs at all (verified —
+     * zero codepoints in U+0600–U+06FF across all four cuts), so the ar
+     * locale physically cannot render in it. See the [lang='ar'] block near
+     * the bottom of this file.
      */
-    --font-sans: 'Bodoni Moda', serif;
-    --font-display: 'Bodoni Moda', serif;
+    --font-sans: 'Didot', serif;
+    --font-display: 'Didot Title', 'Didot', serif;
     --font-arabic: 'Noto Naskh Arabic', serif;
 
     /* Semantic & Brand Colors */
@@ -522,7 +598,7 @@
 /*
  * Arabic typography.
  *
- * Bodoni Moda (--font-sans and --font-display) ships no Arabic glyphs, so
+ * Didot (--font-sans and --font-display) ships no Arabic glyphs, so
  * any element that opts into them would fall back to whatever the OS happens to
  * pick — inconsistent across machines. Route them to the Naskh face whenever the
  * document is in Arabic.
