@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Truck } from 'lucide-react';
 import Reveal from '@/components/home/Reveal';
-import ZellijStarsPattern from '@/components/home/ZellijStarsPattern';
 import { useTranslation } from '@/hooks/use-translation';
+import zellij from '@/images/zellij-pattern.png';
 
 /**
  * The closing "become a seller" banner — shared by the home and about pages
@@ -17,13 +17,18 @@ export default function ArtisanCta() {
             <div className="container px-2!">
                 <Reveal from="scale">
                     <div className="relative overflow-hidden rounded-[2rem] bg-souk-brown px-8 py-16 text-center sm:px-16">
-                        {/* Texture, not decoration: small enough that the
-                            stars read as a woven surface behind the copy
-                            rather than as a row of large motifs competing
-                            with the headline. */}
-                        <ZellijStarsPattern
-                            className="pointer-events-none absolute inset-0 h-full w-full text-souk-cream/15"
-                            size={46}
+                        {/* The same zellij photograph the other dark panels
+                            (the about page's hero, the auth screens) tile
+                            behind their copy — `mix-blend-screen` at a low
+                            opacity so only the tile's highlights show through
+                            the brown fill, same treatment those use. */}
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 opacity-[0.08] mix-blend-screen"
+                            style={{
+                                backgroundImage: `url(${zellij})`,
+                                backgroundSize: '320px',
+                            }}
                         />
                         <div className="relative mx-auto max-w-2xl">
                             {/* <p className="font-arabic text-lg text-souk-cream/80">

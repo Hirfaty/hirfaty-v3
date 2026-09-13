@@ -147,7 +147,7 @@ return [
     'onboarding.finish' => 'اكتشف السوق',
 
     'onboarding.welcome.quote' => 'خلف كل قطعة يدان وحرفة متوارثة.',
-    'onboarding.welcome.title' => 'مرحباً، :name 👋',
+    'onboarding.welcome.title' => 'مرحباً، :name',
     'onboarding.welcome.body' => 'حرفتي تجمع حرفيي المغرب في مكان واحد. دقيقتان للتعارف، ثم السوق بين يديك.',
     'onboarding.welcome.point_direct' => 'تشتري مباشرة من الحرفي — بدون وسيط.',
     'onboarding.welcome.point_authentic' => 'كل قطعة مصنوعة يدوياً، وكل متجر تتحقق منه فريقنا.',

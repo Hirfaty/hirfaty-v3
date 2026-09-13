@@ -3,6 +3,7 @@ import { Loader2, PackageSearch, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
+import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
@@ -50,6 +51,16 @@ const EYEBROW = 'text-[10px] font-semibold uppercase tracking-[0.16em]';
  */
 const HERO_ARCH =
     'pointer-events-none absolute left-1/2 -z-10 -translate-x-1/2 border border-souk-brown/12 [border-radius:50%_50%_0_0/28%_28%_0_0]';
+
+/**
+ * Widths of the two arches, kept here rather than inline so the ornaments
+ * hung on the doorway below can be sized from the same expressions. A
+ * lozenge pinned at a *fixed* x would drift off the jamb the moment the
+ * viewport crossed out of the `min()` clamp — pinning the ornaments to a
+ * wrapper of the same width instead makes them track the arch at every size.
+ */
+const ARCH_OUTER_W = 'w-[min(72vw,760px)]';
+const ARCH_INNER_W = 'w-[min(66vw,700px)]';
 
 /** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
 const LOCALE_TAGS: Record<string, string> = {
@@ -162,21 +173,58 @@ export default function ProductsIndex({
                 No photograph: the listing's own grid supplies the colour a
                 few screens down, and a picture here only competed with it.
                 What is left is type, centred inside a traced arcade. */}
-            <section className="relative isolate overflow-hidden border-b border-souk-brown/15 px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+            <section className="relative isolate overflow-hidden border-b border-souk-brown/15 px-5 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
                 <div
                     aria-hidden="true"
-                    className={`${HERO_ARCH} top-7 h-[115%] w-[min(72vw,760px)]`}
+                    className={`${HERO_ARCH} top-7 h-[115%] ${ARCH_OUTER_W}`}
                 />
                 <div
                     aria-hidden="true"
-                    className={`${HERO_ARCH} top-11 h-[115%] w-[min(66vw,700px)]`}
+                    className={`${HERO_ARCH} top-11 h-[115%] ${ARCH_INNER_W}`}
                 />
+
+                {/* ── The doorway's ornament ────────────────────────────
+                    Three touches, one at each point a real riad doorway is
+                    actually decorated — the crown, the jambs and the
+                    threshold — rather than pattern laid over the whole
+                    opening. All of it stays line-weight and `-z-10`, behind
+                    the type: the hero earns its restraint from being type on
+                    paper, and a filled motif here would take that away.
+
+                    Every piece is centred (`left-1/2 -translate-x-1/2`) or
+                    pinned to a wrapper of the arch's own width, so the
+                    ornament needs no RTL handling and tracks the arch as it
+                    scales. */}
+
+                {/* Keystone at the crown, hung just under the inner arch's
+                    apex. A star rather than the line–lozenge–line rule used
+                    between title and subtitle below: repeating that ornament
+                    here would read as a duplicate rather than as a second,
+                    distinct point of decoration. */}
+                <ZellijStarIcon className="pointer-events-none absolute top-12 left-1/2 -z-10 size-6 -translate-x-1/2 text-souk-brown/25" />
+
+                {/* Studs on the jambs, down in the clear space below the
+                    subtitle — the pair of small glazed tiles set into a door
+                    frame. Each is pulled out by half its own width so it
+                    straddles the arch line and reads as set *into* the jamb
+                    rather than parked beside it.
+
+                    `left`/`right` deliberately, not `start`/`end`: the offset
+                    has to be a *physical* translate (`translate-x` has no
+                    logical form), so a logical edge would flip under
+                    `dir="rtl"` while the translate stayed put — which parked
+                    both studs 8px inboard of the jambs instead of on them.
+                    The pair is identical and the wrapper is centred, so there
+                    is no start/end meaning here to preserve anyway. */}
+                <div
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute bottom-14 left-1/2 -z-10 -translate-x-1/2 ${ARCH_OUTER_W}`}
+                >
+                    <span className="absolute left-0 size-2 -translate-x-1/2 rotate-45 border border-souk-brown/30" />
+                    <span className="absolute right-0 size-2 translate-x-1/2 rotate-45 border border-souk-brown/30" />
+                </div>
 
                 <div className="mx-auto max-w-4xl text-center">
-                    <p className={`mb-5 text-terracotta-deep ${EYEBROW}`}>
-                        {t('buyer.products.hero_eyebrow')}
-                    </p>
-
                     <h1 className="font-display text-5xl leading-[0.98] text-balance text-souk-brown sm:text-7xl lg:text-[5.4rem]">
                         {t('buyer.products.hero_title')}
                     </h1>
@@ -185,7 +233,7 @@ export default function ProductsIndex({
                         stanzas of tilework, standing in for a rule. */}
                     <div
                         aria-hidden="true"
-                        className="mx-auto my-7 flex w-40 items-center gap-3"
+                        className="mx-auto my-5 flex w-40 items-center gap-3"
                     >
                         <span className="h-px flex-1 bg-souk-brown/25" />
                         <span className="size-2 rotate-45 border border-souk-brown/50" />
@@ -199,16 +247,13 @@ export default function ProductsIndex({
             </section>
 
             {/* ── The full collection ──────────────────────────────── */}
-            <section className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 sm:py-24 lg:px-12">
+            <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-8 lg:px-12">
                 {/* Heading and search share a baseline: the search field is
                     an underlined line of display type, not a boxed input, so
                     it sits in the masthead as a second title rather than as a
                     widget bolted beneath one. */}
                 <div className="mb-10 grid gap-7 border-b border-souk-brown/15 pb-9 lg:grid-cols-[minmax(0,0.75fr)_minmax(380px,1fr)] lg:items-end">
                     <div>
-                        <p className={`mb-3 text-terracotta-deep ${EYEBROW}`}>
-                            {t('buyer.products.collection_eyebrow')}
-                        </p>
                         <h2 className="font-display text-4xl text-souk-title sm:text-5xl">
                             {t('buyer.products.collection_title')}
                         </h2>

@@ -6,7 +6,7 @@ import PasswordInput from '@/components/password-input';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
-import heroMain from '@/images/hero-main.jpg';
+import loginPic from '@/images/auth/login.jpg';
 import logo from '@/images/logo.png';
 import zellij from '@/images/zellij-pattern.png';
 import { register } from '@/routes';
@@ -87,7 +87,7 @@ export default function Login({
                             />
                             <div className="relative aspect-[4/5] h-full overflow-hidden rounded-t-full rounded-bl-2xl shadow-2xl shadow-black/30">
                                 <img
-                                    src={heroMain}
+                                    src={loginPic}
                                     alt="A Moroccan artisan shaping a clay vessel by hand"
                                     className="h-full w-full object-cover"
                                 />

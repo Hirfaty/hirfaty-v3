@@ -1,8 +1,11 @@
 import { Link } from '@inertiajs/react';
 import VaseIcon from '@/components/home/VaseIcon';
+import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
 
 export const SiteFooter = () => {
+    const { t } = useTranslation();
+
     return (
         <footer className="relative mt-32 overflow-hidden border-t border-ink/15 bg-cream">
             {/* Watermark, not an illustration: faint enough to read as paper
@@ -30,7 +33,7 @@ export const SiteFooter = () => {
                         Chefchaouen et au-delà.
                     </p>
                     <p className="mt-6 font-arabic text-base text-ink/80">
-                        حرفتي — صنع بفخر في المغرب
+                        {t('common.footer.ar_line')}
                     </p>
                 </div>
 

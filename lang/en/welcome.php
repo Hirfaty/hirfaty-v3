@@ -39,7 +39,7 @@ return [
     'categories.shoes.name' => 'Shoes',
     'categories.accessories.name' => 'Accessories',
     'categories.home.name' => 'Home & Kitchen',
-    'categories.terroir.name' => 'Terroir products',
+
 
     // ── Home page ────────────────────────────────────────────────────────
     /*
@@ -65,6 +65,20 @@ return [
     'hero.alt_textile' => 'Wool being woven on a traditional loom',
     'hero.alt_zellige' => 'Hand-cut zellige tilework, geometric pattern',
     'hero.slides_label' => 'Choose a photograph',
+    'hero.prev' => 'Previous photograph',
+    'hero.next' => 'Next photograph',
+
+    // ── Explore by category ─────────────────────────────────────────────
+    // Fallback labels, used only if the tile's category is not found in
+    // `navCategories` — see `EXPLORE_CATEGORIES` in welcome.tsx.
+    'categories_grid.eyebrow' => 'Browse the souk',
+    'categories_grid.heading' => 'Explore by category',
+    'categories_grid.pottery' => 'Pottery & Ceramics',
+    'categories_grid.textile' => 'Textiles & Weaving',
+    'categories_grid.art' => 'Painting & Art',
+    'categories_grid.lantern' => 'Moroccan Lantern',
+    'categories_grid.wood' => 'Wood & Carpentry',
+    'categories_grid.leather' => 'Leather Goods',
 
     // ── Three pillars ────────────────────────────────────────────────────
     // `*.title_script` mirrors `hero.badge_script`: the Arabic name of the
@@ -129,11 +143,6 @@ return [
     'audience.cta' => 'Open your workshop',
 
     // ── Map ──────────────────────────────────────────────────────────────
-    'map.eyebrow' => 'Across Morocco',
-    'map.heading_line1' => 'Where the work',
-    'map.heading_line2' => 'actually happens',
-    'map.lead' => 'Our workshops are spread from the Rif to the Sahara. These are seven of the cities whose trades you will find on Hirfaty.',
-    'map.body' => 'Each one carries its own craft — Tangier its weaving, Fes its blue ceramic and its tanneries, Meknes its damascened metal, Safi its potters\' hill, Marrakesh its lanterns and leather, Agadir its argan and silver, Laayoune its Saharan leather. Buy from a workshop and you are buying from a place, not a warehouse.',
     'map.city.tanger' => 'Tangier',
     'map.city.fes' => 'Fes',
     'map.city.meknes' => 'Meknes',
@@ -141,6 +150,29 @@ return [
     'map.city.marrakech' => 'Marrakesh',
     'map.city.agadir' => 'Agadir',
     'map.city.laayoune' => 'Laayoune',
+
+    /*
+     * ── Contact ──────────────────────────────────────────────────────────
+     *
+     * `email`/`phone`/`address` are *data*, not copy, and are deliberately
+     * identical across all three locale files — only their labels translate.
+     * They live here rather than in a config because the address is the one
+     * value that genuinely differs per locale (city names are transliterated:
+     * Casablanca / الدار البيضاء).
+     *
+     * TODO: `phone` and `address` are placeholders — the real switchboard
+     * number and street address are not recorded anywhere in this repo yet.
+     * `email` is the live one, taken from MAIL_FROM_ADDRESS.
+     */
+    'contact.eyebrow' => 'Get in touch',
+    'contact.heading_line1' => 'Talk to the people',
+    'contact.heading_line2' => 'behind the souk',
+    'contact.email_label' => 'Email',
+    'contact.email' => 'contact@hirfaty.com',
+    'contact.phone_label' => 'Phone',
+    'contact.phone' => '+212 000 000 000',
+    'contact.address_label' => 'Address',
+    'contact.address' => 'Casablanca, Morocco',
 
     'products.eyebrow' => 'Fresh from the souk',
     'products.heading' => 'Explore our products',
@@ -150,6 +182,12 @@ return [
     'products.currency' => 'MAD',
     'products.prev' => 'Previous products',
     'products.next' => 'Next products',
+
+    'catalogue.eyebrow' => 'Take it with you',
+    'catalogue.heading' => 'Download our product catalogue',
+    'catalogue.lead' => 'Every workshop and every piece in one document — browse it offline, or share it with your team.',
+    'catalogue.button' => 'Download the catalogue',
+    'catalogue.alt' => 'The printed Hirfaty product catalogue',
 
     'gallery.eyebrow' => 'In the workshops',
     'gallery.heading' => 'Gallery',

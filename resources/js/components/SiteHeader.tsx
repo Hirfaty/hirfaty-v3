@@ -206,15 +206,16 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
 
     return (
         <header
-            className={`z-50 transition-colors duration-300 ${
-                variant === 'overlay'
-                    ? `fixed inset-x-0 top-0 ${
-                          scrolled || searchOpen
-                              ? 'bg-cream shadow-sm shadow-ink/5'
-                              : 'bg-transparent'
-                      }`
-                    : 'relative bg-cream'
-            }`}
+            // className={`z-50 transition-colors duration-300 ${
+            //     variant === 'overlay'
+            //         ? `fixed inset-x-0 top-0 ${
+            //               scrolled || searchOpen
+            //                   ? 'bg-cream shadow-sm shadow-ink/5'
+            //                   : 'bg-transparent'
+            //           }`
+            //         : 'relative bg-cream'
+            // }`}
+            className="bg-transparent"
         >
             <CartSync />
 

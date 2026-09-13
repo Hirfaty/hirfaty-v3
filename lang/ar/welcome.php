@@ -40,6 +40,7 @@ return [
     'categories.accessories.name' => 'إكسسوارات',
     'categories.home.name' => 'بيت ومطبخ',
     'categories.terroir.name' => 'منتجات الأرض',
+    'categories_grid.leather' => 'المنتجات الجلدية',
 
     // ── الصفحة الرئيسية ──────────────────────────────────────────────────
     /*
@@ -63,6 +64,17 @@ return [
     'hero.alt_textile' => 'نسج الصوف على نول تقليدي',
     'hero.alt_zellige' => 'زليج منحوت يدوياً بزخرفة هندسية',
     'hero.slides_label' => 'اختر صورة',
+    'hero.prev' => 'الصورة السابقة',
+    'hero.next' => 'الصورة التالية',
+
+    // ── استكشف حسب الفئة ──────────────────────────────────────────────────
+    'categories_grid.eyebrow' => 'تجوّل في السوق',
+    'categories_grid.heading' => 'استكشف حسب الفئة',
+    'categories_grid.pottery' => 'الفخار والخزف',
+    'categories_grid.textile' => 'المنسوجات والنسيج',
+    'categories_grid.art' => 'الرسم والفن',
+    'categories_grid.lantern' => 'الفانوس المغربي',
+    'categories_grid.wood' => 'الخشب والنجارة',
 
     // ── الركائز الثلاث ───────────────────────────────────────────────────
     'pillars.eyebrow' => 'ما نقدّمه',
@@ -122,11 +134,6 @@ return [
     'audience.cta' => 'افتح ورشتك',
 
     // ── الخريطة ──────────────────────────────────────────────────────────
-    'map.eyebrow' => 'في كل أنحاء المغرب',
-    'map.heading_line1' => 'حيث يجري العمل',
-    'map.heading_line2' => 'على أرض الواقع',
-    'map.lead' => 'ورشاتنا ممتدة من الريف إلى الصحراء. هذه سبع من المدن التي تجد حرفها على حرفتي.',
-    'map.body' => 'لكل مدينة حرفتها — طنجة ونسيجها، فاس وخزفها الأزرق ودبّاغاتها، مكناس وتلقيمها على المعدن، آسفي وتلّة خزّافيها، مراكش وفوانيسها وجلدها، أكادير وأركانها وفضّتها، العيون وجلدها الصحراوي. حين تشتري من ورشة فأنت تشتري من مكان، لا من مستودع.',
     'map.city.tanger' => 'طنجة',
     'map.city.fes' => 'فاس',
     'map.city.meknes' => 'مكناس',
@@ -134,6 +141,19 @@ return [
     'map.city.marrakech' => 'مراكش',
     'map.city.agadir' => 'أكادير',
     'map.city.laayoune' => 'العيون',
+
+    // ── التواصل ──────────────────────────────────────────────────────────
+    // البريد والهاتف بيانات لا نصوص — نفس القيمة في الملفات الثلاثة.
+    // TODO: الهاتف والعنوان قيمتان مؤقتتان، انظر en/welcome.php.
+    'contact.eyebrow' => 'تواصل معنا',
+    'contact.heading_line1' => 'تحدّث إلى من',
+    'contact.heading_line2' => 'يصنعون هذا السوق',
+    'contact.email_label' => 'البريد الإلكتروني',
+    'contact.email' => 'contact@hirfaty.com',
+    'contact.phone_label' => 'الهاتف',
+    'contact.phone' => '+212 000 000 000',
+    'contact.address_label' => 'العنوان',
+    'contact.address' => 'الدار البيضاء، المغرب',
 
     'products.eyebrow' => 'جديد السوق',
     'products.heading' => 'استكشف منتجاتنا',
@@ -143,6 +163,12 @@ return [
     'products.currency' => 'درهم',
     'products.prev' => 'المنتجات السابقة',
     'products.next' => 'المنتجات التالية',
+
+    'catalogue.eyebrow' => 'خذه معك',
+    'catalogue.heading' => 'حمّل كتالوج منتجاتنا',
+    'catalogue.lead' => 'كل ورشة وكل قطعة في وثيقة واحدة — تصفحها بلا اتصال، أو شاركها مع فريقك.',
+    'catalogue.button' => 'تحميل الكتالوج',
+    'catalogue.alt' => 'كتالوج حرفتي المطبوع',
 
     'gallery.eyebrow' => 'داخل الورشات',
     'gallery.heading' => 'المعرض',

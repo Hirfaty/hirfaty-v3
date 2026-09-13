@@ -8,9 +8,8 @@ import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
-import buyerImage from '@/images/cat-jewelry.jpg';
-// import sellerImage from '@/images/cat-pottery.jpg';
-import sellerImage from '@/images/register-seller.jpg';
+import registerPic1 from '@/images/auth/register-1.jpg';
+import registerPic2 from '@/images/auth/register-2.jpg';
 import logo from '@/images/logo.png';
 import zellij from '@/images/zellij-pattern.png';
 import { login } from '@/routes';
@@ -121,8 +120,8 @@ export default function Register() {
                                     key={accountKind}
                                     src={
                                         accountKind === 'seller'
-                                            ? sellerImage
-                                            : buyerImage
+                                            ? registerPic1
+                                            : registerPic2
                                     }
                                     alt={
                                         accountKind === 'seller'

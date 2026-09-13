@@ -116,4 +116,14 @@ return [
 
     'errors.back_home' => 'Retour à l’accueil',
     'errors.browse_market' => 'Explorer le marché',
+
+    /*
+     * La signature arabe du pied de page, sous le paragraphe d'accroche.
+     * Conservée identique dans les trois fichiers de langue plutôt que
+     * traduite en français/anglais — même logique que
+     * `welcome.hero.badge_script` et `welcome.seller_cta.ar_line` : une
+     * fioriture ornementale dans la langue d'origine de la marque, pas un
+     * texte qui change avec la langue active.
+     */
+    'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
 ];

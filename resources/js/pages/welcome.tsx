@@ -1,5 +1,14 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowRight } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import {
+    ArrowRight,
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    Mail,
+    MapPin,
+    Phone,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
 import ArtisanCta from '@/components/ArtisanCta';
 import {
     AtelierArchIcon,
@@ -11,27 +20,37 @@ import {
     WholesaleTagIcon,
     ZellijStarIcon,
 } from '@/components/home/CraftIcons';
-import HeroBackdrop from '@/components/home/HeroBackdrop';
+import HeroSlider from '@/components/home/HeroSlider';
 import MoroccoMap, {
     MOROCCO_ASPECT,
     projectMorocco,
 } from '@/components/home/MoroccoMap';
-import type { RailProduct } from '@/components/home/ProductRail';
+import type {
+    ProductRailBounds,
+    ProductRailHandle,
+    RailProduct,
+} from '@/components/home/ProductRail';
 import ProductRail from '@/components/home/ProductRail';
 import Reveal from '@/components/home/Reveal';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
-import accessories from '@/images/cat-accessories.jpg';
+import brochure from '@/images/brochure/brochure.jpeg';
 import jewelry from '@/images/cat-jewelry.jpg';
 import leather from '@/images/cat-leather.jpg';
 import pottery from '@/images/cat-pottery.jpg';
 import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
-import heroMain from '@/images/hero-main.jpg';
-import heroTextile from '@/images/hero-textile.jpg';
-import heroZellige from '@/images/hero-zellige.jpg';
+import exploreArt from '@/images/categories/art.jpeg';
+import exploreLantern from '@/images/categories/lantern.jpeg';
+import explorePottery from '@/images/categories/pottery.jpeg';
+import exploreTextile from '@/images/categories/textile.jpeg';
+import exploreLeather from '@/images/categories/lether.jpeg';
+import exploreWood from '@/images/categories/wood.jpeg';
+import hero1 from '@/images/hero/hero-1.jpeg';
+import hero2 from '@/images/hero/hero-2.jpg';
+import hero3 from '@/images/hero/hero-3.jpg';
 
 //change
 
@@ -46,9 +65,9 @@ const SHOWCASE = [pottery, leather, wood, textile, jewelry, spice];
  * descriptions follow the active locale like the rest of the page.
  */
 const HERO_SLIDES = [
-    { src: heroMain, altKey: 'welcome.hero.alt' },
-    { src: heroTextile, altKey: 'welcome.hero.alt_textile' },
-    { src: heroZellige, altKey: 'welcome.hero.alt_zellige' },
+    { src: hero1, altKey: 'welcome.hero.alt' },
+    { src: hero2, altKey: 'welcome.hero.alt_textile' },
+    { src: hero3, altKey: 'welcome.hero.alt_zellige' },
 ] as const;
 
 /*
@@ -99,6 +118,50 @@ const PILLARS = [
 ] as const;
 
 /**
+ * The "Explore by category" tiles under the hero.
+ *
+ * `slugMatch` finds each tile's real `Category` row inside the shared
+ * `navCategories` prop (see `HandleInertiaRequests::getNavCategories()`),
+ * rather than hardcoding an id: seed order is not a contract, and an id
+ * baked in here would silently point at the wrong craft — or at nothing —
+ * the moment a store re-seeds. Matched against the *French* seed name via
+ * `Str::slug()`, because the slug is the one string `CategorySeeder` fixes
+ * as stable across locales; `translated_name` moves with the active one.
+ *
+ * `key` doubles as the translation suffix for the fallback label
+ * (`welcome.categories_grid.<key>`), used only if the category is not found —
+ * an empty or freshly seeded database should still render every tile rather
+ * than a dead link.
+ */
+const EXPLORE_CATEGORIES = [
+    { key: 'pottery', image: explorePottery, slugMatch: 'poterie' },
+    { key: 'textile', image: exploreTextile, slugMatch: 'textile' },
+    { key: 'art', image: exploreArt, slugMatch: 'peinture' },
+    { key: 'lantern', image: exploreLantern, slugMatch: 'lanterne' },
+    { key: 'wood', image: exploreWood, slugMatch: 'bois' },
+    { key: 'leather', image: exploreLeather, slugMatch: 'leather' },
+] as const;
+
+/**
+ * The three ways to reach Hirfaty, as content rather than markup — the rows
+ * are structurally identical, so describing them as data keeps the single row
+ * template below honest about that.
+ *
+ * `key` is the translation suffix for both halves of the row: the value lives
+ * at `welcome.contact.<key>` and its label at `welcome.contact.<key>_label`,
+ * so a row's copy is found in one place.
+ *
+ * `href` is the scheme the value is prefixed with to make it a link. Absent on
+ * the address, which is the one row with nothing to activate — rendering it as
+ * an anchor would promise a map that does not open.
+ */
+const CONTACT_ROWS = [
+    { key: 'email', Icon: Mail, href: 'mailto:' },
+    { key: 'phone', Icon: Phone, href: 'tel:' },
+    { key: 'address', Icon: MapPin, href: null },
+] as const;
+
+/**
  * The cities pinned on the map, as real coordinates.
  *
  * Kept as longitude/latitude rather than as pixels so they stay meaningful:
@@ -130,56 +193,6 @@ const MAP_CITIES = [
     { key: 'marrakech', lat: 31.6295, lon: -7.9811, labelAbove: false },
     { key: 'agadir', lat: 30.4278, lon: -9.5981, labelAbove: false },
     { key: 'laayoune', lat: 27.1536, lon: -13.2033, labelAbove: false },
-] as const;
-
-/**
- * The drifting gallery strip.
- *
- * Heights and vertical offsets vary per tile on purpose: an even row of
- * identical cards reads as a filmstrip, whereas the staggered arrangement
- * reads as pieces hung on a wall. `pottery` is the tallest and sits level,
- * so the eye has one fixed point to settle on as the rest drifts past.
- *
- * Rendered twice at half speed each pass — see the `animate-gallery` note in
- * app.css and the duplication in the markup below.
- */
-const GALLERY = [
-    {
-        src: jewelry,
-        alt: 'Silver Moroccan jewellery',
-        box: 'h-64 md:h-72',
-        shift: 'translate-y-6',
-    },
-    {
-        src: wood,
-        alt: 'Carved cedar wood detail',
-        box: 'h-72 md:h-88',
-        shift: '-translate-y-4',
-    },
-    {
-        src: pottery,
-        alt: 'A potter at the wheel',
-        box: 'h-80 md:h-96',
-        shift: 'translate-y-0',
-    },
-    {
-        src: textile,
-        alt: 'Handwoven Moroccan textile',
-        box: 'h-64 md:h-80',
-        shift: 'translate-y-8',
-    },
-    {
-        src: accessories,
-        alt: 'Handmade artisan accessories',
-        box: 'h-72 md:h-88',
-        shift: '-translate-y-2',
-    },
-    {
-        src: spice,
-        alt: 'Moroccan spices at the souk',
-        box: 'h-64 md:h-72',
-        shift: 'translate-y-5',
-    },
 ] as const;
 
 /**
@@ -341,101 +354,213 @@ export default function Welcome({
      */
     const { t, isRTL } = useTranslation();
 
+    // Shared by every page (see `HandleInertiaRequests`), not fetched here —
+    // the header already depends on the same prop, so the home page reads it
+    // rather than asking the controller for a second, page-specific copy.
+    const { navCategories } = usePage<{
+        navCategories?: Array<{
+            id: number;
+            slug: string;
+            translated_name: string;
+        }>;
+    }>().props;
+
+    const categoryTiles = EXPLORE_CATEGORIES.map((tile) => {
+        const category = navCategories?.find((c) =>
+            c.slug.includes(tile.slugMatch),
+        );
+
+        return {
+            ...tile,
+            href: category
+                ? `/products?category_id=${category.id}`
+                : '/products',
+            label:
+                category?.translated_name ??
+                t(`welcome.categories_grid.${tile.key}`),
+        };
+    });
+
+    /*
+     * The product rail's own paging, driven from here rather than from
+     * inside the rail: the arrows now sit top-right of this section next to
+     * "See all products", not overlaid on the rail's photography, so this
+     * component needs a handle to call `prev`/`next` on and a copy of the
+     * rail's bounds to grey them out at the ends. See `ProductRail`'s own
+     * doc for why this moved rather than staying self-contained.
+     */
+    const railRef = useRef<ProductRailHandle>(null);
+    const [railBounds, setRailBounds] = useState<ProductRailBounds>({
+        atStart: true,
+        atEnd: false,
+        autoplay: true,
+    });
+
+    /*
+     * The arch shape SiteHeader's own icon buttons use (rounded on top,
+     * squared at the foot), so this pair reads as belonging to the same
+     * button vocabulary rather than as a one-off control invented for this
+     * section.
+     */
+    const railArrowButton =
+        'grid h-9 w-9 cursor-pointer shrink-0 place-items-center rounded-t-full rounded-b-md text-souk-brown ring-1 ring-souk-brown/25 transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:pointer-events-none disabled:opacity-30';
+
     return (
         <>
             <Head title="Hirfaty — Moroccan craft, direct from the artisans" />
 
             <div className="min-h-screen bg-souk-paper">
-                {/* Pinned and transparent until the page scrolls, so the hero
-                    photograph runs the full height of the viewport behind it. */}
-                <SiteHeader variant="overlay" />
+                {/* In flow and cream-filled, not pinned over the hero: the
+                    hero band no longer reaches the top of the page — it is
+                    inset, with paper showing around it — so a transparent bar
+                    would put white type on white paper. */}
+                <SiteHeader />
 
                 {/* ───────────────────────── Hero ─────────────────────────
-                    Three full-bleed photographs crossfading behind the claim,
-                    rather than one still: the page opens on the range of the
-                    catalogue instead of a single craft. The stack carries its
-                    own scrim — see HeroBackdrop. */}
-                <section className="relative overflow-hidden">
-                    <HeroBackdrop
+                    Three photographs the visitor pages *sideways* through,
+                    rather than one still or a dissolve: the band reads as a
+                    strip of the catalogue that continues past the edge, which
+                    is the promise the arrows make.
+
+                    Inset from the page on the sides and underneath so the
+                    paper frames it — the band is a plate on the page, not the
+                    page itself. The slider carries its own scrim and controls;
+                    see HeroSlider. */}
+                {/* Sides and foot only — no top padding, so the band sits
+                    directly under the bar and the margin reads as even on the
+                    three edges that have one.
+
+                    `overflow-x-clip` because the arrows are rotated squares
+                    overhanging into the margin: their bounding boxes are
+                    wider than the squares themselves, and on a phone (where
+                    the margin is narrowest) that pushed ~9px of horizontal
+                    scroll onto the whole page. `clip` rather than `hidden`
+                    so no scroll container is created, and on the x axis only
+                    so `overflow-y` stays `visible`. */}
+                <section className="overflow-x-clip bg-souk-paper px-5 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-12">
+                    <HeroSlider
                         slides={HERO_SLIDES.map((slide) => ({
                             src: slide.src,
                             alt: t(slide.altKey),
                         }))}
                         label={t('welcome.hero.slides_label')}
-                    />
-
-                    {/*
-                     * `lg:min-h-svh` rather than a flat `h-screen`: this is a
-                     * *floor* tied to the actual viewport, with `items-center`
-                     * doing the vertical centring, so a laptop gets a hero
-                     * sized to fit without scrolling while a longer
-                     * translation (Arabic runs bulkier) simply grows the
-                     * section instead of clipping.
-                     *
-                     * A full viewport rather than one minus the header,
-                     * because the header is now `overlay` — pinned on top of
-                     * this section rather than stacked above it. The extra top
-                     * padding is what keeps the copy clear of the bar; 5.75rem
-                     * is SiteHeader's own rendered height.
-                     */}
-                    <div className="relative container flex items-center py-20 pt-32 lg:min-h-svh lg:py-24 lg:pt-36">
-                        <div className="max-w-[42.5rem]">
-                            <h1 className="mt-6 font-display text-[clamp(2.25rem,6vw,4.5rem)] leading-[1.1] font-bold tracking-[-0.02em] text-white">
-                                <Reveal delay={80}>
-                                    <span className="block">
-                                        {t('welcome.hero.line1')}
-                                    </span>
-                                </Reveal>
-                                <Reveal delay={180}>
-                                    <span className="block text-souk-cream">
-                                        {t('welcome.hero.line2')}
-                                    </span>
-                                </Reveal>
-                            </h1>
-
-                            <Reveal delay={280}>
-                                <p className="mt-6 max-w-lg text-lg leading-relaxed text-souk-cream/85">
-                                    {t('welcome.hero.lead')}
-                                </p>
+                        prevLabel={t('welcome.hero.prev')}
+                        nextLabel={t('welcome.hero.next')}
+                        isRTL={isRTL}
+                    >
+                        {/*
+                         * `tracking` is cancelled under `dir="rtl"` on both the
+                         * heading and the eyebrow: Arabic is a joined script,
+                         * and letter-spacing it prises the connected forms
+                         * apart into unreadable single letters.
+                         */}
+                        {/* Capped at 4rem rather than pushed as large as the
+                            band allows: the two claim lines are a sentence
+                            split in half, and at a bigger size the longer
+                            locales wrap the first half again — which reads as
+                            three unrelated lines rather than as one thought. */}
+                        <h1 className="font-display text-[clamp(1.75rem,4.8vw,4rem)] leading-[1.08] tracking-[0.04em] text-white uppercase rtl:tracking-normal">
+                            <Reveal delay={80}>
+                                <span className="block">
+                                    {t('welcome.hero.line1')}
+                                </span>
                             </Reveal>
+                            <Reveal delay={180}>
+                                <span className="block text-souk-cream">
+                                    {t('welcome.hero.line2')}
+                                </span>
+                            </Reveal>
+                        </h1>
 
-                            <Reveal delay={360}>
-                                <div className="mt-9 flex flex-wrap items-center gap-3">
+                        <Reveal delay={280}>
+                            {/* `mx-auto` on a narrower measure than the
+                                heading: the lead is body copy, and centred
+                                prose set to the full width of a 4xl band is
+                                unreadable however short it is. */}
+                            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-souk-cream/90 italic sm:text-lg">
+                                {t('welcome.hero.lead')}
+                            </p>
+                        </Reveal>
+
+                        <Reveal delay={360}>
+                            {/* `pointer-events-auto` re-arms just the buttons:
+                                the copy layer above them is deliberately
+                                click-through so a swipe can start on the
+                                headline. */}
+                            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+                                <Link
+                                    href="/products"
+                                    className="group pointer-events-auto relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 hover:bg-souk-brown/90"
+                                >
+                                    <StorefrontIcon className="h-5 w-5 shrink-0" />
+                                    {t('welcome.hero.cta_primary')}
+                                </Link>
+                                <Link
+                                    href="/seller/onboarding"
+                                    className="pointer-events-auto inline-flex items-center gap-2.5 rounded-xl border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-7 py-3.5 font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25"
+                                >
+                                    <AtelierArchIcon className="h-5 w-5 shrink-0" />
+                                    {t('welcome.hero.cta_secondary')}
+                                </Link>
+                            </div>
+                        </Reveal>
+                    </HeroSlider>
+                </section>
+
+                {/* ─────────────── Explore by categories ───────────────
+                    Crafts as photographs rather than the categories menu's
+                    flat text list: this is the first thing under the hero,
+                    and a name alone asks a visitor to already know what
+                    "lantern-making" looks like. A handful rather than the
+                    full set behind the header's own menu — a grid deep
+                    enough to browse would duplicate the /products filters
+                    this is meant to be a doorway into. */}
+                <section className="bg-souk-paper py-8 lg:py-8">
+                    <div className="container">
+                        <Reveal delay={140}>
+                            <h2 className="mt-4 text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
+                                {t('welcome.categories_grid.heading')}
+                            </h2>
+                        </Reveal>
+
+                        <div className="mt-14 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                            {categoryTiles.map((tile, i) => (
+                                <Reveal key={tile.key} delay={200 + i * 100}>
                                     <Link
-                                        href="/products"
-                                        className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 transition-transform duration-300 hover:-translate-y-0.5"
+                                        href={tile.href}
+                                        className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5"
                                     >
-                                        <span
-                                            aria-hidden="true"
-                                            className="absolute inset-y-0 -left-1/3 w-1/3 bg-white/30 opacity-0 group-hover:animate-sheen group-hover:opacity-100"
+                                        <img
+                                            src={tile.image}
+                                            alt=""
+                                            loading="lazy"
+                                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                         />
-                                        <StorefrontIcon className="h-5 w-5 shrink-0" />
-                                        {t('welcome.hero.cta_primary')}
-                                    </Link>
-                                    <Link
-                                        href="/seller/onboarding"
-                                        className="inline-flex items-center gap-2.5 rounded-xl border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-7 py-3.5 font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25"
-                                    >
-                                        <AtelierArchIcon className="h-5 w-5 shrink-0" />
-                                        {t('welcome.hero.cta_secondary')}
-                                    </Link>
-                                </div>
-                            </Reveal>
-
-                            {/* <Reveal delay={440}>
-                                <dl className="mt-13 flex flex-wrap gap-x-10 gap-y-6">
-                                    {HERO_STATS.map(([value, key]) => (
-                                        <div key={key}>
-                                            <dt className="font-display text-3xl font-bold text-souk-cream">
-                                                {value}
-                                            </dt>
-                                            <dd className="mt-1 text-xs tracking-[0.08em] text-white/60 uppercase">
-                                                {t(`welcome.hero.${key}`)}
-                                            </dd>
+                                        {/* Scrim only at the foot, where the
+                                            label sits — the rest of the
+                                            photograph stays true, since
+                                            nothing else on the tile needs to
+                                            read over it. */}
+                                        <div
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-5">
+                                            <span className="font-display text-lg text-souk-cream">
+                                                {tile.label}
+                                            </span>
+                                            <ArrowRight
+                                                className="h-4 w-4 shrink-0 text-souk-cream transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                                                strokeWidth={1.75}
+                                            />
                                         </div>
-                                    ))}
-                                </dl>
-                            </Reveal> */}
+                                        <div
+                                            aria-hidden="true"
+                                            className="absolute inset-0 ring-1 ring-souk-brown/10 ring-inset"
+                                        />
+                                    </Link>
+                                </Reveal>
+                            ))}
                         </div>
                     </div>
                 </section>
@@ -446,43 +571,93 @@ export default function Welcome({
                     the marketplace. A rail rather than a grid so a full row
                     of stock is reachable without the section swallowing a
                     screen and a half. */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div className="relative container">
-                        <div className="flex flex-wrap items-end justify-between gap-6">
-                            <div className="max-w-2xl">
+                <section className="relative overflow-hidden bg-souk-paper py-8 lg:py-8">
+                    <div className="te relative container">
+                        <div className="flex flex-col">
+                            <div className="mx-auto w-full max-w-2xl text-center">
                                 <Reveal delay={80}>
-                                    <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
+                                    <h2 className="mt-4 text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                                         {t('welcome.products.heading')}
                                     </h2>
                                 </Reveal>
-                                <Reveal delay={140}>
-                                    <p className="mt-5 text-lg text-souk-brown-deep/75">
-                                        {t('welcome.products.lead')}
-                                    </p>
+                            </div>
+                            <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:mt-0 sm:ml-auto sm:justify-end sm:gap-6">
+                                {/* Arrows grouped with "See all products" rather
+                                than left overlaid on the rail itself: both
+                                are ways to move through the same catalogue,
+                                so they read as one control cluster, top-right
+                                of the section on larger screens — centered
+                                under the heading on narrow ones where there
+                                isn't room to push it to the edge. */}
+                                <Reveal delay={200}>
+                                    <div className="flex flex-wrap items-center justify-center gap-4 sm:flex-nowrap sm:gap-5">
+                                        {/* Matches the ternary below: no rail
+                                        mounted, nothing for these to
+                                        control. */}
+                                        {featuredProducts.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        railRef.current?.prev()
+                                                    }
+                                                    disabled={
+                                                        !railBounds.autoplay &&
+                                                        railBounds.atStart
+                                                    }
+                                                    aria-label={t(
+                                                        'welcome.products.prev',
+                                                    )}
+                                                    className={railArrowButton}
+                                                >
+                                                    <ChevronLeft
+                                                        className="h-4 w-4 rtl:rotate-180"
+                                                        strokeWidth={1.75}
+                                                    />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        railRef.current?.next()
+                                                    }
+                                                    disabled={
+                                                        !railBounds.autoplay &&
+                                                        railBounds.atEnd
+                                                    }
+                                                    aria-label={t(
+                                                        'welcome.products.next',
+                                                    )}
+                                                    className={railArrowButton}
+                                                >
+                                                    <ChevronRight
+                                                        className="h-4 w-4 rtl:rotate-180"
+                                                        strokeWidth={1.75}
+                                                    />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <Link
+                                            href="/products"
+                                            className="group inline-flex items-center gap-2 border-b border-souk-brown/40 pb-1 text-souk-brown transition-colors hover:border-souk-brown"
+                                        >
+                                            {t('welcome.products.view_all')}
+                                            <ArrowRight
+                                                className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                                                strokeWidth={1.75}
+                                            />
+                                        </Link>
+                                    </div>
                                 </Reveal>
                             </div>
-                            <Reveal delay={200}>
-                                <Link
-                                    href="/products"
-                                    className="group inline-flex items-center gap-2 border-b border-souk-brown/40 pb-1 text-souk-brown transition-colors hover:border-souk-brown"
-                                >
-                                    {t('welcome.products.view_all')}
-                                    <ArrowRight
-                                        className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
-                                        strokeWidth={1.75}
-                                    />
-                                </Link>
-                            </Reveal>
                         </div>
-
                         {featuredProducts.length > 0 ? (
                             <div className="mt-14">
                                 <ProductRail
+                                    ref={railRef}
                                     products={featuredProducts}
                                     isRTL={isRTL}
                                     currency={t('welcome.products.currency')}
-                                    prevLabel={t('welcome.products.prev')}
-                                    nextLabel={t('welcome.products.next')}
+                                    onBoundsChange={setRailBounds}
                                 />
                             </div>
                         ) : (
@@ -509,188 +684,96 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* ────────────────── Three ways in ──────────────────
-                    The three things a visitor can actually do here, as
-                    cards. Content lives in `PILLARS` above so the three stay
-                    structurally identical — the only differences that matter
-                    are the destination, the icon and the photograph. */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
-                    />
-
-                    <div className="relative container">
-                        <div className="mx-auto max-w-3xl text-center">
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4.6vw,3.75rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title">
-                                    <span className="block">
-                                        {t('welcome.pillars.heading_line1')}
-                                    </span>
-                                    <span className="block text-souk-brown italic">
-                                        {t('welcome.pillars.heading_line2')}
-                                    </span>
-                                </h2>
-                            </Reveal>
-                        </div>
-
-                        <div className="mt-14 grid gap-7 sm:grid-cols-2 lg:mt-16 lg:grid-cols-3">
-                            {PILLARS.map(({ key, href, Icon, image }, i) => (
-                                <Reveal key={key} delay={i * 150}>
-                                    <Link
-                                        href={href}
-                                        className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-lg ring-1 shadow-souk-brown/10 ring-souk-brown/10 transition duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-souk-brown/20"
-                                    >
-                                        <div className="relative h-52 shrink-0 overflow-hidden">
-                                            <img
-                                                src={image}
-                                                alt=""
-                                                loading="lazy"
-                                                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                            />
-                                            <div
-                                                aria-hidden="true"
-                                                className="absolute inset-0 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
-                                            />
-
-                                            <span className="absolute start-4 top-4 flex h-12 w-12 items-center justify-center rounded-xl border border-souk-cream/40 bg-souk-brown/70 text-souk-cream backdrop-blur">
-                                                <Icon className="h-6 w-6" />
-                                            </span>
-
-                                            <div className="absolute start-4 end-4 bottom-3">
-                                                <h3 className="font-display text-[1.375rem] leading-tight font-bold text-white">
-                                                    {t(
-                                                        `welcome.pillars.${key}.title`,
-                                                    )}
-                                                </h3>
-                                                {/* Empty in ar — see `hero.badge_script`. */}
-                                                {t(
-                                                    `welcome.pillars.${key}.title_script`,
-                                                ) && (
-                                                    <span
-                                                        dir="rtl"
-                                                        className="font-arabic text-base text-white/70"
-                                                    >
-                                                        {t(
-                                                            `welcome.pillars.${key}.title_script`,
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex flex-1 flex-col p-6">
-                                            <p className="text-sm leading-relaxed text-souk-brown-deep/80">
-                                                {t(
-                                                    `welcome.pillars.${key}.desc`,
-                                                )}
-                                            </p>
-
-                                            <ul className="mt-4 flex flex-wrap gap-1.5">
-                                                {[1, 2, 3, 4].map((n) => (
-                                                    <li
-                                                        key={n}
-                                                        className="rounded-full border border-souk-brown/20 bg-souk-brown/5 px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-souk-brown"
-                                                    >
-                                                        {t(
-                                                            `welcome.pillars.${key}.tag${n}`,
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ul>
-
-                                            {/* `mt-auto` so the cue sits on the
-                                                card's bottom edge whatever the
-                                                description's length — the three
-                                                translations are not the same
-                                                number of lines. */}
-                                            <span className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-souk-brown">
-                                                {t('welcome.pillars.cta')}
-                                                {/*
-                                                 * `rtl:rotate-180` because the
-                                                 * glyph is a direction, not an
-                                                 * ornament: under `dir="rtl"`
-                                                 * flex reverses the row so the
-                                                 * arrow sits to the *left* of
-                                                 * the label, and an unrotated
-                                                 * one would then point back at
-                                                 * the text it is leading away
-                                                 * from. The hover nudge is
-                                                 * mirrored for the same reason.
-                                                 */}
-                                                <ArrowRight
-                                                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
-                                                    strokeWidth={1.75}
-                                                />
-                                            </span>
-                                        </div>
-                                    </Link>
-                                </Reveal>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                {/* ───────────────────── Harmony ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
-                    <div className="relative container grid items-center gap-16 lg:grid-cols-[0.92fr_1.08fr]">
-                        <div>
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2.25rem,4.6vw,4rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                                    {t('welcome.harmony.heading')}
-                                </h2>
-                            </Reveal>
-
-                            {/* Numbered rather than indented: the old staggered
-                                left margin made the three lines look misaligned
-                                instead of deliberate. */}
-                            <ol className="mt-10 space-y-6">
-                                {[1, 2, 3].map((n, i) => (
-                                    <Reveal
-                                        key={n}
-                                        delay={140 + i * 110}
-                                        from="left"
-                                    >
-                                        <li className="flex gap-5">
-                                            <span
-                                                aria-hidden="true"
-                                                className="mt-1 font-display text-sm text-souk-brown/45 tabular-nums"
-                                            >
-                                                0{n}
-                                            </span>
-                                            <p className="border-s border-souk-brown/20 ps-5 text-lg leading-relaxed text-souk-brown-deep">
-                                                {t(`welcome.harmony.line${n}`)}
-                                            </p>
-                                        </li>
-                                    </Reveal>
-                                ))}
-                            </ol>
-                        </div>
-
-                        {/* Arch-topped pair — the doorway shape that recurs
-                            across the site. */}
-                        <Reveal from="right" delay={120}>
-                            <div className="relative mx-auto aspect-[5/4] w-full max-w-[34rem]">
-                                <div className="absolute top-0 left-0 h-[86%] w-[56%] overflow-hidden rounded-t-full rounded-b-3xl shadow-2xl shadow-souk-brown/25">
-                                    <img
-                                        src={leather}
-                                        alt="Hand-tooled Moroccan leather goods drying in a workshop"
-                                        className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                </div>
-                                <div className="absolute right-0 bottom-0 h-[66%] w-[48%] overflow-hidden rounded-t-full rounded-b-3xl border-[8px] border-souk-peach shadow-2xl shadow-souk-brown/25">
-                                    <img
-                                        src={pottery}
-                                        alt="Glazed Moroccan pottery arranged on a shelf"
-                                        className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                </div>
-                                <ZellijStarIcon
+                {/* ───────────────────── Product catalogue ─────────────────────
+                    A slim promo bar rather than a full section: this is a
+                    single, secondary action (download a PDF), not a pitch
+                    that needs its own heading hierarchy and lead paragraph —
+                    it should read as a strip, the way the site's flash
+                    banners do, not as a peer of the sections either side of
+                    it.
+                    The photograph of the catalogue fills the trailing half of
+                    the panel as its background rather than sitting in the copy
+                    as a thumbnail: at icon size it read as a grey smudge, and
+                    at this size it does the job the copy otherwise has to —
+                    showing there is a real, printed object behind the
+                    download.
+                    Download wiring is deliberately not here yet — this is the
+                    design only, the button has nothing to point at until a
+                    catalogue file and a route exist. */}
+                <section className="py-8 lg:py-8">
+                    <div className="container">
+                        <Reveal from="scale">
+                            <div className="relative isolate overflow-hidden rounded-2xl bg-souk-brown">
+                                {/*
+                                 * `end-0` rather than `right-0`: the copy
+                                 * beside it is text, so the whole panel
+                                 * mirrors under `dir="rtl"` and the
+                                 * photograph has to travel with it — the
+                                 * picture would otherwise end up behind the
+                                 * Arabic.
+                                 *
+                                 * `lg` and up only, and at exactly half.
+                                 * Below that the panel is too narrow to give
+                                 * away a half: it showed at 3/5 from `sm`,
+                                 * and since the copy was only capped by
+                                 * `max-w-xl` the heading ran a third of the
+                                 * way into the picture, where the scrim has
+                                 * already faded to ~60% and the type stopped
+                                 * being reliably legible. The copy takes the
+                                 * matching `lg:w-1/2` below, so the two
+                                 * halves meet without overlapping at any
+                                 * width.
+                                 */}
+                                <div
                                     aria-hidden="true"
-                                    className="absolute top-[8%] right-[10%] h-10 w-10 text-souk-brown/25"
-                                />
+                                    className="absolute inset-y-0 end-0 -z-10 hidden lg:block lg:w-1/2"
+                                >
+                                    <img
+                                        src={brochure}
+                                        alt=""
+                                        loading="lazy"
+                                        className="h-full w-full object-cover"
+                                    />
+                                    {/*
+                                     * Dissolves the photograph's leading edge
+                                     * into the brown so the two do not meet on
+                                     * a hard seam. A horizontal gradient is a
+                                     * physical direction, so it is flipped
+                                     * explicitly for Arabic — `to-l` fades
+                                     * leftward (brown at the left, clear at
+                                     * the right), which is only correct while
+                                     * the picture sits on the right.
+                                     */}
+                                    <div className="absolute inset-0 bg-gradient-to-l from-transparent via-souk-brown/55 to-souk-brown rtl:bg-gradient-to-r" />
+                                </div>
+
+                                {/* `lg:w-1/2` is what actually keeps the copy
+                                    off the photograph — `max-w-xl` alone is a
+                                    fixed 36rem, so on a panel narrower than
+                                    72rem it stopped short of the constraint
+                                    and the type ran under the picture. Half
+                                    the panel is the same boundary the photo
+                                    uses, so they cannot overlap however long
+                                    a translation runs. */}
+                                <div className="max-w-xl px-6 py-10 sm:px-8 sm:py-12 lg:w-1/2 lg:py-14">
+                                    <p className="font-display text-2xl leading-snug text-white">
+                                        {t('welcome.catalogue.heading')}
+                                    </p>
+                                    <p className="mt-1.5 text-sm text-souk-cream/75">
+                                        {t('welcome.catalogue.lead')}
+                                    </p>
+                                    <a
+                                        href="#"
+                                        onClick={(e) => e.preventDefault()}
+                                        className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-souk-cream px-6 py-3 text-sm font-semibold tracking-[0.04em] text-souk-brown-deep uppercase transition-colors hover:bg-white"
+                                    >
+                                        <Download
+                                            className="h-4 w-4 shrink-0"
+                                            strokeWidth={2}
+                                        />
+                                        {t('welcome.catalogue.button')}
+                                    </a>
+                                </div>
                             </div>
                         </Reveal>
                     </div>
@@ -702,7 +785,7 @@ export default function Welcome({
                     the composition itself carries the claim — one shop, two
                     kinds of customer. `AUDIENCE` below holds each branch's
                     content; the centre is shared. */}
-                <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-24 lg:py-32">
+                <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-8 lg:py-8">
                     <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
@@ -712,7 +795,7 @@ export default function Welcome({
                         {/* ── Introduction ── */}
                         <div className="mx-auto max-w-3xl text-center">
                             <Reveal delay={80}>
-                                <h2 className="mt-5 font-display text-[clamp(2.25rem,5vw,4.25rem)] leading-[1.02] font-bold tracking-[-0.02em] text-souk-title">
+                                <h2 className="mt-5 font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.02] font-bold tracking-[-0.02em] text-souk-title">
                                     {t('welcome.audience.heading')}
                                 </h2>
                             </Reveal>
@@ -800,231 +883,239 @@ export default function Welcome({
                     </div>
                 </section>
 
-                {/* ───────────────────── Where they work ─────────────────────
-                    A diagram, not a map service: a flat silhouette with four
-                    pins. Nothing here is tiled, geocoded or fetched, so the
-                    section costs one inline path and no third-party script. */}
-                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
-                    <div className="relative z-10 container">
-                        {/*
-                         * Copy beside the map rather than stacked above it, so
-                         * the two halves travel toward each other as the
-                         * section scrolls in.
-                         *
-                         * Under `dir="rtl"` the copy moves to the other side,
-                         * so the reveal directions are swapped with it —
-                         * `Reveal`'s `from` is a physical translate, and
-                         * left/right would otherwise be the wrong way round
-                         * in Arabic, each half sliding in across the other.
-                         */}
-                        <div className="lg:w-[50%]">
-                            <Reveal from={isRTL ? 'right' : 'left'}>
-                                {/* <p className="text-[11px] font-semibold tracking-[0.24em] text-souk-brown uppercase">
-                                    {t('welcome.map.eyebrow')}
-                                </p> */}
+                {/* ───────────────────────── Contact ─────────────────────────
+                    The map stays, but as the companion to the contact details
+                    rather than as the section's own full-bleed background: it
+                    used to hang off the trailing edge with the copy half a
+                    screen away, which read as two unrelated things sharing a
+                    band. In a two-column grid the pins sit directly beside the
+                    address they illustrate.
 
+                    Still a diagram, not a map service — a flat silhouette with
+                    pins, so this costs one inline path and no third-party
+                    script. */}
+                <section className="relative overflow-hidden">
+                    <div className="container">
+                        {/*
+                         * `items-center` so the map sits against the middle of
+                         * the details rather than the top of them, and the two
+                         * columns read as a pair.
+                         *
+                         * Under `dir="rtl"` the grid mirrors, so the reveal
+                         * directions are swapped with it — `Reveal`'s `from` is
+                         * a physical translate, and left/right would otherwise
+                         * be the wrong way round in Arabic, each half sliding
+                         * in across the other.
+                         */}
+                        <div className="mx-auto grid w-fit items-center gap-14 py-8 lg:grid-cols-2 lg:gap-8">
+                            <Reveal from={isRTL ? 'right' : 'left'}>
                                 <h2 className="mt-4 font-display text-[clamp(2rem,4.2vw,3.5rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title">
                                     <span className="block">
-                                        {t('welcome.map.heading_line1')}
+                                        {t('welcome.contact.heading_line1')}
                                     </span>
-                                    <span className="block text-souk-brown italic">
-                                        {t('welcome.map.heading_line2')}
+                                    <span className="block text-souk-brown">
+                                        {t('welcome.contact.heading_line2')}
                                     </span>
                                 </h2>
 
-                                <p className="mt-6 max-w-md text-lg leading-relaxed text-souk-brown-deep/80">
-                                    {t('welcome.map.lead')}
-                                </p>
-                                <p className="mt-4 max-w-md leading-relaxed text-souk-brown-deep/70">
-                                    {t('welcome.map.body')}
-                                </p>
+                                {/*
+                                 * A `<dl>`, not a list of paragraphs: each row
+                                 * is a label and its value, which is what a
+                                 * description list is for — and it gives a
+                                 * screen reader the pairing for free.
+                                 *
+                                 * Email and phone are real links; an address
+                                 * is not, so it stays plain text rather than
+                                 * being dressed as something clickable.
+                                 */}
+                                <dl className="mt-10 space-y-7">
+                                    {CONTACT_ROWS.map(({ key, Icon, href }) => {
+                                        const value = t(
+                                            `welcome.contact.${key}`,
+                                        );
+                                        /*
+                                         * The number is stored spaced for
+                                         * legibility ("+212 000 000 000"), but
+                                         * a `tel:` URI has no spaces in it —
+                                         * RFC 3966 wants the digits and the
+                                         * `+` and nothing else. Stripped here
+                                         * rather than in the translation so
+                                         * the displayed value keeps its
+                                         * grouping.
+                                         */
+                                        const target = href
+                                            ? `${href}${
+                                                  href === 'tel:'
+                                                      ? value.replace(
+                                                            /[^+\d]/g,
+                                                            '',
+                                                        )
+                                                      : value
+                                              }`
+                                            : null;
 
-                                {/* The pins, restated as a list — the map's
-                                    own labels are small, and this gives the
-                                    four names a readable form on a phone
-                                    where the panel shrinks. */}
-                                {/* <ul className="mt-8 flex flex-wrap gap-2">
-                                    {MAP_CITIES.map(({ key }) => (
-                                        <li
-                                            key={key}
-                                            className="inline-flex items-center gap-2 rounded-full border border-souk-brown/20 bg-souk-brown/5 px-3.5 py-1.5 text-sm text-souk-brown-deep"
-                                        >
-                                            <span
-                                                aria-hidden="true"
-                                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-souk-brown"
-                                            />
-                                            {t(`welcome.map.city.${key}`)}
-                                        </li>
-                                    ))}
-                                </ul> */}
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="flex items-start gap-4"
+                                            >
+                                                {/* The arch-topped frame the
+                                                    header's icon buttons and
+                                                    the product cards wear, so
+                                                    these belong to the same
+                                                    vocabulary. */}
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="grid size-11 shrink-0 place-items-center rounded-t-full rounded-b-md bg-souk-brown/10 text-souk-brown ring-1 ring-souk-brown/15"
+                                                >
+                                                    <Icon
+                                                        className="size-[18px]"
+                                                        strokeWidth={1.6}
+                                                    />
+                                                </span>
+
+                                                <div>
+                                                    <dt className="text-[11px] font-semibold tracking-[0.18em] text-souk-brown-deep/55 uppercase rtl:tracking-normal">
+                                                        {t(
+                                                            `welcome.contact.${key}_label`,
+                                                        )}
+                                                    </dt>
+                                                    {/*
+                                                     * `dir="ltr"` on the value:
+                                                     * an email address and a
+                                                     * dialling code are Latin
+                                                     * and left-to-right even
+                                                     * inside Arabic, and a
+                                                     * leading `+` in an RTL
+                                                     * paragraph is reordered to
+                                                     * the wrong end of the
+                                                     * number without it.
+                                                     */}
+                                                    <dd
+                                                        dir={
+                                                            target
+                                                                ? 'ltr'
+                                                                : undefined
+                                                        }
+                                                        className="mt-1 font-display text-lg text-souk-title rtl:text-end"
+                                                    >
+                                                        {target ? (
+                                                            <a
+                                                                href={target}
+                                                                className="transition-colors hover:text-souk-brown"
+                                                            >
+                                                                {value}
+                                                            </a>
+                                                        ) : (
+                                                            value
+                                                        )}
+                                                    </dd>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </dl>
+                            </Reveal>
+
+                            {/*
+                             * The map. In flow beside the details now rather
+                             * than absolutely positioned against the section
+                             * edge — the aspect ratio still derives the height
+                             * from the width, so the artwork is never
+                             * letterboxed and the pins, which are percentages
+                             * of this same box, stay in register.
+                             */}
+                            <Reveal from={isRTL ? 'left' : 'right'} delay={120}>
+                                {/*
+                                 * `lg:mx-0` pulls the artwork to the inline
+                                 * *start* of its column from `lg` up, rather
+                                 * than centring it there: centred, the map's
+                                 * own leftover column space stacked on top of
+                                 * the grid gap and left it 140px from the
+                                 * details it belongs to. Hugging the start
+                                 * edge leaves only the gap itself.
+                                 *
+                                 * Inline-start, not `left`, so it still sits
+                                 * on the side facing the details once the grid
+                                 * mirrors under `dir="rtl"`. Centred below
+                                 * `lg`, where the two stack and there is no
+                                 * column to hug.
+                                 */}
+                                <div
+                                    className="relative mx-auto w-full max-w-sm lg:mx-0 lg:max-w-md"
+                                    style={{ aspectRatio: MOROCCO_ASPECT }}
+                                >
+                                    <MoroccoMap
+                                        className="h-full w-full text-souk-brown"
+                                        fillOpacity={0.14}
+                                        strokeOpacity={0.4}
+                                    />
+
+                                    {/*
+                                     * Pins are HTML over the SVG rather than
+                                     * <circle>/<text> inside it: that way the
+                                     * labels are real text in the page font and
+                                     * `motion-safe:` can switch the pulse off,
+                                     * neither of which SMIL inside the SVG would
+                                     * give.
+                                     *
+                                     * `left`/`top` are physical on purpose. Every
+                                     * other offset on this page is logical so it
+                                     * mirrors under `dir="rtl"` — a map must not.
+                                     * Tangier is north whichever way the page
+                                     * reads.
+                                     */}
+                                    {MAP_CITIES.map(
+                                        ({ key, lon, lat, labelAbove }, i) => {
+                                            const { left, top } =
+                                                projectMorocco(lon, lat);
+
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className="absolute -translate-x-1/2 -translate-y-1/2"
+                                                    style={{
+                                                        left: `${left}%`,
+                                                        top: `${top}%`,
+                                                    }}
+                                                >
+                                                    <span className="relative flex h-2.5 w-2.5">
+                                                        <span
+                                                            className="absolute inline-flex h-full w-full rounded-full bg-souk-brown/60 motion-safe:animate-ping"
+                                                            /* Offset so the four pulse in
+                                                   turn rather than as one
+                                                   flashing block. */
+                                                            style={{
+                                                                animationDelay: `${i * 600}ms`,
+                                                            }}
+                                                        />
+                                                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-souk-brown ring-2 ring-souk-peach" />
+                                                    </span>
+
+                                                    <span
+                                                        className={`absolute left-1/2 -translate-x-1/2 font-display text-xs font-semibold whitespace-nowrap text-souk-brown-deep sm:text-sm ${
+                                                            labelAbove
+                                                                ? 'bottom-4'
+                                                                : 'top-4'
+                                                        }`}
+                                                    >
+                                                        {t(
+                                                            `welcome.map.city.${key}`,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            );
+                                        },
+                                    )}
+                                </div>
                             </Reveal>
                         </div>
                     </div>
-
-                    {/*
-                     * The map, as the section's own side background.
-                     *
-                     * One element in two modes rather than two copies: below
-                     * `lg` it is an ordinary block under the copy, and from
-                     * `lg` it becomes absolute and full-bleed against the
-                     * trailing edge. `inset-y-0` sets its height from the
-                     * section, and the aspect ratio derives the width — so the
-                     * artwork is never letterboxed and the pins, which are
-                     * percentages of this same box, stay in register in both
-                     * modes.
-                     *
-                     * `end-0` is logical, so the map moves to the other side
-                     * in Arabic along with the copy. The artwork inside does
-                     * not mirror — only which edge it hangs off.
-                     */}
-                    <Reveal
-                        from={isRTL ? 'left' : 'right'}
-                        delay={120}
-                        className="relative z-0 mt-14 px-6 lg:absolute lg:inset-y-0 lg:end-0 lg:mt-0 lg:px-0"
-                    >
-                        <div
-                            className="relative mx-auto w-full max-w-xs lg:h-full lg:w-auto lg:max-w-none"
-                            style={{ aspectRatio: MOROCCO_ASPECT }}
-                        >
-                            <MoroccoMap
-                                className="h-full w-full text-souk-brown"
-                                fillOpacity={0.14}
-                                strokeOpacity={0.4}
-                            />
-
-                            {/*
-                             * Pins are HTML over the SVG rather than
-                             * <circle>/<text> inside it: that way the
-                             * labels are real text in the page font and
-                             * `motion-safe:` can switch the pulse off,
-                             * neither of which SMIL inside the SVG would
-                             * give.
-                             *
-                             * `left`/`top` are physical on purpose. Every
-                             * other offset on this page is logical so it
-                             * mirrors under `dir="rtl"` — a map must not.
-                             * Tangier is north whichever way the page
-                             * reads.
-                             */}
-                            {MAP_CITIES.map(
-                                ({ key, lon, lat, labelAbove }, i) => {
-                                    const { left, top } = projectMorocco(
-                                        lon,
-                                        lat,
-                                    );
-
-                                    return (
-                                        <div
-                                            key={key}
-                                            className="absolute -translate-x-1/2 -translate-y-1/2"
-                                            style={{
-                                                left: `${left}%`,
-                                                top: `${top}%`,
-                                            }}
-                                        >
-                                            <span className="relative flex h-2.5 w-2.5">
-                                                <span
-                                                    className="absolute inline-flex h-full w-full rounded-full bg-souk-brown/60 motion-safe:animate-ping"
-                                                    /* Offset so the four pulse in
-                                                   turn rather than as one
-                                                   flashing block. */
-                                                    style={{
-                                                        animationDelay: `${i * 600}ms`,
-                                                    }}
-                                                />
-                                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-souk-brown ring-2 ring-souk-peach" />
-                                            </span>
-
-                                            <span
-                                                className={`absolute left-1/2 -translate-x-1/2 font-display text-xs font-semibold whitespace-nowrap text-souk-brown-deep sm:text-sm ${
-                                                    labelAbove
-                                                        ? 'bottom-4'
-                                                        : 'top-4'
-                                                }`}
-                                            >
-                                                {t(`welcome.map.city.${key}`)}
-                                            </span>
-                                        </div>
-                                    );
-                                },
-                            )}
-                        </div>
-                    </Reveal>
                 </section>
 
                 {/* ───────────────────── Gallery ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-28">
-                    <div className="relative container text-center">
-                        <Reveal delay={80}>
-                            <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-none font-bold tracking-[-0.02em] text-souk-title">
-                                {t('welcome.gallery.heading')}
-                            </h2>
-                        </Reveal>
-                        <Reveal delay={140}>
-                            <p className="mx-auto mt-4 max-w-xl text-souk-brown-deep/75">
-                                {t('welcome.gallery.lead')}
-                            </p>
-                        </Reveal>
-                    </div>
 
-                    {/* Full-bleed rather than contained: the strip has to run
-                        off both edges for the drift to read as continuous
-                        rather than as a row that stops. */}
-                    <div className="relative mt-14 overflow-hidden">
-                        {/*
-                         * `motion-safe:` as on the word marquee — anyone who
-                         * has asked their OS for reduced motion gets a still
-                         * strip instead. Pauses on hover so a piece that
-                         * catches the eye can actually be looked at.
-                         */}
-                        <div className="flex w-max hover:[animation-play-state:paused] motion-safe:animate-gallery">
-                            {[0, 1].map((copy) => (
-                                <ul
-                                    key={copy}
-                                    className="flex items-center"
-                                    /*
-                                     * The loop needs two identical copies to
-                                     * translate across seamlessly, but a
-                                     * screen reader should hear the set once.
-                                     */
-                                    aria-hidden={copy === 1 || undefined}
-                                >
-                                    {GALLERY.map(({ src, alt, box, shift }) => (
-                                        <li
-                                            key={`${copy}-${alt}`}
-                                            className={`px-2 md:px-3 ${shift}`}
-                                        >
-                                            <div
-                                                className={`group relative w-44 overflow-hidden rounded-3xl bg-souk-brown/5 ring-1 ring-souk-brown/10 md:w-60 ${box}`}
-                                            >
-                                                <img
-                                                    src={src}
-                                                    alt={copy === 0 ? alt : ''}
-                                                    className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-105"
-                                                    loading="lazy"
-                                                />
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ))}
-                        </div>
-
-                        {/*
-                         * Feathered edges, so tiles enter and leave the strip
-                         * instead of being clipped off mid-drift against a
-                         * hard border.
-                         */}
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-y-0 start-0 w-16 bg-gradient-to-r from-souk-paper to-transparent md:w-28 rtl:bg-gradient-to-l"
-                        />
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-y-0 end-0 w-16 bg-gradient-to-l from-souk-paper to-transparent md:w-28 rtl:bg-gradient-to-r"
-                        />
-                    </div>
-                </section>
+                <div>logos</div>
 
                 <ArtisanCta />
 

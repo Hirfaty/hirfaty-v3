@@ -116,4 +116,14 @@ return [
 
     'errors.back_home' => 'Back to home',
     'errors.browse_market' => 'Explore the market',
+
+    /*
+     * The site footer's Arabic signature line, under the tagline paragraph.
+     * Kept as the same Arabic string in all three locale files rather than
+     * translated into English/French — same convention as
+     * `welcome.hero.badge_script` and `welcome.seller_cta.ar_line`: an
+     * ornamental flourish in the brand's own language, not copy that changes
+     * with the active locale.
+     */
+    'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
 ];

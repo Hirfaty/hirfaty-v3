@@ -1,6 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useRef,
+    useState,
+} from 'react';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 
@@ -66,10 +71,10 @@ function RailCard({
         >
             <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5">
                 {gallery.length > 0 ? (
-                    // Same dip-free crossfade stack as `CollectionCard` and
-                    // the home hero's `HeroBackdrop` — see either for why the
-                    // outgoing frame stays opaque underneath the incoming one
-                    // rather than the two simply swapping opacity together.
+                    // Same dip-free crossfade stack as `CollectionCard` — see
+                    // it for why the outgoing frame stays opaque underneath
+                    // the incoming one rather than the two simply swapping
+                    // opacity together.
                     <div className="absolute inset-0 isolate">
                         {gallery.map((image, i) => {
                             const active = i === index;
@@ -140,49 +145,92 @@ function RailCard({
     );
 }
 
+/** Imperative paging, for the arrow pair the page header renders — see below. */
+export type ProductRailHandle = {
+    prev: () => void;
+    next: () => void;
+};
+
 /**
- * The home page's product strip.
+ * Enough for a caller's own buttons to disable themselves correctly — the
+ * same rule the rail used to apply to its own, now-removed arrows: while
+ * autoplay is running there is no "start" or "end" to disable against, so
+ * both stay enabled regardless of `atStart`/`atEnd`.
+ */
+export type ProductRailBounds = {
+    atStart: boolean;
+    atEnd: boolean;
+    autoplay: boolean;
+};
+
+/**
+ * The home page's product strip — two rows of merchandise, packed into
+ * columns of two cards each so a single horizontal scroll moves both rows
+ * together. Two rows rather than one so the same width of screen surfaces
+ * twice the stock before a shopper has to touch anything.
  *
- * Drifts on its own exactly like the "Galerie" strip further down the page
- * (`animate-gallery` — a doubled track translated by CSS) — except this row
- * is real, clickable merchandise rather than decorative photography, so the
- * loop is driven from JS against genuine `scrollLeft` instead of a CSS
- * transform: that keeps native touch swipe, trackpad flick and keyboard
- * traversal all still working the instant the drift is stopped, which a
- * transform-only marquee couldn't offer without being torn down and rebuilt
- * as a scroller at that moment.
+ * Moves itself in hops rather than a continuous drift: advance a few
+ * columns, settle, wait, advance again — a rhythm rather than a scroll, so it
+ * reads as merchandise being paged through rather than a marquee. Driven
+ * against genuine `scrollLeft` rather than a CSS transform (the same choice
+ * the old single-row drift made), which is what keeps native touch swipe,
+ * trackpad flick and keyboard traversal all still working the instant
+ * autoplay is stopped, without tearing the strip down and rebuilding it as a
+ * scroller at that moment.
  *
- * The loop illusion itself borrows the Gallery's own trick: the track holds
- * two identical copies of the list back to back, drifts forward, and snaps
+ * The loop illusion borrows the Gallery's own trick: the track holds two
+ * identical copies of the column list back to back, hops forward, and snaps
  * `scrollLeft` back by exactly one copy's width the instant it crosses into
  * the second — invisible, because the second copy looks exactly like the
  * first taking its place. The second copy is `aria-hidden` and untabbable,
- * same as the Gallery's, and only exists while the drift is running: once
+ * same as the Gallery's, and only exists while autoplay is running: once
  * stopped it unmounts, so a shopper paging by hand never lands on a
  * duplicate.
  *
- * Any manual touch — an arrow, a swipe, a wheel nudge — stops the drift for
- * good rather than pausing it. A marquee that resumes out from under a
- * shopper mid-swipe is fighting them; once they have taken the wheel, native
- * scroll-snap paging (the pre-existing behaviour) takes over permanently.
+ * Only the arrows stop it, and for good — not a wheel nudge, not a touch that
+ * merely started over the strip, and not the pointer simply resting on it.
+ * Those used to stop or pause it, which is exactly what made the rail sit
+ * still for anyone reading it: the cursor ends up over the strip the moment
+ * someone scrolls *the page* past it, wherever the pointer happens to be, and
+ * a rail that freezes whenever it is being looked at never gets to show its
+ * second handful of stock. Hovering a card still swaps its own gallery
+ * (`useHoverGallery`) — the strip underneath keeps hopping regardless.
+ *
+ * The arrows themselves are not rendered here. They used to sit overlaid on
+ * the rail's own edges; the page header now renders its own pair top-right of
+ * the section instead, driving this component through `ref` (`prev`/`next`)
+ * and reading `onBoundsChange` to know when to grey out. The rail keeps
+ * owning the scroll position, the hop loop and the autoplay-stopping rule —
+ * only the buttons' markup and placement moved.
  */
-export default function ProductRail({
-    products,
-    isRTL,
-    currency,
-    prevLabel,
-    nextLabel,
-}: {
-    products: RailProduct[];
-    isRTL: boolean;
-    /** Already-translated currency suffix, e.g. "MAD". */
-    currency: string;
-    prevLabel: string;
-    nextLabel: string;
-}) {
+const ProductRail = forwardRef<
+    ProductRailHandle,
+    {
+        products: RailProduct[];
+        isRTL: boolean;
+        /** Already-translated currency suffix, e.g. "MAD". */
+        currency: string;
+        /** Fires whenever the paging state changes — see `ProductRailBounds`. */
+        onBoundsChange?: (bounds: ProductRailBounds) => void;
+    }
+>(function ProductRail({ products, isRTL, currency, onBoundsChange }, ref) {
     const track = useRef<HTMLUListElement>(null);
     const [atStart, setAtStart] = useState(true);
     const [atEnd, setAtEnd] = useState(false);
+
+    /*
+     * Paired up two at a time into columns, so the track scrolls one strip
+     * of *columns* rather than one strip of cards — each column stacks its
+     * two products vertically, which is what turns a single-row rail into a
+     * two-row one without touching how the scrolling itself works. A
+     * trailing odd product gets a column of its own rather than being
+     * dropped, since the backend already decides how many to feature.
+     */
+    const columns: RailProduct[][] = [];
+
+    for (let i = 0; i < products.length; i += 2) {
+        columns.push(products.slice(i, i + 2));
+    }
 
     /*
      * Off outright for anyone who has asked their OS for reduced motion, and
@@ -193,24 +241,19 @@ export default function ProductRail({
      */
     const [autoplay, setAutoplay] = useState(
         () =>
-            products.length > 1 &&
+            columns.length > 1 &&
             !(
                 typeof window !== 'undefined' &&
                 window.matchMedia('(prefers-reduced-motion: reduce)').matches
             ),
     );
-    // Paused (not stopped) while the pointer is over the strip, exactly like
-    // the Gallery's `hover:[animation-play-state:paused]` — read inside the
-    // rAF loop via a ref rather than state, so hovering doesn't re-run the
-    // effect that owns the animation frame.
-    const paused = useRef(false);
 
     /**
-     * Ends the drift for good and drops the decorative second copy. Safe to
-     * call unconditionally — every trigger below fires this before doing
-     * anything else, and a no-op when the drift is already off.
+     * Ends autoplay for good and drops the decorative second copy. Only the
+     * arrows call this — see the component doc for why every other gesture
+     * used to and no longer does.
      *
-     * No scroll-position bookkeeping needed: the rAF loop below always keeps
+     * No scroll-position bookkeeping needed: the loop below always keeps
      * `scrollLeft` within the span of one copy (it is what the wraparound is
      * for), so the position already makes sense once the second copy is gone
      * — nothing to translate.
@@ -218,13 +261,29 @@ export default function ProductRail({
     const stopAutoplay = () => setAutoplay(false);
 
     /**
-     * Drives the loop while `autoplay` is on: advances `scrollLeft` at a
-     * constant speed (delta-time based, so frame-rate hiccups don't change
-     * how fast the row appears to move) and folds it back by one copy's
-     * width the moment it drifts into the second — the seamless-loop trick,
-     * done against real scroll instead of a transform.
+     * Drives the loop while `autoplay` is on: tween several columns' worth of
+     * `scrollLeft`, rest, repeat — folding back by one copy's width the
+     * moment a hop crosses into the second copy, the same seamless-loop trick
+     * the old continuous drift used, just applied once per hop instead of
+     * once per frame.
      *
-     * `isRTL` flips the sign the same way `page()` used to: right-to-left
+     * `HOP_COLUMNS` columns rather than one: a hop that only ever swapped in
+     * a single new column read as barely moving — a shopper glancing over
+     * mid-hop would see almost the same set of products as before it. Moving
+     * a small page's worth at once makes each hop read as a new handful of
+     * merchandise, the way the arrows' own `page()` already does for a
+     * manual press.
+     *
+     * The column width is measured off the live DOM at the start of every
+     * hop rather than computed once: it changes at the `sm` breakpoint, and
+     * re-measuring is the only way the hop distance keeps up with a resize
+     * that happens between hops. The result is clamped to half the track
+     * (`halfway`, the span of one copy of the list): without it, a short
+     * catalogue — few enough columns that `HOP_COLUMNS` overshoots a whole
+     * copy — could skip past the wraparound point the check below only
+     * tests once per frame, rather than land inside it.
+     *
+     * `isRTL` flips the sign the same way `page()` does: right-to-left
      * containers report `scrollLeft` counting *down* from 0 in every current
      * browser, so "forward" is a negative delta there.
      */
@@ -239,40 +298,77 @@ export default function ProductRail({
             return;
         }
 
-        const pxPerSecond = 26;
         const dir = isRTL ? -1 : 1;
+        // How long one hop takes, and how long the strip rests before the
+        // next — together, the "move a little, stop" rhythm.
+        const hopDuration = 650;
+        const dwell = 1500;
+        const HOP_COLUMNS = 3;
+
         let raf = 0;
-        let lastTs: number | null = null;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let cancelled = false;
 
-        const step = (ts: number) => {
-            // Clamped rather than left raw: a backgrounded tab can deliver a
-            // multi-second gap between frames, and applying that gap in one
-            // jump would skip the row past several cards instead of drifting.
-            const dt = lastTs === null ? 0 : Math.min(ts - lastTs, 100) / 1000;
-            lastTs = ts;
+        const hop = () => {
+            if (cancelled) {
+                return;
+            }
 
-            if (!paused.current) {
-                el.scrollLeft += dir * pxPerSecond * dt;
+            const first = el.children[0] as HTMLElement | undefined;
+            const second = el.children[1] as HTMLElement | undefined;
+            const columnStep =
+                first && second
+                    ? Math.abs(second.offsetLeft - first.offsetLeft)
+                    : el.clientWidth;
+            const halfway = el.scrollWidth / 2;
+            const distancePerHop = Math.min(columnStep * HOP_COLUMNS, halfway);
 
-                const halfway = el.scrollWidth / 2;
+            const from = el.scrollLeft;
+            const travel = dir * distancePerHop;
+            const start = performance.now();
 
+            const frame = (now: number) => {
+                if (cancelled) {
+                    return;
+                }
+
+                const p = Math.min((now - start) / hopDuration, 1);
+                // easeOutCubic — the hop decelerates into its rest rather
+                // than stopping dead.
+                const eased = 1 - (1 - p) ** 3;
+
+                el.scrollLeft = from + travel * eased;
+
+                // `halfway` is the outer, per-hop measurement above — the
+                // track's width does not change mid-tween, so there is
+                // nothing to re-measure here.
                 if (dir > 0 && el.scrollLeft >= halfway) {
                     el.scrollLeft -= halfway;
                 } else if (dir < 0 && el.scrollLeft <= -halfway) {
                     el.scrollLeft += halfway;
                 }
-            }
 
-            raf = requestAnimationFrame(step);
+                if (p < 1) {
+                    raf = requestAnimationFrame(frame);
+                } else {
+                    timeout = setTimeout(hop, dwell);
+                }
+            };
+
+            raf = requestAnimationFrame(frame);
         };
 
-        raf = requestAnimationFrame(step);
+        timeout = setTimeout(hop, dwell);
 
-        return () => cancelAnimationFrame(raf);
-    }, [autoplay, isRTL, products.length]);
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(raf);
+            clearTimeout(timeout);
+        };
+    }, [autoplay, isRTL, columns.length]);
 
     /**
-     * Which arrows are still live. Only meaningful once the drift has
+     * Which arrows are still live. Only meaningful once autoplay has
      * stopped — while it's running the strip loops forever, so there is no
      * "start" or "end" to disable against yet.
      *
@@ -306,7 +402,7 @@ export default function ProductRail({
             el.removeEventListener('scroll', update);
             observer.disconnect();
         };
-    }, [products.length, autoplay]);
+    }, [columns.length, autoplay]);
 
     const page = (dir: 1 | -1) => {
         const el = track.current;
@@ -324,9 +420,9 @@ export default function ProductRail({
     };
 
     /**
-     * An arrow's first job is to hand control back to the shopper: while the
-     * drift is running, a click stops it and nothing else — the row is
-     * already moving in that general direction, so a click that both stopped
+     * An arrow's first job is to hand control back to the shopper: while
+     * autoplay is running, a press stops it and nothing else — the row is
+     * already moving in that general direction, so a press that both stopped
      * *and* paged would fire two motions on top of each other. Once stopped,
      * arrows page as normal.
      */
@@ -341,46 +437,53 @@ export default function ProductRail({
     };
 
     /*
-     * Overlaid on the rail's own edges, so they read as belonging to the row
-     * rather than as a control panel parked under it. Solid paper fill and a
-     * shadow because they now sit over photography, where the bare outlined
-     * button they used to be would disappear into a dark image.
-     *
-     * `top` is half of a card's *image*, not half of the track: the track is
-     * taller by the caption underneath each card, and centring on that would
-     * leave both arrows visibly low. The figures are the card widths below
-     * (15 / 16.5rem) at the 4:5 crop, halved.
+     * The only way in for the page header's arrow buttons: `prev`/`next` are
+     * the same `handleArrow` the old internal buttons called, so the
+     * stop-before-paging rule above still applies no matter which markup is
+     * driving it.
      */
-    const arrow =
-        'absolute top-[9.375rem] z-20 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-souk-paper text-souk-brown shadow-lg shadow-souk-brown/15 ring-1 ring-souk-brown/15 transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:pointer-events-none disabled:opacity-0 sm:top-[10.3125rem] sm:grid';
+    useImperativeHandle(ref, () => ({
+        prev: () => handleArrow(-1),
+        next: () => handleArrow(1),
+    }));
+
+    /*
+     * Tells the caller's buttons when to grey out — see `ProductRailBounds`.
+     * Read through a ref rather than a plain effect dependency: `onBoundsChange`
+     * is a fresh function on every one of the caller's renders (it is not,
+     * and does not need to be, wrapped in `useCallback`), and depending on it
+     * directly would re-fire this effect, and re-notify the caller, on every
+     * render of the page rather than only when the paging state itself
+     * changes.
+     */
+    const onBoundsChangeRef = useRef(onBoundsChange);
+
+    useEffect(() => {
+        onBoundsChangeRef.current = onBoundsChange;
+    });
+
+    useEffect(() => {
+        onBoundsChangeRef.current?.({ atStart, atEnd, autoplay });
+    }, [atStart, atEnd, autoplay]);
 
     return (
-        <div className="relative">
+        <div className="relativ">
             {/*
              * The row bleeds past the container on both sides and is faded
              * back out there, so the cards run off the edge of the page
              * instead of stopping dead in a line — the rail should look like
              * a slice of something longer, which is what the arrows promise.
              *
-             * Scroll-snap only applies once the drift has stopped: snapping
-             * against a `scrollLeft` that JS is already driving every frame
-             * fights the browser's own snap-back and stutters.
+             * Scroll-snap only applies once autoplay has stopped: snapping
+             * against a `scrollLeft` the hop loop is already driving fights
+             * the browser's own snap-back and stutters.
              *
-             * Any manual scroll gesture on the track — a wheel nudge, a
-             * touch drag — stops the drift the same way an arrow does,
-             * before the browser's own handling of that gesture even runs.
+             * No `onWheel`/`onTouchStart`/`onPointerDown`/`onMouseEnter` here
+             * on purpose — see the component doc. Only the arrows call
+             * `stopAutoplay`, and nothing pauses.
              */}
             <ul
                 ref={track}
-                onMouseEnter={() => {
-                    paused.current = true;
-                }}
-                onMouseLeave={() => {
-                    paused.current = false;
-                }}
-                onWheel={stopAutoplay}
-                onTouchStart={stopAutoplay}
-                onPointerDown={stopAutoplay}
                 className={`-mx-5 flex gap-6 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:-mx-10 sm:px-10 [&::-webkit-scrollbar]:hidden ${
                     autoplay
                         ? ''
@@ -393,28 +496,33 @@ export default function ProductRail({
                 }`}
             >
                 {/*
-                 * One copy while stopped; two back to back while drifting —
-                 * see the component doc for why. The second is `aria-hidden`
-                 * and untabbable, same treatment the Gallery gives its own
-                 * repeated copy just below on the page.
+                 * One copy while stopped; two back to back while autoplay is
+                 * running — see the component doc for why. The second is
+                 * `aria-hidden` and untabbable, same treatment the Gallery
+                 * gives its own repeated copy just below on the page.
                  */}
                 {(autoplay ? [0, 1] : [0]).map((copy) =>
-                    products.map((product) => (
+                    columns.map((column, colIndex) => (
                         <li
-                            key={`${copy}-${product.id}`}
+                            key={`${copy}-${colIndex}`}
                             aria-hidden={copy === 1 || undefined}
                             /* Fixed widths rather than a fraction of the
                                track: a percentage basis would resize the
                                cards as the viewport grows, whereas a rail
                                should keep the card constant and simply show
-                               more of them. */
-                            className="w-[15rem] shrink-0 snap-start sm:w-[16.5rem]"
+                               more of them. A column, not a card: two stack
+                               vertically inside it, which is what makes the
+                               rail two rows deep. */
+                            className="flex w-[15rem] shrink-0 snap-start flex-col gap-10 sm:w-[16.5rem]"
                         >
-                            <RailCard
-                                product={product}
-                                currency={currency}
-                                tabIndex={copy === 1 ? -1 : undefined}
-                            />
+                            {column.map((product) => (
+                                <RailCard
+                                    key={product.id}
+                                    product={product}
+                                    currency={currency}
+                                    tabIndex={copy === 1 ? -1 : undefined}
+                                />
+                            ))}
                         </li>
                     )),
                 )}
@@ -434,46 +542,8 @@ export default function ProductRail({
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-y-0 -end-5 z-10 w-12 bg-gradient-to-l from-souk-paper to-transparent sm:-end-10 sm:w-16 rtl:bg-gradient-to-r"
             />
-
-            {/*
-             * Logical `start`/`end` rather than left/right: "previous" belongs
-             * on whichever side the row starts from, which mirrors with the
-             * document. The glyphs take `rtl:rotate-180` for the same reason —
-             * a chevron is a direction, not an ornament, and in a
-             * right-to-left rail previous *is* rightward.
-             *
-             * Hidden below `sm`, where there is no gutter for them to clear
-             * the artwork and swiping is the natural gesture anyway. Never
-             * disabled while the drift is running — there is no "end" to
-             * disable against yet, and a click's job at that point is only to
-             * stop it. At the ends of a stopped rail they fade out instead of
-             * greying: a button sitting over a photograph at 30% opacity
-             * looks like a rendering fault.
-             */}
-            <button
-                type="button"
-                onClick={() => handleArrow(-1)}
-                disabled={!autoplay && atStart}
-                aria-label={prevLabel}
-                className={`${arrow} -start-4`}
-            >
-                <ChevronLeft
-                    className="h-5 w-5 rtl:rotate-180"
-                    strokeWidth={1.5}
-                />
-            </button>
-            <button
-                type="button"
-                onClick={() => handleArrow(1)}
-                disabled={!autoplay && atEnd}
-                aria-label={nextLabel}
-                className={`${arrow} -end-4`}
-            >
-                <ChevronRight
-                    className="h-5 w-5 rtl:rotate-180"
-                    strokeWidth={1.5}
-                />
-            </button>
         </div>
     );
-}
+});
+
+export default ProductRail;
