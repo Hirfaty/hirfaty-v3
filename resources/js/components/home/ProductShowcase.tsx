@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RefObject } from 'react';
-import { useState } from 'react';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
@@ -31,8 +30,29 @@ export type ShowcaseProduct = {
 /** How many products fill the spotlight carousel down the leading third. */
 const SPOTLIGHT_SIZE = 5;
 
+/** How many rows the grid is split into, each its own rail. */
+const BAND_ROWS = 2;
+
+/**
+ * One slide of a row's rail: 4 products.
+ *
+ * Laid out 1 x 4 from `lg` up and 2 x 2 below it, so a slide is always the same
+ * four products whatever the breakpoint and the rails never have to re-band
+ * themselves on resize.
+ */
+export const BAND_SIZE = 4;
+
 /** How many products fill the grid: 4 columns by 2 rows. */
-const GRID_SIZE = 8;
+const GRID_SIZE = BAND_SIZE * BAND_ROWS;
+
+/**
+ * How long a row holds before it slides on.
+ *
+ * Deliberately not the spotlight's 4500ms: three rails on one beat would
+ * periodically fire together, which reads as the whole section lurching rather
+ * than as three things quietly taking their turns.
+ */
+const BAND_INTERVAL = 5200;
 
 /**
  * The arch shape SiteHeader's own icon buttons use (rounded on top, squared at
@@ -42,8 +62,11 @@ const GRID_SIZE = 8;
 const arrowButton =
     'grid h-9 w-9 cursor-pointer shrink-0 place-items-center rounded-t-full rounded-b-md text-souk-brown transition-colors hover:bg-souk-brown hover:text-souk-cream';
 
-/** The pair above the grid, turning its pages, drawn on the page colour. */
-const gridArrow = `${arrowButton} ring-1 ring-souk-brown/25 disabled:pointer-events-none disabled:opacity-30`;
+/**
+ * The pair above the grid, turning its pages, drawn on the page colour. No
+ * `disabled:` styling: the grid wraps, so neither arrow is ever dead.
+ */
+const gridArrow = `${arrowButton} ring-1 ring-souk-brown/25`;
 
 /**
  * The spotlight's own pair, sitting on the photograph rather than on the page,
@@ -212,12 +235,23 @@ function Spotlight({
  * renders" case the Rules of Hooks exist to catch, since it would run once per
  * item rather than being tied to one.
  */
-function ShowcaseCard({
+export function ShowcaseCard({
     product,
     currency,
+    fill = true,
 }: {
     product: ShowcaseProduct;
     currency: string;
+    /**
+     * Whether the photograph should stretch to fill the height its row was
+     * given, rather than keep its own 4:5 shape.
+     *
+     * True inside the showcase, where the row is a fixed screenful and the
+     * cards divide it up. False anywhere the row has no height of its own —
+     * `NewArrivals`, for one — because `flex-1` against an auto-height parent
+     * resolves to nothing and would collapse the photograph to a hairline.
+     */
+    fill?: boolean;
 }) {
     const gallery = product.gallery_images ?? product.images;
     const { index, previous, hoverProps } = useHoverGallery(gallery.length);
@@ -228,6 +262,12 @@ function ShowcaseCard({
     const onSale = base !== null && sale !== null && sale < base;
 
     return (
+        /*
+         * No entrance animation: the card does not appear, it travels. Its row
+         * is a scroll-snap rail that slides the whole band into view, so a fade
+         * on top of that would only make the arriving products hazy while they
+         * moved.
+         */
         <Link
             {...hoverProps}
             href={`/products/${product.slug}`}
@@ -238,9 +278,14 @@ function ShowcaseCard({
              * (the row is a screenful there, so the photograph is the part
              * that flexes and the caption below keeps its natural size);
              * falls back to a fixed aspect on a phone, where the grid is free
-             * to be as tall as its contents.
+             * to be as tall as its contents — and everywhere, when the row it
+             * sits in has no height of its own to divide up.
              */}
-            <div className="relative aspect-[4/5] shrink-0 overflow-hidden rounded-sm bg-souk-brown/5 lg:aspect-auto lg:min-h-0 lg:flex-1">
+            <div
+                className={`relative aspect-[4/5] shrink-0 overflow-hidden rounded-sm bg-souk-brown/5 ${
+                    fill ? 'lg:aspect-auto lg:min-h-0 lg:flex-1' : ''
+                }`}
+            >
                 {gallery.length > 0 ? (
                     <div className="absolute inset-0 isolate">
                         {gallery.map((image, i) => {
@@ -308,13 +353,123 @@ function ShowcaseCard({
 }
 
 /**
- * The home page's "Explore our products" body: a swipable spotlight down the
- * leading third, a fixed 4 x 2 grid of eight products filling the rest.
+ * One row of the product grid, as a swipable rail.
  *
- * Two sets of controls, each belonging to one half. The grid's arrows turn its
- * pages and live at the top of the section next to the "view all" link; the
- * spotlight's sit in the corner of its own photograph. What is gone is the
- * "x / y" counter that used to accompany the grid's pair.
+ * Built the same way as `Spotlight` and the hero: a scroll-snap track whose
+ * slides are each a full width of the row, tweened between by `useSnapCarousel`
+ * and swipable by hand in between. The only difference is what a slide holds —
+ * four product cards rather than one photograph.
+ *
+ * `offset` is what keeps the two rows showing different products: row r starts
+ * its sequence at band `r × BAND_ROWS` and both then walk forward through the
+ * same bands at the same rate, half a beat apart.
+ *
+ * Why `r × BAND_ROWS` and not simply `r`. Running half a beat apart means the
+ * rows' own indices are either equal (both have ticked) or one apart (the top
+ * has ticked and the bottom has not yet). Row 1's band is `offset + i₁` and row
+ * 0's is `i₀`, so the two collide whenever `offset ≡ i₀ - i₁` — that is,
+ * whenever `offset` is 0 or 1. An offset of 1 therefore looks right and is
+ * wrong exactly half the time: every time the top row ticked, both rows showed
+ * the same four products until the bottom row caught up. Two is the smallest
+ * offset that clears both phases.
+ */
+export function GridRail({
+    products,
+    bandCount,
+    offset,
+    slides,
+    track,
+    order,
+    currency,
+    fill = true,
+    bandSize = BAND_SIZE,
+    columnsClassName = 'grid-cols-2 lg:grid-cols-4',
+}: {
+    /** The whole grid pool; this rail slices its own bands out of it. */
+    products: ShowcaseProduct[];
+    bandCount: number;
+    offset: number;
+    /** How many slides this rail has — see `ProductShowcase`. */
+    slides: number;
+    track: RefObject<HTMLUListElement | null>;
+    /** Render order including the wrap-around clone — see `useSnapCarousel`. */
+    order: number[];
+    currency: string;
+    /**
+     * Whether the rail fills the height it was given rather than taking its
+     * own from its cards — see `ShowcaseCard`. False for a row standing on its
+     * own, like `NewArrivals`.
+     */
+    fill?: boolean;
+    /**
+     * How many products make up one slide of this rail. Defaults to the
+     * showcase's own four; `NewArrivals` overrides it to six, which is why
+     * this is not simply the module constant baked in — a caller with a
+     * different slide width also owns `bandCount`, which is computed against
+     * that same width, so the two never disagree about where one slide ends.
+     */
+    bandSize?: number;
+    /**
+     * The grid's own column classes, since a slide of six needs a different
+     * split than a slide of four. Kept as one Tailwind string rather than a
+     * column *count* prop — grid-cols-N is only ever meaningful in whole
+     * literal classes the compiler can see statically, so a number here would
+     * have to be turned back into one of these strings anyway.
+     */
+    columnsClassName?: string;
+}) {
+    return (
+        <ul
+            ref={track}
+            className={`flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+                fill ? 'lg:h-full' : ''
+            }`}
+        >
+            {order.map((slide, position) => {
+                const band = (offset + slide) % Math.max(slides, 1);
+                const start = (band % Math.max(bandCount, 1)) * bandSize;
+
+                return (
+                    <li
+                        // Positional, because `order` repeats a slide at the
+                        // end — see `useSnapCarousel`.
+                        key={position}
+                        className={`grid w-full shrink-0 grow-0 basis-full snap-start snap-always gap-x-5 gap-y-6 ${columnsClassName} ${
+                            fill ? 'lg:h-full' : ''
+                        }`}
+                    >
+                        {products
+                            .slice(start, start + bandSize)
+                            .map((product) => (
+                                <ShowcaseCard
+                                    key={product.id}
+                                    product={product}
+                                    currency={currency}
+                                    fill={fill}
+                                />
+                            ))}
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
+/**
+ * The home page's "Explore our products" body: a swipable spotlight down the
+ * leading third, a 4 x 2 grid of eight products filling the rest.
+ *
+ * Both halves move by themselves. The spotlight swaps its whole photograph; the
+ * grid turns over one *row* at a time — the top four, then on the next beat the
+ * bottom four — so the section always has something quietly in motion without
+ * ever replacing everything at once, which at this size reads as the page
+ * jumping. See `useStaggeredBands` for the alternation, and `BAND_INTERVAL` for
+ * why the two halves deliberately run on different clocks.
+ *
+ * Two sets of controls, each belonging to one half. The grid's arrows turn it a
+ * full page at a time and live at the top of the section next to the "view all"
+ * link; the spotlight's sit in the corner of its own photograph. Neither pair
+ * disables at an end any more, because neither half has one — both wrap.
  *
  * From `lg` up the row holding those two panels is a full viewport tall, and
  * the heading and controls above it add to that rather than come out of it —
@@ -367,19 +522,77 @@ export default function ProductShowcase({
     const { track, index, step, order, pauseProps } =
         useSnapCarousel<HTMLUListElement>(frames.length, 4500, isRTL);
 
-    const [page, setPage] = useState(0);
-
-    const pageCount = Math.max(1, Math.ceil(gridProducts.length / GRID_SIZE));
     /*
-     * Clamped on read rather than trusted: `products` comes from the server and
-     * can be shorter on a later visit than it was when `page` was last set,
-     * which would otherwise leave the grid on an empty page.
+     * Floored, not rounded up: a trailing band of one or two products would
+     * turn over into a row with empty cells in it. Dropping the remainder
+     * costs at most three products that were never going to be on screen at
+     * the same time anyway, and keeps every row of the grid full.
      */
-    const current = Math.min(page, pageCount - 1);
-    const visible = gridProducts.slice(
-        current * GRID_SIZE,
-        current * GRID_SIZE + GRID_SIZE,
+    const bandCount = Math.floor(gridProducts.length / BAND_SIZE);
+
+    /*
+     * Three bands is the floor for rolling the rows. With two, both are on
+     * screen already and any advance would land one row on the band the other
+     * is showing — the same four products twice over. A pool that short is laid
+     * out flat and simply does not move, which is what the grid did before it
+     * rolled at all.
+     */
+    const rotating = bandCount > BAND_ROWS;
+    const slides = rotating ? bandCount : 1;
+
+    /*
+     * One rail per row, on the same interval but half a beat apart, which is
+     * what makes them take turns: the top row slides, then the bottom, then the
+     * top again. Two calls rather than a loop because hooks may not run inside
+     * one — and because the arrows below need to reach both.
+     */
+    const top = useSnapCarousel<HTMLUListElement>(slides, BAND_INTERVAL, isRTL);
+    const bottom = useSnapCarousel<HTMLUListElement>(
+        slides,
+        BAND_INTERVAL,
+        isRTL,
+        BAND_INTERVAL / 2,
     );
+
+    /*
+     * Hovering or tabbing anywhere in the grid holds *both* rows. Pausing only
+     * the row under the cursor would leave the other one moving under the
+     * reader's eye, which is the thing the pause exists to prevent.
+     */
+    const gridPause = {
+        onMouseEnter: () => {
+            top.pauseProps.onMouseEnter();
+            bottom.pauseProps.onMouseEnter();
+        },
+        onMouseLeave: () => {
+            top.pauseProps.onMouseLeave();
+            bottom.pauseProps.onMouseLeave();
+        },
+        onFocusCapture: () => {
+            top.pauseProps.onFocusCapture();
+            bottom.pauseProps.onFocusCapture();
+        },
+        onBlurCapture: () => {
+            top.pauseProps.onBlurCapture();
+            bottom.pauseProps.onBlurCapture();
+        },
+    };
+
+    /**
+     * Both rows slide one band, in the direction asked for — the same move the
+     * spotlight's own arrows make, so the two halves of the section answer a
+     * click the same way.
+     *
+     * One band rather than a whole page of two. Stepping by two looks like it
+     * should turn the grid over in one go, but the rails wrap: with three bands
+     * in the pool, +2 from band 1 lands on band 0, and a "next" click visibly
+     * slides the row *backwards*. Moving both rows by the same single band also
+     * preserves the gap between them, so the pair still cannot collide.
+     */
+    const turnPage = (delta: 1 | -1) => {
+        top.step(delta);
+        bottom.step(delta);
+    };
 
     return (
         <div className="flex flex-col gap-6 lg:gap-8">
@@ -395,12 +608,16 @@ export default function ProductShowcase({
                     />
                 </Link>
 
-                {pageCount > 1 && (
+                {/*
+                 * No longer disabled at the ends, because there are no ends:
+                 * the grid wraps now that it also turns itself, exactly as the
+                 * spotlight's own pair has always done.
+                 */}
+                {rotating && (
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={() => setPage(Math.max(0, current - 1))}
-                            disabled={current === 0}
+                            onClick={() => turnPage(-1)}
                             aria-label={labels.prev}
                             className={gridArrow}
                         >
@@ -411,10 +628,7 @@ export default function ProductShowcase({
                         </button>
                         <button
                             type="button"
-                            onClick={() =>
-                                setPage(Math.min(pageCount - 1, current + 1))
-                            }
-                            disabled={current >= pageCount - 1}
+                            onClick={() => turnPage(1)}
                             aria-label={labels.next}
                             className={gridArrow}
                         >
@@ -427,7 +641,7 @@ export default function ProductShowcase({
                 )}
             </div>
 
-            <div className="flex flex-col gap-8 lg:h-[100svh] lg:max-h-[900px] lg:min-h-[620px] lg:flex-row lg:gap-10">
+            <div className="flex flex-col gap-8 lg:h-[85svh] lg:max-h-[900px] lg:min-h-[620px] lg:flex-row lg:gap-10">
                 <div className="lg:min-h-0 lg:w-[30%] lg:shrink-0">
                     <Spotlight
                         frames={frames}
@@ -440,17 +654,47 @@ export default function ProductShowcase({
                     />
                 </div>
 
+                {/*
+                 * `gridPause` on the wrapper rather than on each rail: the whole
+                 * grid is what should hold still while someone is reading it or
+                 * tabbing through it, not just the row under the cursor.
+                 */}
                 <div
-                    key={current}
-                    className="grid min-h-0 flex-1 animate-in grid-cols-2 gap-x-5 gap-y-6 duration-500 fade-in lg:grid-cols-4 lg:grid-rows-2"
+                    {...gridPause}
+                    className="flex min-h-0 flex-1 flex-col gap-y-6"
                 >
-                    {visible.map((product) => (
-                        <ShowcaseCard
-                            key={product.id}
-                            product={product}
-                            currency={currency}
-                        />
-                    ))}
+                    {rotating ? (
+                        [top, bottom].map((rail, row) => (
+                            <div
+                                key={row}
+                                className="min-w-0 lg:min-h-0 lg:flex-1"
+                            >
+                                <GridRail
+                                    products={gridProducts}
+                                    bandCount={bandCount}
+                                    offset={row * BAND_ROWS}
+                                    slides={slides}
+                                    track={rail.track}
+                                    order={rail.order}
+                                    currency={currency}
+                                />
+                            </div>
+                        ))
+                    ) : (
+                        /*
+                         * Too few products to roll — laid out as a plain grid
+                         * rather than as two rails that could never move.
+                         */
+                        <div className="grid min-h-0 flex-1 grid-cols-2 gap-x-5 gap-y-6 lg:grid-cols-4 lg:grid-rows-2">
+                            {gridProducts.slice(0, GRID_SIZE).map((product) => (
+                                <ShowcaseCard
+                                    key={product.id}
+                                    product={product}
+                                    currency={currency}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

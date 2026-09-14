@@ -15,8 +15,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *    someone reading or tabbing through.
  *  - It also pauses while the tab is hidden, so a backgrounded tab does not
  *    burn a timer and animation frames for nobody.
+ *
+ * @param delay  Shifts the whole schedule, so several slideshows on one
+ *               interval can be kept out of phase — see the timer effect.
  */
-export function useSlideshow(count: number, interval = 3500) {
+export function useSlideshow(count: number, interval = 3500, delay = 0) {
     /*
      * Current and outgoing slide held as one value rather than two pieces of
      * state, so they can never be read half-updated: a consumer that stacks
@@ -43,31 +46,49 @@ export function useSlideshow(count: number, interval = 3500) {
             window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
 
-    // Held in a ref so restarting the timer on manual navigation doesn't
-    // depend on `index` being in the effect's dependency list, which would
-    // re-create the interval on every automatic tick too.
+    // Held in refs so restarting the timer on manual navigation doesn't depend
+    // on `index` being in the effect's dependency list, which would re-create
+    // the interval on every automatic tick too.
     const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+    const lead = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (reduced || paused || count < 2) {
             return;
         }
 
-        timer.current = setInterval(
-            () =>
-                setSlide((s) => ({
-                    current: (s.current + 1) % count,
-                    previous: s.current,
-                })),
-            interval,
-        );
+        const advance = () =>
+            setSlide((s) => ({
+                current: (s.current + 1) % count,
+                previous: s.current,
+            }));
+
+        /*
+         * Ticks land at `delay + interval`, `delay + 2 × interval`, and so on,
+         * so two slideshows sharing one interval can be held permanently out of
+         * phase with each other: the product grid runs its two rows on the same
+         * clock half a beat apart, which is what makes them take turns instead
+         * of both turning over at once.
+         *
+         * Hence the timeout in front of the interval rather than a plain
+         * `setInterval`. With `delay` at 0 the two are equivalent, which is
+         * every other caller.
+         */
+        lead.current = setTimeout(() => {
+            advance();
+            timer.current = setInterval(advance, interval);
+        }, delay + interval);
 
         return () => {
+            if (lead.current) {
+                clearTimeout(lead.current);
+            }
+
             if (timer.current) {
                 clearInterval(timer.current);
             }
         };
-    }, [reduced, paused, count, interval]);
+    }, [reduced, paused, count, interval, delay]);
 
     useEffect(() => {
         const onVisibility = () => setPaused(document.hidden);

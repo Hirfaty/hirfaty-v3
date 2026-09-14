@@ -6,15 +6,19 @@ import ContactSection from '@/components/home_page/ContactSection';
 import ExploreByCategories from '@/components/home_page/ExploreByCategories';
 import { ExploreProducts } from '@/components/home_page/ExploreProducts';
 import HeroSection from '@/components/home_page/HeroSection';
+import NewArrivals from '@/components/home_page/NewArrivals';
 import OneWorkshop from '@/components/home_page/OneWorkshop';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 
 export default function Welcome({
     featuredProducts = [],
+    newArrivals = [],
 }: {
     canRegister?: boolean;
     featuredProducts?: ShowcaseProduct[];
+    /** The twelve most recently listed pieces — see `HomeController`. */
+    newArrivals?: ShowcaseProduct[];
 }) {
     return (
         <>
@@ -32,6 +36,9 @@ export default function Welcome({
                 {/* ───────────────── Explore our products ───────────────── */}
                 <ExploreProducts featuredProducts={featuredProducts} />
 
+                {/* ───────────────────── New arrivals ───────────────────── */}
+                <NewArrivals products={newArrivals} />
+
                 {/* ───────────────────────── Brochure ───────────────────────── */}
                 <BrochureSection />
 
@@ -43,7 +50,7 @@ export default function Welcome({
 
                 {/* ───────────────────── Gallery ───────────────────── */}
 
-                <div>logos</div>
+                {/* <div>logos</div> */}
 
                 <ArtisanCta />
 

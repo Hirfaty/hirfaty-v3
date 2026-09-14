@@ -182,6 +182,16 @@ return [
     'products.spotlight_prev' => 'Pièce précédente à la une',
     'products.spotlight_next' => 'Pièce suivante à la une',
 
+    // ── Nouveautés ───────────────────────────────────────────────────────
+    // La rangée sous « Explorer nos produits ». Les libellés des flèches lui
+    // sont propres plutôt que repris de `products.*` : les deux rangées sont
+    // sur la même page et un lecteur d'écran annoncerait deux paires
+    // identiques.
+    'new_arrivals.heading' => 'Nouveautés',
+    'new_arrivals.view_all' => 'Voir toutes les nouveautés',
+    'new_arrivals.prev' => 'Nouveautés précédentes',
+    'new_arrivals.next' => 'Nouveautés suivantes',
+
     'brochure.eyebrow' => 'À emporter',
     'brochure.heading' => 'Obtenez notre brochure',
     'brochure.lead' => 'Chaque atelier et chaque pièce réunis dans un seul document — consultez-le hors ligne, ou partagez-le avec votre équipe.',

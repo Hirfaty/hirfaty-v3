@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class NewArrivalsService
 {
@@ -22,6 +24,43 @@ class NewArrivalsService
      */
     public function paginate(?User $viewer, int $perPage = 12): LengthAwarePaginator
     {
+        return $this->query($viewer)
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * The same pieces, for the home page's single scrolling row.
+     *
+     * Fetched whole rather than paginated: the row holds eighteen — three
+     * slides of six, see `NewArrivals.tsx` — the visitor scrolls between them
+     * by hand, and eighteen rows cost far less than the round trip that
+     * turning a page lazily would need. The same reasoning
+     * `HomeService::featuredProducts()` gives for the rail above it.
+     *
+     * `whereHas('store')` because `BuyerProductResource` reaches through to
+     * `store->city->name` and assumes the relation is there — the paginated
+     * page gets away without it only because nothing has yet published a
+     * product with no shop.
+     *
+     * @return Collection<int, Product>
+     */
+    public function forHome(?User $viewer, int $limit = 18): Collection
+    {
+        return $this->query($viewer)
+            ->whereHas('store')
+            ->take($limit)
+            ->get();
+    }
+
+    /**
+     * The shared shape of both: newest first, gated to what this viewer may
+     * see, with everything `BuyerProductResource` reads eager loaded.
+     *
+     * @return Builder<Product>
+     */
+    private function query(?User $viewer): Builder
+    {
         $audience = Product::audienceFor($viewer);
 
         return Product::query()
@@ -36,8 +75,6 @@ class NewArrivalsService
             // the same reasoning.
             ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists'])
-            ->orderByDesc('id')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->orderByDesc('id');
     }
 }

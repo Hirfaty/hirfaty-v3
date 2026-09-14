@@ -185,6 +185,15 @@ return [
     'products.spotlight_prev' => 'Previous featured piece',
     'products.spotlight_next' => 'Next featured piece',
 
+    // ── New arrivals ─────────────────────────────────────────────────────
+    // The row below "Explore our products". The arrow labels are its own
+    // rather than reused from `products.*`: both rows sit on the same page,
+    // and a screen reader would otherwise announce two identical pairs.
+    'new_arrivals.heading' => 'New arrivals',
+    'new_arrivals.view_all' => 'See all new arrivals',
+    'new_arrivals.prev' => 'Previous new arrivals',
+    'new_arrivals.next' => 'Next new arrivals',
+
     'brochure.eyebrow' => 'Take it with you',
     'brochure.heading' => 'Get our brochure',
     'brochure.lead' => 'Every workshop and every piece in one document — browse it offline, or share it with your team.',

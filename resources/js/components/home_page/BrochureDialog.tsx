@@ -70,14 +70,10 @@ export default function BrochureDialog({ children }: { children: ReactNode }) {
 
         form.post(brochure.request.url(), {
             errorBag: 'brochure',
-            // The section sits well down the homepage; without this, a
-            // successful submit throws the reader back to the top of it.
             preserveScroll: true,
             onSuccess: () => {
                 setOpen(false);
                 form.reset();
-                // Falls back to the local translation so the confirmation
-                // survives the flash going missing for any reason.
                 toast.success(
                     page.props.flash?.success ??
                         t('welcome.brochure.dialog.success'),

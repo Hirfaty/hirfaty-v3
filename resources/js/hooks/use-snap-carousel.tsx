@@ -28,11 +28,17 @@ export function useSnapCarousel<T extends HTMLElement>(
     count: number,
     interval: number,
     isRTL: boolean,
+    /**
+     * Holds this rail out of phase with another on the same interval — see
+     * `useSlideshow`. The product grid's two rows use it to take turns.
+     */
+    delay = 0,
 ) {
     const track = useRef<T>(null);
     const { index, previous, goTo, reduced, pauseProps } = useSlideshow(
         count,
         interval,
+        delay,
     );
 
     /*
