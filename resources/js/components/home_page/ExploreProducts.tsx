@@ -18,9 +18,16 @@ export function ExploreProducts({
 }) {
     const { t, isRTL } = useTranslation();
 
+    /*
+     * The section has no height of its own: the screenful is the products
+     * themselves, and this is however tall they plus the heading above them
+     * come out. Pinning the *section* to the viewport instead — which is what
+     * this used to do — spends that screenful on the heading and the row of
+     * controls first and leaves the photography with whatever is left over.
+     */
     return (
-        <section className="relative bg-souk-paper py-8 lg:mb-48 lg:flex lg:h-[100svh] lg:min-h-[620px] lg:flex-col lg:py-10">
-            <div className="container lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+        <section className="relative bg-souk-paper py-8 lg:py-10">
+            <div className="container">
                 <Reveal delay={80}>
                     <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                         {t('welcome.products.heading')}
@@ -28,10 +35,7 @@ export function ExploreProducts({
                 </Reveal>
 
                 {featuredProducts.length > 0 ? (
-                    <Reveal
-                        delay={160}
-                        className="mt-8 lg:mt-10 lg:min-h-0 lg:flex-1"
-                    >
+                    <Reveal delay={160} className="mt-8 lg:mt-10">
                         <ProductShowcase
                             products={featuredProducts}
                             currency={t('welcome.products.currency')}

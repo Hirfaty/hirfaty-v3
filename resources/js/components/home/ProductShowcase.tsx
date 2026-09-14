@@ -92,9 +92,9 @@ function Spotlight({
     /*
      * `aspect-[4/5]` below `lg`, `h-full` from `lg` up — the same switch every
      * box in this section makes. Stacked on a phone there is no height to fill
-     * (the section is as tall as its content), so the panel has to derive its
-     * own; side by side on a laptop the section is a fixed height and the panel
-     * must fill whatever the grid beside it is given, whatever shape that is.
+     * (the row is as tall as its content), so the panel has to derive its own;
+     * side by side on a laptop the row is a screenful and the panel must fill
+     * whatever the grid beside it is given, whatever shape that is.
      */
     const shell =
         'relative isolate aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5 lg:aspect-auto lg:h-full';
@@ -235,8 +235,8 @@ function ShowcaseCard({
         >
             {/*
              * Grows into whatever height the row has left over from `lg` up
-             * (the section is a fixed height there, so the photograph is the
-             * part that flexes and the caption below keeps its natural size);
+             * (the row is a screenful there, so the photograph is the part
+             * that flexes and the caption below keeps its natural size);
              * falls back to a fixed aspect on a phone, where the grid is free
              * to be as tall as its contents.
              */}
@@ -316,18 +316,20 @@ function ShowcaseCard({
  * spotlight's sit in the corner of its own photograph. What is gone is the
  * "x / y" counter that used to accompany the grid's pair.
  *
- * The whole section is sized to fit a laptop screen without scrolling, which is
- * why the heights here are driven top-down rather than by each card's own
- * aspect ratio: the caller gives this component a bounded height, the grid
- * splits it into two rows, and each card's photograph takes whatever the
- * caption underneath it does not. Sizing from aspect ratios instead — the
- * obvious way to build it — makes the section's height a function of the
- * container's *width*, and at 70% of a wide container two 4:5 rows come out
- * around 1000px tall, well past the fold on the laptops this is designed for.
+ * From `lg` up the row holding those two panels is a full viewport tall, and
+ * the heading and controls above it add to that rather than come out of it —
+ * the screenful is meant to be the merchandise, not the furniture around it.
+ * That height is then driven top-down rather than by each card's own aspect
+ * ratio: the row fixes the height, the grid splits it into two rows, and each
+ * card's photograph takes whatever the caption underneath it does not. Sizing
+ * from aspect ratios instead — the obvious way to build it — would make the
+ * height a function of the container's *width*, and at 70% of a wide container
+ * two 4:5 rows come out around 1000px tall.
  *
- * Below `lg` the two panels stack and every box falls back to a fixed aspect
- * ratio: there is no "fits on screen" to honour on a phone, and forcing one
- * would only shrink the photography to stamps.
+ * Below `lg` the two panels stack, the screenful is given up, and every box
+ * falls back to a fixed aspect ratio: there is no "fits on screen" worth
+ * honouring on a phone, and forcing one would only shrink the photography to
+ * stamps. The grid drops to two columns there for the same reason.
  */
 export default function ProductShowcase({
     products,
@@ -380,7 +382,7 @@ export default function ProductShowcase({
     );
 
     return (
-        <div className="flex h-full flex-col gap-6 lg:gap-8">
+        <div className="flex flex-col gap-6 lg:gap-8">
             {/*
              * These arrows turn the grid's pages, and only the grid's — the
              * spotlight carries its own pair down in the corner of its
@@ -433,14 +435,21 @@ export default function ProductShowcase({
                 )}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-8 lg:flex-row lg:gap-10">
+            {/*
+             * The screenful, and the only thing that claims one: a full
+             * viewport of photography, with the heading and the controls above
+             * sitting on top of it rather than eating into it. Below `lg` the
+             * two panels stack and the height goes away again — a phone has no
+             * room to spend a whole screen on one row of this.
+             */}
+            <div className="flex flex-col gap-8 lg:h-[100svh] lg:min-h-[620px] lg:flex-row lg:gap-10">
                 {/*
                  * 30% of the row, and not allowed to shrink below it — the grid
                  * beside it is the flexible half. A basis rather than a width so
                  * the `gap` comes out of the two panels proportionally instead of
                  * pushing the total past 100%.
                  */}
-                <div className="lg:h-screen lg:min-h-0 lg:w-[30%] lg:shrink-0">
+                <div className="lg:min-h-0 lg:w-[30%] lg:shrink-0">
                     <Spotlight
                         frames={frames}
                         track={track}
@@ -462,7 +471,7 @@ export default function ProductShowcase({
                  */}
                 <div
                     key={current}
-                    className="grid min-h-0 flex-1 animate-in grid-cols-2 gap-x-5 gap-y-6 duration-500 fade-in lg:h-screen lg:grid-rows-2"
+                    className="grid min-h-0 flex-1 animate-in grid-cols-2 gap-x-5 gap-y-6 duration-500 fade-in lg:grid-cols-4 lg:grid-rows-2"
                 >
                     {visible.map((product) => (
                         <ShowcaseCard
