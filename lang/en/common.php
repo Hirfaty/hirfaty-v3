@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'Confirm password',
     'auth.register.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
 
+    // ── Strength meter — one label per bar filled ───────────────────
+    'auth.register.password_strength_very_weak' => 'Very weak',
+    'auth.register.password_strength_weak' => 'Weak',
+    'auth.register.password_strength_fair' => 'Fair',
+    'auth.register.password_strength_good' => 'Good',
+    'auth.register.password_strength_strong' => 'Strong',
+
     'auth.register.terms_prefix' => 'I accept the',
     'auth.register.terms_privacy' => 'privacy policy',
     'auth.register.terms_and' => 'and the',
@@ -109,4 +116,22 @@ return [
 
     'errors.back_home' => 'Back to home',
     'errors.browse_market' => 'Explore the market',
+
+    /*
+     * The site footer's Arabic signature line, under the tagline paragraph.
+     * Kept as the same Arabic string in all three locale files rather than
+     * translated into English/French — same convention as
+     * `welcome.hero.badge_script` and `welcome.seller_cta.ar_line`: an
+     * ornamental flourish in the brand's own language, not copy that changes
+     * with the active locale.
+     */
+    'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'Letters from the souk',
+    'footer.newsletter.blurb' => 'New pieces, new workshops, and the stories behind them. Once a month, never more.',
+    'footer.newsletter.label' => 'Your email address',
+    'footer.newsletter.placeholder' => 'you@example.com',
+    'footer.newsletter.submit' => 'Subscribe',
+    'footer.newsletter.success' => 'You are on the list. Watch out for the next letter from the souk.',
+    'footer.newsletter.invalid' => 'Enter a valid email address.',
 ];

@@ -22,7 +22,7 @@
     $dir = $rtl ? 'rtl' : 'ltr';
     $align = $rtl ? 'right' : 'left';
 
-    // Georgia, not the brand's Bodoni Moda: mail clients don't reliably load
+    // Georgia, not the brand's Didot: mail clients don't reliably load
     // webfonts, and a websafe serif keeps the editorial tone everywhere.
     $font = "Georgia, 'Times New Roman', serif";
 

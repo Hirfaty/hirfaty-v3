@@ -115,6 +115,15 @@ export default function Security({
                                     placeholder="New password"
                                 />
 
+                                {/* Password::defaults() enforces this
+                                    (App\Providers\AppServiceProvider), so
+                                    spell it out rather than letting the user
+                                    discover it by failing. */}
+                                <p className="text-xs text-muted-foreground">
+                                    At least 12 characters, with upper and lower
+                                    case, a number and a symbol.
+                                </p>
+
                                 <InputError message={errors.password} />
                             </div>
 

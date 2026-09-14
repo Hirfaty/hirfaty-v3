@@ -85,6 +85,15 @@ export default function ResetPassword({ token, email }: Props) {
                                             autoFocus
                                             placeholder="Votre nouveau mot de passe"
                                         />
+                                        {/* Password::defaults() enforces this
+                                            (App\Providers\AppServiceProvider),
+                                            so spell it out rather than letting
+                                            the admin discover it by failing. */}
+                                        <p className="text-xs text-ink-soft">
+                                            Au moins 12 caractères, avec
+                                            majuscules, minuscules, un chiffre
+                                            et un symbole.
+                                        </p>
                                         <InputError message={errors.password} />
                                     </div>
 

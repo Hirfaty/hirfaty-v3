@@ -81,6 +81,32 @@ class BuyerProductResource extends JsonResource
             'images' => $this->images,
             'videos' => $this->videos,
 
+            /*
+             * Own images plus every variant's, folded into one deduplicated
+             * list. Only present when the caller eager-loaded `variants.media`
+             * (currently just the home rail): computing this from a lazy
+             * `variants` load would fire a query per card, and most callers
+             * of this resource (the listing grid, the detail page's own
+             * gallery) already have their own reason to keep a variant's
+             * photography scoped to that variant rather than merged in.
+             */
+            'gallery_images' => $this->when(
+                $this->relationLoaded('variants'),
+                fn () => $this->images
+                    ->concat($this->variants->flatMap(
+                        fn ($variant) => $variant->relationLoaded('media')
+                            ? $variant->media->where('type', 'image')
+                            : []
+                    ))
+                    ->unique('id')
+                    ->map(fn ($media) => [
+                        'id' => $media->id,
+                        'url' => $media->url,
+                        'type' => $media->type,
+                    ])
+                    ->values(),
+            ),
+
             'wishlists_count' => $this->whenCounted('wishlists'),
 
             /*

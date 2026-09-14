@@ -7,6 +7,7 @@ import {
     Package,
     ShieldCheck,
     ShoppingBag,
+    Store,
     Tag,
     Users,
 } from 'lucide-react';
@@ -68,6 +69,11 @@ const contentItems: NavItem[] = [
 ];
 
 const communityItems: NavItem[] = [
+    {
+        title: 'Ateliers',
+        url: route('admin.stores.index', undefined, false),
+        icon: Store,
+    },
     {
         title: 'Utilisateurs',
         url: route('admin.users.index', undefined, false),

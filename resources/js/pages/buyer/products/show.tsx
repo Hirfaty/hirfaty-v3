@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useTranslation } from '@/hooks/use-translation';
 import type { Media } from '@/types';
 import type {
@@ -265,6 +266,111 @@ function TrustRow({ t }: { t: (k: string) => string }) {
     );
 }
 
+/**
+ * One tile in a "more from shop" / "you may also like" row.
+ *
+ * Split out from `ProductRow`'s `.map()` rather than left inline:
+ * `useHoverGallery` is a hook, and hooks may only run at the top level of a
+ * component — calling one from inside a loop callback would run it once per
+ * item rather than tying it to one, tripping the Rules of Hooks. Same reason
+ * `ProductShowcase`'s `ShowcaseCard` and `CollectionCard` are their own
+ * components.
+ */
+function RelatedProductCard({
+    product: p,
+    money,
+    t,
+}: {
+    product: DetailProduct;
+    money: (v: number | string) => string;
+    t: (k: string) => string;
+}) {
+    const gallery = p.gallery_images ?? p.images;
+    const { index, previous, hoverProps } = useHoverGallery(gallery.length);
+
+    // Demo-only state: see DetailProduct's base_price note further down.
+    // Nothing else in this card means anything without a retail figure to
+    // compare against.
+    const pUnpriced = p.base_price === null;
+    const pSale =
+        !pUnpriced &&
+        p.sale_price &&
+        Number(p.sale_price) < Number(p.base_price);
+    const pTrade = pUnpriced ? null : (p.professional_effective_price ?? null);
+
+    return (
+        <Link
+            {...hoverProps}
+            href={route('products.show', p.slug)}
+            className="group block"
+        >
+            <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
+                {gallery.length > 0 ? (
+                    // Same dip-free crossfade stack as `CollectionCard` and
+                    // `ProductShowcase` — see either for why the outgoing frame
+                    // stays opaque underneath the incoming one rather than
+                    // the two simply swapping opacity together.
+                    <div className="absolute inset-0 isolate">
+                        {gallery.map((image, i) => {
+                            const active = i === index;
+                            const outgoing = i === previous && i !== index;
+
+                            return (
+                                <div
+                                    key={image.id}
+                                    className={`absolute inset-0 ${
+                                        active
+                                            ? 'z-20 opacity-100 transition-opacity duration-500 ease-out'
+                                            : outgoing
+                                              ? 'z-10 opacity-100'
+                                              : 'z-0 opacity-0'
+                                    }`}
+                                >
+                                    <img
+                                        src={image.url}
+                                        alt={i === 0 ? p.name : ''}
+                                        loading="lazy"
+                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="flex h-full items-center justify-center text-souk-brown/25">
+                        <ZellijStarIcon className="h-8 w-8" />
+                    </div>
+                )}
+            </div>
+            <h3 className="mt-3 font-display text-base leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
+                {p.name}
+            </h3>
+            <p className="mt-1 text-sm">
+                {pUnpriced ? (
+                    <span className="text-souk-brown-deep/45 italic">
+                        {t('buyer.products.price_coming_soon')}
+                    </span>
+                ) : pTrade !== null ? (
+                    <span className="text-olive">{money(pTrade)} MAD</span>
+                ) : pSale ? (
+                    <>
+                        <span className="text-terracotta">
+                            {money(Number(p.sale_price))} MAD
+                        </span>{' '}
+                        <span className="text-xs text-souk-brown-deep/45 line-through">
+                            {money(Number(p.base_price))}
+                        </span>
+                    </>
+                ) : (
+                    <span className="text-souk-title">
+                        {money(Number(p.base_price))} MAD
+                    </span>
+                )}
+            </p>
+        </Link>
+    );
+}
+
 /** A row of product cards, shared by "more from shop" and "you may also like". */
 function ProductRow({
     title,
@@ -285,69 +391,14 @@ function ProductRow({
         <section className="container border-t border-souk-brown/10 py-14">
             <h2 className="font-display text-2xl text-souk-title">{title}</h2>
             <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-9 lg:grid-cols-4">
-                {products.map((p) => {
-                    // Demo-only state: see DetailProduct's base_price note
-                    // further down. Nothing else in this card means anything
-                    // without a retail figure to compare against.
-                    const pUnpriced = p.base_price === null;
-                    const pSale =
-                        !pUnpriced &&
-                        p.sale_price &&
-                        Number(p.sale_price) < Number(p.base_price);
-                    const pTrade = pUnpriced
-                        ? null
-                        : (p.professional_effective_price ?? null);
-
-                    return (
-                        <Link
-                            key={p.id}
-                            href={route('products.show', p.slug)}
-                            className="group"
-                        >
-                            <div className="aspect-[4/5] overflow-hidden rounded-t-[3rem] rounded-b-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
-                                {p.images?.[0] ? (
-                                    <img
-                                        src={p.images[0].url}
-                                        alt={p.name}
-                                        loading="lazy"
-                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    />
-                                ) : (
-                                    <div className="flex h-full items-center justify-center text-souk-brown/25">
-                                        <ZellijStarIcon className="h-8 w-8" />
-                                    </div>
-                                )}
-                            </div>
-                            <h3 className="mt-3 font-display text-base leading-snug text-souk-title transition-colors group-hover:text-souk-brown">
-                                {p.name}
-                            </h3>
-                            <p className="mt-1 text-sm">
-                                {pUnpriced ? (
-                                    <span className="text-souk-brown-deep/45 italic">
-                                        {t('buyer.products.price_coming_soon')}
-                                    </span>
-                                ) : pTrade !== null ? (
-                                    <span className="text-olive">
-                                        {money(pTrade)} MAD
-                                    </span>
-                                ) : pSale ? (
-                                    <>
-                                        <span className="text-terracotta">
-                                            {money(Number(p.sale_price))} MAD
-                                        </span>{' '}
-                                        <span className="text-xs text-souk-brown-deep/45 line-through">
-                                            {money(Number(p.base_price))}
-                                        </span>
-                                    </>
-                                ) : (
-                                    <span className="text-souk-title">
-                                        {money(Number(p.base_price))} MAD
-                                    </span>
-                                )}
-                            </p>
-                        </Link>
-                    );
-                })}
+                {products.map((p) => (
+                    <RelatedProductCard
+                        key={p.id}
+                        product={p}
+                        money={money}
+                        t={t}
+                    />
+                ))}
             </div>
         </section>
     );

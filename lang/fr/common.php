@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'Confirmer le mot de passe',
     'auth.register.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
 
+    // ── Jauge de robustesse — un libellé par barre remplie ──────────
+    'auth.register.password_strength_very_weak' => 'Très faible',
+    'auth.register.password_strength_weak' => 'Faible',
+    'auth.register.password_strength_fair' => 'Moyenne',
+    'auth.register.password_strength_good' => 'Bonne',
+    'auth.register.password_strength_strong' => 'Excellente',
+
     'auth.register.terms_prefix' => 'J\'accepte la',
     'auth.register.terms_privacy' => 'politique de confidentialité',
     'auth.register.terms_and' => 'et les',
@@ -109,4 +116,22 @@ return [
 
     'errors.back_home' => 'Retour à l’accueil',
     'errors.browse_market' => 'Explorer le marché',
+
+    /*
+     * La signature arabe du pied de page, sous le paragraphe d'accroche.
+     * Conservée identique dans les trois fichiers de langue plutôt que
+     * traduite en français/anglais — même logique que
+     * `welcome.hero.badge_script` et `welcome.seller_cta.ar_line` : une
+     * fioriture ornementale dans la langue d'origine de la marque, pas un
+     * texte qui change avec la langue active.
+     */
+    'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'Les lettres du souk',
+    'footer.newsletter.blurb' => 'Les nouvelles pièces, les nouveaux ateliers et les histoires qui vont avec. Une fois par mois, jamais plus.',
+    'footer.newsletter.label' => 'Votre adresse e-mail',
+    'footer.newsletter.placeholder' => 'vous@exemple.com',
+    'footer.newsletter.submit' => 'Je m’inscris',
+    'footer.newsletter.success' => 'Vous êtes inscrit. Guettez la prochaine lettre du souk.',
+    'footer.newsletter.invalid' => 'Saisissez une adresse e-mail valide.',
 ];

@@ -43,6 +43,12 @@ export type ListingProduct = {
         city_name: string | null;
     };
     images: Media[];
+    /**
+     * Own images plus every variant's, deduplicated — present only when the
+     * backend eager-loaded `variants.media` (the listing, new arrivals, and
+     * the home rail all do). Falls back to `images` where absent.
+     */
+    gallery_images?: Media[];
     wishlists_count?: number;
 
     // Present only for professional buyers.
@@ -139,9 +145,11 @@ function PriceBlock({
 }
 
 /**
- * Arch-topped tile, echoing the horseshoe arches used on the home page and
- * in the `motif-arches` background — the shape is the brand's signature, and
- * keeps the grid free of the hard corners the old listing had.
+ * Square tile. Deliberately without the arch top and rounded panel it used to
+ * carry: the merchandise is the shape here, and a photograph of a rug or a
+ * lamp reads worse once its own silhouette is cropped into the brand's.
+ * Ornament stays on the page's own furniture (the `motif-arches` background,
+ * the section headers), not on the goods.
  *
  * The tile carries its own souk-brown surface rather than floating on the
  * page, so the listing is not wall-to-wall light. Everything inside is
@@ -189,9 +197,9 @@ export function ProductCard({
     return (
         <Link
             href={`/products/${product.slug}`}
-            className="group block rounded-[1.75rem] bg-souk-brown p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-souk-brown-deep hover:shadow-xl hover:shadow-souk-brown/25"
+            className="group block bg-souk-brown p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-souk-brown-deep hover:shadow-xl hover:shadow-souk-brown/25"
         >
-            <div className="relative aspect-[4/5] overflow-hidden rounded-t-[5.25rem] rounded-b-2xl bg-souk-cream/8 ring-1 ring-souk-cream/15 transition-colors duration-500 group-hover:ring-souk-cream/30">
+            <div className="relative aspect-[4/5] overflow-hidden bg-souk-cream/8 ring-1 ring-souk-cream/15 transition-colors duration-500 group-hover:ring-souk-cream/30">
                 {cover ? (
                     <img
                         src={cover}

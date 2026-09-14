@@ -147,7 +147,7 @@ return [
     'onboarding.finish' => 'Découvrir le marché',
 
     'onboarding.welcome.quote' => 'Derrière chaque pièce, il y a une paire de mains et un savoir-faire transmis.',
-    'onboarding.welcome.title' => 'Bienvenue, :name 👋',
+    'onboarding.welcome.title' => 'Bienvenue, :name',
     'onboarding.welcome.body' => 'Hirfaty rassemble les artisans du Maroc en un seul endroit. Deux minutes pour faire connaissance, puis le marché est à vous.',
     'onboarding.welcome.point_direct' => 'Vous achetez directement à l\'artisan — sans intermédiaire.',
     'onboarding.welcome.point_authentic' => 'Chaque pièce est faite main, chaque boutique est vérifiée par notre équipe.',

@@ -10,8 +10,7 @@ const EYEBROW =
     'text-[9px] font-semibold uppercase tracking-[0.16em] sm:text-[10px]';
 
 /**
- * A tile for the "Objects with a story" grid — the light, double-arched
- * frame the listing was redesigned around. Now the one product tile every
+ * A tile for the "Objects with a story" grid. The one product tile every
  * buyer-facing grid uses: the marketplace listing, new arrivals, and a
  * shop's own page all render this, so a shop page reads as a filtered view
  * of the same catalogue rather than a visually distinct product.
@@ -21,9 +20,11 @@ const EYEBROW =
  * its `Audience`/`ListingProduct` types are still imported from that module.
  * Left in place rather than deleted since nobody has asked for it to go.
  *
- * The frame is doubled on purpose — an outer paper mat and an inner arch
- * holding the photograph — which is what gives the grid the look of a row of
- * riad doorways rather than a row of images.
+ * Plain rectangles, deliberately. The frame is still doubled — an outer paper
+ * mat and an inner border holding the photograph — but the `portal-frame`
+ * arch both used to carry is gone: it cropped the top of every photograph
+ * into the same silhouette, which cost the merchandise its own shape and
+ * forced the badges down off the top edge to stay out of the curve.
  */
 export function CollectionCard({
     product,
@@ -43,9 +44,8 @@ export function CollectionCard({
     canWishlist: boolean;
 }) {
     const [wished, setWished] = useState(wishlisted);
-    const { index, previous, hoverProps } = useHoverGallery(
-        product.images.length,
-    );
+    const gallery = product.gallery_images ?? product.images;
+    const { index, previous, hoverProps } = useHoverGallery(gallery.length);
 
     const base =
         product.base_price !== null ? Number(product.base_price) : null;
@@ -100,9 +100,9 @@ export function CollectionCard({
             {...hoverProps}
             className="group relative min-w-0 transition-transform duration-500 ease-out hover:-translate-y-1"
         >
-            <div className="relative overflow-hidden portal-frame border border-souk-brown/25 bg-souk-paper p-1.5 transition-[border-color,box-shadow] duration-500 group-hover:border-souk-brown/60 group-hover:shadow-[0_18px_45px_-30px_var(--color-souk-brown)] sm:p-2">
-                <div className="relative aspect-4/5 overflow-hidden portal-frame border border-souk-brown/20 bg-white">
-                    {product.images.length > 0 ? (
+            <div className="relative overflow-hidden rounded-md border border-souk-brown/25 bg-souk-paper p-1.5 transition-[border-color,box-shadow] duration-500 group-hover:border-souk-brown/60 group-hover:shadow-[0_18px_45px_-30px_var(--color-souk-brown)] sm:p-2">
+                <div className="relative aspect-4/5 overflow-hidden border border-souk-brown/20 bg-white">
+                    {gallery.length > 0 ? (
                         /* `isolate` scopes the stack's own z-index ranking to
                            itself, so it can't compete with the wishlist
                            button's `z-10` (which exists for an unrelated
@@ -115,14 +115,14 @@ export function CollectionCard({
                            block is exactly the kind of bug that isn't caught
                            until a screenshot review, so it stays explicit. */
                         <div className="absolute inset-0 isolate">
-                            {product.images.map((image, i) => {
+                            {gallery.map((image, i) => {
                                 const active = i === index;
                                 // Stays fully opaque *underneath* the
                                 // incoming frame while it fades in, so the
                                 // crossfade never dips through a moment where
                                 // both layers are half-transparent and the
                                 // tile visibly darkens — same technique as
-                                // the home hero's `HeroBackdrop`.
+                                // `ProductShowcase`'s own cards.
                                 const outgoing = i === previous && i !== index;
 
                                 return (
@@ -160,18 +160,19 @@ export function CollectionCard({
                         </div>
                     )}
 
-                    {/* Badges sit at 19% rather than the top edge: above that
-                        line they fall inside the arch's curve and get clipped. */}
+                    {/* Back at the corner now the arch no longer clips it —
+                        the 19% inset these used to carry only existed to keep
+                        them clear of the curve. */}
                     {soldOut ? (
                         <span
-                            className={`absolute start-2 top-[19%] border border-souk-brown/25 bg-souk-paper/92 px-1.5 py-1 text-souk-brown-deep sm:start-3 ${EYEBROW}`}
+                            className={`absolute start-2 top-2 border border-souk-brown/25 bg-souk-paper/92 px-1.5 py-1 text-souk-brown-deep sm:start-3 sm:top-3 ${EYEBROW}`}
                         >
                             {t('buyer.products.badge_sold_out')}
                         </span>
                     ) : (
                         discount > 0 && (
                             <span
-                                className={`absolute start-2 top-[19%] border border-terracotta/30 bg-souk-paper/92 px-1.5 py-1 text-terracotta-deep sm:start-3 ${EYEBROW}`}
+                                className={`absolute start-2 top-2 border border-terracotta/30 bg-souk-paper/92 px-1.5 py-1 text-terracotta-deep sm:start-3 sm:top-3 ${EYEBROW}`}
                             >
                                 −{discount}%
                             </span>
@@ -188,7 +189,7 @@ export function CollectionCard({
                                 ? 'buyer.products.wishlist_remove'
                                 : 'buyer.products.wishlist_add',
                         )}
-                        className="absolute end-2 top-[19%] z-10 grid h-9 w-9 cursor-pointer place-items-center bg-souk-paper/90 text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream sm:end-3"
+                        className="absolute end-2 top-2 z-10 grid h-9 w-9 cursor-pointer place-items-center bg-souk-paper/90 text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream sm:end-3 sm:top-3"
                     >
                         <Heart
                             className={`h-4 w-4 ${wished ? 'fill-terracotta text-terracotta' : ''}`}

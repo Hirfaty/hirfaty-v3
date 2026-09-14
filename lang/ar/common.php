@@ -83,6 +83,13 @@ return [
     'auth.register.password_confirm' => 'تأكيد كلمة المرور',
     'auth.register.password_hint' => '12 حرفًا على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
 
+    // ── مقياس قوة كلمة المرور — تسمية لكل شريط مُفعّل ────────────────
+    'auth.register.password_strength_very_weak' => 'ضعيفة جدًا',
+    'auth.register.password_strength_weak' => 'ضعيفة',
+    'auth.register.password_strength_fair' => 'متوسطة',
+    'auth.register.password_strength_good' => 'جيدة',
+    'auth.register.password_strength_strong' => 'ممتازة',
+
     'auth.register.terms_prefix' => 'أوافق على',
     'auth.register.terms_privacy' => 'سياسة الخصوصية',
     'auth.register.terms_and' => 'و',
@@ -108,4 +115,15 @@ return [
 
     'errors.back_home' => 'العودة إلى الرئيسية',
     'errors.browse_market' => 'اكتشف السوق',
+
+    // توقيع تذييل الصفحة — نفس القيمة في الملفات الثلاثة، انظر en/common.php.
+    'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'رسائل من السوق',
+    'footer.newsletter.blurb' => 'قطع جديدة، ورشات جديدة، والحكايات وراءها. مرة واحدة في الشهر، لا أكثر.',
+    'footer.newsletter.label' => 'عنوان بريدك الإلكتروني',
+    'footer.newsletter.placeholder' => 'you@example.com',
+    'footer.newsletter.submit' => 'اشترك',
+    'footer.newsletter.success' => 'تم تسجيلك. ترقّب رسالة السوق القادمة.',
+    'footer.newsletter.invalid' => 'أدخل عنوان بريد إلكتروني صالحاً.',
 ];

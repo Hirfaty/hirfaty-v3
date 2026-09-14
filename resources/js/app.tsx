@@ -20,8 +20,8 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
  * That silently breaks Arabic rather than merely mislabelling it: app.css
  * hangs the Arabic font stack and the "never italicise Arabic" rule off
  * [lang='ar'], and RTL layout off [dir='rtl']. A stale lang="fr" leaves
- * Arabic text rendered left-to-right and italic in Bodoni Moda, which carries
- * no Arabic glyphs at all.
+ * Arabic text rendered left-to-right and italic in Didot, which carries no
+ * Arabic glyphs at all.
  */
 const syncDocumentLocale = (props: Record<string, unknown>) => {
     const locale = props.locale as string | undefined;

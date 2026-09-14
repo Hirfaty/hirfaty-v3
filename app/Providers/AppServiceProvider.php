@@ -94,14 +94,32 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        /*
+         * The same complexity policy everywhere a password is set —
+         * registration, "forgot password", and account settings all share
+         * `passwordRules()` (see App\Concerns\PasswordValidationRules), so
+         * this one rule is what actually gets enforced on each of them.
+         *
+         * Used to be production-only, which meant a one-character password
+         * sailed through on every other environment while the register
+         * screen's own hint text (common.auth.register.password_hint) kept
+         * advertising the strict rules regardless — the policy is real
+         * everywhere now, so the hint stops lying outside prod.
+         *
+         * `uncompromised()` stays production-only: it calls the k-anonymity
+         * HaveIBeenPwned API over the network on every check, which would
+         * make local dev and the test suite depend on internet access for
+         * no benefit — nobody is registering a real leaked password in a
+         * factory-seeded dev database.
+         */
+        Password::defaults(function (): Password {
+            $rule = Password::min(12)
                 ->mixedCase()
                 ->letters()
                 ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+                ->symbols();
+
+            return app()->isProduction() ? $rule->uncompromised() : $rule;
+        });
     }
 }

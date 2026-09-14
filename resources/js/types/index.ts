@@ -33,10 +33,26 @@ export interface ResetLinkPayload {
     expires_in_minutes: number;
 }
 
+/**
+ * The signed-in seller's shop, reduced to what the status bar needs — shaped
+ * by HandleInertiaRequests::getSellerStoreStatus(). Null for anyone who is not
+ * a seller with a shop.
+ */
+export interface SellerStoreStatus {
+    store_name: string;
+    verification_status: 'pending' | 'approved' | 'rejected';
+    rejection_reason: string | null;
+    /** Names from Store::REQUIRED_PROFILE_FIELDS that are still blank. */
+    missing_fields: string[];
+    /** Approved *and* complete — the gate on publishing products. */
+    can_sell: boolean;
+}
+
 export interface PageProps extends InertiaPageProps {
     auth: Auth;
     name: string;
     sidebarOpen: boolean;
+    sellerStore?: SellerStoreStatus | null;
     flash: {
         success?: string;
         error?: string;

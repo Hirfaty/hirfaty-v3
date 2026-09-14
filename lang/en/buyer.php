@@ -146,7 +146,7 @@ return [
     'onboarding.finish' => 'Explore the market',
 
     'onboarding.welcome.quote' => 'Behind every piece there are two hands and a craft passed down.',
-    'onboarding.welcome.title' => 'Welcome, :name 👋',
+    'onboarding.welcome.title' => 'Welcome, :name',
     'onboarding.welcome.body' => 'Hirfaty brings Morocco\'s artisans together in one place. Two minutes to get acquainted, then the market is yours.',
     'onboarding.welcome.point_direct' => 'You buy straight from the artisan — no middleman.',
     'onboarding.welcome.point_authentic' => 'Every piece is handmade, and every shop is vetted by our team.',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -13,8 +14,11 @@ class DashboardController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
+        // Defensive only — `store.setup` middleware already bounces a
+        // storeless seller. The old target here was `seller.store.create`,
+        // a route that has never existed.
         if (! $store) {
-            return redirect()->route('seller.store.create');
+            return redirect()->route('seller.setup.store');
         }
 
         $stats = [
@@ -32,22 +36,30 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        //  ── Revenue chart — last 6 months ────────────────────
+        /*
+         * Revenue chart — last 6 months.
+         *
+         * Grouped in PHP rather than SQL on purpose: this used to call
+         * MONTH()/YEAR(), which are MySQL-only. SQLite (local and CI) has no
+         * such functions and Postgres (production) spells them EXTRACT, so the
+         * query threw on every environment this project actually runs on — it
+         * only stayed hidden because the dashboard route was disabled.
+         *
+         * Six months of one shop's earnings is a small set, so pulling the
+         * rows and bucketing them here costs nothing and works on all three.
+         */
         $revenueChart = $store->earnings()
-            ->select(
-                DB::raw('MONTH(created_at) as month'),
-                DB::raw('YEAR(created_at) as year'),
-                DB::raw('SUM(net_amount) as total'),
-            )
-            ->where('created_at', '>=', now()->subMonths(6))
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get()
-            ->map(fn ($row) => [
-                'label' => now()->setMonth($row->month)->format('M'),
-                'total' => (float) $row->total,
-            ]);
+            ->where('created_at', '>=', now()->subMonths(6)->startOfMonth())
+            ->get(['net_amount', 'created_at'])
+            ->groupBy(fn ($earning) => $earning->created_at->format('Y-m'))
+            ->map(fn ($group, $key) => [
+                'label' => CarbonImmutable::createFromFormat('Y-m', $key)->format('M'),
+                'total' => (float) $group->sum('net_amount'),
+            ])
+            // groupBy keys are "YYYY-MM", so a plain key sort is chronological
+            // and does not put December before February.
+            ->sortKeys()
+            ->values();
 
         // ── Order status breakdown ────────────────────────────
         $orderBreakdown = $store->orders()

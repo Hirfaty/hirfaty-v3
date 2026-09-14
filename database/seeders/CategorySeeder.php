@@ -54,6 +54,11 @@ class CategorySeeder extends Seeder
                 'ar' => 'الرسم والفن',
                 'en' => 'Painting & Art',
             ],
+            [
+                'fr' => 'Lanterne marocaine',
+                'ar' => 'الفانوس المغربي',
+                'en' => 'Moroccan Lantern',
+            ],
         ];
 
         foreach ($categories as $names) {

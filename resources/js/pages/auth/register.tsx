@@ -4,11 +4,12 @@ import { useState } from 'react';
 import VaseIcon from '@/components/home/VaseIcon';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
-import buyerImage from '@/images/cat-jewelry.jpg';
-import sellerImage from '@/images/cat-pottery.jpg';
+import registerPic1 from '@/images/auth/register-1.jpg';
+import registerPic2 from '@/images/auth/register-2.jpg';
 import logo from '@/images/logo.png';
 import zellij from '@/images/zellij-pattern.png';
 import { login } from '@/routes';
@@ -56,6 +57,13 @@ export default function Register() {
      * the role and the review that justifies it stay together.
      */
     const role = accountKind;
+
+    /*
+     * Read purely for the strength meter below — the field itself stays
+     * uncontrolled (no `value` prop on PasswordInput), so this never fights
+     * Inertia's <Form>, which reads the live DOM value on submit anyway.
+     */
+    const [passwordValue, setPasswordValue] = useState('');
 
     const switchLocale = (code: string) =>
         router.post(route('locale.switch', code), {}, { preserveScroll: true });
@@ -112,8 +120,8 @@ export default function Register() {
                                     key={accountKind}
                                     src={
                                         accountKind === 'seller'
-                                            ? sellerImage
-                                            : buyerImage
+                                            ? registerPic1
+                                            : registerPic2
                                     }
                                     alt={
                                         accountKind === 'seller'
@@ -410,6 +418,14 @@ export default function Register() {
                                                     required
                                                     autoComplete="new-password"
                                                     className={fieldClass}
+                                                    onChange={(e) =>
+                                                        setPasswordValue(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <PasswordStrengthMeter
+                                                    password={passwordValue}
                                                 />
                                                 <InputError
                                                     message={errors.password}
@@ -442,10 +458,10 @@ export default function Register() {
                                             </div>
                                         </div>
 
-                                        {/* Production enforces the strict
-                                            Password::defaults() set, so spell
-                                            the rules out rather than letting
-                                            people discover them by failing. */}
+                                        {/* Password::defaults() enforces this
+                                            everywhere now, so spell the rules
+                                            out rather than letting people
+                                            discover them by failing. */}
                                         <p className="mt-1.5 text-[11px] leading-relaxed text-souk-brown-deep/45">
                                             {t(
                                                 'common.auth.register.password_hint',

@@ -41,6 +41,7 @@ return [
     'categories.accessories.name' => 'Accessoires',
     'categories.home.name' => 'Maison & Cuisine',
     'categories.terroir.name' => 'Produits de Terroir',
+    'categories_grid.leather' => 'Maroquinerie',
 
     // ── Page d'accueil ───────────────────────────────────────────────────
     /*
@@ -65,6 +66,20 @@ return [
     'hero.alt_textile' => 'Tissage de laine sur un métier traditionnel',
     'hero.alt_zellige' => 'Zellige taillé à la main, motif géométrique',
     'hero.slides_label' => 'Choisir une photographie',
+    'hero.prev' => 'Photographie précédente',
+    'hero.next' => 'Photographie suivante',
+
+    // ── Explorer par catégorie ───────────────────────────────────────────
+    // Libellés de repli, utilisés uniquement si la catégorie de la vignette
+    // est introuvable dans `navCategories` — voir `EXPLORE_CATEGORIES` dans
+    // welcome.tsx.
+    'categories_grid.eyebrow' => 'Parcourir le souk',
+    'categories_grid.heading' => 'Explorer par catégorie',
+    'categories_grid.pottery' => 'Poterie & Céramique',
+    'categories_grid.textile' => 'Textiles & Tissage',
+    'categories_grid.art' => 'Peinture & Art',
+    'categories_grid.lantern' => 'Lanterne marocaine',
+    'categories_grid.wood' => 'Bois & Menuiserie',
 
     // ── Les trois piliers ────────────────────────────────────────────────
     // `*.title_script` reprend `hero.badge_script` : le nom arabe du pilier,
@@ -129,11 +144,6 @@ return [
     'audience.cta' => 'Ouvrir votre atelier',
 
     // ── Carte ────────────────────────────────────────────────────────────
-    'map.eyebrow' => 'Partout au Maroc',
-    'map.heading_line1' => 'Là où le travail',
-    'map.heading_line2' => 'se fait vraiment',
-    'map.lead' => 'Nos ateliers s\'étendent du Rif au Sahara. Voici sept des villes dont vous retrouverez les métiers sur Hirfaty.',
-    'map.body' => 'Chacune porte son métier — Tanger le tissage, Fès sa céramique bleue et ses tanneries, Meknès le métal damasquiné, Safi sa colline des potiers, Marrakech ses lanternes et son cuir, Agadir l\'argan et l\'argent, Laâyoune le cuir saharien. Acheter à un atelier, c\'est acheter à un lieu, pas à un entrepôt.',
     'map.city.tanger' => 'Tanger',
     'map.city.fes' => 'Fès',
     'map.city.meknes' => 'Meknès',
@@ -141,6 +151,26 @@ return [
     'map.city.marrakech' => 'Marrakech',
     'map.city.agadir' => 'Agadir',
     'map.city.laayoune' => 'Laâyoune',
+    'map.city.essaouira' => 'Essaouira',
+
+
+    /*
+     * ── Contact ──────────────────────────────────────────────────────────
+     * `email`/`phone` sont des données, pas du texte : identiques dans les
+     * trois fichiers de langue. Seuls les libellés sont traduits.
+     *
+     * TODO : `phone` et `address` sont des valeurs d'attente — le vrai
+     * numéro et l'adresse postale ne figurent nulle part dans ce dépôt.
+     */
+    'contact.eyebrow' => 'Nous contacter',
+    'contact.heading_line1' => 'Parlez à celles et ceux',
+    'contact.heading_line2' => 'qui font le souk',
+    'contact.email_label' => 'E-mail',
+    'contact.email' => 'contact@hirfaty.com',
+    'contact.phone_label' => 'Téléphone',
+    'contact.phone' => '+212 000 000 000',
+    'contact.address_label' => 'Adresse',
+    'contact.address' => 'Safi, Maroc',
 
     'products.eyebrow' => 'Frais du souk',
     'products.heading' => 'Explorez nos produits',
@@ -150,6 +180,14 @@ return [
     'products.currency' => 'MAD',
     'products.prev' => 'Produits précédents',
     'products.next' => 'Produits suivants',
+    'products.spotlight_prev' => 'Pièce précédente à la une',
+    'products.spotlight_next' => 'Pièce suivante à la une',
+
+    'catalogue.eyebrow' => 'À emporter',
+    'catalogue.heading' => 'Téléchargez notre catalogue produits',
+    'catalogue.lead' => 'Chaque atelier et chaque pièce réunis dans un seul document — consultez-le hors ligne, ou partagez-le avec votre équipe.',
+    'catalogue.button' => 'Télécharger le catalogue',
+    'catalogue.alt' => 'Le catalogue produits Hirfaty imprimé',
 
     'gallery.eyebrow' => 'Dans les ateliers',
     'gallery.heading' => 'Galerie',

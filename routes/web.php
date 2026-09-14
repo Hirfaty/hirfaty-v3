@@ -17,10 +17,12 @@ use App\Http\Controllers\Buyer\SearchController;
 use App\Http\Controllers\Buyer\StoreController as BuyerStoreController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\StoreSetupController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -33,10 +35,6 @@ Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
 // Static marketing page — no backend data, so no dedicated controller.
 // Route::inertia('/about', 'about')->name('about');
-
-Route::middleware(['auth', 'verified', 'store.setup'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
 
 /*
  * No app-level `verification.verify` route here on purpose — Fortify already
@@ -134,22 +132,10 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
 
-        // Blogs
-        Route::get('/blogs', [Admin\BlogController::class, 'index'])->name('blogs.index');
-        // `create` and the image endpoint must stay above `{blog}` or they are
-        // matched as an id — which on Postgres errors on the bigint cast
-        // rather than 404ing cleanly.
-        Route::get('/blogs/create', [Admin\BlogController::class, 'create'])->name('blogs.create');
-        Route::post('/blogs/images', [Admin\BlogController::class, 'uploadImage'])->name('blogs.images.store');
-        Route::post('/blogs', [Admin\BlogController::class, 'store'])->name('blogs.store');
-        Route::get('/blogs/{blog}/edit', [Admin\BlogController::class, 'edit'])->name('blogs.edit');
-        Route::get('/blogs/{blog}/preview', [Admin\BlogController::class, 'preview'])->name('blogs.preview');
-        Route::patch('/blogs/{blog}/archive', [Admin\BlogController::class, 'archive'])->name('blogs.archive');
-        Route::patch('/blogs/{blog}/publish', [Admin\BlogController::class, 'publishNow'])->name('blogs.publish');
-        // POST, not PUT: the form ships the cover image as multipart, which
-        // browsers can only send on a POST.
-        Route::post('/blogs/{blog}', [Admin\BlogController::class, 'update'])->name('blogs.update');
-        Route::delete('/blogs/{blog}', [Admin\BlogController::class, 'destroy'])->name('blogs.destroy');
+        // Stores — the review queue a shop sits in before it may sell.
+        Route::get('/stores', [Admin\StoreController::class, 'index'])->name('stores.index');
+        Route::patch('/stores/{store}/approve', [Admin\StoreController::class, 'approve'])->name('stores.approve');
+        Route::patch('/stores/{store}/reject', [Admin\StoreController::class, 'reject'])->name('stores.reject');
 
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
@@ -173,12 +159,40 @@ Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
     ->name('seller.')
     ->group(function () {
 
-        // Dashboard
-        // Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::redirect('/dashboard', '/seller/orders')->name('dashboard');
+        // Where setup-store lands once the shop exists. In this group, not the
+        // one above: it is the confirmation for a shop that was just created,
+        // so `store.setup` passing is exactly the precondition.
+        Route::get('/store-created', [StoreSetupController::class, 'created'])->name('store.created');
 
-        // Products
-        Route::resource('products', ProductController::class);
+        // Dashboard. Was a redirect to /seller/orders while the real overview
+        // sat unrouted; the page exists and is the natural landing, so it is
+        // wired up again.
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        /*
+         * Products. Reading the catalogue is always allowed — that page is
+         * where the status bar explains what is still outstanding. Anything
+         * that creates or changes a listing is gated on the shop being both
+         * complete and approved (Store::canSell()).
+         */
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+
+        /*
+         * `create` stays above `{product}` or it is matched as an id — which
+         * on Postgres errors on the bigint cast rather than 404ing cleanly.
+         */
+        Route::middleware('store.sellable')->group(function () {
+            Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+            Route::post('products', [ProductController::class, 'store'])->name('products.store');
+            Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+            // One route matching both verbs, not two separate declarations:
+            // Wayfinder generates a helper per route, and two routes sharing
+            // the name emit a duplicate key into the generated action file.
+            Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
+            Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        });
+
+        Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
 
         // Orders
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
@@ -187,6 +201,19 @@ Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
 
         // Earnings
         Route::get('earnings', [EarningController::class, 'index'])->name('earnings.index');
+
+        /*
+         * Settings. The controller and the page have both existed for a while
+         * but were never routed — SellerSidebar already linked to
+         * /seller/settings, which 404'd. It is also where a seller finishes a
+         * shop they skipped through at setup (craft, city, description), so
+         * the "complete it later" promise depends on these existing.
+         */
+        Route::get('settings', [SellerSettingsController::class, 'index'])->name('settings.index');
+        Route::patch('settings/profile', [SellerSettingsController::class, 'updateProfile'])->name('settings.profile.update');
+        Route::patch('settings/store', [SellerSettingsController::class, 'updateStore'])->name('settings.store.update');
+        Route::patch('settings/locale', [SellerSettingsController::class, 'updateLocale'])->name('settings.locale.update');
+        Route::patch('settings/password', [SellerSettingsController::class, 'updatePassword'])->name('settings.password.update');
     });
 
 Route::middleware('auth')->group(function () {
@@ -298,6 +325,18 @@ Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('store
  * The controller therefore has to tolerate a null user; see its show().
  */
 Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
+
+/*
+ * The footer's mailing-list signup, and so reachable from every page.
+ *
+ * Public, because the whole point of putting it in the footer is that a visitor
+ * who has never registered can use it — and therefore throttled: it is an
+ * unauthenticated endpoint whose job is to write a row, which is precisely the
+ * shape of thing that fills a table up overnight if left open.
+ */
+Route::post('/newsletter', [NewsletterController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('newsletter.store');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

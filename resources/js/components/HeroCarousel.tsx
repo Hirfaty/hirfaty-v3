@@ -34,8 +34,8 @@ type Props = {
  * know about RTL — a translating track would need its direction flipped for
  * Arabic.
  *
- * Motion rules live in `useSlideshow`, which the home page's full-bleed
- * backdrop shares — see that hook for what pauses the timer and why.
+ * Motion rules live in `useSlideshow`, which the home page's `HeroSlider`
+ * shares — see that hook for what pauses the timer and why.
  */
 export default function HeroCarousel({
     slides,

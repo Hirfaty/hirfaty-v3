@@ -1,33 +1,27 @@
-import { Link } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-    Plus,
-    Pencil,
-    Trash2,
-    Eye,
-    Package,
-    Archive,
-    AlertCircle,
-    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     Clock,
-    Search,
-    X,
+    EllipsisVertical,
+    Eye,
+    ImageOff,
+    Lock,
+    Package,
+    Pencil,
+    PlusCircle,
+    Trash2,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Table,
     TableBody,
@@ -37,395 +31,306 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import SellerLayout from '@/layouts/seller/layout';
-import { cn } from '@/lib/utils';
-import type { Media, PaginatedData, Product, ProductStatus } from '@/types';
+import { formatDate } from '@/lib/utils';
+import type { PageProps, PaginatedData } from '@/types';
 
-const statusConfig: Record<
-    ProductStatus,
-    { label: string; icon: any; className: string }
-> = {
-    // Created by an admin and not yet completed; invisible in the storefront.
-    draft: {
-        label: 'Brouillon',
-        icon: Archive,
-        className: 'bg-slate-50 text-slate-700 border-slate-200',
-    },
-    published: {
-        label: 'En vente',
-        icon: CheckCircle2,
-        className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    },
-    pending_review: {
-        label: 'En révision',
-        icon: Clock,
-        className: 'bg-amber-50 text-amber-700 border-amber-200',
-    },
-    rejected: {
-        label: 'Rejeté',
-        icon: AlertCircle,
-        className: 'bg-rose-50 text-rose-700 border-rose-200',
-    },
-    archived: {
-        label: 'Archivé',
-        icon: Archive,
-        className: 'bg-slate-50 text-slate-700 border-slate-200',
-    },
-};
-
-interface ProductProps {
-    products: PaginatedData<Product & { images: Media[] }>;
+interface ProductRow {
+    id: number;
+    name: string;
+    price: number;
+    stock: number;
+    status: string;
+    rejection_reason: string | null;
+    created_at: string;
+    category: { id: number; name: string } | null;
+    images: Array<{ url: string }>;
 }
 
-function Index({ products }: ProductProps) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedStatuses, setSelectedStatuses] = useState<ProductStatus[]>(
-        [],
-    );
+/** Mirrors the Product status lifecycle on the model. */
+const STATUS: Record<string, { label: string; className: string }> = {
+    draft: { label: 'Brouillon', className: 'bg-slate-100 text-slate-700' },
+    pending_review: {
+        label: 'En revue',
+        className: 'bg-amber-100 text-amber-700',
+    },
+    published: {
+        label: 'En ligne',
+        className: 'bg-emerald-100 text-emerald-700',
+    },
+    rejected: { label: 'Refusé', className: 'bg-rose-100 text-rose-700' },
+    archived: { label: 'Archivé', className: 'bg-slate-100 text-slate-500' },
+};
 
-    const statuses: ProductStatus[] = [
-        'published',
-        'pending_review',
-        'rejected',
-        'archived',
-    ];
+const money = (n: number) =>
+    `${new Intl.NumberFormat('fr-MA').format(Math.round(n))} MAD`;
 
-    const handleDelete = (id: number, name: string) => {
-        router.delete(route('seller.products.destroy', id), {
-            onSuccess: () => {
-                toast.success('Produit supprimé', {
-                    description: `« ${name} » a été retiré de votre catalogue.`,
-                });
-            },
-        });
+const Index = ({
+    products,
+    flash,
+    sellerStore,
+}: PageProps & { products: PaginatedData<ProductRow> }) => {
+    const canSell = sellerStore?.can_sell ?? false;
+
+    /*
+     * `store.sellable` redirects here with a flash when a seller reaches a
+     * blocked route directly (a bookmarked /create, say). Surfacing it means
+     * the bounce is explained rather than looking like a dead link.
+     */
+    useEffect(() => {
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash?.error]);
+
+    const handleDelete = (product: ProductRow) => {
+        if (
+            confirm(
+                `Supprimer « ${product.name} » ? Cette action est irréversible.`,
+            )
+        ) {
+            router.delete(route('seller.products.destroy', product.id), {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const f = (page.props as unknown as PageProps).flash;
+
+                    if (f?.error) {
+                        toast.error(f.error);
+                    } else if (f?.success) {
+                        toast.success(f.success);
+                    }
+                },
+            });
+        }
     };
-
-    const toggleStatusFilter = (status: ProductStatus) => {
-        setSelectedStatuses((prev) =>
-            prev.includes(status)
-                ? prev.filter((s) => s !== status)
-                : [...prev, status],
-        );
-    };
-
-    const filteredProducts = useMemo(() => {
-        return products.data.filter((p) => {
-            const matchesSearch =
-                searchTerm === '' ||
-                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.id.toString().includes(searchTerm);
-
-            const matchesStatus =
-                selectedStatuses.length === 0 ||
-                selectedStatuses.includes(p.status);
-
-            return matchesSearch && matchesStatus;
-        });
-    }, [products.data, searchTerm, selectedStatuses]);
 
     return (
-        <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8">
-            <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title="Produits" />
+
+            <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
-                        <span className="inline-block h-px w-8 bg-border" />
-                        Gestion de l'Atelier
-                    </div>
-                    <h1 className="mt-4 font-display text-4xl leading-tight md:text-5xl lg:text-6xl">
-                        Votre Catalogue
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                        Produits
                     </h1>
-                    <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">
-                        Gérez vos pièces uniques, suivez vos stocks et mettez en
-                        avant votre savoir-faire.
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {products.total} produit
+                        {products.total > 1 ? 's' : ''} dans votre catalogue.
                     </p>
                 </div>
-                <Button
-                    asChild
-                    className="h-12 bg-primary px-6 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
-                >
-                    <Link href={route('seller.products.create')}>
-                        <Plus className="me-2 h-5 w-5" />
-                        Créer une pièce
+
+                {/*
+                    Disabled-with-a-reason rather than hidden: this is the
+                    screen a blocked seller is redirected to, so the button
+                    belongs where they expect it and says why it is inert.
+                 */}
+                {canSell ? (
+                    <Link
+                        href={route('seller.products.create')}
+                        className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
+                    >
+                        <PlusCircle className="h-4 w-4" />
+                        Ajouter un produit
                     </Link>
-                </Button>
+                ) : (
+                    <span
+                        title="Votre atelier doit être complété et validé par Hirfaty avant de pouvoir publier."
+                        className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-border bg-muted px-4 py-2.5 text-sm font-medium text-ink-soft"
+                    >
+                        <Lock className="h-4 w-4" />
+                        Ajouter un produit
+                    </span>
+                )}
             </header>
 
-            {/* Search and Filters */}
-            <div className="mb-8 space-y-4">
-                {/* Search Bar */}
-                <div className="relative">
-                    <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Rechercher par nom ou ID..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full border border-border bg-card/50 py-3 pr-4 pl-12 text-sm placeholder-muted-foreground transition-all focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background focus:outline-none"
-                    />
-                    {searchTerm && (
-                        <button
-                            onClick={() => setSearchTerm('')}
-                            className="absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-                    )}
-                </div>
-
-                {/* Status Filters */}
-                <div className="flex flex-wrap gap-2">
-                    {statuses.map((status) => {
-                        const config = statusConfig[status];
-                        const isSelected = selectedStatuses.includes(status);
-
-                        return (
-                            <button
-                                key={status}
-                                onClick={() => toggleStatusFilter(status)}
-                                className={cn(
-                                    'rounded-full border px-4 py-2 text-sm font-medium transition-all',
-                                    isSelected
-                                        ? `${config.className} ring-2 ring-primary ring-offset-2 ring-offset-background`
-                                        : 'border-border bg-card/50 text-muted-foreground hover:bg-card hover:text-foreground',
-                                )}
-                            >
-                                {config.label}
-                            </button>
-                        );
-                    })}
-                    {selectedStatuses.length > 0 && (
-                        <button
-                            onClick={() => setSelectedStatuses([])}
-                            className="ml-2 rounded-full border border-border bg-card/50 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            Réinitialiser
-                        </button>
-                    )}
-                </div>
+            {/* Standing explanation of the product review step, so "En revue"
+                on a row below is never a surprise. */}
+            <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-5 py-3.5 shadow-sm">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
+                <p className="text-sm text-ink-soft">
+                    Chaque produit est relu par l’équipe Hirfaty avant d’être
+                    visible par les acheteurs. Comptez un à deux jours ouvrés.
+                </p>
             </div>
 
-            <div className="overflow-hidden border border-border bg-card/50 shadow-sm backdrop-blur-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-b border-border bg-muted/30 hover:bg-muted/30">
-                            <TableHead className="py-5 pl-6 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                                Produit
-                            </TableHead>
-                            <TableHead className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                                Statut
-                            </TableHead>
-                            <TableHead className="text-end text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                                Prix
-                            </TableHead>
-                            <TableHead className="text-end text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-                                Stock
-                            </TableHead>
-                            <TableHead className="pr-6 text-end text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead>Produit</TableHead>
+                            <TableHead>Catégorie</TableHead>
+                            <TableHead>Statut</TableHead>
+                            <TableHead className="text-right">Prix</TableHead>
+                            <TableHead className="text-right">Stock</TableHead>
+                            <TableHead className="text-right">
                                 Actions
                             </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredProducts.length === 0 ? (
+                        {products.data.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={5}
-                                    className="py-20 text-center"
+                                    colSpan={6}
+                                    className="h-40 text-center"
                                 >
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="flex h-16 w-16 items-center justify-center bg-muted">
-                                            <Package className="h-8 w-8 text-muted-foreground/50" />
-                                        </div>
-                                        <p className="font-display text-lg">
-                                            Aucun produit trouvé
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {searchTerm ||
-                                            selectedStatuses.length > 0
-                                                ? "Essayez d'ajuster vos filtres ou votre recherche."
-                                                : 'Commencez par ajouter votre première création.'}
-                                        </p>
-                                        {(searchTerm ||
-                                            selectedStatuses.length > 0) && (
-                                            <Button
-                                                onClick={() => {
-                                                    setSearchTerm('');
-                                                    setSelectedStatuses([]);
-                                                }}
-                                                variant="outline"
-                                                className="mt-2 rounded-xl"
-                                            >
-                                                Réinitialiser les filtres
-                                            </Button>
-                                        )}
-                                        {!searchTerm &&
-                                            selectedStatuses.length === 0 && (
-                                                <Button
-                                                    asChild
-                                                    variant="outline"
-                                                    className="mt-2"
-                                                >
-                                                    <Link
-                                                        href={route(
-                                                            'seller.products.create',
-                                                        )}
-                                                    >
-                                                        Ajouter un produit
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                    </div>
+                                    <Package className="mx-auto h-8 w-8 text-ink/15" />
+                                    <p className="mt-3 text-sm text-ink-soft">
+                                        {canSell
+                                            ? 'Aucun produit pour le moment.'
+                                            : 'Votre atelier doit être validé avant de pouvoir ajouter des produits.'}
+                                    </p>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredProducts.map((p) => {
-                                const config = statusConfig[p.status];
-                                const StatusIcon = config.icon;
+                            products.data.map((product) => {
+                                const meta = STATUS[product.status] ?? {
+                                    label: product.status,
+                                    className: 'bg-slate-100 text-slate-700',
+                                };
 
                                 return (
-                                    <TableRow
-                                        key={p.id}
-                                        className="group border-border transition-colors hover:bg-muted/20"
-                                    >
-                                        <TableCell className="py-4 pl-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-14 w-14 shrink-0 overflow-hidden border border-border bg-muted shadow-sm">
-                                                    <img
-                                                        src={
-                                                            p.images[0]?.url ??
-                                                            ''
-                                                        }
-                                                        alt={p.name}
-                                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                                    />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="font-display text-lg leading-tight">
-                                                        {p.name}
-                                                    </span>
-                                                    <span className="mt-0.5 text-[10px] tracking-wider text-muted-foreground uppercase">
-                                                        ID: #{p.id}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </TableCell>
+                                    <TableRow key={product.id}>
                                         <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(
-                                                    'flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold',
-                                                    config.className,
-                                                )}
-                                            >
-                                                <StatusIcon className="h-3 w-3" />
-                                                {config.label}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-end font-medium tabular-nums">
-                                            {p.base_price}{' '}
-                                            <span className="text-[10px] text-muted-foreground">
-                                                MAD
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-end tabular-nums">
-                                            <div className="flex flex-col items-end">
-                                                <span
-                                                    className={cn(
-                                                        'font-medium',
-                                                        p.stock <= 2
-                                                            ? 'text-rose-600'
-                                                            : '',
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                                    {product.images?.[0] ? (
+                                                        <img
+                                                            src={
+                                                                product
+                                                                    .images[0]
+                                                                    .url
+                                                            }
+                                                            alt=""
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center text-ink/20">
+                                                            <ImageOff className="h-4 w-4" />
+                                                        </div>
                                                     )}
-                                                >
-                                                    {p.stock}
-                                                </span>
-                                                {p.stock <= 2 && (
-                                                    <span className="text-[9px] font-bold tracking-tighter text-rose-500 uppercase">
-                                                        Bas !
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="pr-6">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    asChild
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 rounded-lg transition-colors hover:bg-primary/10 hover:text-primary"
-                                                    title="Aperçu public"
-                                                >
+                                                </div>
+                                                <div className="min-w-0">
                                                     <Link
                                                         href={route(
                                                             'seller.products.show',
-                                                            p.id,
+                                                            product.id,
                                                         )}
+                                                        className="block truncate font-medium text-ink hover:underline"
                                                     >
-                                                        <Eye className="h-4 w-4" />
+                                                        {product.name}
                                                     </Link>
-                                                </Button>
-                                                <Button
-                                                    asChild
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="h-9 w-9 rounded-lg transition-colors hover:bg-primary/10 hover:text-primary"
-                                                    title="Modifier"
-                                                >
-                                                    <Link
-                                                        href={route(
-                                                            'seller.products.edit',
-                                                            p.id,
+                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                        Ajouté le{' '}
+                                                        {formatDate(
+                                                            product.created_at,
                                                         )}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
 
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            className="h-9 w-9 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                                            title="Supprimer"
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {product.category?.name ?? '—'}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            <span
+                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
+                                            >
+                                                {meta.label}
+                                            </span>
+                                            {product.status === 'rejected' &&
+                                                product.rejection_reason && (
+                                                    <p
+                                                        className="mt-1 max-w-52 truncate text-[11px] text-rose-700"
+                                                        title={
+                                                            product.rejection_reason
+                                                        }
+                                                    >
+                                                        {
+                                                            product.rejection_reason
+                                                        }
+                                                    </p>
+                                                )}
+                                        </TableCell>
+
+                                        <TableCell className="text-right text-sm text-ink tabular-nums">
+                                            {money(product.price)}
+                                        </TableCell>
+
+                                        <TableCell className="text-right text-sm tabular-nums">
+                                            <span
+                                                className={
+                                                    product.stock === 0
+                                                        ? 'text-rose-600'
+                                                        : 'text-ink'
+                                                }
+                                            >
+                                                {product.stock}
+                                            </span>
+                                        </TableCell>
+
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <EllipsisVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link
+                                                            href={route(
+                                                                'seller.products.show',
+                                                                product.id,
+                                                            )}
+                                                            className="flex items-center gap-2"
                                                         >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-2xl">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle className="font-display text-2xl">
-                                                                Supprimer ce
-                                                                produit ?
-                                                            </AlertDialogTitle>
-                                                            <AlertDialogDescription className="text-base">
-                                                                Cette action
-                                                                retirera «{' '}
-                                                                {p.name} » de
-                                                                votre boutique.
-                                                                Cette opération
-                                                                est
-                                                                irréversible.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter className="mt-6">
-                                                            <AlertDialogCancel className="h-11 rounded-xl">
-                                                                Annuler
-                                                            </AlertDialogCancel>
-                                                            <AlertDialogAction
+                                                            <Eye className="h-4 w-4" />
+                                                            Voir
+                                                        </Link>
+                                                    </DropdownMenuItem>
+
+                                                    {/* Edit and delete are
+                                                        blocked server-side by
+                                                        `store.sellable`; hiding
+                                                        them avoids offering a
+                                                        link that only bounces. */}
+                                                    {canSell && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={route(
+                                                                        'seller.products.edit',
+                                                                        product.id,
+                                                                    )}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                    Modifier
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
                                                                 onClick={() =>
                                                                     handleDelete(
-                                                                        p.id,
-                                                                        p.name,
+                                                                        product,
                                                                     )
                                                                 }
-                                                                className="h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                className="flex items-center gap-2 text-destructive"
                                                             >
-                                                                Oui, supprimer
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
+                                                                <Trash2 className="h-4 w-4" />
+                                                                Supprimer
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 );
@@ -433,47 +338,50 @@ function Index({ products }: ProductProps) {
                         )}
                     </TableBody>
                 </Table>
+
+                {products.last_page > 1 && (
+                    <div className="flex items-center justify-between border-t border-border px-5 py-3.5">
+                        <p className="text-xs text-ink-soft">
+                            {products.from}–{products.to} sur {products.total}
+                        </p>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={!products.prev_page_url}
+                                onClick={() =>
+                                    router.get(
+                                        products.prev_page_url!,
+                                        undefined,
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={!products.next_page_url}
+                                onClick={() =>
+                                    router.get(
+                                        products.next_page_url!,
+                                        undefined,
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
-            {/* Pagination placeholder if needed */}
         </div>
     );
-}
+};
 
-Index.layout = (page: React.ReactNode) => <SellerLayout children={page} />;
-
+Index.layout = (page: ReactNode) => <SellerLayout>{page}</SellerLayout>;
 export default Index;
-
-// import SellerLayout from '@/layouts/seller/layout';
-// import React from 'react';
-// import { Link } from '@inertiajs/react';
-// import { Products } from '@/types';
-// import { Product, PaginatedData } from '@/types';
-
-// const Index = ({ pageProps }: { pageProps: PaginatedData<Product> }) => {
-//     console.log('products: ', pageProps);
-//     return (
-//         <div>
-//             {pageProps.data.map((e) => {
-//                 return (
-//                     <div key={e.id} className="grid grid-cols-2">
-//                         <img src={e?.images[0]?.url} className="h-24 w-24" />
-//                         <Link
-//                             href={route('seller.products.edit', e.id)}
-//                             className="text-blue-600 hover:text-blue-900"
-//                         >
-//                             Edit Product
-//                         </Link>
-//                         <Link href={route('seller.products.destroy', e.id)}>
-//                             Delete
-//                         </Link>
-//                     </div>
-//                 );
-//             })}
-//         </div>
-
-//     );
-// };
-
-// Index.layout = (page: React.ReactNode) => <SellerLayout children={page} />;
-
-// export default Index;
