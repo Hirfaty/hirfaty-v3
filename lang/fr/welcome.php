@@ -180,6 +180,8 @@ return [
     'products.currency' => 'MAD',
     'products.prev' => 'Produits précédents',
     'products.next' => 'Produits suivants',
+    'products.spotlight_prev' => 'Pièce précédente à la une',
+    'products.spotlight_next' => 'Pièce suivante à la une',
 
     'catalogue.eyebrow' => 'À emporter',
     'catalogue.heading' => 'Téléchargez notre catalogue produits',

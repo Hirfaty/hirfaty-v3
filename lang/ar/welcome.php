@@ -165,6 +165,8 @@ return [
     'products.currency' => 'درهم',
     'products.prev' => 'المنتجات السابقة',
     'products.next' => 'المنتجات التالية',
+    'products.spotlight_prev' => 'القطعة المميزة السابقة',
+    'products.spotlight_next' => 'القطعة المميزة التالية',
 
     'catalogue.eyebrow' => 'خذه معك',
     'catalogue.heading' => 'حمّل كتالوج منتجاتنا',

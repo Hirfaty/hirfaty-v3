@@ -11,10 +11,12 @@ class HomeService
      * The products showcased in the "Explore our products" rail on the home
      * page.
      *
-     * Thirteen: five for the swipable spotlight carousel and eight for the
-     * 4 x 2 grid beside it. Every card is fetched up front rather than
-     * paginated: this is a shop window, not a listing, and thirteen rows
-     * costs less than the request that fetching them lazily would need.
+     * Five for the swipable spotlight carousel, then as many as three 4 x 2
+     * pages for the grid beside it, which the arrows above it turn. Fewer in
+     * the catalogue simply means fewer pages — the grid divides up whatever it
+     * is handed. Every card is fetched up front rather than paginated over the
+     * wire: this is a shop window, not a listing, and twenty-nine rows cost
+     * less than the round trip that turning a page lazily would need.
      *
      * Ordered at random rather than newest-first. The rail is a shop window
      * onto the whole catalogue, and sorting it by id turned it into a "just
@@ -38,7 +40,7 @@ class HomeService
      * product whose only extra photo lives on a colour variant would show a
      * single static frame.
      */
-    public function featuredProducts(int $limit = 13): Collection
+    public function featuredProducts(int $limit = 29): Collection
     {
         return Product::query()
             // storefront(false): temporarily includes unpriced products for

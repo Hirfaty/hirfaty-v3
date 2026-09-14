@@ -184,6 +184,8 @@ return [
     'products.currency' => 'MAD',
     'products.prev' => 'Previous products',
     'products.next' => 'Next products',
+    'products.spotlight_prev' => 'Previous featured piece',
+    'products.spotlight_next' => 'Next featured piece',
 
     'catalogue.eyebrow' => 'Take it with you',
     'catalogue.heading' => 'Download our product catalogue',

@@ -19,7 +19,7 @@ export function ExploreProducts({
     const { t, isRTL } = useTranslation();
 
     return (
-        <section className="relative overflow-hidden bg-souk-paper py-8 lg:flex lg:h-[100svh] lg:max-h-[880px] lg:min-h-[620px] lg:flex-col lg:py-10">
+        <section className="relative bg-souk-paper py-8 lg:mb-48 lg:flex lg:h-[100svh] lg:min-h-[620px] lg:flex-col lg:py-10">
             <div className="container lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
                 <Reveal delay={80}>
                     <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
@@ -38,6 +38,12 @@ export function ExploreProducts({
                             labels={{
                                 prev: t('welcome.products.prev'),
                                 next: t('welcome.products.next'),
+                                spotlightPrev: t(
+                                    'welcome.products.spotlight_prev',
+                                ),
+                                spotlightNext: t(
+                                    'welcome.products.spotlight_next',
+                                ),
                                 viewAll: t('welcome.products.view_all'),
                             }}
                             isRTL={isRTL}
@@ -48,7 +54,7 @@ export function ExploreProducts({
                         <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
                             {SHOWCASE.slice(0, 4).map((src, i) => (
                                 <Reveal key={src} delay={i * 100}>
-                                    <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5">
+                                    <div className="relative aspect-[4/5] rounded-xl bg-souk-brown/5">
                                         <img
                                             src={src}
                                             alt=""

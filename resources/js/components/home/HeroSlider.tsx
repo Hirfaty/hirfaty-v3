@@ -33,7 +33,7 @@ export default function HeroSlider({
     /** The claim, centred over the photography. */
     children?: ReactNode;
 }) {
-    const { track, index, goTo, step, pauseProps } =
+    const { track, index, goTo, step, order, pauseProps } =
         useSnapCarousel<HTMLUListElement>(slides.length, interval, isRTL);
 
     if (slides.length === 0) {
@@ -49,20 +49,24 @@ export default function HeroSlider({
                 ref={track}
                 className="flex h-[clamp(24rem,72svh,42rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-                {slides.map((slide, i) => (
+                {order.map((slide, position) => (
                     <li
-                        key={slide.src}
+                        // Positional, because `order` repeats a slide at each
+                        // end — see `useSnapCarousel`.
+                        key={position}
                         className="relative h-full w-full shrink-0 grow-0 basis-full snap-start snap-always"
                     >
                         <img
-                            src={slide.src}
+                            src={slides[slide].src}
                             // Only the resting slide carries its description:
                             // three alt texts announced in a row describe a
-                            // gallery, not the one picture on show.
-                            alt={i === index ? slide.alt : ''}
-                            // The first is the LCP candidate; the rest are
-                            // offscreen until paged to.
-                            loading={i === 0 ? 'eager' : 'lazy'}
+                            // gallery, not the one picture on show. Matched on
+                            // position rather than on `slide` so the trailing
+                            // clone of slide 0 stays silent too.
+                            alt={position === index ? slides[slide].alt : ''}
+                            // The first is the LCP candidate; the rest, the
+                            // clone included, are offscreen until paged to.
+                            loading={position === 0 ? 'eager' : 'lazy'}
                             className="h-full w-full object-cover"
                             draggable={false}
                         />

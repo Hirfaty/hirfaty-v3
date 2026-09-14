@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RefObject } from 'react';
+import { useState } from 'react';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
@@ -39,7 +40,19 @@ const GRID_SIZE = 8;
  * rather than as a one-off control invented for this section.
  */
 const arrowButton =
-    'grid h-9 w-9 cursor-pointer shrink-0 place-items-center rounded-t-full rounded-b-md text-souk-brown ring-1 ring-souk-brown/25 transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:pointer-events-none disabled:opacity-30';
+    'grid h-9 w-9 cursor-pointer shrink-0 place-items-center rounded-t-full rounded-b-md text-souk-brown transition-colors hover:bg-souk-brown hover:text-souk-cream';
+
+/** The pair above the grid, turning its pages, drawn on the page colour. */
+const gridArrow = `${arrowButton} ring-1 ring-souk-brown/25 disabled:pointer-events-none disabled:opacity-30`;
+
+/**
+ * The spotlight's own pair, sitting on the photograph rather than on the page,
+ * so they need their own ground to read against — hence the paper fill, where
+ * the grid's get away with a hairline ring. The arch shape, borrowed from
+ * SiteHeader's icon buttons, is the same either way, so the two pairs read as
+ * the same kind of control doing the same kind of job to different things.
+ */
+const spotlightArrow = `${arrowButton} bg-souk-paper/85 backdrop-blur-sm`;
 
 /**
  * The tall panel down the leading third of the section: swipable and
@@ -56,14 +69,19 @@ function Spotlight({
     frames,
     track,
     index,
-    goTo,
+    step,
+    order,
+    labels,
     pauseProps,
 }: {
     /** Only products with photography — see `ProductShowcase` for the filter. */
     frames: ShowcaseProduct[];
     track: RefObject<HTMLUListElement | null>;
     index: number;
-    goTo: (index: number) => void;
+    step: (delta: 1 | -1) => void;
+    /** Render order including the wrap-around clones — see `useSnapCarousel`. */
+    order: number[];
+    labels: { spotlightPrev: string; spotlightNext: string };
     pauseProps: {
         onMouseEnter: () => void;
         onMouseLeave: () => void;
@@ -95,12 +113,15 @@ function Spotlight({
                 ref={track}
                 className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-                {frames.map((product) => {
+                {order.map((frame, position) => {
+                    const product = frames[frame];
                     const image = (product.gallery_images ?? product.images)[0];
 
                     return (
                         <li
-                            key={product.id}
+                            // Positional, because `order` repeats a frame at
+                            // each end — see `useSnapCarousel`.
+                            key={position}
                             className="relative h-full w-full shrink-0 grow-0 basis-full snap-start snap-always"
                         >
                             <img
@@ -125,38 +146,54 @@ function Spotlight({
                 className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-2/3 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
             />
 
-            <Link
-                href={`/products/${frames[index].slug}`}
-                className="absolute inset-x-0 bottom-0 z-30 flex flex-col justify-end p-6"
-            >
-                <span className="font-display text-xl leading-snug text-souk-cream">
-                    {frames[index].name}
-                </span>
-                {frames[index].store.store_name && (
-                    <span className="mt-1 line-clamp-1 text-xs text-souk-cream/70">
-                        {frames[index].store.store_name}
+            {/*
+             * Caption and controls share one row along the foot rather than the
+             * caption being the whole strip: the arrows have to sit on top of
+             * the photograph, and a link spanning the full width underneath
+             * them would swallow the clicks meant for them.
+             */}
+            <div className="absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-4 p-6">
+                <Link
+                    href={`/products/${frames[index].slug}`}
+                    className="flex min-w-0 flex-1 flex-col"
+                >
+                    <span className="font-display text-xl leading-snug text-souk-cream">
+                        {frames[index].name}
                     </span>
-                )}
-            </Link>
+                    {frames[index].store.store_name && (
+                        <span className="mt-1 line-clamp-1 text-xs text-souk-cream/70">
+                            {frames[index].store.store_name}
+                        </span>
+                    )}
+                </Link>
 
-            {frames.length > 1 && (
-                <div className="absolute inset-x-0 bottom-24 z-30 flex items-center justify-center gap-2">
-                    {frames.map((product, i) => (
+                {frames.length > 1 && (
+                    <div className="flex shrink-0 items-center gap-2">
                         <button
-                            key={product.id}
                             type="button"
-                            onClick={() => goTo(i)}
-                            aria-label={product.name}
-                            aria-current={i === index}
-                            className={`h-1.5 rounded-full transition-all duration-500 ${
-                                i === index
-                                    ? 'w-8 bg-souk-cream'
-                                    : 'w-1.5 bg-white/45 hover:bg-white/75'
-                            }`}
-                        />
-                    ))}
-                </div>
-            )}
+                            onClick={() => step(-1)}
+                            aria-label={labels.spotlightPrev}
+                            className={spotlightArrow}
+                        >
+                            <ChevronLeft
+                                className="h-4 w-4 rtl:rotate-180"
+                                strokeWidth={1.75}
+                            />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => step(1)}
+                            aria-label={labels.spotlightNext}
+                            className={spotlightArrow}
+                        >
+                            <ChevronRight
+                                className="h-4 w-4 rtl:rotate-180"
+                                strokeWidth={1.75}
+                            />
+                        </button>
+                    </div>
+                )}
+            </div>
 
             <div
                 aria-hidden="true"
@@ -274,11 +311,10 @@ function ShowcaseCard({
  * The home page's "Explore our products" body: a swipable spotlight down the
  * leading third, a fixed 4 x 2 grid of eight products filling the rest.
  *
- * The controls that used to page the grid (an arrow pair plus a "x / y"
- * counter, sat above the grid) are gone — the grid no longer pages, it simply
- * shows its eight products. What is left of them, the arrow pair and the
- * "view all" link, now sits at the very top of the whole section rather than
- * above just the grid, and the arrows drive the spotlight carousel instead.
+ * Two sets of controls, each belonging to one half. The grid's arrows turn its
+ * pages and live at the top of the section next to the "view all" link; the
+ * spotlight's sit in the corner of its own photograph. What is gone is the
+ * "x / y" counter that used to accompany the grid's pair.
  *
  * The whole section is sized to fit a laptop screen without scrolling, which is
  * why the heights here are driven top-down rather than by each card's own
@@ -306,14 +342,17 @@ export default function ProductShowcase({
      * Passed in rather than read from `useTranslation` so this stays a dumb
      * component — the same contract `HeroSlider` next door works to.
      */
-    labels: { prev: string; next: string; viewAll: string };
+    labels: {
+        prev: string;
+        next: string;
+        spotlightPrev: string;
+        spotlightNext: string;
+        viewAll: string;
+    };
     isRTL: boolean;
 }) {
     const spotlightProducts = products.slice(0, SPOTLIGHT_SIZE);
-    const gridProducts = products.slice(
-        SPOTLIGHT_SIZE,
-        SPOTLIGHT_SIZE + GRID_SIZE,
-    );
+    const gridProducts = products.slice(SPOTLIGHT_SIZE);
 
     /*
      * Only products that actually have photography: a frame with nothing in it
@@ -323,11 +362,33 @@ export default function ProductShowcase({
         (product) => (product.gallery_images ?? product.images).length > 0,
     );
 
-    const { track, index, goTo, step, pauseProps } =
+    const { track, index, step, order, pauseProps } =
         useSnapCarousel<HTMLUListElement>(frames.length, 4500, isRTL);
+
+    const [page, setPage] = useState(0);
+
+    const pageCount = Math.max(1, Math.ceil(gridProducts.length / GRID_SIZE));
+    /*
+     * Clamped on read rather than trusted: `products` comes from the server and
+     * can be shorter on a later visit than it was when `page` was last set,
+     * which would otherwise leave the grid on an empty page.
+     */
+    const current = Math.min(page, pageCount - 1);
+    const visible = gridProducts.slice(
+        current * GRID_SIZE,
+        current * GRID_SIZE + GRID_SIZE,
+    );
 
     return (
         <div className="flex h-full flex-col gap-6 lg:gap-8">
+            {/*
+             * These arrows turn the grid's pages, and only the grid's — the
+             * spotlight carries its own pair down in the corner of its
+             * photograph. They sit up here rather than over the grid because
+             * the grid has to reach the foot of the section, and they ride
+             * alongside the way out of the section because both are ways
+             * through the catalogue; this is just the one that stays.
+             */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     href="/products"
@@ -340,13 +401,14 @@ export default function ProductShowcase({
                     />
                 </Link>
 
-                {frames.length > 1 && (
+                {pageCount > 1 && (
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={() => step(-1)}
+                            onClick={() => setPage(Math.max(0, current - 1))}
+                            disabled={current === 0}
                             aria-label={labels.prev}
-                            className={arrowButton}
+                            className={gridArrow}
                         >
                             <ChevronLeft
                                 className="h-4 w-4 rtl:rotate-180"
@@ -355,9 +417,12 @@ export default function ProductShowcase({
                         </button>
                         <button
                             type="button"
-                            onClick={() => step(1)}
+                            onClick={() =>
+                                setPage(Math.min(pageCount - 1, current + 1))
+                            }
+                            disabled={current >= pageCount - 1}
                             aria-label={labels.next}
-                            className={arrowButton}
+                            className={gridArrow}
                         >
                             <ChevronRight
                                 className="h-4 w-4 rtl:rotate-180"
@@ -375,18 +440,31 @@ export default function ProductShowcase({
                  * the `gap` comes out of the two panels proportionally instead of
                  * pushing the total past 100%.
                  */}
-                <div className="lg:min-h-0 lg:w-[30%] lg:shrink-0">
+                <div className="lg:h-screen lg:min-h-0 lg:w-[30%] lg:shrink-0">
                     <Spotlight
                         frames={frames}
                         track={track}
                         index={index}
-                        goTo={goTo}
+                        step={step}
+                        order={order}
+                        labels={labels}
                         pauseProps={pauseProps}
                     />
                 </div>
 
-                <div className="grid min-h-0 flex-1 grid-cols-4 gap-x-5 gap-y-6 lg:grid-rows-2">
-                    {gridProducts.map((product) => (
+                {/*
+                 * Keyed on the page so a press swaps the set outright and
+                 * replays the fade, rather than React reconciling eight cards
+                 * in place and leaving each photograph to pop in whenever it
+                 * decodes. Remounting also resets each card's hover gallery,
+                 * which is what you want — the cursor is now over a different
+                 * product than the one that was mid-sequence.
+                 */}
+                <div
+                    key={current}
+                    className="grid min-h-0 flex-1 animate-in grid-cols-2 gap-x-5 gap-y-6 duration-500 fade-in lg:h-screen lg:grid-rows-2"
+                >
+                    {visible.map((product) => (
                         <ShowcaseCard
                             key={product.id}
                             product={product}

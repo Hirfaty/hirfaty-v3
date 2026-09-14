@@ -84,7 +84,7 @@ function CategoryCarousel({
     isRTL: boolean;
     label: string;
 }) {
-    const { track, index, goTo, pauseProps } =
+    const { track, index, goTo, order, pauseProps } =
         useSnapCarousel<HTMLUListElement>(tiles.length, 4000, isRTL);
 
     return (
@@ -93,12 +93,14 @@ function CategoryCarousel({
                 ref={track}
                 className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-                {tiles.map((tile) => (
+                {order.map((tile, position) => (
                     <li
-                        key={tile.key}
+                        // Positional, because `order` repeats a tile at each
+                        // end — see `useSnapCarousel`.
+                        key={position}
                         className="w-full shrink-0 grow-0 basis-full snap-start snap-always"
                     >
-                        <CategoryTileCard tile={tile} />
+                        <CategoryTileCard tile={tiles[tile]} />
                     </li>
                 ))}
             </ul>
