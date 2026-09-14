@@ -18,13 +18,6 @@ export function ExploreProducts({
 }) {
     const { t, isRTL } = useTranslation();
 
-    /*
-     * The section has no height of its own: the screenful is the products
-     * themselves, and this is however tall they plus the heading above them
-     * come out. Pinning the *section* to the viewport instead — which is what
-     * this used to do — spends that screenful on the heading and the row of
-     * controls first and leaves the photography with whatever is left over.
-     */
     return (
         <section className="relative bg-souk-paper py-8 lg:py-10">
             <div className="container">

@@ -48,14 +48,14 @@ export default function HeroSection() {
                     <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                         <Link
                             href="/products"
-                            className="group pointer-events-auto relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 hover:bg-souk-brown/90"
+                            className="group pointer-events-auto relative inline-flex items-center gap-2.5 overflow-hidden rounded-md bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 hover:bg-souk-brown/90"
                         >
                             <StorefrontIcon className="h-5 w-5 shrink-0" />
                             {t('welcome.hero.cta_primary')}
                         </Link>
                         <Link
                             href="/seller/onboarding"
-                            className="pointer-events-auto inline-flex items-center gap-2.5 rounded-xl border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-7 py-3.5 font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25"
+                            className="pointer-events-auto inline-flex items-center gap-2.5 rounded-md border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-7 py-3.5 font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25"
                         >
                             <AtelierArchIcon className="h-5 w-5 shrink-0" />
                             {t('welcome.hero.cta_secondary')}

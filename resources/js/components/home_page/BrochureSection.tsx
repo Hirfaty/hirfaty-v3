@@ -10,7 +10,7 @@ export default function BrochureSection() {
         <section className="py-8 lg:py-8">
             <div className="container">
                 <Reveal from="scale">
-                    <div className="relative isolate overflow-hidden rounded-2xl bg-souk-brown">
+                    <div className="relative isolate overflow-hidden rounded-md bg-souk-brown">
                         <div
                             aria-hidden="true"
                             className="absolute inset-y-0 end-0 -z-10 hidden lg:block lg:w-1/2"

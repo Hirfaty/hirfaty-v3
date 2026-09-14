@@ -228,7 +228,7 @@ export default function OneWorkshop() {
                     <div className="mt-20 text-center">
                         <Link
                             href="/seller/onboarding"
-                            className="group inline-flex items-center gap-3 rounded-lg bg-souk-brown px-9 py-4 font-display text-lg text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep"
+                            className="group inline-flex items-center gap-3 rounded-sm bg-souk-brown px-9 py-4 font-display text-lg text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep"
                         >
                             {t('welcome.audience.cta')}
                             <ArrowRight

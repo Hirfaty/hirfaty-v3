@@ -97,7 +97,7 @@ function Spotlight({
      * whatever the grid beside it is given, whatever shape that is.
      */
     const shell =
-        'relative isolate aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5 lg:aspect-auto lg:h-full';
+        'relative isolate aspect-[4/5] overflow-hidden rounded-md bg-souk-brown/5 lg:aspect-auto lg:h-full';
 
     if (frames.length === 0) {
         return (
@@ -122,7 +122,7 @@ function Spotlight({
                             // Positional, because `order` repeats a frame at
                             // each end — see `useSnapCarousel`.
                             key={position}
-                            className="relative h-full w-full shrink-0 grow-0 basis-full snap-start snap-always"
+                            className="relative h-full w-full shrink-0 grow-0 basis-full snap-start snap-always rounded-sm"
                         >
                             <img
                                 src={image.url}
@@ -197,7 +197,7 @@ function Spotlight({
 
             <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-40 rounded-xl ring-1 ring-souk-brown/10 ring-inset"
+                className="pointer-events-none absolute inset-0 z-40 rounded-md ring-1 ring-souk-brown/10 ring-inset"
             />
         </div>
     );
@@ -240,7 +240,7 @@ function ShowcaseCard({
              * falls back to a fixed aspect on a phone, where the grid is free
              * to be as tall as its contents.
              */}
-            <div className="relative aspect-[4/5] shrink-0 overflow-hidden rounded-xl bg-souk-brown/5 lg:aspect-auto lg:min-h-0 lg:flex-1">
+            <div className="relative aspect-[4/5] shrink-0 overflow-hidden rounded-sm bg-souk-brown/5 lg:aspect-auto lg:min-h-0 lg:flex-1">
                 {gallery.length > 0 ? (
                     <div className="absolute inset-0 isolate">
                         {gallery.map((image, i) => {
@@ -275,7 +275,7 @@ function ShowcaseCard({
                 )}
                 <div
                     aria-hidden="true"
-                    className="absolute inset-0 rounded-xl ring-1 ring-souk-brown/10 ring-inset"
+                    className="absolute inset-0 rounded-md ring-1 ring-souk-brown/10 ring-inset"
                 />
             </div>
 
@@ -383,14 +383,6 @@ export default function ProductShowcase({
 
     return (
         <div className="flex flex-col gap-6 lg:gap-8">
-            {/*
-             * These arrows turn the grid's pages, and only the grid's — the
-             * spotlight carries its own pair down in the corner of its
-             * photograph. They sit up here rather than over the grid because
-             * the grid has to reach the foot of the section, and they ride
-             * alongside the way out of the section because both are ways
-             * through the catalogue; this is just the one that stays.
-             */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Link
                     href="/products"
@@ -435,25 +427,7 @@ export default function ProductShowcase({
                 )}
             </div>
 
-            {/*
-             * The screenful, and the only thing that claims one: a full
-             * viewport of photography, with the heading and the controls above
-             * sitting on top of it rather than eating into it. Below `lg` the
-             * two panels stack and the height goes away again — a phone has no
-             * room to spend a whole screen on one row of this.
-             *
-             * Capped rather than left to grow with the viewport: past roughly
-             * a 27" monitor a full screen of this is the photography stretched
-             * thin over empty space, not more merchandise — the grid still
-             * only has eight cards to show, just spread further apart.
-             */}
             <div className="flex flex-col gap-8 lg:h-[100svh] lg:max-h-[900px] lg:min-h-[620px] lg:flex-row lg:gap-10">
-                {/*
-                 * 30% of the row, and not allowed to shrink below it — the grid
-                 * beside it is the flexible half. A basis rather than a width so
-                 * the `gap` comes out of the two panels proportionally instead of
-                 * pushing the total past 100%.
-                 */}
                 <div className="lg:min-h-0 lg:w-[30%] lg:shrink-0">
                     <Spotlight
                         frames={frames}
@@ -466,14 +440,6 @@ export default function ProductShowcase({
                     />
                 </div>
 
-                {/*
-                 * Keyed on the page so a press swaps the set outright and
-                 * replays the fade, rather than React reconciling eight cards
-                 * in place and leaving each photograph to pop in whenever it
-                 * decodes. Remounting also resets each card's hover gallery,
-                 * which is what you want — the cursor is now over a different
-                 * product than the one that was mid-sequence.
-                 */}
                 <div
                     key={current}
                     className="grid min-h-0 flex-1 animate-in grid-cols-2 gap-x-5 gap-y-6 duration-500 fade-in lg:grid-cols-4 lg:grid-rows-2"
