@@ -151,6 +151,8 @@ return [
     'map.city.marrakech' => 'Marrakech',
     'map.city.agadir' => 'Agadir',
     'map.city.laayoune' => 'Laâyoune',
+    'map.city.essaouira' => 'Essaouira',
+
 
     /*
      * ── Contact ──────────────────────────────────────────────────────────

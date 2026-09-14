@@ -122,7 +122,7 @@ export function CollectionCard({
                                 // crossfade never dips through a moment where
                                 // both layers are half-transparent and the
                                 // tile visibly darkens — same technique as
-                                // `ProductRail`'s own cards.
+                                // `ProductShowcase`'s own cards.
                                 const outgoing = i === previous && i !== index;
 
                                 return (

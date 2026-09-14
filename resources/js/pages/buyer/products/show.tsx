@@ -273,7 +273,8 @@ function TrustRow({ t }: { t: (k: string) => string }) {
  * `useHoverGallery` is a hook, and hooks may only run at the top level of a
  * component — calling one from inside a loop callback would run it once per
  * item rather than tying it to one, tripping the Rules of Hooks. Same reason
- * `ProductRail`'s `RailCard` and `CollectionCard` are their own components.
+ * `ProductShowcase`'s `ShowcaseCard` and `CollectionCard` are their own
+ * components.
  */
 function RelatedProductCard({
     product: p,
@@ -306,7 +307,7 @@ function RelatedProductCard({
             <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
                 {gallery.length > 0 ? (
                     // Same dip-free crossfade stack as `CollectionCard` and
-                    // `ProductRail` — see either for why the outgoing frame
+                    // `ProductShowcase` — see either for why the outgoing frame
                     // stays opaque underneath the incoming one rather than
                     // the two simply swapping opacity together.
                     <div className="absolute inset-0 isolate">
