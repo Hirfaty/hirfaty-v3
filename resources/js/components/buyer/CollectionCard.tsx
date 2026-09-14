@@ -100,7 +100,7 @@ export function CollectionCard({
             {...hoverProps}
             className="group relative min-w-0 transition-transform duration-500 ease-out hover:-translate-y-1"
         >
-            <div className="relative overflow-hidden rounded-xl border border-souk-brown/25 bg-souk-paper p-1.5 transition-[border-color,box-shadow] duration-500 group-hover:border-souk-brown/60 group-hover:shadow-[0_18px_45px_-30px_var(--color-souk-brown)] sm:p-2">
+            <div className="relative overflow-hidden rounded-md border border-souk-brown/25 bg-souk-paper p-1.5 transition-[border-color,box-shadow] duration-500 group-hover:border-souk-brown/60 group-hover:shadow-[0_18px_45px_-30px_var(--color-souk-brown)] sm:p-2">
                 <div className="relative aspect-4/5 overflow-hidden border border-souk-brown/20 bg-white">
                     {gallery.length > 0 ? (
                         /* `isolate` scopes the stack's own z-index ranking to

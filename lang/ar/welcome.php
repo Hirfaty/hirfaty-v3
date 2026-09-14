@@ -155,7 +155,7 @@ return [
     'contact.phone_label' => 'الهاتف',
     'contact.phone' => '+212 000 000 000',
     'contact.address_label' => 'العنوان',
-    'contact.address' => 'الدار البيضاء، المغرب',
+    'contact.address' => 'أسفي، المغرب',
 
     'products.eyebrow' => 'جديد السوق',
     'products.heading' => 'استكشف منتجاتنا',

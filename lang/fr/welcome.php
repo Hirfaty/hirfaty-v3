@@ -170,7 +170,7 @@ return [
     'contact.phone_label' => 'Téléphone',
     'contact.phone' => '+212 000 000 000',
     'contact.address_label' => 'Adresse',
-    'contact.address' => 'Casablanca, Maroc',
+    'contact.address' => 'Safi, Maroc',
 
     'products.eyebrow' => 'Frais du souk',
     'products.heading' => 'Explorez nos produits',

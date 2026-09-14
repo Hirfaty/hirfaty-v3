@@ -380,7 +380,7 @@ export default function ProductsIndex({
                         <button
                             onClick={loadMore}
                             disabled={loadingMore}
-                            className="inline-flex items-center gap-2 border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-md border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
                         >
                             {loadingMore && (
                                 <Loader2 className="h-4 w-4 animate-spin" />

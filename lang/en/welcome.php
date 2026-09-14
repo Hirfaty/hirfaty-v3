@@ -174,7 +174,7 @@ return [
     'contact.phone_label' => 'Phone',
     'contact.phone' => '+212 000 000 000',
     'contact.address_label' => 'Address',
-    'contact.address' => 'Casablanca, Morocco',
+    'contact.address' => 'Safi, Morocco',
 
     'products.eyebrow' => 'Fresh from the souk',
     'products.heading' => 'Explore our products',
