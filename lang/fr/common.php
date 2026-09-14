@@ -134,4 +134,25 @@ return [
     'footer.newsletter.submit' => 'Je m’inscris',
     'footer.newsletter.success' => 'Vous êtes inscrit. Guettez la prochaine lettre du souk.',
     'footer.newsletter.invalid' => 'Saisissez une adresse e-mail valide.',
+
+    // ── Le reste du pied de page ─────────────────────────────────────────
+    // Tout ceci était écrit en dur en français dans `SiteFooter.tsx`, et
+    // restait donc en français sur les versions arabe et anglaise du site.
+    'footer.blurb' => 'La place de marché de l’artisanat marocain. Des objets faits à la main, par des artisans de Fès, Marrakech, Chefchaouen et au-delà.',
+
+    'footer.buyers.title' => 'Acheteurs',
+    'footer.buyers.explore' => 'Explorer',
+    'footer.buyers.how' => 'Comment ça marche',
+
+    'footer.artisans.title' => 'Artisans',
+    'footer.artisans.sell' => 'Vendre sur Hirfaty',
+
+    'footer.company.title' => 'Société',
+    'footer.company.contact' => 'Contact',
+
+    'footer.follow.title' => 'Suivre',
+
+    // `:year` est remplacé côté React par l'année en cours.
+    'footer.copyright' => '© :year Hirfaty.com — Tous droits réservés.',
+    'footer.shipping' => 'Livraison dans tout le Maroc.',
 ];

@@ -167,7 +167,7 @@ return [
     'contact.email_label' => 'E-mail',
     'contact.email' => 'contact@hirfaty.com',
     'contact.phone_label' => 'Téléphone',
-    'contact.phone' => '+212 000 000 000',
+    'contact.phone' => '+212 632098074',
     'contact.address_label' => 'Adresse',
     'contact.address' => 'Safi, Maroc',
 

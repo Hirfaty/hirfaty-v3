@@ -20,7 +20,7 @@ const MAP_CITIES = [
     { key: 'marrakech', lat: 31.6295, lon: -7.9811, labelAbove: false },
     { key: 'agadir', lat: 30.4278, lon: -9.5981, labelAbove: false },
     { key: 'laayoune', lat: 27.1536, lon: -13.2033, labelAbove: false },
-    { key: 'essaouira', lat: 31.5109436, lon: -9.7625422, labelAbove: false },
+    // { key: 'essaouira', lat: 31.5109436, lon: -9.7625422, labelAbove: false },
 ] as const;
 
 export default function ContactSection() {

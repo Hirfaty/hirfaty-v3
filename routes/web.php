@@ -33,6 +33,15 @@ Route::get('/', HomeController::class)->name('home');
 // Route::inertia('/about', 'about')->name('about');
 
 /*
+ * The two pages the footer links to. Static: all their copy comes from
+ * `lang/<locale>/pages.php` and the contact details from `welcome.contact.*`,
+ * so there is nothing for a controller to fetch and `Route::inertia` is the
+ * whole implementation.
+ */
+Route::inertia('/how-it-works', 'how-it-works')->name('how-it-works');
+Route::inertia('/contact', 'contact')->name('contact');
+
+/*
  * No app-level `verification.verify` route here on purpose — Fortify already
  * registers one at the same URI (`/email/verify/{id}/{hash}`) bound to
  * VerifyEmailController, which delegates the redirect to the
@@ -55,19 +64,6 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
     ->group(function () {
         // Dashboard
         Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
-        // Route::redirect("/dashboard", '/admin/products')->name('dashboard');
-
-        // Sellers
-        // Route::get('/sellers',              [Admin\SellerController::class, 'index'])->name('sellers.index');
-        // Route::get('/sellers/{user}',       [Admin\SellerController::class, 'show'])->name('sellers.show');
-        // Route::patch('/sellers/{user}/ban', [Admin\SellerController::class, 'ban'])->name('sellers.ban');
-        // Route::delete('/sellers/{user}',    [Admin\SellerController::class, 'destroy'])->name('sellers.destroy');
-
-        // // Buyers
-        // Route::get('/buyers',              [Admin\BuyerController::class, 'index'])->name('buyers.index');
-        // Route::get('/buyers/{user}',       [Admin\BuyerController::class, 'show'])->name('buyers.show');
-        // Route::patch('/buyers/{user}/ban', [Admin\BuyerController::class, 'ban'])->name('buyers.ban');
-        // Route::delete('/buyers/{user}',    [Admin\BuyerController::class, 'destroy'])->name('buyers.destroy');
 
         Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [Admin\UserController::class, 'create'])->name('users.create');

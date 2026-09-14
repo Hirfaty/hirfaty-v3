@@ -170,7 +170,7 @@ return [
     'contact.email_label' => 'Email',
     'contact.email' => 'contact@hirfaty.com',
     'contact.phone_label' => 'Phone',
-    'contact.phone' => '+212 000 000 000',
+    'contact.phone' => '+212 632098074',
     'contact.address_label' => 'Address',
     'contact.address' => 'Safi, Morocco',
 

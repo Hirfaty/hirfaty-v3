@@ -126,4 +126,25 @@ return [
     'footer.newsletter.submit' => 'اشترك',
     'footer.newsletter.success' => 'تم تسجيلك. ترقّب رسالة السوق القادمة.',
     'footer.newsletter.invalid' => 'أدخل عنوان بريد إلكتروني صالحاً.',
+
+    // ── بقية التذييل ─────────────────────────────────────────────────────
+    // كان كل هذا مكتوباً بالفرنسية داخل `SiteFooter.tsx` مباشرة، فكان يظهر
+    // بالفرنسية حتى في النسختين العربية والإنجليزية من الموقع.
+    'footer.blurb' => 'سوق الصناعة التقليدية المغربية. قطع مصنوعة يدوياً، من حرفيي فاس ومراكش وشفشاون وما بعدها.',
+
+    'footer.buyers.title' => 'المشترون',
+    'footer.buyers.explore' => 'استكشف',
+    'footer.buyers.how' => 'كيف يعمل',
+
+    'footer.artisans.title' => 'الحرفيون',
+    'footer.artisans.sell' => 'بِع على حرفتي',
+
+    'footer.company.title' => 'الشركة',
+    'footer.company.contact' => 'اتصل بنا',
+
+    'footer.follow.title' => 'تابعنا',
+
+    // `:year` يُستبدل في React بالسنة الجارية.
+    'footer.copyright' => '© :year Hirfaty.com — جميع الحقوق محفوظة.',
+    'footer.shipping' => 'التوصيل إلى جميع أنحاء المغرب.',
 ];

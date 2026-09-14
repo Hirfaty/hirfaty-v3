@@ -134,4 +134,25 @@ return [
     'footer.newsletter.submit' => 'Subscribe',
     'footer.newsletter.success' => 'You are on the list. Watch out for the next letter from the souk.',
     'footer.newsletter.invalid' => 'Enter a valid email address.',
+
+    // ── The rest of the footer ───────────────────────────────────────────
+    // All of this was hardcoded in French in `SiteFooter.tsx`, and so stayed
+    // French on the Arabic and English versions of the site.
+    'footer.blurb' => 'The marketplace for Moroccan craft. Handmade pieces, by artisans from Fès, Marrakech, Chefchaouen and beyond.',
+
+    'footer.buyers.title' => 'Buyers',
+    'footer.buyers.explore' => 'Browse',
+    'footer.buyers.how' => 'How it works',
+
+    'footer.artisans.title' => 'Artisans',
+    'footer.artisans.sell' => 'Sell on Hirfaty',
+
+    'footer.company.title' => 'Company',
+    'footer.company.contact' => 'Contact',
+
+    'footer.follow.title' => 'Follow',
+
+    // `:year` is substituted on the React side with the current year.
+    'footer.copyright' => '© :year Hirfaty.com — All rights reserved.',
+    'footer.shipping' => 'Delivery throughout Morocco.',
 ];

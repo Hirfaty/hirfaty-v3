@@ -7,23 +7,6 @@ import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
 import newsletter from '@/routes/newsletter';
 
-/**
- * Mailing-list signup.
- *
- * `errorBag` matters more than it looks: this form is in the footer of every
- * page, and Inertia hands a page one flat `errors` object. Without a bag of its
- * own, a rejected address here would surface on the `email` field of whatever
- * other form shares the screen — the login box, checkout, seller settings. The
- * server puts them in the same bag; see `NewsletterSubscriptionRequest`.
- *
- * Confirmation is raised here rather than left to `useFlashToast`, which does
- * not do what its name suggests: it listens for a `flash.toast` payload that
- * nothing in this codebase ever sends, so it never fires. Every other place
- * that wants a toast raises it in its own `onSuccess` — see
- * `pages/admin/products/index.tsx` — and this follows suit. The controller
- * still flashes `success`, which is the server-side convention and is what is
- * read below when present.
- */
 function NewsletterForm() {
     const { t } = useTranslation();
     const page = usePage<{ flash?: { success?: string } }>();
@@ -34,13 +17,10 @@ function NewsletterForm() {
 
         form.post(newsletter.store.url(), {
             errorBag: 'newsletter',
-            // The form is at the very bottom of a long page; without this,
-            // confirming a signup throws the reader back up to the top of it.
+
             preserveScroll: true,
             onSuccess: () => {
                 form.reset('email');
-                // Falls back to the local translation so the confirmation
-                // survives the flash going missing for any reason.
                 toast.success(
                     page.props.flash?.success ??
                         t('common.footer.newsletter.success'),
@@ -99,16 +79,39 @@ function NewsletterForm() {
     );
 }
 
+/**
+ * The three link columns.
+ *
+ * Every entry points somewhere real. The previous version listed twelve links
+ * that all pointed at `#` — pricing, a seller help centre, press, terms — for
+ * pages that do not exist; a dead link in a footer is worse than no link, so
+ * only the four that have a destination are left.
+ */
+const NAV_COLUMNS = [
+    {
+        titleKey: 'common.footer.buyers.title',
+        links: [
+            { labelKey: 'common.footer.buyers.explore', href: '/products' },
+            { labelKey: 'common.footer.buyers.how', href: '/how-it-works' },
+        ],
+    },
+    {
+        titleKey: 'common.footer.artisans.title',
+        links: [{ labelKey: 'common.footer.artisans.sell', href: '/register' }],
+    },
+    {
+        titleKey: 'common.footer.company.title',
+        links: [
+            { labelKey: 'common.footer.company.contact', href: '/contact' },
+        ],
+    },
+] as const;
+
 export const SiteFooter = () => {
     const { t } = useTranslation();
 
     return (
         <footer className="relative mt-32 overflow-hidden border-t border-ink/15 bg-cream">
-            {/* Watermark, not an illustration: faint enough to read as paper
-                texture rather than compete with the columns above it, and
-                clipped by the footer's own edges so it never leaks into the
-                page above. `pointer-events-none` keeps it out of the way of
-                the links sitting over it. */}
             <VaseIcon className="pointer-events-none absolute -bottom-10 -left-10 h-64 w-64 text-ink/5 md:h-80 md:w-80" />
 
             <div className="relative container grid grid-cols-2 gap-10 py-16 md:grid-cols-12">
@@ -124,49 +127,24 @@ export const SiteFooter = () => {
                         </span>
                     </div>
                     <p className="mt-5 max-w-xs text-sm leading-relaxed text-ink-soft">
-                        La place de marché de l'artisanat marocain. Des objets
-                        faits à la main, par des artisans de Fès, Marrakech,
-                        Chefchaouen et au-delà.
+                        {t('common.footer.blurb')}
                     </p>
                     <p className="mt-6 font-arabic text-base text-ink/80">
                         {t('common.footer.ar_line')}
                     </p>
                 </div>
 
-                {[
-                    {
-                        title: 'Acheteurs',
-                        links: [
-                            'Explorer',
-                            'Catégories',
-                            'Vendeurs',
-                            'Comment ça marche',
-                        ],
-                    },
-                    {
-                        title: 'Artisans',
-                        links: [
-                            'Vendre sur Hirfaty',
-                            'Tarifs',
-                            "Centre d'aide vendeur",
-                            "Histoires d'artisans",
-                        ],
-                    },
-                    {
-                        title: 'Société',
-                        links: ['À propos', 'Contact', 'Presse', 'Conditions'],
-                    },
-                ].map((col) => (
-                    <div key={col.title} className="md:col-span-2">
-                        <p className="mb-4 eyebrow">{col.title}</p>
+                {NAV_COLUMNS.map((col) => (
+                    <div key={col.titleKey} className="md:col-span-2">
+                        <p className="mb-4 eyebrow">{t(col.titleKey)}</p>
                         <ul className="space-y-2.5 text-sm text-ink/80">
-                            {col.links.map((l) => (
-                                <li key={l}>
+                            {col.links.map((link) => (
+                                <li key={link.labelKey}>
                                     <Link
-                                        href="#"
+                                        href={link.href}
                                         className="transition-colors hover:text-ink"
                                     >
-                                        {l}
+                                        {t(link.labelKey)}
                                     </Link>
                                 </li>
                             ))}
@@ -175,30 +153,50 @@ export const SiteFooter = () => {
                 ))}
 
                 <div className="col-span-2 md:col-span-2">
-                    <p className="mb-4 eyebrow">Suivre</p>
+                    <p className="mb-4 eyebrow">
+                        {t('common.footer.follow.title')}
+                    </p>
                     <ul className="space-y-2.5 text-sm text-ink/80">
                         <li>
-                            <a href="#" className="hover:text-ink">
+                            <a
+                                href="https://www.instagram.com/hirfaty.com_/"
+                                target="_blank"
+                                className="hover:text-ink"
+                            >
                                 Instagram
                             </a>
                         </li>
                         <li>
-                            <a href="#" className="hover:text-ink">
-                                TikTok
+                            <a
+                                href="https://www.facebook.com/harfti"
+                                target="_blank"
+                                className="hover:text-ink"
+                            >
+                                Facebook
                             </a>
                         </li>
                         <li>
-                            <a href="#" className="hover:text-ink">
-                                YouTube
+                            <a
+                                href="https://ma.linkedin.com/company/hirfaty"
+                                target="_blank"
+                                className="hover:text-ink"
+                            >
+                                Linkedin
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://www.youtube.com/@AjiTchoufHarfti"
+                                target="_blank"
+                                className="hover:text-ink"
+                            >
+                                Youtube
                             </a>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            {/* Its own band rather than a thirteenth column: the grid above is
-                a full 12 (4 + 2 + 2 + 2 + 2) and the signup needs a line of
-                input to be usable at all, which no 2-wide column can give it. */}
             <div className="relative container border-t border-ink/10 py-10">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                     <div className="max-w-sm">
@@ -215,13 +213,18 @@ export const SiteFooter = () => {
             </div>
 
             <div className="container flex flex-col items-start justify-between gap-4 border-t border-ink/10 pt-6 pb-10 text-xs text-ink-soft md:flex-row md:items-center">
+                {/* `t()` has no placeholder support — it is a flat key lookup
+                    (see use-translation.tsx) — so `:year` is substituted here
+                    rather than server-side. */}
                 <p>
-                    © {new Date().getFullYear()} Hirfaty.com — Tous droits
-                    réservés.
+                    {t('common.footer.copyright').replace(
+                        ':year',
+                        String(new Date().getFullYear()),
+                    )}
                 </p>
                 <p className="flex items-center gap-2">
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-terracotta" />
-                    Livraison dans tout le Maroc.
+                    {t('common.footer.shipping')}
                 </p>
             </div>
         </footer>
