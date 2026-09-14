@@ -71,9 +71,9 @@ return [
     'categories_grid.eyebrow' => 'تجوّل في السوق',
     'categories_grid.heading' => 'استكشف حسب الفئة',
     'categories_grid.pottery' => 'الفخار والخزف',
-    'categories_grid.textile' => 'المنسوجات والنسيج',
+    'categories_grid.textile' => 'فن المائدة والاحتفالات',
     'categories_grid.art' => 'الرسم والفن',
-    'categories_grid.lantern' => 'الفانوس المغربي',
+    'categories_grid.lantern' => 'الإنارة والنحاسيات الفنية',
     'categories_grid.wood' => 'الخشب والنجارة',
 
     // ── الركائز الثلاث ───────────────────────────────────────────────────
@@ -143,7 +143,6 @@ return [
     'map.city.laayoune' => 'العيون',
     'map.city.essaouira' => 'الصويرة',
 
-
     // ── التواصل ──────────────────────────────────────────────────────────
     // البريد والهاتف بيانات لا نصوص — نفس القيمة في الملفات الثلاثة.
     // TODO: الهاتف والعنوان قيمتان مؤقتتان، انظر en/welcome.php.
@@ -168,11 +167,30 @@ return [
     'products.spotlight_prev' => 'القطعة المميزة السابقة',
     'products.spotlight_next' => 'القطعة المميزة التالية',
 
-    'catalogue.eyebrow' => 'خذه معك',
-    'catalogue.heading' => 'حمّل كتالوج منتجاتنا',
-    'catalogue.lead' => 'كل ورشة وكل قطعة في وثيقة واحدة — تصفحها بلا اتصال، أو شاركها مع فريقك.',
-    'catalogue.button' => 'تحميل الكتالوج',
-    'catalogue.alt' => 'كتالوج حرفتي المطبوع',
+    'brochure.eyebrow' => 'خذه معك',
+    'brochure.heading' => 'احصل على كُتيّبنا',
+    'brochure.lead' => 'كل ورشة وكل قطعة في وثيقة واحدة — تصفحها بلا اتصال، أو شاركها مع فريقك.',
+    'brochure.button' => 'احصل على الكُتيّب',
+    'brochure.alt' => 'كُتيّب حرفتي المطبوع',
+
+    // ── نافذة طلب الكُتيّب ────────────────────────────────────────────────
+    'brochure.dialog.title' => 'لنتعارف',
+    'brochure.dialog.lead' => 'أخبرنا من أنت ويبدأ تحميل الكُتيّب على الفور.',
+    'brochure.dialog.first_name' => 'الاسم الشخصي',
+    'brochure.dialog.last_name' => 'الاسم العائلي',
+    'brochure.dialog.email' => 'البريد الإلكتروني',
+    'brochure.dialog.type' => 'أنا',
+    'brochure.dialog.type.buyer' => 'مشترٍ',
+    'brochure.dialog.type.seller' => 'بائع',
+    'brochure.dialog.seller_type' => 'أي نوع من البائعين؟',
+    'brochure.dialog.seller_type.artist' => 'حرفي',
+    'brochure.dialog.seller_type.company' => 'شركة',
+    'brochure.dialog.seller_type.cooperative' => 'تعاونية',
+    'brochure.dialog.seller_type.placeholder' => 'اختر واحداً',
+    'brochure.dialog.submit' => 'تحميل الكُتيّب',
+    'brochure.dialog.submitting' => 'جاري تحضير التحميل…',
+    'brochure.dialog.success' => 'شكراً لك — يجري تحميل الكُتيّب الآن.',
+    'brochure.dialog.invalid' => 'تحقق من النموذج وحاول مرة أخرى.',
 
     'gallery.eyebrow' => 'داخل الورشات',
     'gallery.heading' => 'المعرض',

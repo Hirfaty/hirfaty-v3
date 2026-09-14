@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\BrochureController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
 use App\Http\Controllers\Buyer\CheckoutController;
@@ -131,6 +132,9 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/stores', [Admin\StoreController::class, 'index'])->name('stores.index');
         Route::patch('/stores/{store}/approve', [Admin\StoreController::class, 'approve'])->name('stores.approve');
         Route::patch('/stores/{store}/reject', [Admin\StoreController::class, 'reject'])->name('stores.reject');
+
+        // Brochure leads — read-only, see Admin\BrochureLeadController.
+        Route::get('/brochure-leads', [Admin\BrochureLeadController::class, 'index'])->name('brochure-leads.index');
 
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
@@ -332,6 +336,23 @@ Route::get('/professional-account', [ProfessionalRequestController::class, 'show
 Route::post('/newsletter', [NewsletterController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('newsletter.store');
+
+/*
+ * The homepage brochure.
+ *
+ * Public and therefore throttled, on the same reasoning as the newsletter
+ * above: `request` is an unauthenticated endpoint whose job is to write a row.
+ * `download` is throttled a little more loosely — it is gated on the session
+ * flag `request` sets, but it streams 35 MB each time it answers, so it is the
+ * one worth having a ceiling on regardless.
+ */
+Route::post('/brochure', [BrochureController::class, 'request'])
+    ->middleware('throttle:5,1')
+    ->name('brochure.request');
+
+Route::get('/brochure/download', [BrochureController::class, 'download'])
+    ->middleware('throttle:10,1')
+    ->name('brochure.download');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

@@ -76,9 +76,9 @@ return [
     'categories_grid.eyebrow' => 'Parcourir le souk',
     'categories_grid.heading' => 'Explorer par catégorie',
     'categories_grid.pottery' => 'Poterie & Céramique',
-    'categories_grid.textile' => 'Textiles & Tissage',
+    'categories_grid.textile' => 'Art de la table & célébrations',
     'categories_grid.art' => 'Peinture & Art',
-    'categories_grid.lantern' => 'Lanterne marocaine',
+    'categories_grid.lantern' => 'Luminaires & dinanderie d\'art',
     'categories_grid.wood' => 'Bois & Menuiserie',
 
     // ── Les trois piliers ────────────────────────────────────────────────
@@ -153,7 +153,6 @@ return [
     'map.city.laayoune' => 'Laâyoune',
     'map.city.essaouira' => 'Essaouira',
 
-
     /*
      * ── Contact ──────────────────────────────────────────────────────────
      * `email`/`phone` sont des données, pas du texte : identiques dans les
@@ -183,11 +182,30 @@ return [
     'products.spotlight_prev' => 'Pièce précédente à la une',
     'products.spotlight_next' => 'Pièce suivante à la une',
 
-    'catalogue.eyebrow' => 'À emporter',
-    'catalogue.heading' => 'Téléchargez notre catalogue produits',
-    'catalogue.lead' => 'Chaque atelier et chaque pièce réunis dans un seul document — consultez-le hors ligne, ou partagez-le avec votre équipe.',
-    'catalogue.button' => 'Télécharger le catalogue',
-    'catalogue.alt' => 'Le catalogue produits Hirfaty imprimé',
+    'brochure.eyebrow' => 'À emporter',
+    'brochure.heading' => 'Obtenez notre brochure',
+    'brochure.lead' => 'Chaque atelier et chaque pièce réunis dans un seul document — consultez-le hors ligne, ou partagez-le avec votre équipe.',
+    'brochure.button' => 'Obtenir la brochure',
+    'brochure.alt' => 'La brochure Hirfaty imprimée',
+
+    // ── Fenêtre de demande de brochure ───────────────────────────────────
+    'brochure.dialog.title' => 'Faisons connaissance',
+    'brochure.dialog.lead' => 'Dites-nous qui vous êtes et la brochure se télécharge aussitôt.',
+    'brochure.dialog.first_name' => 'Prénom',
+    'brochure.dialog.last_name' => 'Nom',
+    'brochure.dialog.email' => 'Adresse e-mail',
+    'brochure.dialog.type' => 'Je suis',
+    'brochure.dialog.type.buyer' => 'Acheteur',
+    'brochure.dialog.type.seller' => 'Vendeur',
+    'brochure.dialog.seller_type' => 'Quel type de vendeur ?',
+    'brochure.dialog.seller_type.artist' => 'Artisan',
+    'brochure.dialog.seller_type.company' => 'Entreprise',
+    'brochure.dialog.seller_type.cooperative' => 'Coopérative',
+    'brochure.dialog.seller_type.placeholder' => 'Faites votre choix',
+    'brochure.dialog.submit' => 'Télécharger la brochure',
+    'brochure.dialog.submitting' => 'Préparation du téléchargement…',
+    'brochure.dialog.success' => 'Merci — votre brochure est en cours de téléchargement.',
+    'brochure.dialog.invalid' => 'Vérifiez le formulaire et réessayez.',
 
     'gallery.eyebrow' => 'Dans les ateliers',
     'gallery.heading' => 'Galerie',

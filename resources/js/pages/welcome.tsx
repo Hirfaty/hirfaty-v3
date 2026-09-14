@@ -1,14 +1,14 @@
 import { Head } from '@inertiajs/react';
 import ArtisanCta from '@/components/ArtisanCta';
 import type { ShowcaseProduct } from '@/components/home/ProductShowcase';
-import SiteFooter from '@/components/SiteFooter';
-import SiteHeader from '@/components/SiteHeader';
-import HeroSection from '@/components/home_page/HeroSection';
+import BrochureSection from '@/components/home_page/BrochureSection';
+import ContactSection from '@/components/home_page/ContactSection';
 import ExploreByCategories from '@/components/home_page/ExploreByCategories';
 import { ExploreProducts } from '@/components/home_page/ExploreProducts';
-import BrochureSection from '@/components/home_page/BrochureSection';
+import HeroSection from '@/components/home_page/HeroSection';
 import OneWorkshop from '@/components/home_page/OneWorkshop';
-import ContactSection from '@/components/home_page/ContactSection';
+import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 
 export default function Welcome({
     featuredProducts = [],
@@ -32,7 +32,7 @@ export default function Welcome({
                 {/* ───────────────── Explore our products ───────────────── */}
                 <ExploreProducts featuredProducts={featuredProducts} />
 
-                {/* ───────────────────── Product catalogue ───────────────────── */}
+                {/* ───────────────────────── Brochure ───────────────────────── */}
                 <BrochureSection />
 
                 {/* ───────────── One workshop, two ways to sell ───────────── */}

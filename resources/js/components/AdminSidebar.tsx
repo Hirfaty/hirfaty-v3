@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
+    FileText,
     LayoutDashboard,
     LogOut,
     MapPin,
@@ -74,6 +75,11 @@ const communityItems: NavItem[] = [
         title: 'Commandes',
         url: route('admin.orders.index', undefined, false),
         icon: ShoppingBag,
+    },
+    {
+        title: 'Brochure',
+        url: route('admin.brochure-leads.index', undefined, false),
+        icon: FileText,
     },
 ];
 

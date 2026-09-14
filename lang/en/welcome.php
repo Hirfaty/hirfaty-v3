@@ -40,7 +40,6 @@ return [
     'categories.accessories.name' => 'Accessories',
     'categories.home.name' => 'Home & Kitchen',
 
-
     // ── Home page ────────────────────────────────────────────────────────
     /*
      * `hero.badge_script` is the brand word set in Arabic script as an
@@ -74,9 +73,9 @@ return [
     'categories_grid.eyebrow' => 'Browse the souk',
     'categories_grid.heading' => 'Explore by category',
     'categories_grid.pottery' => 'Pottery & Ceramics',
-    'categories_grid.textile' => 'Textiles & Weaving',
+    'categories_grid.textile' => 'Tableware & Celebrations',
     'categories_grid.art' => 'Painting & Art',
-    'categories_grid.lantern' => 'Moroccan Lantern',
+    'categories_grid.lantern' => 'Lighting & Art Metalwork',
     'categories_grid.wood' => 'Wood & Carpentry',
     'categories_grid.leather' => 'Leather Goods',
 
@@ -152,7 +151,6 @@ return [
     'map.city.laayoune' => 'Laayoune',
     'map.city.essaouira' => 'Essaouira',
 
-
     /*
      * ── Contact ──────────────────────────────────────────────────────────
      *
@@ -187,11 +185,30 @@ return [
     'products.spotlight_prev' => 'Previous featured piece',
     'products.spotlight_next' => 'Next featured piece',
 
-    'catalogue.eyebrow' => 'Take it with you',
-    'catalogue.heading' => 'Download our product catalogue',
-    'catalogue.lead' => 'Every workshop and every piece in one document — browse it offline, or share it with your team.',
-    'catalogue.button' => 'Download the catalogue',
-    'catalogue.alt' => 'The printed Hirfaty product catalogue',
+    'brochure.eyebrow' => 'Take it with you',
+    'brochure.heading' => 'Get our brochure',
+    'brochure.lead' => 'Every workshop and every piece in one document — browse it offline, or share it with your team.',
+    'brochure.button' => 'Get the brochure',
+    'brochure.alt' => 'The printed Hirfaty brochure',
+
+    // ── Brochure request dialog ──────────────────────────────────────────
+    'brochure.dialog.title' => 'Where should we send you?',
+    'brochure.dialog.lead' => 'Tell us who you are and the brochure downloads straight away.',
+    'brochure.dialog.first_name' => 'First name',
+    'brochure.dialog.last_name' => 'Last name',
+    'brochure.dialog.email' => 'Email address',
+    'brochure.dialog.type' => 'I am a',
+    'brochure.dialog.type.buyer' => 'Buyer',
+    'brochure.dialog.type.seller' => 'Seller',
+    'brochure.dialog.seller_type' => 'What kind of seller?',
+    'brochure.dialog.seller_type.artist' => 'Artisan',
+    'brochure.dialog.seller_type.company' => 'Company',
+    'brochure.dialog.seller_type.cooperative' => 'Cooperative',
+    'brochure.dialog.seller_type.placeholder' => 'Choose one',
+    'brochure.dialog.submit' => 'Download the brochure',
+    'brochure.dialog.submitting' => 'Preparing your download…',
+    'brochure.dialog.success' => 'Thank you — your brochure is downloading.',
+    'brochure.dialog.invalid' => 'Please check the form and try again.',
 
     'gallery.eyebrow' => 'In the workshops',
     'gallery.heading' => 'Gallery',

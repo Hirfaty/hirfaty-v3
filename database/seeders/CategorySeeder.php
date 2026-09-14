@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
@@ -34,15 +35,21 @@ class CategorySeeder extends Seeder
                 'ar' => 'المصنوعات الجلدية',
                 'en' => 'Leather Goods',
             ],
+            /*
+             * Slugs stay `textiles-tissage` and `lanterne-marocaine` below,
+             * because `Str::slug` is applied to the *French* name — so renaming
+             * these two here would hand a fresh database different slugs from
+             * every existing one, and the homepage tiles in
+             * `ExploreByCategories` match on those fragments. The rename for
+             * already-seeded databases lives in
+             * `2026_09_14_140000_rename_and_retire_categories`, which keeps the
+             * slugs; these entries are pinned to match it.
+             */
             [
-                'fr' => 'Textiles & Tissage',
-                'ar' => 'المنسوجات والنسيج',
-                'en' => 'Textiles & Weaving',
-            ],
-            [
-                'fr' => 'Bijoux & Accessoires',
-                'ar' => 'المجوهرات والإكسسوارات',
-                'en' => 'Jewelry & Accessories',
+                'slug' => 'textiles-tissage',
+                'fr' => 'Art de la table & célébrations',
+                'ar' => 'فن المائدة والاحتفالات',
+                'en' => 'Tableware & Celebrations',
             ],
             [
                 'fr' => 'Bois & Menuiserie',
@@ -55,16 +62,21 @@ class CategorySeeder extends Seeder
                 'en' => 'Painting & Art',
             ],
             [
-                'fr' => 'Lanterne marocaine',
-                'ar' => 'الفانوس المغربي',
-                'en' => 'Moroccan Lantern',
+                'slug' => 'lanterne-marocaine',
+                'fr' => 'Luminaires & dinanderie d\'art',
+                'ar' => 'الإنارة والنحاسيات الفنية',
+                'en' => 'Lighting & Art Metalwork',
             ],
         ];
 
-        foreach ($categories as $names) {
-            // Slug derives from the canonical locale, matching CategoryController.
+        foreach ($categories as $entry) {
+            // Slug derives from the canonical locale, matching CategoryController,
+            // unless the entry pins one because its label has since been renamed.
+            $slug = $entry['slug'] ?? Str::slug($entry[Category::FALLBACK_LOCALE]);
+            $names = Arr::only($entry, Category::LOCALES);
+
             Category::firstOrCreate(
-                ['slug' => Str::slug($names[Category::FALLBACK_LOCALE])],
+                ['slug' => $slug],
                 ['name' => $names],
             );
         }
