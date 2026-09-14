@@ -20,7 +20,7 @@ const ROWS = [
     { key: 'email', source: 'welcome.contact', Icon: Mail, href: 'mailto:' },
     { key: 'phone', source: 'welcome.contact', Icon: Phone, href: 'tel:' },
     { key: 'address', source: 'welcome.contact', Icon: MapPin, href: null },
-    { key: 'hours', source: 'pages.contact', Icon: Clock, href: null },
+    // { key: 'hours', source: 'pages.contact', Icon: Clock, href: null },
 ] as const;
 
 export default function Contact() {
