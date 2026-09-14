@@ -126,4 +126,12 @@ return [
      * texte qui change avec la langue active.
      */
     'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'Les lettres du souk',
+    'footer.newsletter.blurb' => 'Les nouvelles pièces, les nouveaux ateliers et les histoires qui vont avec. Une fois par mois, jamais plus.',
+    'footer.newsletter.label' => 'Votre adresse e-mail',
+    'footer.newsletter.placeholder' => 'vous@exemple.com',
+    'footer.newsletter.submit' => 'Je m’inscris',
+    'footer.newsletter.success' => 'Vous êtes inscrit. Guettez la prochaine lettre du souk.',
+    'footer.newsletter.invalid' => 'Saisissez une adresse e-mail valide.',
 ];

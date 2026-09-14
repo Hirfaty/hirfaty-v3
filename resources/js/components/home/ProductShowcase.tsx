@@ -441,8 +441,13 @@ export default function ProductShowcase({
              * sitting on top of it rather than eating into it. Below `lg` the
              * two panels stack and the height goes away again — a phone has no
              * room to spend a whole screen on one row of this.
+             *
+             * Capped rather than left to grow with the viewport: past roughly
+             * a 27" monitor a full screen of this is the photography stretched
+             * thin over empty space, not more merchandise — the grid still
+             * only has eight cards to show, just spread further apart.
              */}
-            <div className="flex flex-col gap-8 lg:h-[100svh] lg:min-h-[620px] lg:flex-row lg:gap-10">
+            <div className="flex flex-col gap-8 lg:h-[100svh] lg:max-h-[900px] lg:min-h-[620px] lg:flex-row lg:gap-10">
                 {/*
                  * 30% of the row, and not allowed to shrink below it — the grid
                  * beside it is the flexible half. A basis rather than a width so

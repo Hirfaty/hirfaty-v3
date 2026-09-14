@@ -118,4 +118,12 @@ return [
 
     // توقيع تذييل الصفحة — نفس القيمة في الملفات الثلاثة، انظر en/common.php.
     'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'رسائل من السوق',
+    'footer.newsletter.blurb' => 'قطع جديدة، ورشات جديدة، والحكايات وراءها. مرة واحدة في الشهر، لا أكثر.',
+    'footer.newsletter.label' => 'عنوان بريدك الإلكتروني',
+    'footer.newsletter.placeholder' => 'you@example.com',
+    'footer.newsletter.submit' => 'اشترك',
+    'footer.newsletter.success' => 'تم تسجيلك. ترقّب رسالة السوق القادمة.',
+    'footer.newsletter.invalid' => 'أدخل عنوان بريد إلكتروني صالحاً.',
 ];

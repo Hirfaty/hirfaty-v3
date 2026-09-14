@@ -35,7 +35,7 @@ function CategoryTileCard({ tile }: { tile: CategoryTile }) {
     return (
         <Link
             href={tile.href}
-            className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-souk-brown/5"
+            className="group relative block aspect-[4/5] overflow-hidden rounded-md bg-souk-brown/5"
         >
             <img
                 src={tile.image}

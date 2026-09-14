@@ -126,4 +126,12 @@ return [
      * with the active locale.
      */
     'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
+
+    'footer.newsletter.title' => 'Letters from the souk',
+    'footer.newsletter.blurb' => 'New pieces, new workshops, and the stories behind them. Once a month, never more.',
+    'footer.newsletter.label' => 'Your email address',
+    'footer.newsletter.placeholder' => 'you@example.com',
+    'footer.newsletter.submit' => 'Subscribe',
+    'footer.newsletter.success' => 'You are on the list. Watch out for the next letter from the souk.',
+    'footer.newsletter.invalid' => 'Enter a valid email address.',
 ];

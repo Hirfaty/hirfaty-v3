@@ -16,6 +16,7 @@ use App\Http\Controllers\Buyer\SearchController;
 use App\Http\Controllers\Buyer\StoreController as BuyerStoreController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
@@ -319,6 +320,18 @@ Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('store
  * The controller therefore has to tolerate a null user; see its show().
  */
 Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
+
+/*
+ * The footer's mailing-list signup, and so reachable from every page.
+ *
+ * Public, because the whole point of putting it in the footer is that a visitor
+ * who has never registered can use it — and therefore throttled: it is an
+ * unauthenticated endpoint whose job is to write a row, which is precisely the
+ * shape of thing that fills a table up overnight if left open.
+ */
+Route::post('/newsletter', [NewsletterController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('newsletter.store');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

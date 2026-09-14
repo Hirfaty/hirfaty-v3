@@ -44,7 +44,7 @@ export default function HeroSlider({
         'group absolute cursor-pointer top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 rotate-45 place-items-center bg-souk-paper text-souk-brown duration-500  transition-colors hover:bg-souk-brown hover:text-souk-cream sm:h-14 sm:w-14';
 
     return (
-        <div {...pauseProps} className="relative">
+        <div {...pauseProps} className="relative mx-auto max-w-384">
             <ul
                 ref={track}
                 className="flex h-[clamp(24rem,72svh,42rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
