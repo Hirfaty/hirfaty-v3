@@ -63,23 +63,43 @@ return new class extends Migration
             return;
         }
 
+        $products = Product::where('category_id', $retired->id);
+        $stores = Store::where('category_id', $retired->id);
+
         /*
-         * Anything still pointing at the retired category is moved rather than
-         * orphaned. `category_id` is nullable, so deleting outright would leave
-         * live products uncategorised — invisible to the category filters and
+         * The destination is only needed if something actually points at the
+         * retired category — and it is only *looked up* in that case, because
+         * the taxonomies differ between environments. Staging, for one, has no
+         * `maroquinerie` row at all (an admin deleted it) while its
+         * `bijoux-accessoires` is empty: demanding a destination there failed a
+         * deploy over a category that had nothing to reassign.
+         *
+         * When there is something to move, though, this still refuses to guess.
+         * `category_id` is nullable, so carrying on without a destination would
+         * silently orphan live products — invisible to the category filters and
          * to the homepage tiles, with no record of where they used to sit.
          */
-        $destination = Category::firstWhere('slug', self::REASSIGN_TO_SLUG);
+        $orphanCount = $products->count() + $stores->count();
 
-        if (! $destination) {
-            throw new RuntimeException(
-                'Cannot retire "'.self::RETIRED_SLUG.'": the destination category "'
-                .self::REASSIGN_TO_SLUG.'" does not exist in this database.'
-            );
+        if ($orphanCount > 0) {
+            $destination = Category::firstWhere('slug', self::REASSIGN_TO_SLUG);
+
+            if (! $destination) {
+                throw new RuntimeException(sprintf(
+                    'Cannot retire "%s": it still has %d product(s)/store(s) to move, '
+                    .'but the destination category "%s" does not exist here. '
+                    .'Existing slugs: %s. Either create that category or reassign '
+                    .'those rows by hand in /admin/categories first.',
+                    self::RETIRED_SLUG,
+                    $orphanCount,
+                    self::REASSIGN_TO_SLUG,
+                    Category::orderBy('id')->pluck('slug')->implode(', '),
+                ));
+            }
+
+            $products->update(['category_id' => $destination->id]);
+            $stores->update(['category_id' => $destination->id]);
         }
-
-        Product::where('category_id', $retired->id)->update(['category_id' => $destination->id]);
-        Store::where('category_id', $retired->id)->update(['category_id' => $destination->id]);
 
         $retired->delete();
     }

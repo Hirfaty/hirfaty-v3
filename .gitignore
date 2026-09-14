@@ -28,3 +28,7 @@ yarn-error.log
 /.vscode
 /.zed
 /docker/proxy/htpasswd
+# Host-side files bind-mounted into the app container on the server — the
+# brochure PDF lives here (see docker-compose.{prod,staging}.yml). Kept out of
+# git so `git pull` during a deploy never collides with it.
+/storage-data

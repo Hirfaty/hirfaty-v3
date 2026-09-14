@@ -31,6 +31,16 @@ services:
         condition: service_healthy
       seaweedfs:
         condition: service_started
+    volumes:
+      # The brochure PDF. Not in the image: it is ~35 MB, gitignored, and
+      # changes on its own schedule rather than with a release — see
+      # BrochureLeadService::PATH. Bind-mounted rather than `docker cp`d in
+      # because `make stage-release` rebuilds and recreates this container on
+      # every deploy, which would throw a copied-in file away each time.
+      #
+      # Read-only: the app only ever reads this file (exists/download), so
+      # there is no reason for the container to be able to change it.
+      - ./storage-data/brochure:/var/www/html/storage/app/private/brochure:ro
     networks:
       internal:
       edge:
