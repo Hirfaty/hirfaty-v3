@@ -12,13 +12,13 @@ export default function Placeholder({ icon: Icon }: { icon: LucideIcon }) {
 
     return (
         <div className="flex flex-col items-center justify-center px-6 py-24 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-souk-cream/60">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-souk-green/10">
                 <Icon
-                    className="h-6 w-6 text-souk-brown-deep/40"
+                    className="h-6 w-6 text-souk-green/60"
                     strokeWidth={1.4}
                 />
             </span>
-            <p className="mt-5 text-sm text-souk-brown-deep/55">
+            <p className="mt-5 text-base text-souk-brown-deep/55">
                 {t('buyer.account.placeholder')}
             </p>
         </div>

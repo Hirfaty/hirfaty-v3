@@ -5,6 +5,7 @@ import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
 import zellij from '@/images/zellij-pattern.png';
+import { login } from '@/routes';
 
 const STEPS = [
     { key: 'step1', Icon: Compass },
@@ -54,7 +55,7 @@ export default function HowItWorks() {
                         </Reveal>
 
                         <Reveal delay={180}>
-                            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-souk-cream/85">
+                            <p className="mt-6 max-w-2xl text-xl leading-relaxed text-souk-cream/85">
                                 {t('pages.how.lead')}
                             </p>
                         </Reveal>
@@ -121,7 +122,7 @@ export default function HowItWorks() {
                                     {t('pages.how.sellers.body')}
                                 </p>
                                 <Link
-                                    href="/register"
+                                    href={login()}
                                     className="mt-7 inline-flex items-center justify-center rounded-xl bg-souk-brown px-7 py-3.5 text-sm font-semibold tracking-[0.04em] text-white uppercase transition-colors hover:bg-souk-brown-deep"
                                 >
                                     {t('pages.how.sellers.cta')}

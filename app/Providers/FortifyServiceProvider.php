@@ -2,10 +2,10 @@
 
 namespace App\Providers;
 
-use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
+use App\Services\RegistrationCodeService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,7 +14,6 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as ContractsLoginResponse;
 use Laravel\Fortify\Contracts\VerifyEmailResponse as ContractsVerifyEmailResponse;
-use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -52,8 +51,14 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureActions(): void
     {
+        /*
+         * No `Fortify::createUsersUsing()`. Registration is not a Fortify
+         * feature here any more (see config/fortify.php) — accounts are
+         * created by RegistrationCodeService::complete once an emailed code
+         * has proven the address, which is a precondition Fortify's
+         * CreatesNewUsers contract has no way to express.
+         */
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        Fortify::createUsersUsing(CreateNewUser::class);
     }
 
     /**
@@ -61,11 +66,31 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'canRegister' => Features::enabled(Features::registration()),
-            'status' => $request->session()->get('status'),
-        ]));
+        /*
+         * The one front door: an email field, and nothing else.
+         *
+         * What happens next is decided server-side by
+         * Auth\LoginIdentifyController::identify — password for an account that
+         * exists, an emailed code for one that doesn't. There is no separate
+         * signup screen, so no `canRegister` prop: the same field serves both.
+         *
+         * `resume` tells the page a signup is already in progress in this
+         * browser, so it can *offer* to continue instead of silently
+         * redirecting — someone arriving here may genuinely want to use a
+         * different address, and deciding that for them is how you trap
+         * people.
+         */
+        Fortify::loginView(function (Request $request) {
+            $pending = app(RegistrationCodeService::class)->resolve($request);
+
+            return Inertia::render('auth/login/identify', [
+                'status' => $request->session()->get('status'),
+                'resume' => $pending ? [
+                    'maskedEmail' => $pending->maskedEmail(),
+                    'step' => $pending->nextStep(),
+                ] : null,
+            ]);
+        });
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,
@@ -80,7 +105,7 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register'));
+        // No `Fortify::registerView()` — see the login view above.
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 

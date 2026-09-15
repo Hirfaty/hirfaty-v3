@@ -63,4 +63,45 @@ return [
             ],
         ],
     ],
+
+    /*
+     * The 6-digit signup code. No greeting by name here — unlike verify.*,
+     * this email is sent before the account exists, so there is no first name
+     * to greet with.
+     */
+    'registration_code' => [
+        'subject' => 'Your Hirfaty code: :code',
+        'preheader' => ':code is your Hirfaty confirmation code.',
+        'eyebrow' => 'Create an account',
+        'headline' => 'Here is your code.',
+        'body' => 'Enter this code on the Hirfaty page you just left to confirm your email address and finish creating your account.',
+        'expires' => 'This code expires in :minutes minutes.',
+        'ignore' => 'Didn’t ask to join Hirfaty? Ignore this email — no account will be created, and the code stops working on its own.',
+        'tagline' => 'The home of Moroccan artisans.',
+        'privacy' => 'Privacy',
+        'terms' => 'Terms of use',
+    ],
+
+    /*
+     * The 6-digit sign-in code, for someone who has an account but chose a
+     * code over their password. Same template as registration_code (see
+     * emails/auth-code.blade.php) — only the words differ, so the key set
+     * must stay identical to the block above.
+     *
+     * The `ignore` line is worded as a warning rather than a shrug: an
+     * unexpected sign-in code means somebody typed this address into the
+     * login screen, which is worth noticing.
+     */
+    'login_code' => [
+        'subject' => 'Your Hirfaty sign-in code: :code',
+        'preheader' => ':code is your Hirfaty sign-in code.',
+        'eyebrow' => 'Sign in',
+        'headline' => 'Here is your sign-in code.',
+        'body' => 'Enter this code on the Hirfaty sign-in page to get into your account. You will not need your password.',
+        'expires' => 'This code expires in :minutes minutes.',
+        'ignore' => 'Didn’t try to sign in? You can ignore this email — the code expires on its own and nothing has changed on your account. If it keeps happening, change your password.',
+        'tagline' => 'The home of Moroccan artisans.',
+        'privacy' => 'Privacy',
+        'terms' => 'Terms of use',
+    ],
 ];

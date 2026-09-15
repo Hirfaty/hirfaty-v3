@@ -62,6 +62,11 @@ return [
     'orders.status_delivered' => 'Livrée',
     'orders.status_cancelled' => 'Annulée',
 
+    // État vide — components/buyer/orders/EmptyOrders.tsx.
+    'orders.empty_eyebrow' => 'Bienvenue',
+    'orders.empty_title' => 'Prêt à magasiner ?',
+    'orders.empty_cta' => 'Découvrir la boutique',
+
     // ── Évaluations ───────────────────────────────────────────────
     // Proposées uniquement sur une commande livrée — voir ReviewService.
     'reviews.heading' => 'Comment cela s’est-il passé ?',
@@ -146,24 +151,23 @@ return [
     'onboarding.next' => 'Continuer',
     'onboarding.finish' => 'Découvrir le marché',
 
-    'onboarding.welcome.quote' => 'Derrière chaque pièce, il y a une paire de mains et un savoir-faire transmis.',
     'onboarding.welcome.title' => 'Bienvenue, :name',
     'onboarding.welcome.body' => 'Hirfaty rassemble les artisans du Maroc en un seul endroit. Deux minutes pour faire connaissance, puis le marché est à vous.',
     'onboarding.welcome.point_direct' => 'Vous achetez directement à l\'artisan — sans intermédiaire.',
     'onboarding.welcome.point_authentic' => 'Chaque pièce est faite main, chaque boutique est vérifiée par notre équipe.',
     'onboarding.welcome.point_delivery' => 'Livraison partout au Maroc, suivie depuis votre espace commandes.',
 
-    'onboarding.interests.quote' => 'Poterie de Safi, tapis de Taznakht, cuir de Fès — le Maroc a mille métiers.',
     'onboarding.interests.title' => 'Qu\'est-ce qui vous attire ?',
     'onboarding.interests.body' => 'Choisissez les métiers qui vous intéressent. Nous nous en servirons pour mettre en avant ce qui vous ressemble.',
     'onboarding.interests.optional' => 'Facultatif — vous pourrez changer d\'avis à tout moment.',
 
-    'onboarding.professional.quote' => 'Riads, hôtels, boutiques : ils meublent leurs espaces chez nos artisans.',
-    'onboarding.professional.title' => 'Vous achetez pour un établissement ?',
-    'onboarding.professional.body' => 'Riad, hôtel, restaurant, boutique… Si vous commandez en quantité, votre compte peut passer en professionnel.',
-    'onboarding.professional.perk' => 'Les comptes professionnels bénéficient des tarifs de gros. Notre équipe examine chaque demande avant de l\'activer.',
-    'onboarding.professional.cta' => 'Demander un compte professionnel',
-    'onboarding.professional.label' => 'Parlez-nous de votre activité',
+    /*
+     * `.placeholder` et `.hint` sont les deux seules clés restantes de
+     * l'ancienne étape professionnelle : le parcours ne la pose plus, mais
+     * pages/buyer/professional-account.tsx les réutilise pour la même
+     * question posée plus tard, quand un acheteur la demande réellement. Ne
+     * pas supprimer.
+     */
     'onboarding.professional.placeholder' => 'Ex : Je gère un riad de 8 chambres à Marrakech et je cherche du linge de maison et de la vaisselle artisanale en quantité.',
     'onboarding.professional.hint' => '20 caractères minimum. Vous pourrez continuer à commander normalement pendant l\'examen de votre demande.',
 
@@ -189,8 +193,18 @@ return [
     'account.nav_orders' => 'Commandes',
     'account.nav_wishlist' => 'Coups de cœur',
     'account.nav_payment' => 'Paiement',
+    /*
+     * Toujours utilisée par le titre de la page /professional-account. La
+     * barre d'onglets du compte ne la liste plus — voir la note dans
+     * layouts/buyer/account-layout.tsx.
+     */
     'account.nav_professional' => 'Compte professionnel',
     'account.logout' => 'Déconnexion',
+
+    // Le type de compte — remplace l'avatar et le nom qui occupaient le haut
+    // de la colonne latérale.
+    'account.badge_personal' => 'Compte particulier',
+    'account.badge_professional' => 'Compte professionnel',
 
     'account.orders_intro' => 'Un panier est réparti en une commande par atelier : un même achat peut donc apparaître plusieurs fois ici.',
     'account.wishlist_intro' => 'Les pièces que vous avez enregistrées, conservées jusqu\'à ce que vous les retiriez.',
@@ -250,6 +264,11 @@ return [
 
     // ── Coups de cœur ────────────────────────────────────────────────────
     'wishlist.title' => 'Mes coups de cœur',
+
+    // État vide — partage components/buyer/EmptyShowcase.tsx avec les commandes.
+    'wishlist.empty_eyebrow' => 'Rien d’enregistré pour l’instant',
+    'wishlist.empty_title' => 'Une pièce vous plaît ?',
+    'wishlist.empty_cta' => 'Parcourir le marché',
 
     // ── Panier ───────────────────────────────────────────────────────────
     'cart.title' => 'Votre panier',

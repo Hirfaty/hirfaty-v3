@@ -1,5 +1,4 @@
-import { Package } from 'lucide-react';
-import Placeholder from '@/components/buyer/account/Placeholder';
+import EmptyShowcase from '@/components/buyer/EmptyShowcase';
 import OrderReviewPanel from '@/components/buyer/OrderReviewPanel';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
@@ -10,13 +9,19 @@ import type { BuyerOrder, OrderStatus } from '@/types/orders';
  * ternaries in the markup so a new status is one line here, and so the case
  * that is genuinely different — cancelled, a dead end rather than a step — is
  * visibly so rather than buried in a condition.
+ *
+ * Filled tints rather than outlines, so the pills stop adding five more edges
+ * to a page that was mostly edges. `delivered` keeps olive rather than taking
+ * the new brand green: green is already carrying the account accent and the
+ * order total on this same row, and a third green in one line would stop
+ * meaning anything.
  */
 const STATUS_STYLES: Record<OrderStatus, string> = {
-    pending: 'border-souk-brown/25 text-souk-brown-deep/70',
-    confirmed: 'border-souk-brown/40 text-souk-brown-deep',
-    shipped: 'border-terracotta/40 text-terracotta-deep',
-    delivered: 'border-olive/45 text-olive',
-    cancelled: 'border-souk-brown/20 text-souk-brown-deep/45',
+    pending: 'bg-souk-brown/10 text-souk-brown-deep/75',
+    confirmed: 'bg-souk-brown/15 text-souk-brown-deep',
+    shipped: 'bg-terracotta/15 text-terracotta-deep',
+    delivered: 'bg-olive/15 text-olive',
+    cancelled: 'bg-souk-brown/5 text-souk-brown-deep/45',
 };
 
 const LOCALE_TAGS: Record<string, string> = {
@@ -50,13 +55,21 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
             description={t('buyer.account.orders_intro')}
         >
             {orders.length === 0 ? (
-                <Placeholder icon={Package} />
+                <EmptyShowcase
+                    eyebrow={t('buyer.orders.empty_eyebrow')}
+                    title={t('buyer.orders.empty_title')}
+                    ctaLabel={t('buyer.orders.empty_cta')}
+                />
             ) : (
                 <ul className="space-y-5">
                     {orders.map((order) => (
                         <li
                             key={order.id}
-                            className="border border-souk-brown/12 bg-souk-paper p-5"
+                            // A soft card rather than a hairline box, matching
+                            // the address card and the empty state — the whole
+                            // account area now lifts its objects off the paper
+                            // instead of drawing edges around them.
+                            className="rounded-2xl bg-white p-5 shadow-sm shadow-souk-brown/5 sm:p-6"
                         >
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -64,10 +77,10 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
                                         references lines up digit for digit —
                                         they get read by eye when matching one
                                         against an email. */}
-                                    <p className="font-display text-sm tracking-[0.04em] text-souk-title tabular-nums">
+                                    <p className="font-display text-base tracking-[0.04em] text-souk-title tabular-nums">
                                         {order.reference}
                                     </p>
-                                    <p className="mt-1 text-xs text-souk-brown-deep/60">
+                                    <p className="mt-1 text-sm text-souk-brown-deep/60">
                                         {order.store.store_name}
                                         {order.created_at && (
                                             <> · {date(order.created_at)}</>
@@ -77,13 +90,13 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
 
                                 <div className="flex items-center gap-3">
                                     <span
-                                        className={`border px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] uppercase ${STATUS_STYLES[order.status]}`}
+                                        className={`rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.14em] uppercase ${STATUS_STYLES[order.status]}`}
                                     >
                                         {t(
                                             `buyer.orders.status_${order.status}`,
                                         )}
                                     </span>
-                                    <span className="font-display text-sm text-souk-brown">
+                                    <span className="font-display text-base text-souk-green">
                                         {money(order.total_amount)} MAD
                                     </span>
                                 </div>
@@ -95,7 +108,7 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
                                         key={item.id}
                                         className="flex items-center gap-3"
                                     >
-                                        <span className="h-12 w-12 shrink-0 overflow-hidden border border-souk-brown/15 bg-souk-peach">
+                                        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-souk-peach">
                                             {item.product.image && (
                                                 <img
                                                     src={item.product.image}
@@ -105,13 +118,13 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
                                                 />
                                             )}
                                         </span>
-                                        <span className="min-w-0 flex-1 truncate text-sm text-souk-brown-deep/85">
+                                        <span className="min-w-0 flex-1 truncate text-base text-souk-brown-deep/85">
                                             {item.product.name}
                                         </span>
-                                        <span className="shrink-0 text-xs text-souk-brown-deep/55">
+                                        <span className="shrink-0 text-sm text-souk-brown-deep/55">
                                             ×{item.quantity}
                                         </span>
-                                        <span className="shrink-0 text-xs text-souk-brown-deep/70 tabular-nums">
+                                        <span className="shrink-0 text-sm text-souk-brown-deep/70 tabular-nums">
                                             {money(item.subtotal)} MAD
                                         </span>
                                     </li>

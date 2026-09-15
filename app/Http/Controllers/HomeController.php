@@ -8,7 +8,6 @@ use App\Services\NewArrivalsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Laravel\Fortify\Features;
 
 class HomeController extends Controller
 {
@@ -18,7 +17,9 @@ class HomeController extends Controller
         NewArrivalsService $newArrivals,
     ): Response {
         return Inertia::render('welcome', [
-            'canRegister' => Features::enabled(Features::registration()),
+            // No `canRegister`: signup is not a separate screen any more, so
+            // there is nothing for the home page to conditionally offer. The
+            // sign-in link doubles as the signup link.
             'featuredProducts' => BuyerProductResource::collection(
                 $home->featuredProducts(),
             ),

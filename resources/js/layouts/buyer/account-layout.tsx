@@ -17,8 +17,7 @@ export type AccountSection =
     | 'overview'
     | 'orders'
     | 'wishlist'
-    | 'payment_methods'
-    | 'professional_account';
+    | 'payment_methods';
 
 interface Props {
     active: AccountSection;
@@ -31,16 +30,24 @@ interface Props {
 }
 
 /**
- * The shell shared by the five account pages.
+ * The shell shared by the buyer account pages.
  *
- * The nav sits directly on the page rather than inside a panel: a single
- * hairline runs the height of the column, and the current section is marked
- * by a terracotta bar on its leading edge. Nothing is boxed, so the eye reads
- * one continuous page split into two columns instead of two stacked cards.
+ * The nav is a strip of tabs across the top rather than a rail down the side:
+ * there are only four sections, and a 15rem column spent on four words pushed
+ * the actual content into a narrow gutter on every page. Horizontal tabs give
+ * the content the full width and put the sections where a reader looks for
+ * them first.
  *
- * Warm `souk-*` surfaces rather than the neutral ink/cream tokens: this sits
- * behind the storefront, next to /products and the home page, not with the
- * seller and admin tooling.
+ * Deliberately sparse on rules. The previous version drew a hairline down the
+ * rail, another under the page heading, another above the content on small
+ * screens and another above the sign-out button — four lines carving up a page
+ * that is already visually grouped by whitespace. Only one survives: the tab
+ * strip's baseline, which an underline-tab pattern structurally needs.
+ *
+ * No avatar or name either. The header above already says who is signed in;
+ * repeating it here spent the most prominent spot on the page telling the
+ * reader something they knew. What they cannot see anywhere else is which
+ * *kind* of account they hold, so that badge takes the slot instead.
  */
 export default function BuyerAccountLayout({
     active,
@@ -52,11 +59,16 @@ export default function BuyerAccountLayout({
     const { t } = useTranslation();
 
     // Read from the globally shared auth prop, so a page needs no props at all
-    // just to render its own sidebar.
+    // just to render its own chrome.
     const user = usePage<{ auth: Auth }>().props.auth.user;
 
-    const initials =
-        `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
+    /*
+     * `role`, not `professional_verified_at`. A buyer whose request is still
+     * pending is a `buyer` until an admin promotes them — see
+     * Admin\UserController::approveProfessional — so the role is the only
+     * field that answers "what am I being billed as right now".
+     */
+    const isProfessional = user.role === 'professional_buyer';
 
     const items = [
         {
@@ -83,12 +95,13 @@ export default function BuyerAccountLayout({
             icon: CreditCard,
             href: route('buyer.payment_methods'),
         },
-        {
-            id: 'professional_account' as const,
-            label: t('buyer.account.nav_professional'),
-            icon: BadgeCheck,
-            href: route('professional.show'),
-        },
+        /*
+         * No trade-account tab. The route and page still exist at
+         * /professional-account — this only stops the account chrome
+         * advertising it, on the same reasoning that took it out of the
+         * onboarding tour: it asks a business question of someone who came
+         * here to check an order.
+         */
     ];
 
     return (
@@ -96,102 +109,96 @@ export default function BuyerAccountLayout({
             <Head title={title} />
             <SiteHeader />
 
-            <div className="container py-12 lg:py-16">
-                <div className="lg:grid lg:grid-cols-[15rem_1fr]">
-                    {/* ── Rail ──────────────────────────────────────────── */}
-                    <aside className="border-souk-brown/12 pb-8 lg:sticky lg:top-10 lg:self-start lg:border-e lg:pe-8 lg:pb-0">
-                        <div className="flex items-center gap-3 lg:block">
-                            <span
-                                aria-hidden="true"
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-terracotta/10 font-display text-sm text-terracotta lg:h-12 lg:w-12 lg:text-base"
-                            >
-                                {initials}
-                            </span>
-                            <div className="min-w-0 lg:mt-4">
-                                <p className="truncate font-display text-lg leading-tight text-souk-title">
-                                    {user.first_name} {user.last_name}
-                                </p>
-                                <p className="mt-0.5 truncate text-xs text-souk-brown-deep/55">
-                                    {user.email ?? '—'}
-                                </p>
-                            </div>
-                        </div>
+            <div className="container py-10 lg:py-14">
+                {/* ── Standing + sign out ───────────────────────────────── */}
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <span
+                        className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                            isProfessional
+                                ? 'bg-souk-green/10 text-souk-green'
+                                : 'bg-souk-brown/10 text-souk-brown-deep/80'
+                        }`}
+                    >
+                        <BadgeCheck className="h-4 w-4" strokeWidth={1.7} />
+                        {isProfessional
+                            ? t('buyer.account.badge_professional')
+                            : t('buyer.account.badge_personal')}
+                    </span>
 
-                        {/*
-                         * Scrolls sideways under lg, where the rail flattens
-                         * into a strip above the content rather than wrapping
-                         * onto two cramped rows.
-                         */}
-                        <nav
-                            aria-label={t('buyer.account.title')}
-                            className="-mx-1 mt-6 flex gap-1 overflow-x-auto lg:mx-0 lg:mt-9 lg:flex-col lg:gap-0.5 lg:overflow-visible"
-                        >
-                            {items.map((item) => {
-                                const Icon = item.icon;
-                                const current = active === item.id;
-
-                                return (
-                                    <Link
-                                        key={item.id}
-                                        href={item.href}
-                                        aria-current={
-                                            current ? 'page' : undefined
-                                        }
-                                        className={`group relative flex items-center gap-3 py-2.5 ps-4 pe-3 text-sm whitespace-nowrap transition-colors ${
-                                            current
-                                                ? 'text-souk-title'
-                                                : 'text-souk-brown-deep/70 hover:text-souk-title'
-                                        } `}
-                                    >
-                                        {/* The marker: a solid bar on the
-                                            leading edge, hinted on hover. */}
-                                        <span
-                                            aria-hidden="true"
-                                            className={`absolute inset-y-1 start-0 w-[2px] rounded-full transition-colors ${
-                                                current
-                                                    ? 'bg-terracotta'
-                                                    : 'bg-transparent group-hover:bg-souk-brown/20'
-                                            } `}
-                                        />
-                                        <Icon
-                                            className={`h-4 w-4 shrink-0 ${current ? 'text-terracotta' : ''}`}
-                                            strokeWidth={1.6}
-                                        />
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-
-                        <button
-                            type="button"
-                            onClick={() => router.post(route('logout'))}
-                            className="mt-6 flex items-center gap-3 py-2.5 ps-4 pe-3 text-sm text-souk-brown-deep/50 transition-colors hover:text-terracotta lg:mt-9 lg:border-t lg:border-souk-brown/12 lg:pt-6"
-                        >
-                            <LogOut className="h-4 w-4" strokeWidth={1.6} />
-                            {t('buyer.account.logout')}
-                        </button>
-                    </aside>
-
-                    {/* ── Content ───────────────────────────────────────── */}
-                    <main className="min-w-0 border-t border-souk-brown/12 pt-8 lg:border-0 lg:ps-12 lg:pt-0">
-                        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-souk-brown/12 pb-6">
-                            <div>
-                                <h1 className="font-display text-[clamp(1.7rem,3vw,2.3rem)] leading-tight tracking-[-0.02em] text-souk-title">
-                                    {title}
-                                </h1>
-                                {description && (
-                                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-souk-brown-deep/65">
-                                        {description}
-                                    </p>
-                                )}
-                            </div>
-                            {action}
-                        </header>
-
-                        <div className="pt-8">{children}</div>
-                    </main>
+                    <button
+                        type="button"
+                        onClick={() => router.post(route('logout'))}
+                        className="inline-flex items-center gap-2 text-sm text-souk-brown-deep/55 transition-colors hover:text-souk-green"
+                    >
+                        <LogOut className="h-4 w-4" strokeWidth={1.6} />
+                        {t('buyer.account.logout')}
+                    </button>
                 </div>
+
+                {/*
+                 * Scrolls sideways rather than wrapping: four tabs fit on a
+                 * phone at a glance, and a second row of them would read as a
+                 * different kind of thing.
+                 */}
+                <nav
+                    aria-label={t('buyer.account.title')}
+                    className="mt-7 -mb-px flex gap-1 overflow-x-auto border-b border-souk-brown/12 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden"
+                >
+                    {items.map((item) => {
+                        const Icon = item.icon;
+                        const current = active === item.id;
+
+                        return (
+                            <Link
+                                key={item.id}
+                                href={item.href}
+                                aria-current={current ? 'page' : undefined}
+                                className={`group relative flex shrink-0 items-center gap-2.5 px-3 pb-3.5 text-base whitespace-nowrap transition-colors sm:px-4 ${
+                                    current
+                                        ? 'text-souk-green'
+                                        : 'text-souk-brown-deep/65 hover:text-souk-title'
+                                }`}
+                            >
+                                <Icon
+                                    className="h-[1.1rem] w-[1.1rem] shrink-0"
+                                    strokeWidth={1.6}
+                                />
+                                {item.label}
+
+                                {/* Sits on the strip's own baseline, so the
+                                    active tab reads as joined to the page
+                                    below it rather than merely coloured. */}
+                                <span
+                                    aria-hidden="true"
+                                    className={`absolute inset-x-1 -bottom-px h-[2px] rounded-full transition-colors ${
+                                        current
+                                            ? 'bg-souk-green'
+                                            : 'bg-transparent group-hover:bg-souk-brown/20'
+                                    }`}
+                                />
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* ── Content ───────────────────────────────────────────── */}
+                <main className="min-w-0 pt-9">
+                    <header className="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <h1 className="font-display text-[clamp(1.9rem,3.2vw,2.6rem)] leading-tight tracking-[-0.02em] text-souk-title">
+                                {title}
+                            </h1>
+                            {description && (
+                                <p className="mt-2.5 max-w-2xl text-base leading-relaxed text-souk-brown-deep/70">
+                                    {description}
+                                </p>
+                            )}
+                        </div>
+                        {action}
+                    </header>
+
+                    <div className="pt-8">{children}</div>
+                </main>
             </div>
 
             <SiteFooter />

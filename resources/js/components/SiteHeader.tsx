@@ -20,6 +20,7 @@ import { useTranslation } from '@/hooks/use-translation';
 
 import { useGuestCart } from '@/hooks/useGuestCart';
 import logo from '@/images/logo.png';
+import { login } from '@/routes';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -623,7 +624,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                                             Se connecter
                                         </Link>
                                         <Link
-                                            href="/register"
+                                            href={login()}
                                             className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                         >
                                             Créer un compte

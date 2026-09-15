@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\AccountKindController;
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth\LoginCodeController;
+use App\Http\Controllers\Auth\LoginIdentifyController;
+use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\BrochureController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
@@ -349,6 +353,71 @@ Route::post('/brochure', [BrochureController::class, 'request'])
 Route::get('/brochure/download', [BrochureController::class, 'download'])
     ->middleware('throttle:10,1')
     ->name('brochure.download');
+
+/*
+ * One front door. `/login` asks for an email and *then* decides what to ask
+ * for next — a password for an account that exists, or an emailed code for one
+ * that doesn't yet. There is no `/register`: see LoginIdentifyController for
+ * the three-way branch and why the screen is built this way.
+ *
+ * `GET /login` and `POST /login` are deliberately absent from this group.
+ * Both are Fortify's: the first renders the email field (see
+ * FortifyServiceProvider → Fortify::loginView), the second authenticates a
+ * password and carries the login throttle, session regeneration and the
+ * two-factor handoff. Redeclaring either URI here would shadow Fortify's route
+ * in the named-route lookup and reintroduce exactly the bug documented at the
+ * top of this file for `verification.verify`.
+ *
+ * Every endpoint below is public and unauthenticated, so every one is
+ * throttled — same reasoning as the newsletter and brochure routes above, plus
+ * one more: the `verify` endpoints guess at a 6-digit secret, and the
+ * per-code attempt counter in GeneratesEmailCodes is the backstop, not the
+ * front line.
+ */
+Route::prefix('login')->name('login.')->group(function () {
+    Route::post('/identify', [LoginIdentifyController::class, 'identify'])
+        ->middleware('throttle:10,1')
+        ->name('identify');
+
+    Route::get('/password', [LoginIdentifyController::class, 'showPassword'])->name('password');
+
+    // "Email me a code instead" — passwordless sign-in for an existing
+    // account. Refused for two-factor and banned accounts; see the service.
+    Route::post('/code', [LoginCodeController::class, 'send'])
+        ->middleware('throttle:5,1')
+        ->name('code.send');
+
+    Route::get('/code', [LoginCodeController::class, 'show'])->name('code');
+
+    Route::post('/code/verify', [LoginCodeController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('code.verify');
+
+    // ── Finishing a signup ──────────────────────────────────────────────
+    Route::get('/verify', [RegistrationController::class, 'showVerify'])->name('verify');
+
+    Route::post('/verify', [RegistrationController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('verify.store');
+
+    Route::post('/resend', [RegistrationController::class, 'resend'])
+        ->middleware('throttle:5,1')
+        ->name('resend');
+
+    Route::get('/details', [RegistrationController::class, 'showDetails'])->name('details');
+
+    Route::post('/details', [RegistrationController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('details.store');
+});
+
+/*
+ * The two non-shopper doors, both holding pages. Off the /login prefix on
+ * purpose — `/login/seller` would read as "sign in as a seller", which is the
+ * opposite of what these are. See AccountKindController.
+ */
+Route::get('/sell', [AccountKindController::class, 'seller'])->name('sell');
+Route::get('/business', [AccountKindController::class, 'business'])->name('business');
 
 Route::post('/locale/{locale}', function (string $locale) {
     if (! in_array($locale, ['ar', 'fr', 'en'])) {

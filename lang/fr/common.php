@@ -25,44 +25,95 @@ return [
     'login' => 'Connexion',
     'register' => 'S\'inscrire',
 
-    // ── Écran de connexion ───────────────────────────────────────────────
-    'auth.login.eyebrow' => 'Bon retour',
-    'auth.login.title' => 'De retour parmi',
-    'auth.login.title_accent' => 'les artisans',
-    'auth.login.subtitle' => 'Connectez-vous pour retrouver vos commandes, vos pièces sauvegardées et vos ateliers favoris.',
-    'auth.login.email' => 'Adresse e-mail',
-    'auth.login.email_placeholder' => 'vous@exemple.com',
-    'auth.login.password' => 'Mot de passe',
-    'auth.login.password_placeholder' => 'Votre mot de passe',
-    'auth.login.remember' => 'Rester connecté',
-    'auth.login.forgot' => 'Mot de passe oublié ?',
-    'auth.login.submit' => 'Se connecter',
-    'auth.login.no_account' => 'Nouveau sur Hirfaty ?',
-    'auth.login.create_account' => 'Créer un compte',
+    /*
+     * ── La porte unique : /login ─────────────────────────────────────────
+     *
+     * Connexion et inscription partagent un écran, donc un espace de clés.
+     * `auth.register.*` a disparu : il n'y a plus de second écran auquel il
+     * pourrait appartenir. Les textes suivent l'ordre dans lequel le visiteur
+     * les rencontre : identification → mot de passe (ou code) → code
+     * d'inscription → informations.
+     */
+    'auth.login.page_title' => 'Connexion ou création de compte',
     'auth.login.back_home' => 'Retour au marché',
-    'auth.login.quote' => 'Mille mains, un seul souk. Reprenez là où vous vous êtes arrêté.',
-    'auth.login.trust_secure' => 'Connexion sécurisée',
-    'auth.login.trust_artisans' => 'Ateliers d\'artisans',
-    'auth.login.trust_cities' => 'Villes marocaines',
 
-    // ── Écran d'inscription ──────────────────────────────────────────────
-    'auth.register.eyebrow' => 'Créer un compte',
-    'auth.register.buyer.title' => 'Découvrez l\'artisanat',
-    'auth.register.buyer.title_accent' => 'qui vous ressemble',
-    'auth.register.buyer.subtitle' => 'Suivez vos ateliers préférés, sauvegardez des pièces et commandez en quelques clics.',
-    'auth.register.buyer.submit' => 'Créer mon compte',
-    'auth.register.buyer.quote' => 'Chaque pièce a une main, une ville, une histoire. Notre rôle est simplement de vous mettre en relation.',
-    'auth.register.seller.title' => 'Ouvrez votre',
-    'auth.register.seller.title_accent' => 'atelier en ligne',
-    'auth.register.seller.subtitle' => 'Présentez votre savoir-faire à une audience qui cherche l\'authentique.',
-    'auth.register.seller.submit' => 'Continuer vers ma boutique',
-    'auth.register.seller.quote' => 'Hirfaty appartient à ses artisans. Aucun frais d\'ouverture, votre boutique reste la vôtre.',
+    // Fil d'étapes. Affiché uniquement sur la branche inscription : le
+    // parcours d'un visiteur qui revient fait deux écrans, annoncer
+    // « étape 1 sur 3 » serait donc faux.
+    'auth.login.step_of' => 'Étape :current sur :total',
+    'auth.login.step_email' => 'E-mail',
+    'auth.login.step_code' => 'Code',
+    'auth.login.step_details' => 'Informations',
 
-    'auth.register.role_question' => 'Je m\'inscris en tant que',
-    'auth.register.role_buyer' => 'Client',
-    'auth.register.role_buyer_hint' => 'Pour découvrir et acheter',
-    'auth.register.role_seller' => 'Artisan',
-    'auth.register.role_seller_hint' => 'Pour ouvrir un atelier',
+    // ── Identification : le champ e-mail ─────────────────────────────────
+    'auth.login.identify_title' => 'Connectez-vous ou',
+    'auth.login.identify_title_accent' => 'créez votre compte',
+    'auth.login.identify_subtitle' => 'Vous ne savez plus si vous avez déjà un compte ? Saisissez votre e-mail, nous vérifions pour vous.',
+    'auth.login.email_required' => 'Adresse e-mail (obligatoire)',
+    'auth.login.identify_submit' => 'Continuer',
+    'auth.login.privacy_note' => 'La protection de vos informations personnelles est notre priorité. Votre e-mail ne sert qu\'à confirmer le compte.',
+    'auth.login.identify_again' => 'Cela a pris trop de temps — saisissez à nouveau votre e-mail pour reprendre.',
+
+    // Les portes artisan et professionnelle, en cartes sous le formulaire.
+    // « Hirfaty Seller » et « Hirfaty Business » sont des noms de produits :
+    // ils restent en alphabet latin dans toutes les langues, comme le font
+    // habituellement les noms de marque.
+    'auth.login.card_seller_body' => 'Vendez votre artisanat partout au Maroc.',
+    'auth.login.card_seller_cta' => 'Créer un compte artisan',
+    'auth.login.card_business_body' => 'Vous achetez pour le travail ? Commandez au tarif professionnel.',
+    'auth.login.card_business_cta' => 'Créer un compte professionnel',
+
+    // ── Mot de passe : pour un compte existant ──────────────────────────
+    'auth.login.password_title' => 'Bon',
+    'auth.login.password_title_accent' => 'retour',
+    'auth.login.password_subtitle' => 'Vous avez déjà un compte avec cette adresse. Saisissez votre mot de passe pour vous connecter.',
+    'auth.login.password' => 'Mot de passe',
+    'auth.login.remember' => 'Rester connecté',
+    'auth.login.submit' => 'Se connecter',
+    'auth.login.forgot' => 'Mot de passe oublié ?',
+    'auth.login.use_another_email' => 'Utiliser une autre adresse',
+    'auth.login.use_code_instead' => 'Envoyez-moi plutôt un code',
+    'auth.login.use_password_instead' => 'Utiliser mon mot de passe',
+
+    // ── Code de connexion : connexion sans mot de passe ─────────────────
+    'auth.login.code_title' => 'Consultez votre',
+    'auth.login.code_title_accent' => 'boîte mail',
+    'auth.login.code_subtitle' => 'Nous avons envoyé un code de connexion à 6 chiffres à :email. Saisissez-le ci-dessous et vous êtes connecté — sans mot de passe.',
+    'auth.login.code_submit' => 'Me connecter',
+    'auth.login.code_sent' => 'Un code de connexion est en route.',
+    'auth.login.code_unavailable' => 'Ce compte nécessite son mot de passe. Les codes ne sont pas disponibles pour les comptes avec vérification en deux étapes.',
+
+    // ── Code d'inscription : confirmer une nouvelle adresse ─────────────
+    'auth.login.verify_title' => 'Consultez votre',
+    'auth.login.verify_title_accent' => 'boîte mail',
+    'auth.login.verify_subtitle' => 'Vous êtes nouveau ici — nous avons envoyé un code à 6 chiffres à :email. Saisissez-le pour confirmer l\'adresse.',
+    'auth.login.verify_submit' => 'Confirmer mon e-mail',
+    'auth.login.wrong_email' => 'Mauvaise adresse ? Recommencer',
+    'auth.login.session_expired' => 'Cette inscription a expiré. Saisissez votre e-mail pour recommencer.',
+
+    // Communs aux deux écrans de code (voir CodeEntry.tsx).
+    'auth.login.code_label' => 'Code de confirmation',
+    'auth.login.code_invalid' => 'Ce code n\'est pas le bon. Vérifiez l\'e-mail et réessayez.',
+    'auth.login.code_locked' => 'Trop de tentatives sur ce code. Demandez-en un nouveau.',
+    'auth.login.code_resent' => 'Un nouveau code est en route.',
+    'auth.login.code_resend' => 'Envoyer un nouveau code',
+    'auth.login.code_resend_in' => 'Vous pourrez demander un nouveau code dans :seconds s',
+    'auth.login.resend_wait' => 'Patientez encore :seconds secondes avant de demander un autre code.',
+    'auth.login.code_spam_hint' => 'Toujours rien ? Cela peut prendre une minute — pensez aussi au dossier spam.',
+
+    // ── Reprendre une inscription inachevée ─────────────────────────────
+    'auth.login.resume_title' => 'Vous avez une inscription en cours',
+    'auth.login.resume_body' => 'Nous avons déjà envoyé un code à :email.',
+    'auth.login.resume_cta' => 'Reprendre où j\'en étais',
+
+    // ── Pages d'attente Hirfaty Seller / Hirfaty Business ───────────────
+    'auth.login.placeholder_soon' => 'Bientôt disponible',
+    'auth.login.placeholder_seller_title' => 'L\'inscription artisan n\'est pas encore ouverte.',
+    'auth.login.placeholder_seller_body' => 'Nous construisons une vraie maison pour les ateliers — votre boutique, vos pièces, vos revenus. Parlez-nous de votre métier et nous reviendrons vers vous dès l\'ouverture.',
+    'auth.login.placeholder_business_title' => 'Les comptes professionnels s\'ouvrent à la main.',
+    'auth.login.placeholder_business_body' => 'Les tarifs de gros sont validés avant d\'être accordés : les comptes professionnels ne sont donc pas encore en libre-service. Contactez-nous et nous créerons le vôtre. Vous achetez déjà chez nous ? Vous pouvez demander l\'accès professionnel depuis votre compte.',
+    'auth.login.placeholder_contact' => 'Nous contacter',
+    'auth.login.placeholder_back' => 'Je suis client — retour à la connexion',
 
     // ── Écran de vérification d'e-mail ───────────────────────────────────
     'auth.verify.eyebrow' => 'Sécurité du compte',
@@ -75,28 +126,29 @@ return [
     'auth.verify.logout' => 'Se déconnecter',
     'auth.verify.quote' => 'Un compte vérifié, c\'est la confiance du souk préservée — pour les artisans comme pour les acheteurs.',
 
-    'auth.register.first_name' => 'Prénom',
-    'auth.register.last_name' => 'Nom',
-    'auth.register.phone' => 'Téléphone',
-    'auth.register.email' => 'Adresse e-mail',
-    'auth.register.password' => 'Mot de passe',
-    'auth.register.password_confirm' => 'Confirmer le mot de passe',
-    'auth.register.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
+    // ── Champs des informations (étape 3 de l'inscription) ──────────────
+    'auth.login.first_name' => 'Prénom',
+    'auth.login.last_name' => 'Nom',
+    'auth.login.phone' => 'Téléphone',
+    'auth.login.password_confirm' => 'Confirmer le mot de passe',
+    'auth.login.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
+    'auth.login.details_title' => 'Presque',
+    'auth.login.details_title_accent' => 'terminé',
+    'auth.login.details_subtitle' => 'Simplement votre nom, un téléphone pour les livraisons et un mot de passe.',
+    'auth.login.details_submit' => 'Créer mon compte',
+    'auth.login.email_confirmed' => 'E-mail confirmé',
 
-    // ── Jauge de robustesse — un libellé par barre remplie ──────────
-    'auth.register.password_strength_very_weak' => 'Très faible',
-    'auth.register.password_strength_weak' => 'Faible',
-    'auth.register.password_strength_fair' => 'Moyenne',
-    'auth.register.password_strength_good' => 'Bonne',
-    'auth.register.password_strength_strong' => 'Excellente',
+    // ── Jauge de robustesse — un libellé par barre remplie ──────────────
+    'auth.login.password_strength_very_weak' => 'Très faible',
+    'auth.login.password_strength_weak' => 'Faible',
+    'auth.login.password_strength_fair' => 'Moyenne',
+    'auth.login.password_strength_good' => 'Bonne',
+    'auth.login.password_strength_strong' => 'Excellente',
 
-    'auth.register.terms_prefix' => 'J\'accepte la',
-    'auth.register.terms_privacy' => 'politique de confidentialité',
-    'auth.register.terms_and' => 'et les',
-    'auth.register.terms_conditions' => 'conditions d\'utilisation',
-
-    'auth.register.have_account' => 'Vous avez déjà un compte ?',
-    'auth.register.sign_in' => 'Se connecter',
+    'auth.login.terms_prefix' => 'J\'accepte la',
+    'auth.login.terms_privacy' => 'politique de confidentialité',
+    'auth.login.terms_and' => 'et les',
+    'auth.login.terms_conditions' => 'conditions d\'utilisation',
 
     // ── Pages d'erreur ───────────────────────────────────────────────────
     // Rendues par Inertia via le gestionnaire dans bootstrap/app.php.

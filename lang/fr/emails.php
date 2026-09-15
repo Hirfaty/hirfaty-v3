@@ -68,4 +68,45 @@ return [
             ],
         ],
     ],
+
+    /*
+     * Le code d'inscription à 6 chiffres. Pas de salutation nominative ici,
+     * contrairement à verify.* : cet e-mail part avant que le compte existe,
+     * il n'y a donc aucun prénom à afficher.
+     */
+    'registration_code' => [
+        'subject' => 'Votre code Hirfaty : :code',
+        'preheader' => ':code est votre code de confirmation Hirfaty.',
+        'eyebrow' => 'Créer un compte',
+        'headline' => 'Voici votre code.',
+        'body' => 'Saisissez ce code sur la page Hirfaty que vous venez de quitter pour confirmer votre adresse e-mail et terminer la création de votre compte.',
+        'expires' => 'Ce code expire dans :minutes minutes.',
+        'ignore' => 'Vous n’avez pas demandé à rejoindre Hirfaty ? Ignorez cet e-mail — aucun compte ne sera créé et le code cessera de fonctionner de lui-même.',
+        'tagline' => 'La maison des artisans marocains.',
+        'privacy' => 'Confidentialité',
+        'terms' => 'Conditions d’utilisation',
+    ],
+
+    /*
+     * Le code de connexion à 6 chiffres, pour quelqu'un qui a déjà un compte
+     * mais a choisi un code plutôt que son mot de passe. Même gabarit que
+     * registration_code (voir emails/auth-code.blade.php) : seuls les mots
+     * changent, le jeu de clés doit donc rester identique au bloc ci-dessus.
+     *
+     * La ligne `ignore` est formulée comme un avertissement et non comme une
+     * banalité : un code de connexion inattendu signifie que quelqu'un a saisi
+     * cette adresse sur l'écran de connexion, ce qui mérite d'être remarqué.
+     */
+    'login_code' => [
+        'subject' => 'Votre code de connexion Hirfaty : :code',
+        'preheader' => ':code est votre code de connexion Hirfaty.',
+        'eyebrow' => 'Connexion',
+        'headline' => 'Voici votre code de connexion.',
+        'body' => 'Saisissez ce code sur la page de connexion Hirfaty pour accéder à votre compte. Votre mot de passe ne sera pas nécessaire.',
+        'expires' => 'Ce code expire dans :minutes minutes.',
+        'ignore' => 'Vous n’avez pas tenté de vous connecter ? Vous pouvez ignorer cet e-mail — le code expire de lui-même et rien n’a changé sur votre compte. Si cela se répète, changez votre mot de passe.',
+        'tagline' => 'La maison des artisans marocains.',
+        'privacy' => 'Confidentialité',
+        'terms' => 'Conditions d’utilisation',
+    ],
 ];

@@ -63,6 +63,11 @@ return [
     'orders.status_delivered' => 'تم التسليم',
     'orders.status_cancelled' => 'ملغى',
 
+    // الحالة الفارغة — components/buyer/orders/EmptyOrders.tsx.
+    'orders.empty_eyebrow' => 'مرحباً',
+    'orders.empty_title' => 'جاهز للتسوق؟',
+    'orders.empty_cta' => 'تسوّق الآن',
+
     // ── التقييمات ─────────────────────────────────────────────────
     'reviews.heading' => 'كيف كانت التجربة؟',
     'reviews.edit_heading' => 'تقييمك',
@@ -146,24 +151,22 @@ return [
     'onboarding.next' => 'متابعة',
     'onboarding.finish' => 'اكتشف السوق',
 
-    'onboarding.welcome.quote' => 'خلف كل قطعة يدان وحرفة متوارثة.',
     'onboarding.welcome.title' => 'مرحباً، :name',
     'onboarding.welcome.body' => 'حرفتي تجمع حرفيي المغرب في مكان واحد. دقيقتان للتعارف، ثم السوق بين يديك.',
     'onboarding.welcome.point_direct' => 'تشتري مباشرة من الحرفي — بدون وسيط.',
     'onboarding.welcome.point_authentic' => 'كل قطعة مصنوعة يدوياً، وكل متجر تتحقق منه فريقنا.',
     'onboarding.welcome.point_delivery' => 'التوصيل إلى كل أنحاء المغرب، مع تتبع من صفحة طلباتك.',
 
-    'onboarding.interests.quote' => 'خزف آسفي، زرابي تازناخت، جلد فاس — للمغرب ألف حرفة.',
     'onboarding.interests.title' => 'ما الذي يجذبك؟',
     'onboarding.interests.body' => 'اختر الحرف التي تهمك، وسنستعملها لإبراز ما يناسبك.',
     'onboarding.interests.optional' => 'اختياري — يمكنك تغيير رأيك في أي وقت.',
 
-    'onboarding.professional.quote' => 'رياضات وفنادق ومتاجر: يؤثثون فضاءاتهم من عند حرفيينا.',
-    'onboarding.professional.title' => 'هل تشتري لحساب مؤسسة؟',
-    'onboarding.professional.body' => 'رياض، فندق، مطعم، متجر… إذا كنت تطلب بكميات، يمكن أن يصبح حسابك مهنياً.',
-    'onboarding.professional.perk' => 'تستفيد الحسابات المهنية من أسعار الجملة. يراجع فريقنا كل طلب قبل تفعيله.',
-    'onboarding.professional.cta' => 'اطلب حساباً مهنياً',
-    'onboarding.professional.label' => 'حدثنا عن نشاطك',
+    /*
+     * `.placeholder` و`.hint` هما المفتاحان الباقيان من خطوة الحساب
+     * المهني السابقة: لم تعد الجولة تطرحهما، لكن
+     * pages/buyer/professional-account.tsx يعيد استخدامهما لنفس السؤال
+     * حين يطلبه المشتري لاحقاً بالفعل. لا تحذفهما.
+     */
     'onboarding.professional.placeholder' => 'مثال: أدير رياضاً من 8 غرف في مراكش وأبحث عن مفروشات وأوانٍ مصنوعة يدوياً بكميات.',
     'onboarding.professional.hint' => '20 حرفاً على الأقل. يمكنك مواصلة الطلب كالمعتاد أثناء مراجعة طلبك.',
 
@@ -189,8 +192,17 @@ return [
     'account.nav_orders' => 'الطلبات',
     'account.nav_wishlist' => 'المفضلة',
     'account.nav_payment' => 'الأداء',
+    /*
+     * لا تزال مستخدمة في عنوان صفحة /professional-account نفسها. شريط
+     * تبويبات الحساب لم يعد يعرضها — انظر الملاحظة في
+     * layouts/buyer/account-layout.tsx.
+     */
     'account.nav_professional' => 'الحساب المهني',
     'account.logout' => 'تسجيل الخروج',
+
+    // نوع الحساب — يحلّ محلّ الصورة والاسم الذين كانا أعلى الشريط الجانبي.
+    'account.badge_personal' => 'حساب شخصي',
+    'account.badge_professional' => 'حساب مهني',
 
     'account.orders_intro' => 'تُقسَّم السلة إلى طلب لكل ورشة، لذا قد تظهر عملية شراء واحدة هنا أكثر من مرة.',
     'account.wishlist_intro' => 'القطع التي احتفظت بها، تبقى إلى أن تحذفها.',
@@ -250,6 +262,11 @@ return [
 
     // ── المفضلة ──────────────────────────────────────────────────────────
     'wishlist.title' => 'مفضلتي',
+
+    // الحالة الفارغة — تشترك مع الطلبات في components/buyer/EmptyShowcase.tsx.
+    'wishlist.empty_eyebrow' => 'لم تحفظ شيئاً بعد',
+    'wishlist.empty_title' => 'أعجبتك قطعة؟',
+    'wishlist.empty_cta' => 'تجوّل في السوق',
 
     // ── السلة ────────────────────────────────────────────────────────────
     'cart.title' => 'سلتك',

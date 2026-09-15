@@ -3,6 +3,7 @@ import { ArrowRight, Truck } from 'lucide-react';
 import Reveal from '@/components/home/Reveal';
 import { useTranslation } from '@/hooks/use-translation';
 import zellij from '@/images/zellij-pattern.png';
+import { sell } from '@/routes';
 
 /**
  * The closing "become a seller" banner — shared by the home and about pages
@@ -45,8 +46,11 @@ export default function ArtisanCta() {
                             </p>
 
                             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                                {/* The artisan form, not the buyer flow:
+                                    /register is now email-only signup for
+                                    shoppers. */}
                                 <Link
-                                    href="/register"
+                                    href={sell()}
                                     className="group inline-flex items-center gap-3 rounded-xl bg-souk-cream px-9 py-4 font-display text-lg text-souk-brown-deep transition-transform duration-300 hover:-translate-y-0.5"
                                 >
                                     {t('welcome.seller_cta.button')}

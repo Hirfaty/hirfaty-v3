@@ -13,22 +13,24 @@ use Illuminate\Support\Facades\DB;
  * either way, because the column answers "have we already asked?", not "did
  * they engage?". Anything else and a skipped tour would reappear on every
  * login, which is the opposite of skippable.
+ *
+ * This used to also offer a trade-account request as its last step — dropped
+ * because asking a brand-new buyer whether they want wholesale pricing before
+ * they have seen the market answers a question nobody has asked yet. That
+ * request still exists, just moved to where the need actually shows up: a
+ * buyer can ask for it any time from /professional-account
+ * (ProfessionalRequestController → ProfessionalAccountService).
  */
 class OnboardingService
 {
-    public function __construct(
-        private ProfessionalAccountService $professional,
-    ) {}
-
     /**
-     * Finish onboarding: save the picked interests, optionally file a trade
-     * request, and mark the tour done.
+     * Finish onboarding: save the picked interests and mark the tour done.
      *
      * @param  array<int, int>  $categoryIds
      */
-    public function complete(User $user, array $categoryIds = [], ?string $professionalMessage = null): void
+    public function complete(User $user, array $categoryIds = []): void
     {
-        DB::transaction(function () use ($user, $categoryIds, $professionalMessage) {
+        DB::transaction(function () use ($user, $categoryIds) {
             /*
              * Filter to ids that actually exist rather than trusting the
              * payload: sync() on a bad id throws a FK violation, and a
@@ -36,10 +38,6 @@ class OnboardingService
              */
             $valid = Category::whereIn('id', $categoryIds)->pluck('id')->all();
             $user->interests()->sync($valid);
-
-            if ($professionalMessage !== null && $user->canRequestProfessional()) {
-                $this->professional->request($user, $professionalMessage);
-            }
 
             $this->markSeen($user);
         });

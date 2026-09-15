@@ -22,6 +22,7 @@ import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
 import zellij from '@/images/zellij-pattern.png';
+import { login } from '@/routes';
 
 /** Museum-caption label, matching the rest of the storefront. */
 const EYEBROW = 'text-[11px] tracking-[0.22em] uppercase';
@@ -238,7 +239,7 @@ export default function ProfessionalAccount({
         if (isGuest) {
             return {
                 label: t('pro.hero.cta_guest'),
-                href: route('register'),
+                href: login(),
                 Icon: ArrowRight,
             };
         }
@@ -296,7 +297,7 @@ export default function ProfessionalAccount({
                                 </h1>
 
                                 <Reveal delay={280}>
-                                    <p className="mt-7 max-w-xl text-lg leading-relaxed text-souk-cream/85">
+                                    <p className="mt-7 max-w-xl text-xl leading-relaxed text-souk-cream/85">
                                         {t('pro.hero.lead')}
                                     </p>
                                 </Reveal>
@@ -406,7 +407,7 @@ export default function ProfessionalAccount({
                                 </h2>
                             </Reveal>
                             <Reveal delay={140}>
-                                <p className="mt-5 text-lg leading-relaxed text-souk-brown-deep/75">
+                                <p className="mt-5 text-xl leading-relaxed text-souk-brown-deep/75">
                                     {t('pro.demo.lead')}
                                 </p>
                             </Reveal>
@@ -629,7 +630,7 @@ export default function ProfessionalAccount({
                                                 {t('pro.cta.body')}
                                             </p>
                                             <Link
-                                                href={route('register')}
+                                                href={login()}
                                                 className="group mt-6 inline-flex items-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep"
                                             >
                                                 {t('pro.hero.cta_guest')}

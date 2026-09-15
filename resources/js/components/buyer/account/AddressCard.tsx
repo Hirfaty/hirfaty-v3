@@ -67,14 +67,17 @@ export default function AddressCard({
     };
 
     return (
-        <aside className="rounded-2xl border border-souk-brown/15 bg-white/70 p-6 shadow-sm lg:sticky lg:top-10">
+        // No border: the white fill and a soft shadow already lift the card off
+        // the paper background, and a rule around it was a third edge doing
+        // the same job.
+        <aside className="rounded-2xl bg-white p-6 shadow-sm shadow-souk-brown/5 lg:sticky lg:top-10">
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                     <MapPin
-                        className="h-4 w-4 text-souk-brown-deep/60"
-                        strokeWidth={1.6}
+                        className="h-[1.1rem] w-[1.1rem] text-souk-green"
+                        strokeWidth={1.7}
                     />
-                    <h2 className="font-display text-lg leading-tight text-souk-title">
+                    <h2 className="font-display text-xl leading-tight text-souk-title">
                         {t('buyer.account.section_address')}
                     </h2>
                 </div>
@@ -86,7 +89,7 @@ export default function AddressCard({
                 )}
             </div>
 
-            <p className="mt-1.5 text-sm leading-relaxed text-souk-brown-deep/60">
+            <p className="mt-1.5 text-base leading-relaxed text-souk-brown-deep/60">
                 {t('buyer.account.section_address_desc')}
             </p>
 
@@ -203,9 +206,9 @@ export default function AddressCard({
                         />
                     </form>
                 ) : address ? (
-                    <div className="space-y-1.5 text-sm">
+                    <div className="space-y-1.5 text-base">
                         {address.label && (
-                            <p className="text-[11px] font-medium tracking-wide text-terracotta uppercase">
+                            <p className="text-xs font-medium tracking-wide text-souk-green uppercase">
                                 {address.label}
                             </p>
                         )}
@@ -227,14 +230,21 @@ export default function AddressCard({
                         )}
                     </div>
                 ) : (
-                    <div className="rounded-xl border border-dashed border-souk-brown/25 p-6 text-center">
-                        <p className="text-sm text-souk-brown-deep/65">
+                    /*
+                     * No dashed outline. A dotted box is the convention for
+                     * "drop something here", and this is not a drop target —
+                     * it is a sentence and a button. The button already reads
+                     * as the thing to press, so the outline was only adding
+                     * visual noise around it.
+                     */
+                    <div>
+                        <p className="text-base leading-relaxed text-souk-brown-deep/65">
                             {t('buyer.account.no_address')}
                         </p>
                         <button
                             type="button"
                             onClick={startEditing}
-                            className="mx-auto mt-3 flex items-center gap-1.5 rounded-lg bg-souk-brown px-4 py-2 text-sm text-souk-paper transition-colors hover:bg-souk-brown-deep"
+                            className="mt-4 inline-flex items-center gap-2 rounded-full bg-souk-green px-5 py-2.5 text-base text-white transition-colors hover:bg-souk-green-deep"
                         >
                             <Plus className="h-4 w-4" strokeWidth={2} />
                             {t('buyer.account.add_address')}

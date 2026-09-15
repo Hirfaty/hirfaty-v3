@@ -25,44 +25,92 @@ return [
     'login' => 'تسجيل الدخول',
     'register' => 'إنشاء حساب',
 
-    // ── شاشة تسجيل الدخول ────────────────────────────────────────────────
-    'auth.login.eyebrow' => 'أهلًا بعودتك',
-    'auth.login.title' => 'عودة إلى',
-    'auth.login.title_accent' => 'عالم الحرفيين',
-    'auth.login.subtitle' => 'سجّل الدخول لمتابعة طلباتك وقطعك المحفوظة وورشاتك المفضلة.',
-    'auth.login.email' => 'البريد الإلكتروني',
-    'auth.login.email_placeholder' => 'you@example.com',
-    'auth.login.password' => 'كلمة المرور',
-    'auth.login.password_placeholder' => 'كلمة المرور الخاصة بك',
-    'auth.login.remember' => 'أبقني مسجّلًا',
-    'auth.login.forgot' => 'نسيت كلمة المرور؟',
-    'auth.login.submit' => 'تسجيل الدخول',
-    'auth.login.no_account' => 'جديد على حرفتي؟',
-    'auth.login.create_account' => 'إنشاء حساب',
+    /*
+     * ── الباب الواحد: /login ─────────────────────────────────────────────
+     *
+     * تسجيل الدخول وإنشاء الحساب يتقاسمان شاشة واحدة، ومن ثمّ مجموعة
+     * مفاتيح واحدة. اختفى `auth.register.*` لأنه لم تبقَ شاشة ثانية ينتمي
+     * إليها. والنصوص مرتّبة بالترتيب الذي يلقاه الزائر: التعريف ← كلمة
+     * المرور (أو الرمز) ← رمز التسجيل ← البيانات.
+     */
+    'auth.login.page_title' => 'تسجيل الدخول أو إنشاء حساب',
     'auth.login.back_home' => 'العودة إلى السوق',
-    'auth.login.quote' => 'ألف يد، وسوق واحد. تابع من حيث توقفت.',
-    'auth.login.trust_secure' => 'دخول آمن',
-    'auth.login.trust_artisans' => 'ورشة حرفية',
-    'auth.login.trust_cities' => 'مدينة مغربية',
 
-    // ── شاشة إنشاء الحساب ────────────────────────────────────────────────
-    'auth.register.eyebrow' => 'إنشاء حساب',
-    'auth.register.buyer.title' => 'اكتشف الحرف',
-    'auth.register.buyer.title_accent' => 'التي تشبهك',
-    'auth.register.buyer.subtitle' => 'تابع ورشاتك المفضلة، احفظ القطع، واطلب ببضع نقرات.',
-    'auth.register.buyer.submit' => 'إنشاء حسابي',
-    'auth.register.buyer.quote' => 'لكل قطعة يد ومدينة وحكاية. دورنا ببساطة أن نجمعكما.',
-    'auth.register.seller.title' => 'افتح',
-    'auth.register.seller.title_accent' => 'ورشتك على الإنترنت',
-    'auth.register.seller.subtitle' => 'اعرض حرفتك على جمهور يبحث عن الأصيل.',
-    'auth.register.seller.submit' => 'المتابعة إلى متجري',
-    'auth.register.seller.quote' => 'حرفتي مِلك لحرفييها. لا رسوم انضمام، ومتجرك يبقى لك.',
+    // شريط الخطوات. يظهر في مسار التسجيل وحده: رحلة الزائر العائد شاشتان،
+    // فالقول «الخطوة 1 من 3» سيكون غير صحيح.
+    'auth.login.step_of' => 'الخطوة :current من :total',
+    'auth.login.step_email' => 'البريد',
+    'auth.login.step_code' => 'الرمز',
+    'auth.login.step_details' => 'البيانات',
 
-    'auth.register.role_question' => 'أنضم بصفتي',
-    'auth.register.role_buyer' => 'زبون',
-    'auth.register.role_buyer_hint' => 'للتصفح والشراء',
-    'auth.register.role_seller' => 'حرفي',
-    'auth.register.role_seller_hint' => 'لفتح ورشة',
+    // ── التعريف: حقل البريد الإلكتروني ──────────────────────────────────
+    'auth.login.identify_title' => 'سجّل الدخول أو',
+    'auth.login.identify_title_accent' => 'أنشئ حسابك',
+    'auth.login.identify_subtitle' => 'لا تتذكّر إن كان لديك حساب؟ أدخل بريدك الإلكتروني وسنتحقّق لك.',
+    'auth.login.email_required' => 'البريد الإلكتروني (مطلوب)',
+    'auth.login.identify_submit' => 'متابعة',
+    'auth.login.privacy_note' => 'حماية معلوماتك الشخصية أولويتنا. لا نستخدم بريدك إلا لتأكيد الحساب.',
+    'auth.login.identify_again' => 'استغرق ذلك وقتاً طويلاً — أدخل بريدك الإلكتروني مرة أخرى للمتابعة.',
+
+    // بابا الحرفي والأعمال، في بطاقتين أسفل الاستمارة. «Hirfaty Seller»
+    // و«Hirfaty Business» أسماء منتجات تبقى بالحرف اللاتيني في كل اللغات،
+    // كما هي العادة مع أسماء العلامات.
+    'auth.login.card_seller_body' => 'بِع منتجاتك اليدوية في كل أنحاء المغرب.',
+    'auth.login.card_seller_cta' => 'إنشاء حساب حرفي',
+    'auth.login.card_business_body' => 'تشتري لحساب عملك؟ اطلب بأسعار الجملة.',
+    'auth.login.card_business_cta' => 'إنشاء حساب أعمال',
+
+    // ── كلمة المرور: لحساب قائم ─────────────────────────────────────────
+    'auth.login.password_title' => 'أهلاً',
+    'auth.login.password_title_accent' => 'بعودتك',
+    'auth.login.password_subtitle' => 'لديك حساب بهذا العنوان بالفعل. أدخل كلمة المرور لتسجيل الدخول.',
+    'auth.login.password' => 'كلمة المرور',
+    'auth.login.remember' => 'أبقني مسجّلاً',
+    'auth.login.submit' => 'تسجيل الدخول',
+    'auth.login.forgot' => 'نسيت كلمة المرور؟',
+    'auth.login.use_another_email' => 'استخدام عنوان آخر',
+    'auth.login.use_code_instead' => 'أرسل لي رمزاً بدلاً من ذلك',
+    'auth.login.use_password_instead' => 'استخدام كلمة المرور',
+
+    // ── رمز الدخول: تسجيل دخول بلا كلمة مرور ───────────────────────────
+    'auth.login.code_title' => 'تحقّق من',
+    'auth.login.code_title_accent' => 'بريدك',
+    'auth.login.code_subtitle' => 'أرسلنا رمز دخول من ستة أرقام إلى :email. أدخله أدناه وستدخل حسابك — بلا كلمة مرور.',
+    'auth.login.code_submit' => 'سجّل دخولي',
+    'auth.login.code_sent' => 'رمز الدخول في الطريق إليك.',
+    'auth.login.code_unavailable' => 'هذا الحساب يحتاج كلمة المرور. الرموز غير متاحة للحسابات التي تستخدم التحقّق بخطوتين.',
+
+    // ── رمز التسجيل: تأكيد عنوان جديد ──────────────────────────────────
+    'auth.login.verify_title' => 'تحقّق من',
+    'auth.login.verify_title_accent' => 'بريدك',
+    'auth.login.verify_subtitle' => 'أنت جديد هنا — أرسلنا رمزاً من ستة أرقام إلى :email. أدخله لتأكيد العنوان.',
+    'auth.login.verify_submit' => 'تأكيد بريدي الإلكتروني',
+    'auth.login.wrong_email' => 'العنوان خطأ؟ ابدأ من جديد',
+    'auth.login.session_expired' => 'انتهت صلاحية هذا التسجيل. أدخل بريدك الإلكتروني للبدء من جديد.',
+
+    // مشتركة بين شاشتي الرمز (انظر CodeEntry.tsx).
+    'auth.login.code_label' => 'رمز التأكيد',
+    'auth.login.code_invalid' => 'هذا الرمز غير صحيح. راجع الرسالة وحاول مرة أخرى.',
+    'auth.login.code_locked' => 'محاولات كثيرة على هذا الرمز. اطلب رمزاً جديداً.',
+    'auth.login.code_resent' => 'رمز جديد في الطريق إليك.',
+    'auth.login.code_resend' => 'إرسال رمز جديد',
+    'auth.login.code_resend_in' => 'يمكنك طلب رمز جديد بعد :seconds ثانية',
+    'auth.login.resend_wait' => 'انتظر :seconds ثانية أخرى قبل طلب رمز جديد.',
+    'auth.login.code_spam_hint' => 'لم يصل بعد؟ قد يستغرق دقيقة — تحقّق أيضاً من مجلد البريد المزعج.',
+
+    // ── استئناف تسجيل لم يكتمل ─────────────────────────────────────────
+    'auth.login.resume_title' => 'لديك تسجيل قيد الإنجاز',
+    'auth.login.resume_body' => 'سبق أن أرسلنا رمزاً إلى :email.',
+    'auth.login.resume_cta' => 'أكمل من حيث توقفت',
+
+    // ── صفحتا Hirfaty Seller و Hirfaty Business ────────────────────────
+    'auth.login.placeholder_soon' => 'قريباً',
+    'auth.login.placeholder_seller_title' => 'تسجيل الحرفيين لم يُفتح بعد.',
+    'auth.login.placeholder_seller_body' => 'نبني بيتاً حقيقياً للورشات — متجرك وقطعك وأرباحك. حدّثنا عن حرفتك وسنعود إليك لحظة افتتاحه.',
+    'auth.login.placeholder_business_title' => 'حسابات الأعمال تُفتح يدوياً.',
+    'auth.login.placeholder_business_body' => 'تُراجَع أسعار الجملة قبل منحها، لذلك لا تتوفّر حسابات الأعمال ذاتياً بعد. تواصل معنا وسننشئ حسابك. تشتري معنا بالفعل؟ يمكنك طلب صلاحية الأعمال من حسابك.',
+    'auth.login.placeholder_contact' => 'تواصل معنا',
+    'auth.login.placeholder_back' => 'أنا مشترٍ — أعدني إلى تسجيل الدخول',
 
     // ── شاشة تفعيل البريد الإلكتروني ─────────────────────────────────────
     'auth.verify.eyebrow' => 'أمان الحساب',
@@ -75,28 +123,29 @@ return [
     'auth.verify.logout' => 'تسجيل الخروج',
     'auth.verify.quote' => 'الحساب الموثّق يحافظ على ثقة السوق — للحرفيين والمشترين على حد سواء.',
 
-    'auth.register.first_name' => 'الاسم الشخصي',
-    'auth.register.last_name' => 'الاسم العائلي',
-    'auth.register.phone' => 'رقم الهاتف',
-    'auth.register.email' => 'البريد الإلكتروني',
-    'auth.register.password' => 'كلمة المرور',
-    'auth.register.password_confirm' => 'تأكيد كلمة المرور',
-    'auth.register.password_hint' => '12 حرفًا على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
+    // ── حقول البيانات (الخطوة 3 من التسجيل) ────────────────────────────
+    'auth.login.first_name' => 'الاسم الشخصي',
+    'auth.login.last_name' => 'الاسم العائلي',
+    'auth.login.phone' => 'رقم الهاتف',
+    'auth.login.password_confirm' => 'تأكيد كلمة المرور',
+    'auth.login.password_hint' => '12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
+    'auth.login.details_title' => 'أوشكت على',
+    'auth.login.details_title_accent' => 'الانتهاء',
+    'auth.login.details_subtitle' => 'اسمك فقط، ورقم هاتف للتوصيل، وكلمة مرور.',
+    'auth.login.details_submit' => 'إنشاء حسابي',
+    'auth.login.email_confirmed' => 'تم تأكيد البريد',
 
-    // ── مقياس قوة كلمة المرور — تسمية لكل شريط مُفعّل ────────────────
-    'auth.register.password_strength_very_weak' => 'ضعيفة جدًا',
-    'auth.register.password_strength_weak' => 'ضعيفة',
-    'auth.register.password_strength_fair' => 'متوسطة',
-    'auth.register.password_strength_good' => 'جيدة',
-    'auth.register.password_strength_strong' => 'ممتازة',
+    // ── مؤشّر قوة كلمة المرور — تسمية لكل شريط ممتلئ ───────────────────
+    'auth.login.password_strength_very_weak' => 'ضعيفة جداً',
+    'auth.login.password_strength_weak' => 'ضعيفة',
+    'auth.login.password_strength_fair' => 'متوسطة',
+    'auth.login.password_strength_good' => 'جيدة',
+    'auth.login.password_strength_strong' => 'قوية',
 
-    'auth.register.terms_prefix' => 'أوافق على',
-    'auth.register.terms_privacy' => 'سياسة الخصوصية',
-    'auth.register.terms_and' => 'و',
-    'auth.register.terms_conditions' => 'شروط الاستخدام',
-
-    'auth.register.have_account' => 'لديك حساب بالفعل؟',
-    'auth.register.sign_in' => 'تسجيل الدخول',
+    'auth.login.terms_prefix' => 'أوافق على',
+    'auth.login.terms_privacy' => 'سياسة الخصوصية',
+    'auth.login.terms_and' => 'و',
+    'auth.login.terms_conditions' => 'شروط الاستخدام',
 
     // ── صفحات الخطأ ──────────────────────────────────────────────────────
     'errors.eyebrow' => 'خطأ :status',

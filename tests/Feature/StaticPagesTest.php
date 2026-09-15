@@ -123,7 +123,11 @@ it('keeps the :year placeholder in every copyright translation', function () {
 /**
  * Every footer destination has to resolve. The point of the rewrite was to
  * stop the footer pointing twelve links at `#`.
+ *
+ * `/sell` rather than `/register`: the footer's artisan link moved there when
+ * signup merged into /login and the two account-kind doors left the auth
+ * namespace. This dataset has to track SiteFooter's NAV_COLUMNS.
  */
 it('points every footer link at a page that exists', function (string $path) {
     $this->get($path)->assertSuccessful();
-})->with(['/products', '/how-it-works', '/contact', '/register']);
+})->with(['/products', '/how-it-works', '/contact', '/sell']);

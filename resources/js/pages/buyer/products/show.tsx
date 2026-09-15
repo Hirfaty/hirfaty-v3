@@ -26,6 +26,7 @@ import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useTranslation } from '@/hooks/use-translation';
+import { login } from '@/routes';
 import type { Media } from '@/types';
 import type {
     BuyerProductResource,
@@ -1034,7 +1035,7 @@ const ProductDetail = ({
                         <p className="mt-3 text-[13px] leading-relaxed text-souk-brown-deep/70">
                             {t('buyer.detail.login_to_buy_hint')}{' '}
                             <Link
-                                href={route('register')}
+                                href={login()}
                                 className="text-souk-brown underline underline-offset-4"
                             >
                                 {t('buyer.detail.login_to_buy_register')}
@@ -1087,7 +1088,7 @@ const ProductDetail = ({
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="font-display text-lg text-souk-title">
+                                <p className="font-display text-xl text-souk-title">
                                     {product.store.store_name}
                                 </p>
                                 {product.store.city_name && (
@@ -1146,7 +1147,7 @@ const ProductDetail = ({
                     {/* Trade CTA for consumers and guests. */}
                     {isGuestOrConsumer && (
                         <div className="mt-7 rounded-2xl border border-olive/25 bg-olive/5 p-5">
-                            <p className="font-display text-lg text-souk-title">
+                            <p className="font-display text-xl text-souk-title">
                                 {t('buyer.detail.trade_cta_title')}
                             </p>
                             <p className="mt-1.5 text-[13px] leading-relaxed text-souk-brown-deep/75">

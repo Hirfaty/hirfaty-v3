@@ -4,9 +4,10 @@ import type { ReactNode } from 'react';
 /*
  * The account area's form vocabulary.
  *
- * Nothing is boxed — sections are separated by a hairline and whitespace, in
- * keeping with the rail beside them. Inputs carry the only borders on the
- * page, so the eye reads them as the things you can actually type into.
+ * Nothing is boxed and nothing is ruled — sections are separated by
+ * whitespace alone. Inputs carry the only borders in the account area, so the
+ * eye reads them as the things you can actually type into; adding hairlines
+ * between the sections as well meant the page was mostly lines.
  *
  * Every editable section is view-first: a value or a placeholder sits there
  * until the pencil is clicked, and only then does it become a form. Nothing
@@ -14,16 +15,16 @@ import type { ReactNode } from 'react';
  */
 
 export const INPUT =
-    'w-full rounded-lg border border-souk-brown/25 bg-white px-3.5 py-2.5 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/30 focus:border-souk-brown focus:ring-2 focus:ring-souk-brown/10 focus:outline-none';
+    'w-full rounded-lg border border-souk-brown/25 bg-white px-3.5 py-2.5 text-base text-souk-title transition-colors placeholder:text-souk-brown-deep/30 focus:border-souk-green focus:ring-2 focus:ring-souk-green/10 focus:outline-none';
 
 export const INPUT_LOCKED =
-    'w-full cursor-not-allowed rounded-lg border border-souk-brown/12 bg-souk-cream/30 px-3.5 py-2.5 text-sm text-souk-brown-deep/60';
+    'w-full cursor-not-allowed rounded-lg border border-souk-brown/12 bg-souk-cream/30 px-3.5 py-2.5 text-base text-souk-brown-deep/60';
 
 export const LABEL =
-    'mb-1.5 block text-[11px] font-medium tracking-[0.08em] text-souk-brown-deep/55 uppercase';
+    'mb-1.5 block text-xs font-medium tracking-[0.08em] text-souk-brown-deep/55 uppercase';
 
 export const BUTTON =
-    'inline-flex items-center gap-2 rounded-lg bg-souk-brown px-5 py-2.5 text-sm text-souk-paper transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40';
+    'inline-flex items-center gap-2 rounded-full bg-souk-green px-5 py-2.5 text-base text-white transition-colors hover:bg-souk-green-deep disabled:cursor-not-allowed disabled:opacity-40';
 
 /** One block of the page: a heading, a blurb, and the fields under it. */
 export function Section({
@@ -39,14 +40,14 @@ export function Section({
     children: ReactNode;
 }) {
     return (
-        <section className="border-t border-souk-brown/12 pt-10 first:border-0 first:pt-0">
+        <section className="pt-10 first:pt-0">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h2 className="font-display text-xl leading-tight text-souk-title">
+                    <h2 className="font-display text-2xl leading-tight text-souk-title">
                         {title}
                     </h2>
                     {description && (
-                        <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-souk-brown-deep/60">
+                        <p className="mt-1.5 max-w-lg text-base leading-relaxed text-souk-brown-deep/60">
                             {description}
                         </p>
                     )}
@@ -70,9 +71,9 @@ export function EditButton({
         <button
             type="button"
             onClick={onClick}
-            className="inline-flex shrink-0 items-center gap-1.5 py-1 text-xs text-souk-brown-deep/60 transition-colors hover:text-souk-brown"
+            className="inline-flex shrink-0 items-center gap-1.5 py-1 text-sm text-souk-brown-deep/60 transition-colors hover:text-souk-green"
         >
-            <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} />
+            <Pencil className="h-4 w-4" strokeWidth={1.8} />
             {label}
         </button>
     );
@@ -83,7 +84,7 @@ export function ViewRow({ label, value }: { label: string; value: ReactNode }) {
     return (
         <div>
             <p className={LABEL}>{label}</p>
-            <p className="text-sm text-souk-title">{value}</p>
+            <p className="text-base text-souk-title">{value}</p>
         </div>
     );
 }
@@ -108,7 +109,7 @@ export function FormActions({
             <button
                 type="button"
                 onClick={onCancel}
-                className="px-3 py-2.5 text-sm text-souk-brown-deep/55 transition-colors hover:text-souk-brown"
+                className="px-3 py-2.5 text-base text-souk-brown-deep/55 transition-colors hover:text-souk-green"
             >
                 {cancelLabel}
             </button>
@@ -136,10 +137,10 @@ export function Field({
             </label>
             {children}
             {error ? (
-                <p className="mt-1.5 text-xs text-terracotta">{error}</p>
+                <p className="mt-1.5 text-sm text-terracotta">{error}</p>
             ) : (
                 hint && (
-                    <p className="mt-1.5 text-[11px] text-souk-brown-deep/45">
+                    <p className="mt-1.5 text-xs text-souk-brown-deep/45">
                         {hint}
                     </p>
                 )

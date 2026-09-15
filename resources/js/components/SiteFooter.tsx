@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import { sell } from '@/routes';
 import newsletter from '@/routes/newsletter';
 
 function NewsletterForm() {
@@ -97,7 +98,14 @@ const NAV_COLUMNS = [
     },
     {
         titleKey: 'common.footer.artisans.title',
-        links: [{ labelKey: 'common.footer.artisans.sell', href: '/register' }],
+        // The artisan form, not the buyer flow: /register is now email-only
+        // signup for shoppers.
+        links: [
+            {
+                labelKey: 'common.footer.artisans.sell',
+                href: sell.url(),
+            },
+        ],
     },
     {
         titleKey: 'common.footer.company.title',

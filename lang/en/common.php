@@ -25,44 +25,93 @@ return [
     'login' => 'Login',
     'register' => 'Register',
 
-    // ── Sign-in screen ───────────────────────────────────────────────────
-    'auth.login.eyebrow' => 'Welcome back',
-    'auth.login.title' => 'Back among',
-    'auth.login.title_accent' => 'the artisans',
-    'auth.login.subtitle' => 'Sign in to pick up your orders, saved pieces and favourite workshops.',
-    'auth.login.email' => 'Email address',
-    'auth.login.email_placeholder' => 'you@example.com',
-    'auth.login.password' => 'Password',
-    'auth.login.password_placeholder' => 'Your password',
-    'auth.login.remember' => 'Keep me signed in',
-    'auth.login.forgot' => 'Forgot password?',
-    'auth.login.submit' => 'Sign in',
-    'auth.login.no_account' => 'New to Hirfaty?',
-    'auth.login.create_account' => 'Create an account',
+    /*
+     * ── The one front door: /login ───────────────────────────────────────
+     *
+     * Signing in and signing up share a screen and therefore share a key
+     * namespace. `auth.register.*` is gone — there is no second screen for it
+     * to belong to. Copy for the whole flow lives here, in the order a
+     * visitor meets it: identify → password (or login code) → signup code →
+     * profile completion.
+     */
+    'auth.login.page_title' => 'Sign in or create your account',
     'auth.login.back_home' => 'Back to the market',
-    'auth.login.quote' => 'A thousand hands, one souk. Pick up right where you left off.',
-    'auth.login.trust_secure' => 'Secure sign-in',
-    'auth.login.trust_artisans' => 'Artisan workshops',
-    'auth.login.trust_cities' => 'Moroccan cities',
 
-    // ── Sign-up screen ───────────────────────────────────────────────────
-    'auth.register.eyebrow' => 'Create an account',
-    'auth.register.buyer.title' => 'Discover craft',
-    'auth.register.buyer.title_accent' => 'that speaks to you',
-    'auth.register.buyer.subtitle' => 'Follow your favourite workshops, save pieces and order in a few clicks.',
-    'auth.register.buyer.submit' => 'Create my account',
-    'auth.register.buyer.quote' => 'Every piece has a hand, a city, a story. We simply put you in touch.',
-    'auth.register.seller.title' => 'Open your',
-    'auth.register.seller.title_accent' => 'workshop online',
-    'auth.register.seller.subtitle' => 'Show your craft to an audience that is looking for the real thing.',
-    'auth.register.seller.submit' => 'Continue to my shop',
-    'auth.register.seller.quote' => 'Hirfaty belongs to its artisans. No joining fee, and your shop stays yours.',
+    // Step chrome. Shown only on the signup branch — a returning visitor's
+    // journey is two screens, so claiming "step 1 of 3" would be a lie.
+    'auth.login.step_of' => 'Step :current of :total',
+    'auth.login.step_email' => 'Email',
+    'auth.login.step_code' => 'Code',
+    'auth.login.step_details' => 'Details',
 
-    'auth.register.role_question' => 'I am joining as',
-    'auth.register.role_buyer' => 'A customer',
-    'auth.register.role_buyer_hint' => 'To browse and buy',
-    'auth.register.role_seller' => 'An artisan',
-    'auth.register.role_seller_hint' => 'To open a workshop',
+    // ── Identify: the email field ────────────────────────────────────────
+    'auth.login.identify_title' => 'Sign in or',
+    'auth.login.identify_title_accent' => 'create your account',
+    'auth.login.identify_subtitle' => 'Not sure if you already have an account? Enter your email and we will check for you.',
+    'auth.login.email_required' => 'Email address (required)',
+    'auth.login.identify_submit' => 'Continue',
+    'auth.login.privacy_note' => 'Securing your personal information is our priority. We only use your email to confirm the account.',
+    'auth.login.identify_again' => 'That took too long — enter your email again to pick up where you were.',
+
+    // The artisan and trade doors, shown as cards below the form. "Hirfaty
+    // Seller" and "Hirfaty Business" are product names and stay in Latin
+    // script in every locale, the way brand names normally do.
+    'auth.login.card_seller_body' => 'Sell your craft to buyers across Morocco.',
+    'auth.login.card_seller_cta' => 'Create a seller account',
+    'auth.login.card_business_body' => 'Buying for work? Order at trade prices.',
+    'auth.login.card_business_cta' => 'Create a business account',
+
+    // ── Password: for an account that exists ─────────────────────────────
+    'auth.login.password_title' => 'Welcome',
+    'auth.login.password_title_accent' => 'back',
+    'auth.login.password_subtitle' => 'You already have an account with this address. Enter your password to sign in.',
+    'auth.login.password' => 'Password',
+    'auth.login.remember' => 'Keep me signed in',
+    'auth.login.submit' => 'Sign in',
+    'auth.login.forgot' => 'Forgot your password?',
+    'auth.login.use_another_email' => 'Use a different email',
+    'auth.login.use_code_instead' => 'Email me a code instead',
+    'auth.login.use_password_instead' => 'Use my password instead',
+
+    // ── Login code: passwordless sign-in ────────────────────────────────
+    'auth.login.code_title' => 'Check your',
+    'auth.login.code_title_accent' => 'inbox',
+    'auth.login.code_subtitle' => 'We sent a 6-digit sign-in code to :email. Enter it below and you are in — no password needed.',
+    'auth.login.code_submit' => 'Sign me in',
+    'auth.login.code_sent' => 'A sign-in code is on its way.',
+    'auth.login.code_unavailable' => 'This account needs its password. Codes are not available for accounts with two-step verification.',
+
+    // ── Signup code: confirming a new address ───────────────────────────
+    'auth.login.verify_title' => 'Check your',
+    'auth.login.verify_title_accent' => 'inbox',
+    'auth.login.verify_subtitle' => 'You are new here — we sent a 6-digit code to :email. Enter it below to confirm the address.',
+    'auth.login.verify_submit' => 'Confirm my email',
+    'auth.login.wrong_email' => 'Wrong address? Start over',
+    'auth.login.session_expired' => 'That signup link has expired. Enter your email to start again.',
+
+    // Shared by both code screens (see CodeEntry.tsx).
+    'auth.login.code_label' => 'Confirmation code',
+    'auth.login.code_invalid' => 'That code is not right. Check the email and try again.',
+    'auth.login.code_locked' => 'Too many attempts on this code. Send yourself a new one.',
+    'auth.login.code_resent' => 'A new code is on its way.',
+    'auth.login.code_resend' => 'Send a new code',
+    'auth.login.code_resend_in' => 'You can ask for a new code in :seconds s',
+    'auth.login.resend_wait' => 'Please wait :seconds more seconds before asking for another code.',
+    'auth.login.code_spam_hint' => 'Nothing yet? It can take a minute — check your spam folder too.',
+
+    // ── Resuming an unfinished signup ───────────────────────────────────
+    'auth.login.resume_title' => 'You have a signup in progress',
+    'auth.login.resume_body' => 'We already sent a code to :email.',
+    'auth.login.resume_cta' => 'Continue where I left off',
+
+    // ── Hirfaty Seller / Hirfaty Business holding pages ─────────────────
+    'auth.login.placeholder_soon' => 'Coming soon',
+    'auth.login.placeholder_seller_title' => 'Artisan signup is not open yet.',
+    'auth.login.placeholder_seller_body' => 'We are building a proper home for workshops — your shop, your pieces, your earnings. Tell us about your craft and we will come to you the moment it opens.',
+    'auth.login.placeholder_business_title' => 'Trade accounts are opened by hand.',
+    'auth.login.placeholder_business_body' => 'Wholesale pricing is reviewed before it is granted, so business accounts are not self-serve yet. Get in touch and we will set yours up. Already shopping with us? You can request trade access from your account.',
+    'auth.login.placeholder_contact' => 'Get in touch',
+    'auth.login.placeholder_back' => 'I am shopping — take me back to sign in',
 
     // ── Verify-email screen ──────────────────────────────────────────────
     'auth.verify.eyebrow' => 'Account security',
@@ -75,28 +124,29 @@ return [
     'auth.verify.logout' => 'Sign out',
     'auth.verify.quote' => 'A verified account keeps the souk trustworthy — for artisans and buyers alike.',
 
-    'auth.register.first_name' => 'First name',
-    'auth.register.last_name' => 'Last name',
-    'auth.register.phone' => 'Phone number',
-    'auth.register.email' => 'Email address',
-    'auth.register.password' => 'Password',
-    'auth.register.password_confirm' => 'Confirm password',
-    'auth.register.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
+    // ── Profile completion fields (signup step 3) ───────────────────────
+    'auth.login.first_name' => 'First name',
+    'auth.login.last_name' => 'Last name',
+    'auth.login.phone' => 'Phone number',
+    'auth.login.password_confirm' => 'Confirm password',
+    'auth.login.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
+    'auth.login.details_title' => 'Almost',
+    'auth.login.details_title_accent' => 'there',
+    'auth.login.details_subtitle' => 'Just your name, a phone number for deliveries and a password.',
+    'auth.login.details_submit' => 'Create my account',
+    'auth.login.email_confirmed' => 'Email confirmed',
 
-    // ── Strength meter — one label per bar filled ───────────────────
-    'auth.register.password_strength_very_weak' => 'Very weak',
-    'auth.register.password_strength_weak' => 'Weak',
-    'auth.register.password_strength_fair' => 'Fair',
-    'auth.register.password_strength_good' => 'Good',
-    'auth.register.password_strength_strong' => 'Strong',
+    // ── Strength meter — one label per bar filled ───────────────────────
+    'auth.login.password_strength_very_weak' => 'Very weak',
+    'auth.login.password_strength_weak' => 'Weak',
+    'auth.login.password_strength_fair' => 'Fair',
+    'auth.login.password_strength_good' => 'Good',
+    'auth.login.password_strength_strong' => 'Strong',
 
-    'auth.register.terms_prefix' => 'I accept the',
-    'auth.register.terms_privacy' => 'privacy policy',
-    'auth.register.terms_and' => 'and the',
-    'auth.register.terms_conditions' => 'terms of use',
-
-    'auth.register.have_account' => 'Already have an account?',
-    'auth.register.sign_in' => 'Sign in',
+    'auth.login.terms_prefix' => 'I accept the',
+    'auth.login.terms_privacy' => 'privacy policy',
+    'auth.login.terms_and' => 'and the',
+    'auth.login.terms_conditions' => 'terms of use',
 
     // ── Error pages ──────────────────────────────────────────────────────
     // Rendered through Inertia by the handler in bootstrap/app.php.

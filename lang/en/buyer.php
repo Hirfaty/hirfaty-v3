@@ -61,6 +61,11 @@ return [
     'orders.status_delivered' => 'Delivered',
     'orders.status_cancelled' => 'Cancelled',
 
+    // Empty state — components/buyer/orders/EmptyOrders.tsx.
+    'orders.empty_eyebrow' => 'Welcome',
+    'orders.empty_title' => 'Ready to shop?',
+    'orders.empty_cta' => 'Shop now',
+
     // ── Ratings ───────────────────────────────────────────────────
     // Only offered on a delivered order — see ReviewService.
     'reviews.heading' => 'How did it go?',
@@ -145,24 +150,22 @@ return [
     'onboarding.next' => 'Continue',
     'onboarding.finish' => 'Explore the market',
 
-    'onboarding.welcome.quote' => 'Behind every piece there are two hands and a craft passed down.',
     'onboarding.welcome.title' => 'Welcome, :name',
     'onboarding.welcome.body' => 'Hirfaty brings Morocco\'s artisans together in one place. Two minutes to get acquainted, then the market is yours.',
     'onboarding.welcome.point_direct' => 'You buy straight from the artisan — no middleman.',
     'onboarding.welcome.point_authentic' => 'Every piece is handmade, and every shop is vetted by our team.',
     'onboarding.welcome.point_delivery' => 'Delivery anywhere in Morocco, tracked from your orders page.',
 
-    'onboarding.interests.quote' => 'Safi pottery, Taznakht rugs, Fès leather — Morocco has a thousand crafts.',
     'onboarding.interests.title' => 'What draws you in?',
     'onboarding.interests.body' => 'Pick the crafts you care about. We\'ll use them to put what suits you up front.',
     'onboarding.interests.optional' => 'Optional — you can change your mind any time.',
 
-    'onboarding.professional.quote' => 'Riads, hotels, boutiques: they furnish their spaces with our artisans.',
-    'onboarding.professional.title' => 'Buying for a business?',
-    'onboarding.professional.body' => 'Riad, hotel, restaurant, shop… If you order in quantity, your account can become professional.',
-    'onboarding.professional.perk' => 'Professional accounts get wholesale pricing. Our team reviews every request before activating it.',
-    'onboarding.professional.cta' => 'Request a professional account',
-    'onboarding.professional.label' => 'Tell us about your business',
+    /*
+     * `.placeholder` and `.hint` are the only two of the old trade-request
+     * step still in use — the tour no longer asks this, but
+     * pages/buyer/professional-account.tsx reuses them for the same question
+     * asked later, when a buyer actually requests it. Do not remove.
+     */
     'onboarding.professional.placeholder' => 'e.g. I run an 8-room riad in Marrakech and I\'m looking for household linen and handmade tableware in quantity.',
     'onboarding.professional.hint' => '20 characters minimum. You can carry on ordering as normal while we review your request.',
 
@@ -180,7 +183,7 @@ return [
     'professional.declined_retry' => 'You\'re welcome to submit a new request.',
     'professional.submitted_on' => 'Sent on :date',
 
-    // ── Account area: four pages sharing the left sidebar ────────────────
+    // ── Account area: four pages sharing the tab strip at the top ────────
     'account.title' => 'My account',
     'account.subtitle' => 'Your details, your orders and the pieces you saved.',
 
@@ -188,8 +191,18 @@ return [
     'account.nav_orders' => 'Orders',
     'account.nav_wishlist' => 'Wishlist',
     'account.nav_payment' => 'Payment',
+    /*
+     * Still used by the standalone /professional-account page's own heading.
+     * The account tab strip no longer lists it — see the note in
+     * layouts/buyer/account-layout.tsx.
+     */
     'account.nav_professional' => 'Professional account',
     'account.logout' => 'Sign out',
+
+    // Which kind of account this is — replaces the avatar and name that used
+    // to sit at the top of the rail.
+    'account.badge_personal' => 'Personal account',
+    'account.badge_professional' => 'Trade account',
 
     'account.orders_intro' => 'A basket is split into one order per workshop, so a single purchase can appear here more than once.',
     'account.wishlist_intro' => 'The pieces you saved, kept until you remove them.',
@@ -249,6 +262,11 @@ return [
 
     // ── Wishlist ─────────────────────────────────────────────────────────
     'wishlist.title' => 'My wishlist',
+
+    // Empty state — shares components/buyer/EmptyShowcase.tsx with orders.
+    'wishlist.empty_eyebrow' => 'Nothing saved yet',
+    'wishlist.empty_title' => 'Found something you like?',
+    'wishlist.empty_cta' => 'Browse the market',
 
     // ── Cart ─────────────────────────────────────────────────────────────
     'cart.title' => 'Your cart',

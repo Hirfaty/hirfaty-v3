@@ -1,11 +1,10 @@
-import { useTranslation } from '@/hooks/use-translation';
-import Reveal from '@/components/home/Reveal';
-
 import { Mail, MapPin, Phone } from 'lucide-react';
 import MoroccoMap, {
     MOROCCO_ASPECT,
     projectMorocco,
 } from '@/components/home/MoroccoMap';
+import Reveal from '@/components/home/Reveal';
+import { useTranslation } from '@/hooks/use-translation';
 
 const CONTACT_ROWS = [
     { key: 'email', Icon: Mail, href: 'mailto:' },
@@ -25,6 +24,7 @@ const MAP_CITIES = [
 
 export default function ContactSection() {
     const { t, isRTL } = useTranslation();
+
     return (
         <section className="relative overflow-hidden">
             <div className="container">

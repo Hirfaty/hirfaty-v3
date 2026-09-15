@@ -64,7 +64,7 @@ export default function About() {
                                 </h1>
 
                                 <Reveal delay={280}>
-                                    <p className="mt-7 max-w-lg text-lg leading-relaxed text-souk-cream/85">
+                                    <p className="mt-7 max-w-lg text-xl leading-relaxed text-souk-cream/85">
                                         {t('about.hero.lead')}
                                     </p>
                                 </Reveal>
@@ -218,7 +218,7 @@ export default function About() {
                                         from="right"
                                     >
                                         <p
-                                            className="border-s-2 border-souk-brown/25 ps-6 text-lg leading-relaxed text-souk-brown"
+                                            className="border-s-2 border-souk-brown/25 ps-6 text-xl leading-relaxed text-souk-brown"
                                             style={{
                                                 marginInlineStart: i * 14,
                                             }}

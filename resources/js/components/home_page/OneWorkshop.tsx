@@ -1,5 +1,5 @@
-import { useTranslation } from '@/hooks/use-translation';
-import Reveal from '../home/Reveal';
+import { Link } from '@inertiajs/react';
+import { ArrowRight } from 'lucide-react';
 import {
     CratesIcon,
     ParcelIcon,
@@ -8,13 +8,13 @@ import {
     StorefrontIcon,
     WholesaleTagIcon,
 } from '@/components/home/CraftIcons';
-import { Link } from '@inertiajs/react';
+import { useTranslation } from '@/hooks/use-translation';
 import leather from '@/images/cat-leather.jpg';
 import pottery from '@/images/cat-pottery.jpg';
 import spice from '@/images/cat-spice.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
-import { ArrowRight } from 'lucide-react';
+import Reveal from '../home/Reveal';
 
 const AUDIENCE = {
     retail: {
@@ -144,6 +144,7 @@ function AudienceBranch({
 
 export default function OneWorkshop() {
     const { t } = useTranslation();
+
     return (
         <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-8 lg:py-8">
             <div
@@ -160,7 +161,7 @@ export default function OneWorkshop() {
                         </h2>
                     </Reveal>
                     <Reveal delay={160}>
-                        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-souk-brown-deep/75">
+                        <p className="mx-auto mt-6 max-w-xl text-xl leading-relaxed text-souk-brown-deep/75">
                             {t('welcome.audience.lead')}
                         </p>
                     </Reveal>
@@ -206,7 +207,7 @@ export default function OneWorkshop() {
                         </Reveal>
 
                         <Reveal delay={140}>
-                            <p className="mt-7 max-w-[13rem] text-center font-display text-lg leading-snug text-souk-title">
+                            <p className="mt-7 max-w-[13rem] text-center font-display text-xl leading-snug text-souk-title">
                                 {t('welcome.audience.hub')}
                             </p>
                             <span

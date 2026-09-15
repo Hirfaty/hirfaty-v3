@@ -42,7 +42,6 @@ class OnboardingController extends Controller
                     'name' => $c->translated_name,
                     'icon' => $c->icon,
                 ]),
-            'canRequestProfessional' => $user->canRequestProfessional(),
             'firstName' => $user->first_name,
         ]);
     }
@@ -52,19 +51,9 @@ class OnboardingController extends Controller
         $data = $request->validate([
             'interests' => ['nullable', 'array'],
             'interests.*' => ['integer', 'exists:categories,id'],
-            /*
-             * Present only if the buyer filled in the trade step. Null and ''
-             * both mean "didn't ask" — the service only files a request when
-             * this is a non-empty string.
-             */
-            'professional_message' => ['nullable', 'string', 'max:1500'],
         ]);
 
-        $this->onboarding->complete(
-            $request->user(),
-            $data['interests'] ?? [],
-            $data['professional_message'] ?? null,
-        );
+        $this->onboarding->complete($request->user(), $data['interests'] ?? []);
 
         return redirect()->route('products.index')
             ->with('success', 'Bienvenue sur Hirfaty !');

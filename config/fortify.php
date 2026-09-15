@@ -153,7 +153,20 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        /*
+         * `Features::registration()` is deliberately absent.
+         *
+         * Signup is not a separate screen any more: /login takes an email and
+         * branches to a password or an emailed code (identifier-first — see
+         * Auth\LoginIdentifyController). Fortify's registration feature would
+         * register `GET /register` and a `POST /register` that creates an
+         * account straight from request input, bypassing the code entirely —
+         * i.e. a second, unverified way in. Removing the feature removes both.
+         *
+         * Turning this back on also means restoring
+         * `Fortify::createUsersUsing()` and an Actions\Fortify\CreateNewUser,
+         * both of which were deleted with it.
+         */
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

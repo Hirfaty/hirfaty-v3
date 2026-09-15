@@ -79,7 +79,7 @@ export default function PasswordStrengthMeter({
                     level.text,
                 )}
             >
-                {t(`common.auth.register.password_strength_${level.key}`)}
+                {t(`common.auth.login.password_strength_${level.key}`)}
             </p>
         </div>
     );

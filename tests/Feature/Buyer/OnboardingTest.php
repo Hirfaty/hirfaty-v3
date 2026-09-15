@@ -30,7 +30,6 @@ test('a new buyer is shown the tour', function () {
         ->assertInertia(
             fn ($page) => $page->component('buyer/onboarding')
                 ->has('categories', 2)
-                ->where('canRequestProfessional', true)
         );
 });
 
@@ -87,22 +86,29 @@ test('finishing without picking anything is fine', function () {
         ->and($this->buyer->professional_request_status)->toBeNull();
 });
 
-test('the tour can file a trade request on its last step', function () {
+/**
+ * The tour no longer has a trade-request step — asking a brand-new buyer
+ * whether they want wholesale pricing before they have seen the market
+ * answered a question nobody had asked yet. Posting the old field is simply
+ * ignored rather than validated against, since OnboardingController::store no
+ * longer declares it: the request stays available from /professional-account
+ * (see ProfessionalRequestTest) whenever a buyer actually needs it.
+ */
+test('a professional_message on the tour is ignored, not filed as a request', function () {
     $this->actingAs($this->buyer)
         ->post(route('onboarding.store'), [
             'interests' => [$this->pottery->id],
             'professional_message' => 'Je gère un riad de 8 chambres à Marrakech.',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
 
     $this->buyer->refresh();
 
-    expect($this->buyer->professional_request_status)->toBe('pending')
-        ->and($this->buyer->professional_request_message)
-        ->toBe('Je gère un riad de 8 chambres à Marrakech.')
-        // Crucially NOT promoted — that's the admin's call.
-        ->and($this->buyer->role)->toBe('buyer')
-        ->and($this->buyer->professional_verified_at)->toBeNull();
+    expect($this->buyer->professional_request_status)->toBeNull()
+        ->and($this->buyer->professional_request_message)->toBeNull()
+        ->and($this->buyer->interests->pluck('id')->all())
+        ->toEqualCanonicalizing([$this->pottery->id]);
 });
 
 /**

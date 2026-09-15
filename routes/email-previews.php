@@ -1,5 +1,6 @@
 <?php
 
+use App\Concerns\GeneratesEmailCodes;
 use App\Models\Order;
 
 Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
@@ -58,5 +59,24 @@ Route::get('/preview/email/verify/{audience}/{locale}', function (string $audien
         'locale' => $locale,
         'audience' => $audience,
         'expiresInMinutes' => config('auth.verification.expire', 60),
+    ]);
+})->middleware('auth');
+
+/*
+ * The 6-digit code email, both purposes and all three locales:
+ *   /preview/email/code/registration_code/fr ... /code/login_code/ar
+ *
+ * No `user` is passed: the signup variant deliberately goes out before the
+ * account exists, so the shared template has no first name to greet with.
+ */
+Route::get('/preview/email/code/{copy}/{locale}', function (string $copy, string $locale) {
+    abort_unless(in_array($copy, ['registration_code', 'login_code'], true), 404);
+    abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
+
+    return view('emails.auth-code', [
+        'code' => '480913',
+        'locale' => $locale,
+        'expiresInMinutes' => GeneratesEmailCodes::CODE_TTL_MINUTES,
+        'copy' => $copy,
     ]);
 })->middleware('auth');

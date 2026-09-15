@@ -5,6 +5,7 @@ import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
 import zellij from '@/images/zellij-pattern.png';
+import { login } from '@/routes';
 
 /**
  * The contact details themselves come from `welcome.contact.*`, which the
@@ -58,7 +59,7 @@ export default function Contact() {
                         </Reveal>
 
                         <Reveal delay={180}>
-                            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-souk-cream/85">
+                            <p className="mt-6 max-w-2xl text-xl leading-relaxed text-souk-cream/85">
                                 {t('pages.contact.lead')}
                             </p>
                         </Reveal>
@@ -145,7 +146,7 @@ export default function Contact() {
                                     {t('pages.contact.seller.body')}
                                 </p>
                                 <Link
-                                    href="/register"
+                                    href={login()}
                                     className="mt-7 inline-flex items-center justify-center rounded-xl bg-souk-brown px-7 py-3.5 text-sm font-semibold tracking-[0.04em] text-white uppercase transition-colors hover:bg-souk-brown-deep"
                                 >
                                     {t('pages.contact.seller.cta')}

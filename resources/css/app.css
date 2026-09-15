@@ -134,8 +134,26 @@
     --color-souk-brown-deep: #5d4429; /* pressed + body copy on cream */
     --color-souk-cream: #f0e4c9; /* type + buttons on brown */
     --color-souk-peach: #fff1e2; /* alternating section fill */
-    --color-souk-paper: #fffefb; /* page base */
+    --color-souk-paper: #fffefd; /* page base */
     --color-souk-title: #38230c; /* section headings */
+
+    /*
+     * Zellige green — the second brand accent, sitting opposite the warm
+     * browns the way the green tiles do in a real zellige panel. Deep and
+     * desaturated on purpose: at this value it reads as considered rather
+     * than as a "success" state, so it can carry standing and navigation
+     * without being mistaken for a validation colour.
+     *
+     * Scoped to the buyer account area for now — status (personal vs trade
+     * account) and the active-tab marker. Terracotta remains the storefront's
+     * accent; keeping the two apart is what stops them competing.
+     *
+     * Tints come from opacity modifiers at the call site (`bg-souk-green/10`),
+     * matching how the browns are already used, so there is no third token to
+     * keep in sync.
+     */
+    --color-souk-green: #1a5d4d;
+    --color-souk-green-deep: #124237; /* hover / pressed */
 
     /* Shadcn States */
     --color-primary: var(--primary);
@@ -266,10 +284,36 @@
         }
     }
 
+    /* Buyer "no orders yet" empty state: each product tile drifts around a
+       small loop. Kept separate from each tile's static arc position (set
+       inline, on a wrapping element) rather than folded into one transform —
+       an animation's keyframes replace the element's transform outright, so
+       baking the arc offset into 0%/100% here would still need repeating it
+       per tile, and a typo would silently snap that tile back to (0,0)
+       between loops. Two elements, two concerns. */
+    @keyframes orbit {
+        0% {
+            transform: translate(0, 0);
+        }
+        25% {
+            transform: translate(4px, -4px);
+        }
+        50% {
+            transform: translate(0, -7px);
+        }
+        75% {
+            transform: translate(-4px, -4px);
+        }
+        100% {
+            transform: translate(0, 0);
+        }
+    }
+
     --animate-accordion-down: accordion-down 0.2s ease-out;
     --animate-accordion-up: accordion-up 0.2s ease-out;
     --animate-fade-up: fade-up 0.5s ease-out both;
     --animate-float-slow: float-slow 7s ease-in-out infinite;
+    --animate-orbit: orbit 7s ease-in-out infinite;
     --animate-marquee: marquee 38s linear infinite;
     /* The gallery strip, reusing the marquee keyframes rather than declaring
        an identical second set. Photographs want longer on screen than a

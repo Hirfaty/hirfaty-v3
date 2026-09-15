@@ -135,7 +135,7 @@ export default function IdentitySection({ buyer }: { buyer: Buyer }) {
                     />
                 </div>
 
-                <p className="text-[11px] leading-relaxed text-souk-brown-deep/45">
+                <p className="text-xs leading-relaxed text-souk-brown-deep/45">
                     {t('buyer.account.locked_note')}
                 </p>
             </div>

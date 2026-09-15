@@ -1,11 +1,11 @@
+import { Link } from '@inertiajs/react';
+import { AtelierArchIcon, StorefrontIcon } from '@/components/home/CraftIcons';
 import HeroSlider from '@/components/home/HeroSlider';
+import Reveal from '@/components/home/Reveal';
+import { useTranslation } from '@/hooks/use-translation';
 import hero1 from '@/images/hero/hero-1.jpeg';
 import hero2 from '@/images/hero/hero-2.jpg';
 import hero3 from '@/images/hero/hero-3.jpg';
-import Reveal from '@/components/home/Reveal';
-import { Link } from '@inertiajs/react';
-import { AtelierArchIcon, StorefrontIcon } from '@/components/home/CraftIcons';
-import { useTranslation } from '@/hooks/use-translation';
 
 const HERO_SLIDES = [
     { src: hero1, altKey: 'welcome.hero.alt' },
@@ -15,6 +15,7 @@ const HERO_SLIDES = [
 
 export default function HeroSection() {
     const { t, isRTL } = useTranslation();
+
     return (
         <section className="overflow-x-clip bg-souk-paper px-5 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-4">
             <HeroSlider
@@ -39,7 +40,7 @@ export default function HeroSection() {
                 </h1>
 
                 <Reveal delay={280}>
-                    <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-souk-cream sm:text-lg">
+                    <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-souk-cream sm:text-xl">
                         {t('welcome.hero.lead')}
                     </p>
                 </Reveal>

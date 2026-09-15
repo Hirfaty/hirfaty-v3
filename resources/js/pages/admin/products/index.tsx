@@ -591,7 +591,7 @@ function AdminProducts({
                                             <div className="mt-1 flex items-baseline gap-2">
                                                 {selected.sale_price ? (
                                                     <>
-                                                        <p className="text-lg font-semibold text-ink">
+                                                        <p className="text-xl font-semibold text-ink">
                                                             {
                                                                 selected.sale_price
                                                             }{' '}
@@ -609,11 +609,11 @@ function AdminProducts({
                                                   null ? (
                                                     // Unpriced: off the
                                                     // storefront until set.
-                                                    <p className="text-lg font-semibold text-amber-700">
+                                                    <p className="text-xl font-semibold text-amber-700">
                                                         À définir
                                                     </p>
                                                 ) : (
-                                                    <p className="text-lg font-semibold text-ink">
+                                                    <p className="text-xl font-semibold text-ink">
                                                         {selected.base_price}{' '}
                                                         <span className="text-xs font-medium text-ink-soft">
                                                             MAD
@@ -631,7 +631,7 @@ function AdminProducts({
                                                     Géré par déclinaison
                                                 </p>
                                             ) : (
-                                                <p className="mt-1 text-lg font-semibold text-ink">
+                                                <p className="mt-1 text-xl font-semibold text-ink">
                                                     {selected.stock}{' '}
                                                     <span className="text-xs font-medium text-ink-soft">
                                                         unités
