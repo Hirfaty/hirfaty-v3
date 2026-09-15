@@ -111,7 +111,7 @@ export const SiteFooter = () => {
     const { t } = useTranslation();
 
     return (
-        <footer className="relative mt-32 overflow-hidden border-t border-ink/15 bg-cream">
+        <footer className="relative mt-8 overflow-hidden border-t border-ink/15 bg-cream">
             <VaseIcon className="pointer-events-none absolute -bottom-10 -left-10 h-64 w-64 text-ink/5 md:h-80 md:w-80" />
 
             <div className="relative container grid grid-cols-2 gap-10 py-16 md:grid-cols-12">

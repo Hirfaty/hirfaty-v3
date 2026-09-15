@@ -16,7 +16,7 @@ const HERO_SLIDES = [
 export default function HeroSection() {
     const { t, isRTL } = useTranslation();
     return (
-        <section className="overflow-x-clip bg-souk-paper px-5 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-12">
+        <section className="overflow-x-clip bg-souk-paper px-5 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-4">
             <HeroSlider
                 slides={HERO_SLIDES.map((slide) => ({
                     src: slide.src,

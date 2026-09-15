@@ -40,7 +40,6 @@ return [
     'categories.accessories.name' => 'إكسسوارات',
     'categories.home.name' => 'بيت ومطبخ',
     'categories.terroir.name' => 'منتجات الأرض',
-    'categories_grid.leather' => 'المنتجات الجلدية',
 
     // ── الصفحة الرئيسية ──────────────────────────────────────────────────
     /*
@@ -75,6 +74,7 @@ return [
     'categories_grid.art' => 'الرسم والفن',
     'categories_grid.lantern' => 'الإنارة والنحاسيات الفنية',
     'categories_grid.wood' => 'الخشب والنجارة',
+    'categories_grid.art-vivre' => 'المنسوجات وفن العيش',
 
     // ── الركائز الثلاث ───────────────────────────────────────────────────
     'pillars.eyebrow' => 'ما نقدّمه',

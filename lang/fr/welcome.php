@@ -41,7 +41,6 @@ return [
     'categories.accessories.name' => 'Accessoires',
     'categories.home.name' => 'Maison & Cuisine',
     'categories.terroir.name' => 'Produits de Terroir',
-    'categories_grid.leather' => 'Maroquinerie',
 
     // ── Page d'accueil ───────────────────────────────────────────────────
     /*
@@ -80,6 +79,7 @@ return [
     'categories_grid.art' => 'Peinture & Art',
     'categories_grid.lantern' => 'Luminaires & dinanderie d\'art',
     'categories_grid.wood' => 'Bois & Menuiserie',
+    'categories_grid.art-vivre' => 'Textiles & Art de Vivre',
 
     // ── Les trois piliers ────────────────────────────────────────────────
     // `*.title_script` reprend `hero.badge_script` : le nom arabe du pilier,

@@ -77,7 +77,7 @@ return [
     'categories_grid.art' => 'Painting & Art',
     'categories_grid.lantern' => 'Lighting & Art Metalwork',
     'categories_grid.wood' => 'Wood & Carpentry',
-    'categories_grid.leather' => 'Leather Goods',
+    'categories_grid.art-vivre' => 'Textiles & Art of Living',
 
     // ── Three pillars ────────────────────────────────────────────────────
     // `*.title_script` mirrors `hero.badge_script`: the Arabic name of the

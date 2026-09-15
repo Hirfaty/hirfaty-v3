@@ -4,8 +4,8 @@ import Reveal from '@/components/home/Reveal';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
 import { useTranslation } from '@/hooks/use-translation';
 import exploreArt from '@/images/categories/art.jpeg';
+import exploreArtVivre from '@/images/categories/art-vivre.jpeg';
 import exploreLantern from '@/images/categories/lantern.jpeg';
-import exploreLeather from '@/images/categories/lether.jpeg';
 import explorePottery from '@/images/categories/pottery.jpeg';
 import exploreTextile from '@/images/categories/textile.jpeg';
 import exploreWood from '@/images/categories/wood.jpeg';
@@ -16,7 +16,7 @@ const EXPLORE_CATEGORIES = [
     { key: 'art', image: exploreArt, slugMatch: 'peinture' },
     { key: 'lantern', image: exploreLantern, slugMatch: 'lanterne' },
     { key: 'wood', image: exploreWood, slugMatch: 'bois' },
-    { key: 'leather', image: exploreLeather, slugMatch: 'leather' },
+    { key: 'art-vivre', image: exploreArtVivre, slugMatch: 'art-vivre' },
 ] as const;
 
 type CategoryTile = {
