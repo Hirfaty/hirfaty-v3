@@ -27,27 +27,34 @@ class StoreApproved extends Notification implements ShouldQueue
         // Falls back to French, which is the marketplace's default locale.
         $locale = $notifiable->locale ?? 'fr';
 
+        /*
+         * Points at the catalogue, not at an "add a product" form: artisans no
+         * longer file their own listings — the Hirfaty team contacts them and
+         * publishes on their behalf (see Seller\ProductController) — so this
+         * tells them to expect that call rather than sending them looking for
+         * a button that is not there.
+         */
         $copy = [
             'fr' => [
                 'subject' => 'Votre atelier est validé — Hirfaty',
                 'greeting' => "Bonjour {$notifiable->first_name} !",
                 'line1' => "Bonne nouvelle : votre atelier « {$this->store->store_name} » a été validé par notre équipe.",
-                'line2' => 'Vous pouvez dès maintenant ajouter vos produits. Chaque fiche est relue avant sa mise en ligne, comptez un à deux jours ouvrés.',
-                'action' => 'Ajouter un produit',
+                'line2' => 'Nous vous contactons prochainement pour rassembler vos photos, prix et descriptions, et publier vos premières pièces à votre place.',
+                'action' => 'Voir mon atelier',
             ],
             'ar' => [
                 'subject' => 'تمت الموافقة على ورشتك — حرفتي',
                 'greeting' => "مرحبًا {$notifiable->first_name}!",
                 'line1' => "خبر سار: تمت الموافقة على ورشتك «{$this->store->store_name}» من طرف فريقنا.",
-                'line2' => 'يمكنك الآن إضافة منتجاتك. تخضع كل بطاقة منتج للمراجعة قبل نشرها، وتستغرق من يوم إلى يومَي عمل.',
-                'action' => 'إضافة منتج',
+                'line2' => 'سنتواصل معك قريبًا لجمع الصور والأسعار والأوصاف، وننشر قطعك الأولى نيابة عنك.',
+                'action' => 'عرض ورشتي',
             ],
             'en' => [
                 'subject' => 'Your workshop is approved — Hirfaty',
                 'greeting' => "Hello {$notifiable->first_name}!",
                 'line1' => "Good news: your workshop “{$this->store->store_name}” has been approved by our team.",
-                'line2' => 'You can start adding products now. Every listing is reviewed before it goes live — allow one to two working days.',
-                'action' => 'Add a product',
+                'line2' => 'We will be in touch shortly to collect your photos, prices and descriptions, and publish your first pieces on your behalf.',
+                'action' => 'View my workshop',
             ],
         ];
 
@@ -58,7 +65,7 @@ class StoreApproved extends Notification implements ShouldQueue
             ->greeting($t['greeting'])
             ->line($t['line1'])
             ->line($t['line2'])
-            ->action($t['action'], url('/seller/products/create'));
+            ->action($t['action'], url('/seller/products'));
     }
 
     /**

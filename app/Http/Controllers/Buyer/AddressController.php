@@ -80,6 +80,14 @@ class AddressController extends Controller
             'recipient_phone' => ['required', 'string', 'max:30'],
             'address_line' => ['required', 'string', 'max:500'],
             'city_id' => ['required', 'exists:cities,id'],
+            /*
+             * Optional, unlike at checkout: this form also edits addresses
+             * saved before the column existed, and forcing a code to re-save an
+             * otherwise untouched address would be asking the buyer to invent
+             * one. Kept loose at 20 rather than pinned to Morocco's 5 digits so
+             * the same field still works if Hirfaty ever ships elsewhere.
+             */
+            'postal_code' => ['nullable', 'string', 'max:20'],
             ...$extra,
         ], [
             'address_line.required' => __('buyer.account.err_address_line'),

@@ -70,17 +70,19 @@
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>عدّل منتجك</strong> بتصحيح النقاط المذكورة.</p>
+                <p class="step-text"><strong>تواصل مع فريقنا</strong> بالصور أو السعر أو الوصف بعد تصحيحها.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>أعد التقديم</strong> — سيراجعه فريقنا بسرعة.</p>
+                <p class="step-text"><strong>نعيد نشر البطاقة</strong> نيابة عنك بمجرد تسوية هذه النقاط.</p>
             </li>
         </ul>
 
+        {{-- Sellers no longer edit their own listings — the Hirfaty team files
+             and corrects them — so this points at the read-only record. --}}
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/seller/products/{{ $product->id }}/edit" class="cta-btn">
-                ← تعديل وإعادة التقديم
+            <a href="{{ config('app.url') }}/seller/products/{{ $product->id }}" class="cta-btn">
+                ← عرض المنتج
             </a>
         </div>
 

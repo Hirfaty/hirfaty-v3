@@ -3,12 +3,14 @@ import {
     FileText,
     LayoutDashboard,
     LogOut,
+    Mail,
     MapPin,
     Package,
     ShieldCheck,
     ShoppingBag,
     Store,
     Tag,
+    Truck,
     Users,
 } from 'lucide-react';
 import {
@@ -81,6 +83,11 @@ const communityItems: NavItem[] = [
         url: route('admin.brochure-leads.index', undefined, false),
         icon: FileText,
     },
+    {
+        title: 'Newsletter',
+        url: route('admin.newsletter-subscribers.index', undefined, false),
+        icon: Mail,
+    },
 ];
 
 const settingsItems: NavItem[] = [
@@ -88,6 +95,11 @@ const settingsItems: NavItem[] = [
         title: 'Villes',
         url: route('admin.cities.index', undefined, false),
         icon: MapPin,
+    },
+    {
+        title: 'Tarifs Amana',
+        url: route('admin.delivery-rates.index', undefined, false),
+        icon: Truck,
     },
 ];
 

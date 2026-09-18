@@ -8,10 +8,10 @@ import {
     Search,
     Trash2,
     TriangleAlert,
-    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import SingleImageInput from '@/components/admin/single-image-input';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,6 +22,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, CategoryLocale, PageProps } from '@/types';
 
@@ -47,71 +56,37 @@ const LOCALE_SHORT: Record<CategoryLocale, string> = {
 
 const EMPTY_NAME: Record<CategoryLocale, string> = { fr: '', ar: '', en: '' };
 
-const INPUT_CLASS =
-    'w-full border border-ink/10 bg-cream/5 px-3 py-2 text-sm text-ink transition-colors placeholder:text-ink/20 focus:border-terracotta focus:outline-none';
+// Matches the field styling every other admin form (see
+// admin/users/create.tsx) uses, so this dialog doesn't read as a different
+// tool from the rest of the panel.
+const INPUT =
+    'w-full rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/70 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10';
+const LABEL = 'mb-1.5 block text-sm font-medium text-ink';
+const ERROR = 'mt-1.5 text-xs text-red-600';
 
-const LABEL_CLASS =
-    'mb-1.5 block text-[9px] font-bold tracking-widest text-ink/40 uppercase';
+/** A labelled field with its validation message. */
+function Field({
+    label,
+    error,
+    children,
+}: {
+    label: string;
+    error?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <label className={LABEL}>{label}</label>
+            {children}
+            {error && <p className={ERROR}>{error}</p>}
+        </div>
+    );
+}
 
 const isComplete = (cat: Category, locales: CategoryLocale[]) =>
     locales.every((loc) => cat.name?.[loc]?.trim());
 
-// ── Translation audit strip ──────────────────────────────────────────
-// All three locales are required server-side, so surfacing them inline
-// lets an admin spot a missing or wrong translation without opening the
-// edit form.
-const LocaleStrip = ({
-    cat,
-    locales,
-}: {
-    cat: Category;
-    locales: CategoryLocale[];
-}) => (
-    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        {locales.map((loc) => {
-            const value = cat.name?.[loc]?.trim();
-
-            return (
-                <span
-                    key={loc}
-                    className="inline-flex items-center gap-1.5 text-[11px]"
-                >
-                    <span className="text-[9px] font-bold tracking-widest text-ink/25">
-                        {LOCALE_SHORT[loc]}
-                    </span>
-                    {value ? (
-                        <span
-                            className="text-ink-soft"
-                            dir={loc === 'ar' ? 'rtl' : 'ltr'}
-                        >
-                            {value}
-                        </span>
-                    ) : (
-                        <span className="inline-flex items-center gap-1 font-medium text-terracotta">
-                            <TriangleAlert className="h-3 w-3" />
-                            manquant
-                        </span>
-                    )}
-                </span>
-            );
-        })}
-    </div>
-);
-
-const CountPill = ({ value, label }: { value: number; label: string }) => (
-    <div className="text-center">
-        <p
-            className={`text-sm font-bold ${value > 0 ? 'text-ink' : 'text-ink/25'}`}
-        >
-            {value}
-        </p>
-        <p className="text-[9px] tracking-widest text-ink-soft uppercase">
-            {label}
-        </p>
-    </div>
-);
-
-// ── One node in the tree ─────────────────────────────────────────────
+// ── One row in the tree ──────────────────────────────────────────────
 interface RowProps {
     cat: CategoryWithCounts;
     locales: CategoryLocale[];
@@ -134,84 +109,144 @@ const CategoryRow = ({
     onDelete,
 }: RowProps) => {
     const locked = cat.products_count > 0 || cat.stores_count > 0;
+    const incomplete = !isComplete(cat, locales);
 
     return (
-        <div
-            className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-cream/20"
-            style={{ paddingInlineStart: `${1.5 + depth * 2}rem` }}
-        >
-            {/* Disclosure — only roots with children get a control, but the
-                slot is always reserved so every row stays aligned. */}
-            <div className="w-4 shrink-0">
-                {childCount > 0 && (
-                    <button
-                        onClick={onToggle}
-                        aria-label={collapsed ? 'Expand' : 'Collapse'}
-                        aria-expanded={!collapsed}
-                        className="text-ink-soft transition-colors hover:text-ink"
-                    >
-                        <ChevronRight
-                            className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                        />
-                    </button>
-                )}
-            </div>
+        <tr className="transition hover:bg-muted/30">
+            <td
+                className="px-5 py-3"
+                style={{ paddingInlineStart: `${1.25 + depth * 1.5}rem` }}
+            >
+                <div className="flex items-center gap-3">
+                    {/* Disclosure — only roots with children get a control,
+                        but the slot is always reserved so every row stays
+                        aligned. */}
+                    <div className="w-4 shrink-0">
+                        {childCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={onToggle}
+                                aria-label={
+                                    collapsed ? 'Développer' : 'Réduire'
+                                }
+                                aria-expanded={!collapsed}
+                                className="text-ink-soft transition hover:text-ink"
+                            >
+                                <ChevronRight
+                                    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+                                />
+                            </button>
+                        )}
+                    </div>
 
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-cream/60 text-base">
-                {cat.icon || <Layers className="h-4 w-4 text-ink/25" />}
-            </div>
+                    {/* Only top-level categories carry a picture. */}
+                    {depth === 0 && (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                            {cat.image_url ? (
+                                <img
+                                    src={cat.image_url}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : (
+                                <Layers className="h-4 w-4 text-ink-soft/40" />
+                            )}
+                        </div>
+                    )}
 
-            <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                    <p
-                        className={`text-sm ${depth === 0 ? 'font-semibold text-ink' : 'font-medium text-ink/80'}`}
-                    >
-                        {cat.translated_name}
-                    </p>
-                    {depth === 0 && childCount > 0 && (
-                        <span className="bg-ink/[0.04] px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-ink-soft uppercase">
-                            {childCount}{' '}
-                            {childCount === 1 ? 'enfant' : 'enfants'}
-                        </span>
-                    )}
-                    {!isComplete(cat, locales) && (
-                        <span className="bg-terracotta/10 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-terracotta uppercase">
-                            incomplet
-                        </span>
-                    )}
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p
+                                className={`text-sm ${depth === 0 ? 'font-semibold text-ink' : 'font-medium text-ink'}`}
+                            >
+                                {cat.translated_name}
+                            </p>
+                            {depth === 0 && childCount > 0 && (
+                                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                                    {childCount} sous-catégorie
+                                    {childCount > 1 ? 's' : ''}
+                                </span>
+                            )}
+                            {incomplete && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                                    <TriangleAlert className="h-3 w-3" />
+                                    Incomplet
+                                </span>
+                            )}
+                        </div>
+                        <p className="mt-0.5 font-mono text-xs text-ink-soft/60">
+                            /{cat.slug}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            {locales.map((loc) => {
+                                const value = cat.name?.[loc]?.trim();
+
+                                return (
+                                    <span
+                                        key={loc}
+                                        className="inline-flex items-center gap-1 text-[11px]"
+                                    >
+                                        <span className="font-semibold text-ink-soft/50">
+                                            {LOCALE_SHORT[loc]}
+                                        </span>
+                                        {value ? (
+                                            <span
+                                                className="text-ink-soft"
+                                                dir={
+                                                    loc === 'ar' ? 'rtl' : 'ltr'
+                                                }
+                                            >
+                                                {value}
+                                            </span>
+                                        ) : (
+                                            <span className="font-medium text-rose-600">
+                                                manquant
+                                            </span>
+                                        )}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
-                <p className="mt-0.5 font-mono text-[10px] tracking-wider text-ink/30">
-                    /{cat.slug}
-                </p>
-                <LocaleStrip cat={cat} locales={locales} />
-            </div>
+            </td>
 
-            <div className="hidden shrink-0 gap-5 sm:flex">
-                <CountPill value={cat.products_count} label="Items" />
-                <CountPill value={cat.stores_count} label="Shops" />
-            </div>
+            <td className="px-5 py-3 text-right text-sm text-ink">
+                {cat.products_count}
+            </td>
+            <td className="px-5 py-3 text-right text-sm text-ink">
+                {cat.stores_count}
+            </td>
 
-            <div className="flex shrink-0 items-center gap-1">
-                <button
-                    onClick={onEdit}
-                    aria-label={`Edit ${cat.translated_name}`}
-                    className="p-2 text-ink-soft transition-colors hover:bg-ink hover:text-cream"
-                >
-                    <Edit3 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                    onClick={onDelete}
-                    disabled={locked}
-                    aria-label={`Delete ${cat.translated_name}`}
-                    title={
-                        locked ? 'Has products or stores attached' : undefined
-                    }
-                    className="p-2 text-ink-soft transition-colors hover:bg-terracotta hover:text-cream disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-ink-soft"
-                >
-                    <Trash2 className="h-3.5 w-3.5" />
-                </button>
-            </div>
-        </div>
+            <td className="px-5 py-3">
+                <div className="flex items-center justify-end gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={onEdit}
+                        aria-label={`Modifier ${cat.translated_name}`}
+                    >
+                        <Edit3 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-ink-soft hover:bg-terracotta hover:text-white"
+                        onClick={onDelete}
+                        disabled={locked}
+                        title={
+                            locked
+                                ? 'Des produits ou boutiques y sont rattachés'
+                                : undefined
+                        }
+                        aria-label={`Supprimer ${cat.translated_name}`}
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+            </td>
+        </tr>
     );
 };
 
@@ -224,9 +259,77 @@ const Index = ({
     parents: Category[];
     locales: CategoryLocale[];
 }) => {
-    const [editingId, setEditingId] = useState<number | null>(null);
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [query, setQuery] = useState('');
+    const [incompleteOnly, setIncompleteOnly] = useState(false);
+
+    // ── Create dialog ────────────────────────────────────────
+    const [createOpen, setCreateOpen] = useState(false);
+    const createForm = useForm({
+        name: { ...EMPTY_NAME },
+        parent_id: '' as string | number,
+        image: null as File | null,
+    });
+
+    const openCreate = () => {
+        createForm.reset();
+        createForm.clearErrors();
+        setCreateOpen(true);
+    };
+
+    const handleCreate = () => {
+        createForm.post(route('admin.categories.store'), {
+            forceFormData: true,
+            onSuccess: () => {
+                createForm.reset();
+                setCreateOpen(false);
+            },
+        });
+    };
+
+    // ── Edit dialog ───────────────────────────────────────────
+    const [editOpen, setEditOpen] = useState(false);
+    const [editTarget, setEditTarget] = useState<CategoryWithCounts | null>(
+        null,
+    );
+    // Sent as a POST with `_method` spoofing: PHP does not parse multipart
+    // bodies on a real PATCH, so the image would never arrive.
+    const editForm = useForm({
+        _method: 'patch',
+        name: { ...EMPTY_NAME },
+        parent_id: '' as string | number,
+        image: null as File | null,
+        remove_image: false,
+    });
+
+    const openEdit = (cat: CategoryWithCounts) => {
+        setEditTarget(cat);
+        editForm.clearErrors();
+        editForm.setData({
+            _method: 'patch',
+            // Spread over the empty shape so a locale missing from older
+            // rows still renders a (blank) input instead of an uncontrolled
+            // one.
+            name: { ...EMPTY_NAME, ...cat.name },
+            parent_id: cat.parent_id ?? '',
+            image: null,
+            remove_image: false,
+        });
+        setEditOpen(true);
+    };
+
+    const handleUpdate = () => {
+        if (!editTarget) {
+            return;
+        }
+
+        editForm.post(route('admin.categories.update', editTarget.id), {
+            forceFormData: true,
+            onSuccess: () => setEditOpen(false),
+        });
+    };
+
+    // ── Delete confirmation ───────────────────────────────────
     // The dialog's open flag is kept separate from its subject: Radix keeps
     // the content mounted through the close animation, so clearing the
     // category on close would flash an empty name in the title.
@@ -234,44 +337,6 @@ const Index = ({
         null,
     );
     const [deleteOpen, setDeleteOpen] = useState(false);
-
-    // ── Create form ───────────────────────────────────────────
-    const createForm = useForm({
-        name: { ...EMPTY_NAME },
-        parent_id: '' as string | number,
-        icon: '',
-    });
-
-    const handleCreate = () => {
-        createForm.post(route('admin.categories.store'), {
-            onSuccess: () => createForm.reset(),
-        });
-    };
-
-    // ── Edit form ─────────────────────────────────────────────
-    const editForm = useForm({
-        name: { ...EMPTY_NAME },
-        parent_id: '' as string | number,
-        icon: '',
-    });
-
-    const startEdit = (cat: Category) => {
-        setEditingId(cat.id);
-        editForm.clearErrors();
-        editForm.setData({
-            // Spread over the empty shape so a locale missing from older rows
-            // still renders a (blank) input instead of an uncontrolled one.
-            name: { ...EMPTY_NAME, ...cat.name },
-            parent_id: cat.parent_id ?? '',
-            icon: cat.icon ?? '',
-        });
-    };
-
-    const handleUpdate = (id: number) => {
-        editForm.patch(route('admin.categories.update', id), {
-            onSuccess: () => setEditingId(null),
-        });
-    };
 
     const askDelete = (cat: CategoryWithCounts) => {
         setDeleteTarget(cat);
@@ -312,13 +377,18 @@ const Index = ({
         (c) => c.parent_id && !categories.some((p) => p.id === c.parent_id),
     );
 
+    const incompleteCount = categories.filter(
+        (c) => !isComplete(c, locales),
+    ).length;
+
     const q = query.trim().toLowerCase();
     const matches = (c: CategoryWithCounts) =>
-        !q ||
-        c.slug.toLowerCase().includes(q) ||
-        locales.some((loc) => c.name?.[loc]?.toLowerCase().includes(q));
+        (!incompleteOnly || !isComplete(c, locales)) &&
+        (!q ||
+            c.slug.toLowerCase().includes(q) ||
+            locales.some((loc) => c.name?.[loc]?.toLowerCase().includes(q)));
 
-    // Searching keeps a parent visible when only one of its children hits, so
+    // Filtering keeps a parent visible when only one of its children hits, so
     // the match never loses its hierarchical context.
     const visibleRoots = roots
         .map((root) => {
@@ -334,376 +404,399 @@ const Index = ({
         .filter(({ kids, rootHit }) => rootHit || kids.length > 0);
 
     const visibleOrphans = orphans.filter(matches);
-    const incompleteCount = categories.filter(
-        (c) => !isComplete(c, locales),
-    ).length;
+    const isEmpty = visibleRoots.length === 0 && visibleOrphans.length === 0;
 
-    const stats = [
-        { label: 'Total', value: categories.length },
-        { label: 'Racines', value: roots.length },
-        { label: 'Sous-catégories', value: categories.length - roots.length },
-        { label: 'Incomplètes', value: incompleteCount, warn: true },
-    ];
+    return (
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title="Catégories" />
 
-    // ── Inline edit form, rendered in place of a row ───────────
-    const renderEditor = (cat: CategoryWithCounts, depth: number) => (
-        <div
-            className="border-y border-ink/5 bg-cream/30 px-6 py-5"
-            style={{ paddingInlineStart: `${1.5 + depth * 2}rem` }}
-        >
-            <div className="grid gap-4 sm:grid-cols-3">
-                {locales.map((loc) => (
-                    <div key={loc}>
-                        <label className={LABEL_CLASS}>
-                            {LOCALE_LABELS[loc]}
-                        </label>
-                        <input
-                            dir={loc === 'ar' ? 'rtl' : 'ltr'}
-                            value={editForm.data.name[loc] ?? ''}
-                            onChange={(e) =>
-                                editForm.setData('name', {
-                                    ...editForm.data.name,
-                                    [loc]: e.target.value,
-                                })
+            <header className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                        Catégories
+                    </h1>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {categories.length} catégorie
+                        {categories.length > 1 ? 's' : ''} · {roots.length}{' '}
+                        racine{roots.length > 1 ? 's' : ''} ·{' '}
+                        {categories.length - roots.length} sous-catégorie
+                        {categories.length - roots.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={openCreate}
+                    className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
+                >
+                    <Plus className="h-4 w-4" />
+                    Nouvelle catégorie
+                </button>
+            </header>
+
+            {/* Translation-audit queue — only while there is work to do. */}
+            {incompleteCount > 0 && (
+                <button
+                    type="button"
+                    onClick={() => setIncompleteOnly((v) => !v)}
+                    className={`flex items-center gap-3 rounded-xl border px-5 py-3.5 text-left transition ${
+                        incompleteOnly
+                            ? 'border-amber-400 bg-amber-100'
+                            : 'border-amber-300/60 bg-amber-50 hover:bg-amber-100'
+                    }`}
+                >
+                    <TriangleAlert className="h-5 w-5 shrink-0 text-amber-600" />
+                    <span className="text-sm text-ink">
+                        <span className="font-medium">
+                            {incompleteCount} catégorie
+                            {incompleteCount > 1 ? 's' : ''} avec une traduction
+                            manquante
+                        </span>{' '}
+                        <span className="text-ink-soft">
+                            {incompleteOnly
+                                ? '— cliquez pour tout afficher'
+                                : '.'}
+                        </span>
+                    </span>
+                </button>
+            )}
+
+            {/* ── Search & tree controls ──────────────────── */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="relative max-w-md flex-1">
+                    <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                    <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Rechercher une catégorie…"
+                        className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                    />
+                </div>
+                <button
+                    type="button"
+                    onClick={() =>
+                        setCollapsed((prev) =>
+                            prev.size > 0
+                                ? new Set()
+                                : new Set(roots.map((r) => r.id)),
+                        )
+                    }
+                    className="shrink-0 rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm font-medium text-ink-soft shadow-sm transition hover:border-ink/30 hover:text-ink"
+                >
+                    {collapsed.size > 0 ? 'Tout développer' : 'Tout réduire'}
+                </button>
+            </div>
+
+            {/* ── Table ────────────────────────────────────── */}
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                {isEmpty ? (
+                    <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+                        <FolderTree className="h-8 w-8 text-ink-soft/30" />
+                        <p className="text-sm text-ink-soft">
+                            {q || incompleteOnly
+                                ? 'Aucune catégorie ne correspond à ces filtres.'
+                                : 'Aucune catégorie pour le moment.'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="border-b border-border text-left text-xs font-medium text-ink-soft">
+                                <tr>
+                                    <th className="px-5 py-3">Catégorie</th>
+                                    <th className="px-5 py-3 text-right">
+                                        Produits
+                                    </th>
+                                    <th className="px-5 py-3 text-right">
+                                        Boutiques
+                                    </th>
+                                    <th className="px-5 py-3 text-right">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {visibleRoots.map(({ root, kids }) => (
+                                    <Fragment key={root.id}>
+                                        <CategoryRow
+                                            cat={root}
+                                            locales={locales}
+                                            depth={0}
+                                            childCount={
+                                                childrenOf(root.id).length
+                                            }
+                                            collapsed={collapsed.has(root.id)}
+                                            onToggle={() => toggle(root.id)}
+                                            onEdit={() => openEdit(root)}
+                                            onDelete={() => askDelete(root)}
+                                        />
+                                        {!collapsed.has(root.id) &&
+                                            kids.map((kid) => (
+                                                <CategoryRow
+                                                    key={kid.id}
+                                                    cat={kid}
+                                                    locales={locales}
+                                                    depth={1}
+                                                    childCount={0}
+                                                    collapsed={false}
+                                                    onToggle={() => {}}
+                                                    onEdit={() => openEdit(kid)}
+                                                    onDelete={() =>
+                                                        askDelete(kid)
+                                                    }
+                                                />
+                                            ))}
+                                    </Fragment>
+                                ))}
+
+                                {visibleOrphans.length > 0 && (
+                                    <>
+                                        <tr>
+                                            <td
+                                                colSpan={4}
+                                                className="bg-amber-50 px-5 py-2 text-xs font-semibold text-amber-700"
+                                            >
+                                                Sans parent (parent supprimé)
+                                            </td>
+                                        </tr>
+                                        {visibleOrphans.map((o) => (
+                                            <CategoryRow
+                                                key={o.id}
+                                                cat={o}
+                                                locales={locales}
+                                                depth={1}
+                                                childCount={0}
+                                                collapsed={false}
+                                                onToggle={() => {}}
+                                                onEdit={() => openEdit(o)}
+                                                onDelete={() => askDelete(o)}
+                                            />
+                                        ))}
+                                    </>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Create dialog ────────────────────────────── */}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Nouvelle catégorie</DialogTitle>
+                        <DialogDescription>
+                            Le nom doit être renseigné dans les trois langues.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {locales.map((loc) => (
+                            <Field
+                                key={loc}
+                                label={LOCALE_LABELS[loc]}
+                                error={
+                                    createForm.errors[
+                                        `name.${loc}` as keyof typeof createForm.errors
+                                    ]
+                                }
+                            >
+                                <input
+                                    dir={loc === 'ar' ? 'rtl' : 'ltr'}
+                                    value={createForm.data.name[loc] ?? ''}
+                                    onChange={(e) =>
+                                        createForm.setData('name', {
+                                            ...createForm.data.name,
+                                            [loc]: e.target.value,
+                                        })
+                                    }
+                                    placeholder={
+                                        loc === 'ar'
+                                            ? 'مثال: سجاد يدوي'
+                                            : 'ex. Tapis fait main'
+                                    }
+                                    className={INPUT}
+                                />
+                            </Field>
+                        ))}
+
+                        <Field
+                            label="Catégorie parente"
+                            error={createForm.errors.parent_id}
+                        >
+                            <select
+                                value={createForm.data.parent_id}
+                                onChange={(e) =>
+                                    createForm.setData(
+                                        'parent_id',
+                                        e.target.value,
+                                    )
+                                }
+                                className={INPUT}
+                            >
+                                <option value="">Racine (aucun parent)</option>
+                                {parents.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.translated_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+
+                        {createForm.data.parent_id === '' && (
+                            <SingleImageInput
+                                label="Image (optionnel)"
+                                hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
+                                aspect="square"
+                                value={createForm.data.image}
+                                onChange={(file) =>
+                                    createForm.setData('image', file)
+                                }
+                                error={createForm.errors.image}
+                            />
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCreateOpen(false)}
+                        >
+                            Annuler
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={handleCreate}
+                            disabled={
+                                createForm.processing ||
+                                !locales.every((loc) =>
+                                    createForm.data.name[loc]?.trim(),
+                                )
                             }
-                            className={INPUT_CLASS}
-                        />
-                        {editForm.errors[
-                            `name.${loc}` as keyof typeof editForm.errors
-                        ] && (
-                            <p className="mt-1 text-[10px] tracking-wider text-terracotta uppercase">
-                                {
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90 disabled:opacity-50"
+                        >
+                            {createForm.processing
+                                ? 'Création…'
+                                : 'Créer la catégorie'}
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Edit dialog ──────────────────────────────── */}
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>
+                            Modifier «&nbsp;{editTarget?.translated_name}
+                            &nbsp;»
+                        </DialogTitle>
+                        <DialogDescription>
+                            Le slug /{editTarget?.slug} reste inchangé — le
+                            modifier casserait les liens existants.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {locales.map((loc) => (
+                            <Field
+                                key={loc}
+                                label={LOCALE_LABELS[loc]}
+                                error={
                                     editForm.errors[
                                         `name.${loc}` as keyof typeof editForm.errors
                                     ]
                                 }
-                            </p>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                <div>
-                    <label className={LABEL_CLASS}>Parent</label>
-                    <select
-                        value={editForm.data.parent_id}
-                        onChange={(e) =>
-                            editForm.setData('parent_id', e.target.value)
-                        }
-                        className={INPUT_CLASS}
-                    >
-                        <option value="">Racine (aucun parent)</option>
-                        {parents
-                            .filter((p) => p.id !== cat.id)
-                            .map((p) => (
-                                <option key={p.id} value={p.id}>
-                                    {p.translated_name}
-                                </option>
-                            ))}
-                    </select>
-                    {editForm.errors.parent_id && (
-                        <p className="mt-1 text-[10px] tracking-wider text-terracotta uppercase">
-                            {editForm.errors.parent_id}
-                        </p>
-                    )}
-                </div>
-
-                <div>
-                    <label className={LABEL_CLASS}>Icône</label>
-                    <input
-                        value={editForm.data.icon}
-                        onChange={(e) =>
-                            editForm.setData('icon', e.target.value)
-                        }
-                        placeholder="🧶"
-                        className={INPUT_CLASS}
-                    />
-                </div>
-
-                <div className="flex items-end gap-2">
-                    <button
-                        onClick={() => handleUpdate(cat.id)}
-                        disabled={editForm.processing}
-                        className="bg-ink px-5 py-2 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
-                    >
-                        {editForm.processing ? 'Enregistre…' : 'Enregistrer'}
-                    </button>
-                    <button
-                        onClick={() => setEditingId(null)}
-                        className="px-3 py-2 text-xs font-medium text-ink-soft transition-colors hover:text-ink"
-                    >
-                        Annuler
-                    </button>
-                </div>
-            </div>
-
-            <p className="mt-4 text-[10px] tracking-wider text-ink/30 uppercase">
-                Le slug /{cat.slug} reste inchangé — le modifier casserait les
-                liens existants.
-            </p>
-        </div>
-    );
-
-    const renderNode = (cat: CategoryWithCounts, depth: number) =>
-        editingId === cat.id ? (
-            renderEditor(cat, depth)
-        ) : (
-            <CategoryRow
-                cat={cat}
-                locales={locales}
-                depth={depth}
-                childCount={childrenOf(cat.id).length}
-                collapsed={collapsed.has(cat.id)}
-                onToggle={() => toggle(cat.id)}
-                onEdit={() => startEdit(cat)}
-                onDelete={() => askDelete(cat)}
-            />
-        );
-
-    return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
-            <Head title="Manage Categories" />
-
-            <div className="mx-auto max-w-7xl">
-                <header className="mb-8">
-                    <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
-                        Inventory Architecture
-                    </p>
-                    <h1 className="mt-2 h-editorial text-4xl text-ink md:text-5xl">
-                        Categories & <span className="italic">Taxonomy</span>
-                    </h1>
-                </header>
-
-                {/* ── Compact stats ── */}
-                <div className="mb-10 grid grid-cols-2 gap-px border border-ink/5 bg-ink/5 md:grid-cols-4">
-                    {stats.map((s) => (
-                        <div key={s.label} className="bg-white px-6 py-5">
-                            <p className="text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                {s.label}
-                            </p>
-                            <p
-                                className={`mt-1 h-editorial text-3xl ${
-                                    s.warn && s.value > 0
-                                        ? 'text-terracotta'
-                                        : 'text-ink'
-                                }`}
                             >
-                                {s.value}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-12 items-start gap-10">
-                    {/* ── Tree ── */}
-                    <div className="col-span-12 lg:col-span-8">
-                        <div className="mb-4 flex items-center gap-3">
-                            <div className="relative flex-1">
-                                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink/25" />
                                 <input
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Rechercher une catégorie…"
-                                    className="w-full border border-ink/10 bg-white py-2.5 pr-9 pl-9 text-sm text-ink placeholder:text-ink/25 focus:border-terracotta focus:outline-none"
+                                    dir={loc === 'ar' ? 'rtl' : 'ltr'}
+                                    value={editForm.data.name[loc] ?? ''}
+                                    onChange={(e) =>
+                                        editForm.setData('name', {
+                                            ...editForm.data.name,
+                                            [loc]: e.target.value,
+                                        })
+                                    }
+                                    className={INPUT}
                                 />
-                                {query && (
-                                    <button
-                                        onClick={() => setQuery('')}
-                                        aria-label="Clear search"
-                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-ink/30 hover:text-ink"
-                                    >
-                                        <X className="h-3.5 w-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                onClick={() =>
-                                    setCollapsed((prev) =>
-                                        prev.size > 0
-                                            ? new Set()
-                                            : new Set(roots.map((r) => r.id)),
+                            </Field>
+                        ))}
+
+                        <Field
+                            label="Catégorie parente"
+                            error={editForm.errors.parent_id}
+                        >
+                            <select
+                                value={editForm.data.parent_id}
+                                onChange={(e) =>
+                                    editForm.setData(
+                                        'parent_id',
+                                        e.target.value,
                                     )
                                 }
-                                className="shrink-0 border border-ink/10 bg-white px-4 py-2.5 text-[10px] font-bold tracking-widest text-ink-soft uppercase transition-colors hover:border-ink/20 hover:text-ink"
+                                className={INPUT}
                             >
-                                {collapsed.size > 0
-                                    ? 'Tout ouvrir'
-                                    : 'Tout fermer'}
-                            </button>
-                        </div>
-
-                        <div className="border border-ink/5 bg-white shadow-sm">
-                            {visibleRoots.length === 0 &&
-                            visibleOrphans.length === 0 ? (
-                                <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-                                    <FolderTree className="h-8 w-8 text-ink/15" />
-                                    <p className="text-sm text-ink-soft">
-                                        {q
-                                            ? `Aucune catégorie ne correspond à « ${query} ».`
-                                            : 'Aucune catégorie pour le moment.'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-ink/5">
-                                    {visibleRoots.map(({ root, kids }) => (
-                                        <div key={root.id}>
-                                            {renderNode(root, 0)}
-
-                                            {!collapsed.has(root.id) &&
-                                                kids.length > 0 && (
-                                                    <div className="divide-y divide-ink/5 border-t border-ink/5 bg-cream/10">
-                                                        {kids.map((kid) => (
-                                                            <div key={kid.id}>
-                                                                {renderNode(
-                                                                    kid,
-                                                                    1,
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                        </div>
-                                    ))}
-
-                                    {visibleOrphans.length > 0 && (
-                                        <div>
-                                            <p className="bg-terracotta/5 px-6 py-2 text-[10px] font-bold tracking-widest text-terracotta uppercase">
-                                                Parent introuvable
-                                            </p>
-                                            <div className="divide-y divide-ink/5">
-                                                {visibleOrphans.map((o) => (
-                                                    <div key={o.id}>
-                                                        {renderNode(o, 1)}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* ── Create Sidebar ── */}
-                    <div className="col-span-12 lg:col-span-4">
-                        <div className="sticky top-10 border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="mb-6 h-editorial text-2xl text-ink">
-                                New <span className="italic">Category</span>
-                            </h3>
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <label className="block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                        Nominal Label — all languages required
-                                    </label>
-                                    {locales.map((loc) => (
-                                        <div key={loc}>
-                                            <span className="mb-1 block text-[9px] font-semibold tracking-widest text-ink/30 uppercase">
-                                                {LOCALE_LABELS[loc]}
-                                            </span>
-                                            <input
-                                                dir={
-                                                    loc === 'ar' ? 'rtl' : 'ltr'
-                                                }
-                                                value={
-                                                    createForm.data.name[loc] ??
-                                                    ''
-                                                }
-                                                onChange={(e) =>
-                                                    createForm.setData('name', {
-                                                        ...createForm.data.name,
-                                                        [loc]: e.target.value,
-                                                    })
-                                                }
-                                                placeholder={
-                                                    loc === 'ar'
-                                                        ? 'مثال: سجاد يدوي'
-                                                        : 'e.g. Handmade Carpets'
-                                                }
-                                                className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
-                                            />
-                                            {/* Laravel reports per-locale errors as name.fr, name.ar, ... */}
-                                            {createForm.errors[
-                                                `name.${loc}` as keyof typeof createForm.errors
-                                            ] && (
-                                                <p className="mt-1 text-[10px] tracking-wider text-terracotta uppercase">
-                                                    {
-                                                        createForm.errors[
-                                                            `name.${loc}` as keyof typeof createForm.errors
-                                                        ]
-                                                    }
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                        Hierarchy Placement
-                                    </label>
-                                    <select
-                                        value={createForm.data.parent_id}
-                                        onChange={(e) =>
-                                            createForm.setData(
-                                                'parent_id',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm focus:border-terracotta focus:outline-none"
-                                    >
-                                        <option value="">
-                                            Independent (Root)
+                                <option value="">Racine (aucun parent)</option>
+                                {parents
+                                    .filter((p) => p.id !== editTarget?.id)
+                                    .map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.translated_name}
                                         </option>
-                                        {parents.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.translated_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                    ))}
+                            </select>
+                        </Field>
 
-                                <div>
-                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                        Visual Icon
-                                    </label>
-                                    <input
-                                        value={createForm.data.icon}
-                                        onChange={(e) =>
-                                            createForm.setData(
-                                                'icon',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="🧶"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={
-                                        createForm.processing ||
-                                        // Every locale must be filled before the
-                                        // server will accept the category.
-                                        !locales.every((loc) =>
-                                            createForm.data.name[loc]?.trim(),
-                                        )
-                                    }
-                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    {createForm.processing
-                                        ? 'Defining...'
-                                        : 'Define Category'}
-                                </button>
-                            </div>
-                        </div>
+                        {editForm.data.parent_id === '' ? (
+                            <SingleImageInput
+                                label="Image (optionnel)"
+                                hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
+                                aspect="square"
+                                value={editForm.data.image}
+                                onChange={(file) =>
+                                    editForm.setData('image', file)
+                                }
+                                current={
+                                    editForm.data.remove_image
+                                        ? null
+                                        : (editTarget?.image_url ?? null)
+                                }
+                                onRemoveCurrent={() =>
+                                    editForm.setData('remove_image', true)
+                                }
+                                error={editForm.errors.image}
+                            />
+                        ) : (
+                            editTarget?.image_url && (
+                                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                    Une sous-catégorie n’a pas d’image : celle
+                                    de cette catégorie sera supprimée.
+                                </p>
+                            )
+                        )}
                     </div>
-                </div>
-            </div>
 
-            {/* ── Delete confirmation ── */}
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditOpen(false)}
+                        >
+                            Annuler
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={handleUpdate}
+                            disabled={editForm.processing}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90 disabled:opacity-50"
+                        >
+                            {editForm.processing
+                                ? 'Enregistrement…'
+                                : 'Enregistrer'}
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ── Delete confirmation ──────────────────────── */}
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -713,22 +806,25 @@ const Index = ({
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             Cette action est irréversible.
-                            {childrenOf(deleteTarget?.id ?? -1).length > 0 && (
-                                <>
-                                    {' '}
-                                    Cette catégorie a{' '}
-                                    {childrenOf(deleteTarget!.id).length}{' '}
-                                    sous-catégorie(s) qui se retrouveront sans
-                                    parent.
-                                </>
-                            )}
+                            {deleteTarget &&
+                                childrenOf(deleteTarget.id).length > 0 && (
+                                    <>
+                                        {' '}
+                                        Cette catégorie a{' '}
+                                        {
+                                            childrenOf(deleteTarget.id).length
+                                        }{' '}
+                                        sous-catégorie(s) qui se retrouveront
+                                        sans parent.
+                                    </>
+                                )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Annuler</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-terracotta text-cream hover:bg-terracotta-deep"
+                            className="bg-terracotta text-white hover:bg-terracotta/90"
                         >
                             Supprimer
                         </AlertDialogAction>

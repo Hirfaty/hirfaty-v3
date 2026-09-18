@@ -4,7 +4,6 @@ import {
     LayoutDashboard,
     LogOut,
     Package,
-    PlusCircle,
     Settings,
     ShoppingBag,
     Store,
@@ -34,8 +33,6 @@ interface NavItem {
      */
     url: string;
     icon: typeof LayoutDashboard;
-    /** Hidden while the shop cannot sell — see Store::canSell(). */
-    requiresSellable?: boolean;
 }
 
 const overviewItems: NavItem[] = [
@@ -46,17 +43,15 @@ const overviewItems: NavItem[] = [
     },
 ];
 
+/*
+ * Read-only. Listings are filed by Hirfaty's own team, not by the artisan —
+ * see Seller\ProductController — so there is no "add a product" entry here.
+ */
 const catalogItems: NavItem[] = [
     {
         title: 'Produits',
         url: route('seller.products.index', undefined, false),
         icon: Package,
-    },
-    {
-        title: 'Ajouter un produit',
-        url: route('seller.products.create', undefined, false),
-        icon: PlusCircle,
-        requiresSellable: true,
     },
 ];
 
@@ -138,16 +133,6 @@ export function SellerSidebar() {
     const { url, props } = usePage<PageProps>();
     const { auth, sellerStore } = props;
 
-    /*
-     * "Ajouter un produit" is dropped rather than shown disabled while the
-     * shop is unverified: the route is blocked by `store.sellable` anyway, so
-     * a visible link would only bounce the seller back with an error. The
-     * status bar above already explains why it is not there.
-     */
-    const canSell = sellerStore?.can_sell ?? false;
-    const visible = (items: NavItem[]) =>
-        items.filter((i) => !i.requiresSellable || canSell);
-
     // Exact match for the dashboard root, prefix match elsewhere — otherwise
     // "Produits" would stay lit while viewing a single product.
     const dashboardUrl = route('seller.dashboard', undefined, false);
@@ -188,7 +173,7 @@ export function SellerSidebar() {
                 />
                 <NavGroup
                     label="Catalogue"
-                    items={visible(catalogItems)}
+                    items={catalogItems}
                     isActive={isActive}
                     collapsed={collapsed}
                 />

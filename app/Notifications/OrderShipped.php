@@ -4,57 +4,36 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OrderShipped extends Notification
+class OrderShipped extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public Order $order)
-    {
-        //
-    }
+    public function __construct(public Order $order) {}
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
     public function via(object $notifiable): array
     {
         return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
     public function toMail(object $notifiable): MailMessage
     {
+        $locale = $notifiable->locale ?? 'fr';
+
+        $subjects = [
+            'fr' => "Votre commande {$this->order->reference} est en route — Hirfaty",
+            'ar' => "طلبك {$this->order->reference} في الطريق إليك — حرفتي",
+            'en' => "Your order {$this->order->reference} is on its way — Hirfaty",
+        ];
 
         return (new MailMessage)
-            ->subject("Your order {$this->order->reference} is on its way — Hirfaty")
-            ->greeting("Hello {$notifiable->first_name}!")
-            ->line("Your order {$this->order->reference} has been shipped via Amana.")
-            ->line("**Store:** {$this->order->store->store_name}")
-            ->line("**Tracking number:** {$this->order->tracking_number}")
-            ->line("**Shipping address:** {$this->order->shipping_address}")
-            ->action('Track your order on Amana', 'https://www.amana.ma')
-            ->line('Thank you for shopping on Hirfaty!');
-    }
-
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
-    {
-        return [
-            //
-        ];
+            ->subject($subjects[$locale] ?? $subjects['fr'])
+            ->view("emails.buyer.order-status.shipped.{$locale}", [
+                'order' => $this->order,
+                'user' => $notifiable,
+            ]);
     }
 }

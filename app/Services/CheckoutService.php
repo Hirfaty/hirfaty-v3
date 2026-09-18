@@ -9,24 +9,21 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use App\Notifications\NewOrderReceived;
+use App\Notifications\NewPurchaseForAdmin;
 use App\Notifications\OrderPlaced;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
     const PLATFORM_FEE_PERCENT = 0.20; // 20%
 
-    const AMANA_FEE = 20.00; // flat per order
-
-    /**
-     * Create a new class instance.
-     */
-    public function __construct()
-    {
-        //
-    }
+    public function __construct(private DeliveryFeeService $deliveryFees) {}
 
     public function process(Cart $cart, array $checkoutData)
     {
@@ -131,13 +128,44 @@ class CheckoutService
             // 2. Group cart items by store
             $grouped = $cart->items->groupBy(fn ($item) => $item->product->store_id);
 
+            /*
+             * One purchase, however many workshops it touches. Every order
+             * below carries this, so the admin desk can put the basket back
+             * together — see the orders migration.
+             */
+            $groupReference = 'HRFG-'.strtoupper(Str::random(10));
+
+            /*
+             * What Amana charges for *this* destination, resolved once for the
+             * whole basket. Quoted to the buyer by the same service on the
+             * checkout page, so the summary and the bill agree.
+             */
+            $deliveryFee = $this->deliveryFees->resolve(
+                $checkoutData['country'] ?? null,
+                $checkoutData['city_id'] ?? null,
+            );
+
+            /*
+             * The delivery fee belongs to the checkout as a whole, not to any
+             * one store's order — but it still lives on the `orders` /
+             * `earnings` rows, which are per store. Rather than add a new
+             * basket-level place to hold it, it's attached to whichever order
+             * happens to be created first and every other order in the same
+             * checkout gets 0. Which order that is doesn't matter today: the
+             * admin runs delivery as one service, not each seller arranging
+             * their own shipment, so there is no per-seller reimbursement to
+             * split fairly here yet.
+             */
+            $amanaFeeRemaining = $deliveryFee;
+
             foreach ($grouped as $storeId => $items) {
                 $store = $items->first()->product->store;
 
                 // Calculate amounts
                 $grossAmount = $items->sum(fn ($item) => $unitPrice($item) * $item->quantity);
                 $platformFee = round($grossAmount * self::PLATFORM_FEE_PERCENT, 2);
-                $amanaFee = self::AMANA_FEE;
+                $amanaFee = $amanaFeeRemaining;
+                $amanaFeeRemaining = 0.0;
                 $sellerEarnings = $grossAmount - $platformFee + $amanaFee;
 
                 // Create order
@@ -145,6 +173,7 @@ class CheckoutService
                     'buyer_id' => $cart->user_id,
                     'store_id' => $storeId,
                     'city_id' => $checkoutData['city_id'],
+                    'group_reference' => $groupReference,
                     'status' => 'pending',
                     'total_amount' => $grossAmount,
                     'platform_fee' => $platformFee,
@@ -193,19 +222,12 @@ class CheckoutService
                 ]);
 
                 // Notify seller
-                try {
-                    $order->load(['items.product', 'buyer', 'store']);
-                    $store->user->notify(new NewOrderReceived($order));
-                } catch (\Exception $e) {
-                    \Log::warning("Failed to notify seller {$store->user->id} for order {$order->id}: ".$e->getMessage());
-                }
-
-                // Notify buyer
-                try {
-                    $cart->user->notify(new OrderPlaced($order));
-                } catch (\Exception $e) {
-                    \Log::warning("Buyer notification failed for order {$order->id}: ".$e->getMessage());
-                }
+                // try {
+                //     $order->load(['items.product', 'buyer', 'store']);
+                //     $store->user->notify(new NewOrderReceived($order));
+                // } catch (\Exception $e) {
+                //     \Log::warning("Failed to notify seller {$store->user->id} for order {$order->id}: ".$e->getMessage());
+                // }
 
                 $orders[] = $order;
             }
@@ -214,6 +236,74 @@ class CheckoutService
             $cart->items()->delete();
         });
 
+        /*
+         * Outside the transaction, deliberately. Hirfaty's desk fulfils every
+         * purchase, so this is the email that actually starts the work — but a
+         * mail failure must not roll back an order that is already paid for
+         * and already has stock decremented against it.
+         */
+        $this->notifyAdmin($orders);
+        $this->notifyBuyer($orders, $cart->user);
+
         return $orders;
+    }
+
+    /**
+     * Tell the Hirfaty desk a basket has been bought.
+     *
+     * One email for the whole purchase, not one per workshop: the desk picks
+     * the parcel up as a single job, and three separate emails for one buyer's
+     * order would read as three things to do.
+     *
+     * @param  array<int, Order>  $orders
+     */
+    private function notifyAdmin(array $orders): void
+    {
+        if ($orders === []) {
+            return;
+        }
+
+        $address = config('hirfaty.admin_email');
+
+        if (! $address) {
+            return;
+        }
+
+        try {
+            $loaded = Order::whereIn('id', collect($orders)->pluck('id'))
+                ->with(['store.city', 'buyer', 'items.product.images'])
+                ->get();
+
+            Notification::route('mail', $address)
+                ->notify(new NewPurchaseForAdmin($loaded));
+        } catch (\Exception $e) {
+            Log::error('Admin purchase notification failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Tell the buyer their checkout went through.
+     *
+     * One email for the whole checkout, not one per workshop — see
+     * OrderPlaced's docblock for why sending one per store used to make a
+     * multi-seller purchase read as incomplete.
+     *
+     * @param  array<int, Order>  $orders
+     */
+    private function notifyBuyer(array $orders, ?User $buyer): void
+    {
+        if ($orders === [] || ! $buyer) {
+            return;
+        }
+
+        try {
+            $loaded = Order::whereIn('id', collect($orders)->pluck('id'))
+                ->with(['store', 'items.product'])
+                ->get();
+
+            $buyer->notify(new OrderPlaced($loaded));
+        } catch (\Exception $e) {
+            Log::warning('Buyer purchase notification failed: '.$e->getMessage());
+        }
     }
 }

@@ -19,7 +19,7 @@ export function ExploreProducts({
     const { t, isRTL } = useTranslation();
 
     return (
-        <section className="relative bg-souk-paper py-8 lg:py-10">
+        <section className="relative bg-souk-paper py-6 lg:py-8">
             <div className="container">
                 <Reveal delay={80}>
                     <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
@@ -28,7 +28,7 @@ export function ExploreProducts({
                 </Reveal>
 
                 {featuredProducts.length > 0 ? (
-                    <Reveal delay={160} className="mt-8 lg:mt-10">
+                    <Reveal delay={160} className="mt-6 lg:mt-8">
                         <ProductShowcase
                             products={featuredProducts}
                             currency={t('welcome.products.currency')}
@@ -47,8 +47,8 @@ export function ExploreProducts({
                         />
                     </Reveal>
                 ) : (
-                    <div className="mt-10">
-                        <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-6">
+                        <div className="grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
                             {SHOWCASE.slice(0, 4).map((src, i) => (
                                 <Reveal key={src} delay={i * 100}>
                                     <div className="relative aspect-[4/5] bg-souk-brown/5">
@@ -62,7 +62,7 @@ export function ExploreProducts({
                                 </Reveal>
                             ))}
                         </div>
-                        <p className="mt-12 text-center text-souk-brown-deep/70">
+                        <p className="mt-8 text-center text-souk-brown-deep/70">
                             {t('welcome.products.empty')}
                         </p>
                     </div>

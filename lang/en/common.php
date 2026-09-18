@@ -56,6 +56,7 @@ return [
     // The artisan and trade doors, shown as cards below the form. "Hirfaty
     // Seller" and "Hirfaty Business" are product names and stay in Latin
     // script in every locale, the way brand names normally do.
+    'auth.login.card_seller_brand' => 'Seller',
     'auth.login.card_seller_body' => 'Sell your craft to buyers across Morocco.',
     'auth.login.card_seller_cta' => 'Create a seller account',
     'auth.login.card_business_body' => 'Buying for work? Order at trade prices.',
@@ -104,10 +105,8 @@ return [
     'auth.login.resume_body' => 'We already sent a code to :email.',
     'auth.login.resume_cta' => 'Continue where I left off',
 
-    // ── Hirfaty Seller / Hirfaty Business holding pages ─────────────────
+    // ── Hirfaty Business holding page ───────────────────────────────────
     'auth.login.placeholder_soon' => 'Coming soon',
-    'auth.login.placeholder_seller_title' => 'Artisan signup is not open yet.',
-    'auth.login.placeholder_seller_body' => 'We are building a proper home for workshops — your shop, your pieces, your earnings. Tell us about your craft and we will come to you the moment it opens.',
     'auth.login.placeholder_business_title' => 'Trade accounts are opened by hand.',
     'auth.login.placeholder_business_body' => 'Wholesale pricing is reviewed before it is granted, so business accounts are not self-serve yet. Get in touch and we will set yours up. Already shopping with us? You can request trade access from your account.',
     'auth.login.placeholder_contact' => 'Get in touch',
@@ -132,7 +131,7 @@ return [
     'auth.login.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
     'auth.login.details_title' => 'Almost',
     'auth.login.details_title_accent' => 'there',
-    'auth.login.details_subtitle' => 'Just your name, a phone number for deliveries and a password.',
+    'auth.login.details_subtitle' => 'Just a password. You can fill in the rest later, from your account.',
     'auth.login.details_submit' => 'Create my account',
     'auth.login.email_confirmed' => 'Email confirmed',
 
@@ -205,4 +204,11 @@ return [
     // `:year` is substituted on the React side with the current year.
     'footer.copyright' => '© :year Hirfaty.com — All rights reserved.',
     'footer.shipping' => 'Delivery throughout Morocco.',
+    // ── Google / Facebook sign-in ───────────────────────────────────────
+    'auth.login.social_divider' => 'or',
+    'auth.login.social_google' => 'Continue with Google',
+    'auth.login.social_facebook' => 'Continue with Facebook',
+    'auth.login.social_failed' => 'Sign-in failed. Please try again.',
+    'auth.login.social_unusable' => 'That account did not give us a confirmed email address. Use your email above instead.',
+    'auth.login.social_banned' => 'This account is suspended. Contact us if you believe this is a mistake.',
 ];

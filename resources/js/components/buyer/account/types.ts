@@ -1,8 +1,11 @@
 import type { Media, OrderStatus } from '@/types';
 
 export interface Buyer {
-    first_name: string;
-    last_name: string;
+    // Nullable: the fast-signup flow (RegistrationCodeService::complete) no
+    // longer collects a name at signup, so a freshly registered buyer has
+    // neither until they fill this section in.
+    first_name: string | null;
+    last_name: string | null;
     email: string | null;
     phone_number: string | null;
     created_at: string;

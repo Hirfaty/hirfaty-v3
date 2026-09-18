@@ -21,9 +21,14 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; color: #78716C; text-align: right; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; text-align: right; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; }
+        .store-head { background: rgba(28,25,23,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { font-size: 10px; color: #78716C; text-align: right; padding: 10px 16px; border-bottom: 1px solid rgba(28,25,23,0.15); }
+        .items-table td { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; text-align: right; }
+        .items-table tr:last-child td { border-bottom: none; }
         .items-table .amount { text-align: left; }
         .totals { margin: 0 0 28px; }
         .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; color: rgba(28,25,23,0.65); flex-direction: row-reverse; }
@@ -59,60 +64,80 @@
             <em>الطريق إليك</em>.
         </h1>
 
+        @php
+            // عملية شراء واحدة، مهما بلغ عدد الورشات التي تشملها — لذا فإن
+            // المجاميع المعروضة هي مجموع كل الطلبات التي قسّمتها
+            // CheckoutService.
+            $subtotal = $orders->sum(fn ($o) => (float) $o->total_amount);
+            $delivery = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $first = $orders->first();
+        @endphp
+
         <p class="body-text">
             مرحباً {{ $user->first_name }}، تلقينا طلبك بنجاح.
-            سيقوم البائع بتحضيره وستصلك رسالة بريد إلكتروني فور شحنه.
+            @if($orders->count() > 1)
+                يشمل طلبك {{ $orders->count() }} ورشات مختلفة، لذا تجده أدناه
+                مفصّلاً متجراً بمتجر — سيقوم كل واحد بتحضير وشحن نصيبه.
+            @else
+                سيقوم البائع بتحضيره وستصلك رسالة بريد إلكتروني فور شحنه.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->reference }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
                 <span class="order-meta-label">رقم الطلب</span>
             </div>
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
-                <span class="order-meta-label">المتجر</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->created_at->format('d/m/Y') }}</span>
+                <span class="order-meta-value">{{ $first->created_at->format('d/m/Y') }}</span>
                 <span class="order-meta-label">التاريخ</span>
             </div>
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $first->shipping_address }}</span>
                 <span class="order-meta-label">عنوان التوصيل</span>
             </div>
         </div>
 
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th style="text-align:left">السعر</th>
-                    <th style="text-align:center">الكمية</th>
-                    <th>المنتج</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td class="amount" style="text-align:left">{{ number_format($item->subtotal, 2) }} د.م</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td>{{ $item->product->name }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        {{-- بطاقة واحدة لكل ورشة، حتى يبقى الشراء من عدة بائعين مقروءاً
+             كطلب واحد متكامل، لا كآخر جزء تمت معالجته فقط. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <div class="store-head">
+                <span class="store-ref">{{ $order->reference }}</span>
+                <span class="store-name">{{ $order->store->store_name }}</span>
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left">السعر</th>
+                        <th style="text-align:center">الكمية</th>
+                        <th>المنتج</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->items as $item)
+                    <tr>
+                        <td class="amount" style="text-align:left">{{ number_format($item->subtotal, 2) }} د.م TTC</td>
+                        <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
+                        <td>{{ $item->product->name }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endforeach
 
         <div class="totals">
             <div class="total-row">
-                <span>{{ number_format($order->total_amount, 2) }} د.م</span>
+                <span>{{ number_format($subtotal, 2) }} د.م TTC</span>
                 <span>المجموع الفرعي</span>
             </div>
             <div class="total-row">
-                <span>{{ number_format($order->amana_fee, 2) }} د.م</span>
+                <span>{{ number_format($delivery, 2) }} د.م TTC</span>
                 <span>توصيل أمانة</span>
             </div>
             <div class="total-row final">
-                <span>{{ number_format($order->total_amount, 2) }} د.م</span>
+                <span>{{ number_format($subtotal + $delivery, 2) }} د.م TTC</span>
                 <span>الإجمالي</span>
             </div>
         </div>
@@ -126,8 +151,8 @@
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
-                ← تتبع طلبي
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
+                ← تتبع طلباتي
             </a>
         </div>
 
@@ -137,11 +162,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number">1</div>
-                <p class="step-text"><strong>يحضر البائع</strong> طلبك ويسلمه لأمانة.</p>
+                <p class="step-text"><strong>يحضر كل بائع</strong> نصيبه من طلبك ويسلمه لأمانة.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>ستتلقى بريداً إلكترونياً</strong> برقم تتبع أمانة.</p>
+                <p class="step-text"><strong>ستتلقى بريداً إلكترونياً</strong> برقم تتبع أمانة لكل نصيب.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>

@@ -118,16 +118,29 @@ class HandleInertiaRequests extends Middleware
         $locale = app()->getLocale();
 
         return Cache::remember(
-            "nav_categories_{$locale}",
+            Category::NAV_CACHE_KEY.$locale,
             now()->addHour(),
+            // Every top-level craft is listed; a parent's `children` array is
+            // simply empty when it has no subcategories, and the header
+            // decides what to do with that (no flyout to show).
             fn () => Category::whereNull('parent_id')
                 ->orderBy('id')
+                ->with(['children' => fn ($query) => $query->orderBy('id')])
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'slug' => $category->slug,
                     // `name` is a per-locale map on the model; never leak it raw.
                     'translated_name' => $category->translated_name,
+                    // Shown on the homepage "explore by category" tiles.
+                    'image_url' => $category->image_url,
+                    'children' => $category->children
+                        ->map(fn (Category $child) => [
+                            'id' => $child->id,
+                            'slug' => $child->slug,
+                            'translated_name' => $child->translated_name,
+                        ])
+                        ->all(),
                 ])
                 ->all(),
         );

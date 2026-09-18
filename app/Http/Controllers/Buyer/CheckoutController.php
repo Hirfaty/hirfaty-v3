@@ -5,17 +5,19 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Buyer\CheckoutRequest;
 use App\Http\Resources\CartLineResource;
+use App\Models\Address;
 use App\Models\Cart;
 use App\Models\City;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
+use App\Services\DeliveryFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
-    public function show(Request $request)
+    public function show(Request $request, DeliveryFeeService $deliveryFees)
     {
         $cart = Cart::where('user_id', Auth::id())
             ->with([
@@ -54,17 +56,80 @@ class CheckoutController extends Controller
                     'address_line' => $address->address_line,
                     'city_id' => $address->city_id,
                     'city_name' => $address->city?->name,
+                    'postal_code' => $address->postal_code,
+                    'country' => $address->country,
                     'is_default' => $address->is_default,
                 ]),
 
             /*
-             * Fallback for the phone field when the chosen address carries
-             * none — an address saved before the number was mandatory, or a
-             * brand-new one. Saves the buyer retyping what the account
-             * already knows.
+             * What the account already knows, so the form opens part-filled.
+             * Every field here is nullable: signup collects only a password now
+             * (RegistrationCodeService::complete), so a buyer can reach
+             * checkout with nothing but an email — the page treats these as
+             * blanks to fill rather than values to display.
+             *
+             * `email` is along for display only. It is the buyer's sign-in
+             * identity, locked on /account for the same reason; letting
+             * checkout edit it would either do nothing or change how they log
+             * in.
              */
-            'accountPhone' => $user->phone_number,
+            'customer' => [
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'phone' => $user->phone_number,
+            ],
+
+            /*
+             * Whitelisted server-side in CheckoutRequest and shared from there,
+             * so the page can only offer a method the server will actually
+             * accept. One entry today; see that constant.
+             */
+            'paymentMethods' => CheckoutRequest::PAYMENT_METHODS,
+
+            'defaultCountry' => Address::DEFAULT_COUNTRY,
+
+            /*
+             * Amana's rate card, handed over whole. Delivery is priced per
+             * Moroccan city and per foreign country, so the page needs the
+             * figures to move the total the moment the destination changes —
+             * asking the server on every change would put a round-trip between
+             * picking a city and seeing what it costs. CheckoutService
+             * re-resolves the same fee when the order is placed, so what is
+             * here is a quote and never the bill.
+             */
+            'deliveryRates' => $deliveryFees->rateCard(),
         ]);
+    }
+
+    /**
+     * "Apply" on the discount code field.
+     *
+     * A deliberate stub. There is no coupon table, model or redemption rule in
+     * this app yet, and inventing one here would mean deciding — silently and
+     * in a controller — how a basket-wide discount is split across the several
+     * per-store orders CheckoutService creates, and which party absorbs it in
+     * each seller's Earning row. That is a pricing decision, not a checkout
+     * one.
+     *
+     * So the field is real, reachable and honest about rejecting everything,
+     * rather than absent from a design that calls for it or, worse, wired to
+     * something that appears to discount and does not.
+     */
+    public function applyCoupon(Request $request)
+    {
+        $request->validate(['code' => ['required', 'string', 'max:40']]);
+
+        /*
+         * Into its own error bag, not the shared one: the checkout form lives
+         * on the same page, and an unknown code must not light up as a
+         * validation failure against the delivery fields the buyer has already
+         * filled in correctly.
+         */
+        return back()->withErrors(
+            ['code' => __('buyer.checkout.err_coupon_unknown')],
+            'coupon',
+        );
     }
 
     public function store(

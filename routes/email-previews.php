@@ -4,12 +4,19 @@ use App\Concerns\GeneratesEmailCodes;
 use App\Models\Order;
 
 Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
-    $order = Order::with(['store', 'items.product', 'buyer'])->first();
-    $user = $order->buyer;
+    // A single checkout can span several stores (CheckoutService splits one
+    // cart into one Order per store), so the preview mirrors that: every order
+    // sharing the first one's group_reference, the same set OrderPlaced mails.
+    $first = Order::with(['store', 'items.product', 'buyer'])->firstOrFail();
+    $orders = Order::where('group_reference', $first->group_reference)
+        ->with(['store', 'items.product'])
+        ->get();
+    $user = $first->buyer;
     $user->locale = $locale;
 
     return view("emails.buyer.order-placed.{$locale}", [
-        'order' => $order,
+        'orders' => $orders,
+        'reference' => $first->group_reference,
         'user' => $user,
     ]);
 })->middleware('auth');
@@ -29,6 +36,38 @@ Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) 
     $user->locale = $locale;
 
     return view("emails.buyer.order-status.cancelled.{$locale}", compact('order', 'user'));
+})->middleware('auth');
+
+/*
+ * The rest of the order-status lifecycle: confirmed, shipped, delivered.
+ * Same shape as /preview/email/buyer/cancelled above, one route per event
+ * since each needs slightly different mock state on the order (a tracking
+ * number for shipped, a delivered_at for delivered).
+ */
+Route::get('/preview/email/buyer/confirmed/{locale}', function (string $locale) {
+    $order = Order::with(['store', 'buyer', 'items.product'])->first();
+    $user = $order->buyer;
+    $user->locale = $locale;
+
+    return view("emails.buyer.order-status.confirmed.{$locale}", compact('order', 'user'));
+})->middleware('auth');
+
+Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
+    $order = Order::with(['store', 'buyer', 'items.product'])->first();
+    $order->tracking_number = 'AMN-2K8F4M9Q';
+    $user = $order->buyer;
+    $user->locale = $locale;
+
+    return view("emails.buyer.order-status.shipped.{$locale}", compact('order', 'user'));
+})->middleware('auth');
+
+Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) {
+    $order = Order::with(['store', 'buyer', 'items.product'])->first();
+    $order->delivered_at = now();
+    $user = $order->buyer;
+    $user->locale = $locale;
+
+    return view("emails.buyer.order-status.delivered.{$locale}", compact('order', 'user'));
 })->middleware('auth');
 
 /*

@@ -17,13 +17,14 @@ return [
     'menu' => 'Menu',
     'language' => 'Language',
 
-    // ── Cart dropdown ──────────────────────────────────────────────
+    // ── Cart drawer ────────────────────────────────────────────────
     'cart_aria' => 'Cart',
     'cart_title' => 'Your cart',
+    'cart_count' => ':count item(s)',
     'cart_empty' => 'Your cart is empty.',
     'cart_qty' => 'Qty :count',
     'cart_subtotal' => 'Subtotal',
-    'cart_checkout' => 'Checkout',
+    'cart_view' => 'View cart',
 
     // ── Search panel ───────────────────────────────────────────────
     'search_placeholder' => 'Search for a piece, a craft, an artisan…',

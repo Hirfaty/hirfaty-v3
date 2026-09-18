@@ -146,7 +146,7 @@ export default function OneWorkshop() {
     const { t } = useTranslation();
 
     return (
-        <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-8 lg:py-8">
+        <section className="relative overflow-hidden border-y border-souk-brown/10 bg-souk-paper py-6 lg:py-6">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
@@ -176,7 +176,7 @@ export default function OneWorkshop() {
                  * it reads as a story rather than as a squeezed
                  * desktop layout.
                  */}
-                <div className="mt-20 grid items-center gap-14 lg:mt-24 lg:grid-cols-[1fr_auto_1fr] lg:gap-0">
+                <div className="mt-10 grid items-center gap-14 lg:mt-14 lg:grid-cols-[1fr_auto_1fr] lg:gap-0">
                     {/* ── Retail branch ── */}
                     <AudienceBranch
                         side="start"
@@ -226,7 +226,7 @@ export default function OneWorkshop() {
                 </div>
 
                 <Reveal delay={220}>
-                    <div className="mt-20 text-center">
+                    <div className="mt-10 text-center">
                         <Link
                             href="/seller/onboarding"
                             className="group inline-flex items-center gap-3 rounded-sm bg-souk-brown px-9 py-4 font-display text-lg text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep"

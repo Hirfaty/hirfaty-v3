@@ -6,11 +6,7 @@ import {
     EllipsisVertical,
     Eye,
     ImageOff,
-    Lock,
     Package,
-    Pencil,
-    PlusCircle,
-    Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
@@ -42,7 +38,13 @@ interface ProductRow {
     status: string;
     rejection_reason: string | null;
     created_at: string;
-    category: { id: number; name: string } | null;
+    /*
+     * `name` is a per-locale map on the model (Category casts it to an array),
+     * never a string — rendering it directly threw "objects are not valid as a
+     * React child" and blanked the whole page. `translated_name` is the
+     * resolved string Category appends for exactly this.
+     */
+    category: { id: number; translated_name: string } | null;
     images: Array<{ url: string }>;
 }
 
@@ -67,41 +69,14 @@ const money = (n: number) =>
 const Index = ({
     products,
     flash,
-    sellerStore,
 }: PageProps & { products: PaginatedData<ProductRow> }) => {
-    const canSell = sellerStore?.can_sell ?? false;
-
-    /*
-     * `store.sellable` redirects here with a flash when a seller reaches a
-     * blocked route directly (a bookmarked /create, say). Surfacing it means
-     * the bounce is explained rather than looking like a dead link.
-     */
+    // Nothing on this page writes, but a flashed error can still arrive from
+    // elsewhere in the seller area — surface it rather than swallow it.
     useEffect(() => {
         if (flash?.error) {
             toast.error(flash.error);
         }
     }, [flash?.error]);
-
-    const handleDelete = (product: ProductRow) => {
-        if (
-            confirm(
-                `Supprimer « ${product.name} » ? Cette action est irréversible.`,
-            )
-        ) {
-            router.delete(route('seller.products.destroy', product.id), {
-                preserveScroll: true,
-                onSuccess: (page) => {
-                    const f = (page.props as unknown as PageProps).flash;
-
-                    if (f?.error) {
-                        toast.error(f.error);
-                    } else if (f?.success) {
-                        toast.success(f.success);
-                    }
-                },
-            });
-        }
-    };
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -117,38 +92,17 @@ const Index = ({
                         {products.total > 1 ? 's' : ''} dans votre catalogue.
                     </p>
                 </div>
-
-                {/*
-                    Disabled-with-a-reason rather than hidden: this is the
-                    screen a blocked seller is redirected to, so the button
-                    belongs where they expect it and says why it is inert.
-                 */}
-                {canSell ? (
-                    <Link
-                        href={route('seller.products.create')}
-                        className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
-                    >
-                        <PlusCircle className="h-4 w-4" />
-                        Ajouter un produit
-                    </Link>
-                ) : (
-                    <span
-                        title="Votre atelier doit être complété et validé par Hirfaty avant de pouvoir publier."
-                        className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-border bg-muted px-4 py-2.5 text-sm font-medium text-ink-soft"
-                    >
-                        <Lock className="h-4 w-4" />
-                        Ajouter un produit
-                    </span>
-                )}
             </header>
 
-            {/* Standing explanation of the product review step, so "En revue"
-                on a row below is never a surprise. */}
+            {/* Says who files a listing, so an artisan with an empty
+                catalogue knows to expect a call rather than to go looking
+                for an "add a product" button that no longer exists. */}
             <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-5 py-3.5 shadow-sm">
                 <Clock className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
                 <p className="text-sm text-ink-soft">
-                    Chaque produit est relu par l’équipe Hirfaty avant d’être
-                    visible par les acheteurs. Comptez un à deux jours ouvrés.
+                    Vos produits sont publiés par l’équipe Hirfaty : nous vous
+                    contactons pour rassembler photos, prix et descriptions,
+                    puis la pièce apparaît ici une fois en ligne.
                 </p>
             </div>
 
@@ -175,9 +129,9 @@ const Index = ({
                                 >
                                     <Package className="mx-auto h-8 w-8 text-ink/15" />
                                     <p className="mt-3 text-sm text-ink-soft">
-                                        {canSell
-                                            ? 'Aucun produit pour le moment.'
-                                            : 'Votre atelier doit être validé avant de pouvoir ajouter des produits.'}
+                                        Aucun produit pour le moment. L’équipe
+                                        Hirfaty vous contactera pour publier vos
+                                        premières pièces.
                                     </p>
                                 </TableCell>
                             </TableRow>
@@ -230,7 +184,8 @@ const Index = ({
                                         </TableCell>
 
                                         <TableCell className="text-sm text-ink-soft">
-                                            {product.category?.name ?? '—'}
+                                            {product.category
+                                                ?.translated_name ?? '—'}
                                         </TableCell>
 
                                         <TableCell>
@@ -295,40 +250,12 @@ const Index = ({
                                                         </Link>
                                                     </DropdownMenuItem>
 
-                                                    {/* Edit and delete are
-                                                        blocked server-side by
-                                                        `store.sellable`; hiding
-                                                        them avoids offering a
-                                                        link that only bounces. */}
-                                                    {canSell && (
-                                                        <>
-                                                            <DropdownMenuItem
-                                                                asChild
-                                                            >
-                                                                <Link
-                                                                    href={route(
-                                                                        'seller.products.edit',
-                                                                        product.id,
-                                                                    )}
-                                                                    className="flex items-center gap-2"
-                                                                >
-                                                                    <Pencil className="h-4 w-4" />
-                                                                    Modifier
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        product,
-                                                                    )
-                                                                }
-                                                                className="flex items-center gap-2 text-destructive"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                                Supprimer
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
+                                                    {/* No edit or delete:
+                                                        listings are filed and
+                                                        maintained by the
+                                                        Hirfaty team, so there
+                                                        is no seller-side route
+                                                        left to link to. */}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

@@ -41,8 +41,10 @@ class CartLineResource extends JsonResource
             'name' => $this->product?->name ?? '',
             'slug' => $this->product?->slug,
 
-            // Grouping key for the per-store delivery fee: checkout splits one
-            // basket into an order per store and charges Amana once each.
+            // Checkout still splits one basket into an order per store for
+            // fulfilment (see CheckoutService), even though the delivery
+            // charge itself is now a single flat fee for the whole basket
+            // rather than one per store.
             'store_id' => $this->product?->store_id,
             'store_name' => $this->product?->store?->store_name ?? '',
 

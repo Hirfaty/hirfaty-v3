@@ -21,9 +21,14 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; }
+        .store-head { background: rgba(28,25,23,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 10px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); }
+        .items-table td { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .items-table tr:last-child td { border-bottom: none; }
         .items-table .amount { text-align: right; }
         .totals { margin: 0 0 28px; }
         .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; color: rgba(28,25,23,0.65); }
@@ -59,68 +64,86 @@
             <em>en route</em>.
         </h1>
 
+        @php
+            // Un seul achat, même s'il touche plusieurs ateliers — les totaux
+            // affichés sont donc la somme de toutes les commandes que
+            // CheckoutService en a tirées.
+            $subtotal = $orders->sum(fn ($o) => (float) $o->total_amount);
+            $delivery = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $first = $orders->first();
+        @endphp
+
         <p class="body-text">
             Bonjour {{ $user->first_name }}, nous avons bien reçu votre commande.
-            Le vendeur va la préparer et vous recevrez un email dès qu'elle sera expédiée.
+            @if($orders->count() > 1)
+                Elle concerne {{ $orders->count() }} ateliers différents, elle
+                est donc détaillée ci-dessous boutique par boutique — chacune
+                préparera et expédiera sa propre part.
+            @else
+                Le vendeur va la préparer et vous recevrez un email dès qu'elle sera expédiée.
+            @endif
         </p>
 
-        {{-- Order meta --}}
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Numéro de commande</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Boutique</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Date</span>
-                <span class="order-meta-value">{{ $order->created_at->format('d/m/Y à H:i') }}</span>
+                <span class="order-meta-value">{{ $first->created_at->format('d/m/Y à H:i') }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Livraison à</span>
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $first->shipping_address }}</span>
             </div>
         </div>
 
-        {{-- Items --}}
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Produit</th>
-                    <th style="text-align:center">Qté</th>
-                    <th style="text-align:right">Prix</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td>{{ $item->product->name }}</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td class="amount">{{ number_format($item->subtotal, 2) }} MAD</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        {{-- Un bloc par atelier, pour qu'un achat auprès de plusieurs
+             vendeurs reste lisible comme un seul et même achat, et pas
+             seulement le dernier traité. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <div class="store-head">
+                <span class="store-name">{{ $order->store->store_name }}</span>
+                <span class="store-ref">{{ $order->reference }}</span>
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th style="text-align:center">Qté</th>
+                        <th style="text-align:right">Prix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->items as $item)
+                    <tr>
+                        <td>{{ $item->product->name }}</td>
+                        <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
+                        <td class="amount">{{ number_format($item->subtotal, 2) }} MAD TTC</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endforeach
 
-        {{-- Totals --}}
         <div class="totals">
             <div class="total-row">
                 <span>Sous-total</span>
-                <span>{{ number_format($order->total_amount, 2) }} MAD</span>
+                <span>{{ number_format($subtotal, 2) }} MAD TTC</span>
             </div>
             <div class="total-row">
                 <span>Livraison Amana</span>
-                <span>{{ number_format($order->amana_fee, 2) }} MAD</span>
+                <span>{{ number_format($delivery, 2) }} MAD TTC</span>
             </div>
             <div class="total-row final">
                 <span>Total</span>
-                <span>{{ number_format($order->total_amount, 2) }} MAD</span>
+                <span>{{ number_format($subtotal + $delivery, 2) }} MAD TTC</span>
             </div>
         </div>
 
-        {{-- Shipping info --}}
         <div class="shipping-box">
             <p class="label">Livraison via Amana</p>
             <p>
@@ -130,8 +153,8 @@
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
-                Suivre ma commande →
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
+                Suivre ma commande{{ $orders->count() > 1 ? 's' : '' }} →
             </a>
         </div>
 
@@ -141,11 +164,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number">1</div>
-                <p class="step-text"><strong>Le vendeur prépare</strong> votre commande et la remet à Amana.</p>
+                <p class="step-text"><strong>Chaque vendeur prépare</strong> sa part de votre commande et la remet à Amana.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>Vous recevrez un email</strong> avec votre numéro de suivi Amana.</p>
+                <p class="step-text"><strong>Vous recevrez un email</strong> avec un numéro de suivi Amana pour chaque part.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>

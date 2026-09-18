@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int $id
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Cache;
  * @property-read string $translated_name
  * @property string $slug
  * @property int|null $parent_id
- * @property string|null $icon
+ * @property string|null $image Storage path on the default disk; top-level categories only.
+ * @property-read string|null $image_url
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  *
@@ -22,7 +24,6 @@ use Illuminate\Support\Facades\Cache;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereIcon($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereParentId($value)
@@ -31,9 +32,16 @@ use Illuminate\Support\Facades\Cache;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name', 'slug', 'parent_id', 'icon'])]
+#[Fillable(['name', 'slug', 'parent_id', 'image'])]
 class Category extends Model
 {
+    /**
+     * Header menu cache, one entry per locale. Versioned because the cached
+     * shape has changed over time and a stale entry of the old shape crashes
+     * the header — bump the version whenever the payload changes.
+     */
+    public const NAV_CACHE_KEY = 'nav_categories_v3_';
+
     /**
      * Locales a category name must be available in.
      */
@@ -48,7 +56,7 @@ class Category extends Model
      * Always expose the resolved name so any serialised Category (Inertia props,
      * JSON) carries a display string — `name` itself is a per-locale map.
      */
-    protected $appends = ['translated_name'];
+    protected $appends = ['translated_name', 'image_url'];
 
     /**
      * The header's category menu is cached per locale on the hot path of every
@@ -59,7 +67,7 @@ class Category extends Model
     {
         $forget = function (): void {
             foreach (self::LOCALES as $locale) {
-                Cache::forget("nav_categories_{$locale}");
+                Cache::forget(self::NAV_CACHE_KEY.$locale);
             }
         };
 
@@ -94,6 +102,13 @@ class Category extends Model
     protected function translatedName(): Attribute
     {
         return Attribute::get(fn (): string => $this->nameFor());
+    }
+
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->image
+            ? Storage::disk(config('filesystems.default'))->url($this->image)
+            : null);
     }
 
     public function stores()

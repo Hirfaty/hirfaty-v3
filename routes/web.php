@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Auth\LoginCodeController;
 use App\Http\Controllers\Auth\LoginIdentifyController;
 use App\Http\Controllers\Auth\RegistrationController;
+use App\Http\Controllers\Auth\SellerRegistrationController;
+use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\BrochureController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
@@ -27,14 +29,15 @@ use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
-use App\Http\Controllers\Seller\StoreSetupController;
+use App\Http\Controllers\Seller\WelcomeController as SellerWelcomeController;
 use App\Models\User;
+use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 
 // Static marketing page — no backend data, so no dedicated controller.
-// Route::inertia('/about', 'about')->name('about');
+Route::inertia('/about', 'about')->name('about');
 
 /*
  * The two pages the footer links to. Static: all their copy comes from
@@ -136,32 +139,43 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // Brochure leads — read-only, see Admin\BrochureLeadController.
         Route::get('/brochure-leads', [Admin\BrochureLeadController::class, 'index'])->name('brochure-leads.index');
 
+        // Newsletter subscribers — read-only, see Admin\NewsletterSubscriberController.
+        Route::get('/newsletter-subscribers', [Admin\NewsletterSubscriberController::class, 'index'])->name('newsletter-subscribers.index');
+
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
         Route::post('/cities', [Admin\CityController::class, 'store'])->name('cities.store');
         Route::patch('/cities/{city}', [Admin\CityController::class, 'update'])->name('cities.update');
         Route::delete('/cities/{city}', [Admin\CityController::class, 'destroy'])->name('cities.destroy');
+
+        /*
+         * Amana's rate card. Index only — these are Amana's figures, loaded by
+         * AmanaDeliveryRateSeeder, so there is deliberately no route here that
+         * could edit or delete one. See Admin\DeliveryRateController.
+         */
+        Route::get('/delivery-rates', [Admin\DeliveryRateController::class, 'index'])->name('delivery-rates.index');
     });
 
-// Seller
+/*
+ * Seller.
+ *
+ * One group, not the two this used to be. The split existed so `/setup-store`
+ * could be reached by a seller who had no shop yet while `store.setup` bounced
+ * them out of everything else — but a seller with no shop is no longer a state
+ * that occurs: signup creates the account and the workshop in one transaction
+ * (RegistrationCodeService::completeSeller), and admin promotion has always
+ * created one too (Admin\UserController). With no such seller to catch, both
+ * the wizard and the middleware guarding it were dead weight.
+ */
 Route::middleware(['auth', 'verified', 'role:seller'])
     ->prefix('seller')
     ->name('seller.')
     ->group(function () {
-        // Set up Store (Must be accessible even if store is not setup)
-        Route::get('/setup-store', [StoreSetupController::class, 'show'])->name('setup.store');
-        Route::post('/setup-store', [StoreSetupController::class, 'store']);
-    });
 
-Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
-    ->prefix('seller')
-    ->name('seller.')
-    ->group(function () {
-
-        // Where setup-store lands once the shop exists. In this group, not the
-        // one above: it is the confirmation for a shop that was just created,
-        // so `store.setup` passing is exactly the precondition.
-        Route::get('/store-created', [StoreSetupController::class, 'created'])->name('store.created');
+        // Where seller signup lands: the shop is filed for review and nothing
+        // publishes until an admin clears it. Forwards itself to the
+        // dashboard — see Seller\WelcomeController.
+        Route::get('/welcome', [SellerWelcomeController::class, 'index'])->name('welcome');
 
         // Dashboard. Was a redirect to /seller/orders while the real overview
         // sat unrouted; the page exists and is the natural landing, so it is
@@ -169,29 +183,25 @@ Route::middleware(['auth', 'verified', 'role:seller', 'store.setup'])
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         /*
-         * Products. Reading the catalogue is always allowed — that page is
-         * where the status bar explains what is still outstanding. Anything
-         * that creates or changes a listing is gated on the shop being both
-         * complete and approved (Store::canSell()).
+         * Products, read-only. Sellers no longer file their own listings —
+         * Hirfaty's team creates every product for them through
+         * Admin\ProductController after speaking to the artisan, so all that
+         * is left here is the shop's own view of its catalogue.
+         *
+         * The write routes (and the `store.sellable` gate on them) are gone
+         * rather than merely unlinked, so there is no seller-facing way into
+         * the catalogue left for a crafted request to find.
          */
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
-
         /*
-         * `create` stays above `{product}` or it is matched as an id — which
-         * on Postgres errors on the bigint cast rather than 404ing cleanly.
+         * `whereNumber` matters now that the write routes are gone: a stale
+         * bookmark to /seller/products/create would otherwise be matched as an
+         * id, and on Postgres casting "create" to the bigint key errors out
+         * instead of 404ing cleanly.
          */
-        Route::middleware('store.sellable')->group(function () {
-            Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
-            Route::post('products', [ProductController::class, 'store'])->name('products.store');
-            Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
-            // One route matching both verbs, not two separate declarations:
-            // Wayfinder generates a helper per route, and two routes sharing
-            // the name emit a duplicate key into the generated action file.
-            Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
-            Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-        });
-
-        Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
+        Route::get('products/{product}', [ProductController::class, 'show'])
+            ->whereNumber('product')
+            ->name('products.show');
 
         // Orders
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
@@ -230,6 +240,12 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    // Discount codes are not implemented — see CheckoutController::applyCoupon
+    // for why the field exists anyway. Throttled because it is a guessing game
+    // until it is real, and will still be one afterwards.
+    Route::post('/checkout/coupon', [CheckoutController::class, 'applyCoupon'])
+        ->middleware('throttle:10,1')
+        ->name('checkout.coupon');
 
     /*
      * The account area: four sibling pages sharing one left sidebar, defined
@@ -412,11 +428,49 @@ Route::prefix('login')->name('login.')->group(function () {
 });
 
 /*
- * The two non-shopper doors, both holding pages. Off the /login prefix on
- * purpose — `/login/seller` would read as "sign in as a seller", which is the
- * opposite of what these are. See AccountKindController.
+ * "Continue with Google / Facebook" — the buttons under the email field.
+ *
+ * Outside the /login prefix because the provider redirects back to a fixed,
+ * registered URI and those are easier to keep stable when they are not nested
+ * under a flow that may be restructured.
+ *
+ * `{provider}` is constrained to the two names this app actually supports, so
+ * an unknown driver 404s at the router rather than reaching Socialite —
+ * SocialAuthController re-checks anyway, since a route constraint permits a
+ * provider that has no credentials configured.
+ *
+ * Throttled: the redirect leg is unauthenticated and cheap to spam, and the
+ * callback leg triggers an outbound token exchange with the provider.
  */
-Route::get('/sell', [AccountKindController::class, 'seller'])->name('sell');
+Route::prefix('auth/{provider}')
+    ->whereIn('provider', SocialAuthService::PROVIDERS)
+    ->middleware('throttle:20,1')
+    ->group(function () {
+        Route::get('/redirect', [SocialAuthController::class, 'redirect'])->name('social.redirect');
+        Route::get('/callback', [SocialAuthController::class, 'callback'])->name('social.callback');
+    });
+
+/*
+ * The two non-shopper doors. Off the /login prefix on purpose —
+ * `/login/seller` would read as "sign in as a seller", which is the opposite
+ * of what these are: they are where someone goes to apply for an account they
+ * do not have.
+ *
+ * `/sell` is a real signup now. It asks for an email and hands off to the same
+ * code flow /login uses, tagged with the seller intent — see
+ * SellerRegistrationController. Throttled like every other unauthenticated
+ * endpoint that costs an email.
+ *
+ * `/business` is still a holding page: `professional_buyer` decides which
+ * price list an account is billed on, so it is deliberately impossible to
+ * self-assign and needs its vetting step designed rather than bolted on.
+ */
+Route::get('/sell', [SellerRegistrationController::class, 'show'])->name('sell');
+
+Route::post('/sell', [SellerRegistrationController::class, 'identify'])
+    ->middleware('throttle:10,1')
+    ->name('sell.identify');
+
 Route::get('/business', [AccountKindController::class, 'business'])->name('business');
 
 Route::post('/locale/{locale}', function (string $locale) {

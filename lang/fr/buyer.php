@@ -152,6 +152,7 @@ return [
     'onboarding.finish' => 'Découvrir le marché',
 
     'onboarding.welcome.title' => 'Bienvenue, :name',
+    'onboarding.welcome.title_generic' => 'Bienvenue',
     'onboarding.welcome.body' => 'Hirfaty rassemble les artisans du Maroc en un seul endroit. Deux minutes pour faire connaissance, puis le marché est à vous.',
     'onboarding.welcome.point_direct' => 'Vous achetez directement à l\'artisan — sans intermédiaire.',
     'onboarding.welcome.point_authentic' => 'Chaque pièce est faite main, chaque boutique est vérifiée par notre équipe.',
@@ -222,6 +223,7 @@ return [
     'account.section_address_desc' => 'Où vos commandes sont envoyées. Le paiement la renseigne pour vous.',
 
     'account.field_full_name' => 'Nom complet',
+    'account.field_full_name_empty' => 'Ajoutez votre nom',
     'account.field_first_name' => 'Prénom',
     'account.field_last_name' => 'Nom',
     'account.field_email' => 'Adresse e-mail',
@@ -292,13 +294,12 @@ return [
     'cart.summary' => 'Résumé',
     'cart.subtotal' => 'Sous-total',
     'cart.savings' => 'Économies',
-    'cart.delivery' => 'Livraison Amana',
-    'cart.delivery_one_store' => 'Une boutique',
-    'cart.delivery_many_stores' => ':count boutiques',
     'cart.total' => 'Total',
     'cart.checkout' => 'Passer commande',
     'cart.secure_payment' => 'Paiement sécurisé',
     'cart.split_note' => 'Votre panier sera réparti en une commande par atelier.',
+
+    'cart.you_might_also_like' => 'Vous aimerez aussi',
 
     // ── Commande ─────────────────────────────────────────────────────────
     'checkout.title' => 'Finaliser la commande',
@@ -331,7 +332,7 @@ return [
 
     'checkout.summary' => 'Récapitulatif',
     'checkout.products' => 'Produits (:count)',
-    'checkout.delivery_fee' => 'Frais de livraison (:count colis)',
+    'checkout.delivery_fee' => 'Frais de livraison',
     'checkout.total' => 'Total',
     'checkout.cod_note' => 'Paiement à la livraison. Vous réglez directement le livreur Amana à réception de vos colis.',
     'checkout.confirm' => 'Confirmer la commande',
@@ -341,6 +342,27 @@ return [
     'checkout.err_city' => 'Choisissez une ville.',
     'checkout.err_phone' => 'Un numéro de téléphone est requis pour la livraison.',
     'checkout.err_empty' => 'Votre panier est vide.',
+    'checkout.customer_heading' => 'Vos informations',
+    'checkout.first_name' => 'Prénom',
+    'checkout.first_name_placeholder' => 'Sarah',
+    'checkout.last_name' => 'Nom',
+    'checkout.last_name_placeholder' => 'Bennani',
+    'checkout.email' => 'E-mail',
+    'checkout.shipping_heading' => 'Adresse de livraison',
+    'checkout.postal_code' => 'Code postal',
+    'checkout.country' => 'Pays',
+    'checkout.country_ma' => 'Maroc',
+    'checkout.payment_heading' => 'Mode de paiement',
+    'checkout.payment_cod' => 'Paiement à la livraison',
+    'checkout.coupon' => 'Code promo',
+    'checkout.coupon_placeholder' => 'BIENVENUE10',
+    'checkout.coupon_apply' => 'Appliquer',
+    'checkout.err_first_name' => 'Indiquez votre prénom.',
+    'checkout.err_last_name' => 'Indiquez votre nom.',
+    'checkout.err_postal_code' => 'Indiquez un code postal.',
+    'checkout.err_country' => 'Nous livrons uniquement au Maroc pour le moment.',
+    'checkout.err_payment_method' => 'Choisissez un mode de paiement.',
+    'checkout.err_coupon_unknown' => 'Ce code promo n’est pas valide.',
     'checkout.placed' => ':count commande(s) passée(s) avec succès !',
 
     // ── Page boutique ────────────────────────────────────────────────────

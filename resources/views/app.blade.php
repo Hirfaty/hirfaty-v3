@@ -16,10 +16,13 @@
 
         {{-- Didot is self-hosted (see the @font-face block in app.css). Preloaded
              because the browser would otherwise only discover it after parsing
-             the stylesheet, and every glyph on the page is set in it — the text
-             cut for body copy, the titling cut for headings. The bold and italic
-             cuts are left to normal discovery: they appear far less often and
-             preloading all four would just contend for bandwidth.
+             the stylesheet, and it still sets every large heading on the site —
+             the titling cut (`--font-display` / `.font-display` / `h-editorial`)
+             for big titles, the text cut wherever a component opts into it
+             directly. Body copy itself now runs on the sans-serif below; see
+             the `--font-sans` note in app.css for why the split. The bold and
+             italic cuts are left to normal discovery: they appear far less
+             often and preloading all four would just contend for bandwidth.
 
              Via Vite::asset, not a literal /fonts path: the files live under
              resources/ so Vite can fingerprint them, which means the built
@@ -29,13 +32,17 @@
         @endforeach
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        {{-- Arabic only: Didot carries no Arabic glyphs, so the ar locale is
-             routed to Naskh in app.css.
+        {{-- The body/UI sans (`--font-sans`) and, for the ar locale, Naskh
+             (`--font-arabic` — Didot carries no Arabic glyphs at all, so ar is
+             routed to Naskh everywhere in app.css, headings included).
+             Loaded from Bunny rather than self-hosted, same as Naskh already
+             was: neither is a licensed cut the way Didot is, so there is
+             nothing to gain from vendoring the files.
              Bunny's own `family:400,500,700i` list syntax, NOT Google's
              `ital,wght@0,400;1,700` axis syntax: bunny accepts the Google form
              without erroring but silently serves only a couple of the requested
              faces, leaving the rest to be synthesised by the browser. --}}
-        <link href="https://fonts.bunny.net/css?family=noto-naskh-arabic:400,500,600,700" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,400i&family=noto-naskh-arabic:400,500,600,700" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

@@ -333,7 +333,9 @@ export function ShowcaseCard({
                         <>
                             <span className="font-display text-[15px] text-souk-brown">
                                 {onSale ? sale : base}{' '}
-                                <span className="text-[10px]">{currency}</span>
+                                <span className="text-[10px]">
+                                    {currency} TTC
+                                </span>
                             </span>
                             {onSale && (
                                 <span className="text-xs text-souk-brown-deep/45 line-through">

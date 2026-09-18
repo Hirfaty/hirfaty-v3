@@ -56,7 +56,10 @@ export default function StoreStatusBar({
             wrap: 'border-sky-300/70 bg-sky-50 text-sky-900',
             iconClass: 'text-sky-600',
             title: 'Votre atelier est en cours de validation',
-            body: 'Notre équipe le relit — comptez un à deux jours ouvrés. Vous pourrez ajouter des produits dès qu’il sera approuvé.',
+            // Not "vous pourrez ajouter des produits": artisans never file
+            // their own listings — the Hirfaty team does it for them once the
+            // workshop is approved. See Seller\ProductController.
+            body: 'Notre équipe le relit — comptez un à deux jours ouvrés. Nous vous contacterons ensuite pour publier vos premières pièces.',
             cta: 'Voir mon atelier',
         },
         rejected: {

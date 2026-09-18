@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Notifications\OrderCancelled;
-use App\Notifications\OrderConfirmed;
-use App\Notifications\OrderShipped;
+use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -73,7 +71,7 @@ class OrderController extends Controller
         //
     }
 
-    public function updateStatus(Request $request, Order $order)
+    public function updateStatus(Request $request, Order $order, OrderStatusService $orderStatus)
     {
         $this->authorizeOrder($order);
 
@@ -83,35 +81,30 @@ class OrderController extends Controller
             'cancellation_reason' => ['required_if:status,cancelled', 'nullable', 'string', 'max:500'],
         ]);
 
-        // Guard against going backwards
-        $flow = ['pending', 'confirmed', 'shipped', 'delivered'];
-        $currentIndex = array_search($order->status, $flow);
-        $newIndex = array_search($data['status'], $flow);
+        /*
+         * Cancelling isn't a step in the fulfilment flow — it's the buyer or
+         * the seller stepping out of it — so it's exempt from the "forwards
+         * only" guard below. `$flow` doesn't contain 'cancelled', and
+         * array_search() then returns `false`, which PHP's `<=` silently
+         * coerces to true against *any* $currentIndex: without this early
+         * exit, cancelling an order was rejected as "moving backwards" 100%
+         * of the time.
+         */
+        if ($data['status'] !== 'cancelled') {
+            // Guard against going backwards
+            $flow = ['pending', 'confirmed', 'shipped', 'delivered'];
+            $currentIndex = array_search($order->status, $flow);
+            $newIndex = array_search($data['status'], $flow);
 
-        if ($newIndex <= $currentIndex) {
-            return back()->withErrors(['status' => 'Cannot move order backwards.']);
+            if ($newIndex <= $currentIndex) {
+                return back()->withErrors(['status' => 'Cannot move order backwards.']);
+            }
         }
 
-        $order->update([
-            'status' => $data['status'],
+        $orderStatus->transition($order, $data['status'], [
             'tracking_number' => $data['tracking_number'] ?? $order->tracking_number,
             'cancellation_reason' => $data['cancellation_reason'] ?? null,
-            'delivered_at' => $data['status'] === 'delivered' ? now() : $order->delivered_at,
         ]);
-
-        $order->load('store');
-
-        try {
-            match ($data['status']) {
-                'confirmed' => $order->buyer->notify(new OrderConfirmed($order)),
-                'shipped' => $order->buyer->notify(new OrderShipped($order)),
-                'cancelled' => $order->buyer->notify(new OrderCancelled($order)),
-                default => null,
-            };
-        } catch (\Exception $e) {
-            // Log the error but don't fail the request
-            \Log::error('Failed to send order status notification: '.$e->getMessage());
-        }
 
         return back()->with('success', 'Order status updated.');
     }

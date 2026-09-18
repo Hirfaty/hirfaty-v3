@@ -62,20 +62,49 @@ return [
     'setup.terms_and' => 'and the',
     'setup.terms_conditions' => 'terms of use',
 
-    // ── Post-creation confirmation (/seller/store-created) ───────────
-    'created.eyebrow' => 'Workshop created',
-    'created.title' => 'Welcome among Hirfaty’s artisans',
-    'created.body' => '“:name” is registered. Before your pieces appear on the marketplace, our team reviews them one by one.',
+    // ── Artisan signup (/sell) ───────────────────────────────────────
+    'join.page_title' => 'Sell on Hirfaty',
+    'join.quote' => 'Your craft deserves better than a shelf in the souk.',
+    'join.quote_verify' => 'One more moment, and your workshop opens its doors.',
+    'join.quote_details' => 'Buyers come for the object and return for the artisan.',
 
-    'created.steps_title' => 'What happens next',
-    'created.step_add' => 'Add your products — photos, prices, materials and making time.',
-    'created.step_review' => 'Our team reviews each listing, checking the photos and the description. Allow one to two working days.',
-    'created.step_live' => 'Once approved, the piece is published to the marketplace and visible to every buyer.',
+    'join.identify_title' => 'Open your workshop',
+    'join.identify_title_accent' => 'on Hirfaty',
+    'join.identify_subtitle' => 'Sell your pieces across Morocco, with no website to build and no logistics to handle. Start with your email address.',
+    'join.identify_submit' => 'Get started',
+    'join.privacy_note' => 'We’ll send you a six-digit code to confirm your address. No commitment, no opening fee.',
 
-    'created.later_title' => 'No rush',
-    'created.later_body' => 'Your introduction, logo and banner can be filled in whenever you like, from your settings.',
+    'join.point_shop' => 'Your own online shop, in your name, ready in minutes.',
+    'join.point_delivery' => 'Delivery anywhere in Morocco, handled for you.',
+    'join.point_trust' => 'Every workshop verified, so buyers know who they’re buying from.',
 
-    'created.complete_profile' => 'Complete my workshop now',
-    'created.to_dashboard' => 'Go to my dashboard',
-    'created.add_product' => 'Add a first product',
+    'join.section_you' => 'About you',
+    'join.section_shop' => 'Your workshop',
+
+    'join.category_label' => 'Main craft',
+    'join.category_placeholder' => 'Choose a craft',
+    'join.city_label' => 'Workshop city',
+    'join.city_placeholder' => 'Choose a city',
+
+    'join.description_label' => 'About the workshop',
+    'join.description_hint' => 'A few sentences on your techniques and materials. This is what buyers read — and what our team reviews.',
+
+    'join.details_title' => 'Almost there,',
+    'join.details_title_accent' => 'tell us about you',
+    'join.details_subtitle' => 'Your account and your workshop, in one go. Everything stays editable afterwards from your settings.',
+    'join.details_submit' => 'Create my workshop',
+
+    // ── Post-signup confirmation (/seller/welcome) ───────────────────
+    'welcome.eyebrow' => 'Workshop created',
+    'welcome.title' => 'Welcome among Hirfaty’s artisans',
+    'welcome.body' => '“:name” is registered. Our team verifies every workshop before it goes live — allow one to two working days. We’ll email you as soon as it’s done.',
+    'welcome.body_approved' => '“:name” is verified and live. Your pieces can now be published to the marketplace.',
+
+    'welcome.steps_title' => 'What happens next',
+    'welcome.step_review' => 'Our team verifies your workshop: your craft, your city and your introduction.',
+    'welcome.step_add' => 'In the meantime, prepare your products — photos, prices, materials and making time.',
+    'welcome.step_live' => 'Once your workshop is approved, your pieces are published and visible to every buyer.',
+
+    'welcome.to_dashboard' => 'Go to my dashboard',
+    'welcome.redirecting' => 'Redirecting in :seconds s…',
 ];

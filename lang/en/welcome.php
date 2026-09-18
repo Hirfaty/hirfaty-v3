@@ -50,9 +50,8 @@ return [
      */
     'hero.badge_script' => 'حرفتي',
     'hero.badge' => 'My craft · Moroccan artisans',
-    'hero.line1' => 'Where Ancient Craft',
-    'hero.line2' => 'Meets Modern Lives',
-    'hero.lead' => 'Discover Morocco’s living heritage — connect with master artisans, shop authentic handmade goods, and immerse yourself in centuries of tradition.',
+    'hero.line' => 'The Moroccan soul, Signed',
+    'hero.lead' => 'Immerse yourself in the heart of a living, thousand-year-old heritage — meet master artisans and discover their unique creations, living testaments to ancestral traditions.',
     'hero.cta_primary' => 'Shop the marketplace',
     'hero.cta_secondary' => 'Sell on Hirfaty',
     'hero.stat_artisans' => 'Artisans',

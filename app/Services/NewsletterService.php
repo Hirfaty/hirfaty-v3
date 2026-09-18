@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\NewsletterSubscriber;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * The footer's mailing list.
@@ -40,6 +41,21 @@ class NewsletterService
     public function isSubscribed(string $email): bool
     {
         return NewsletterSubscriber::where('email', $this->normalise($email))->exists();
+    }
+
+    /**
+     * The admin list of everyone on the mailing list, newest first.
+     *
+     * `$search` matches on the address only — it is the one field a subscriber
+     * has, there is no name to search against.
+     */
+    public function paginatedSubscribers(?string $search = null): LengthAwarePaginator
+    {
+        return NewsletterSubscriber::query()
+            ->when($search, fn ($query) => $query->where('email', 'like', "%{$search}%"))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
     }
 
     /**

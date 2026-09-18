@@ -152,6 +152,7 @@ return [
     'onboarding.finish' => 'اكتشف السوق',
 
     'onboarding.welcome.title' => 'مرحباً، :name',
+    'onboarding.welcome.title_generic' => 'مرحباً',
     'onboarding.welcome.body' => 'حرفتي تجمع حرفيي المغرب في مكان واحد. دقيقتان للتعارف، ثم السوق بين يديك.',
     'onboarding.welcome.point_direct' => 'تشتري مباشرة من الحرفي — بدون وسيط.',
     'onboarding.welcome.point_authentic' => 'كل قطعة مصنوعة يدوياً، وكل متجر تتحقق منه فريقنا.',
@@ -220,6 +221,7 @@ return [
     'account.section_address_desc' => 'المكان الذي تُرسل إليه طلباتك. يملؤه الأداء تلقائياً.',
 
     'account.field_full_name' => 'الاسم الكامل',
+    'account.field_full_name_empty' => 'أضف اسمك',
     'account.field_first_name' => 'الاسم الشخصي',
     'account.field_last_name' => 'الاسم العائلي',
     'account.field_email' => 'البريد الإلكتروني',
@@ -290,13 +292,12 @@ return [
     'cart.summary' => 'الملخص',
     'cart.subtotal' => 'المجموع الفرعي',
     'cart.savings' => 'التوفير',
-    'cart.delivery' => 'التوصيل عبر أمانة',
-    'cart.delivery_one_store' => 'ورشة واحدة',
-    'cart.delivery_many_stores' => ':count ورشات',
     'cart.total' => 'المجموع',
     'cart.checkout' => 'إتمام الطلب',
     'cart.secure_payment' => 'دفع آمن',
     'cart.split_note' => 'ستُقسَّم سلتك إلى طلب لكل ورشة.',
+
+    'cart.you_might_also_like' => 'قد يعجبك أيضًا',
 
     // ── إتمام الطلب ──────────────────────────────────────────────────────
     'checkout.title' => 'إتمام الطلب',
@@ -329,7 +330,7 @@ return [
 
     'checkout.summary' => 'ملخص الطلب',
     'checkout.products' => 'المنتجات (:count)',
-    'checkout.delivery_fee' => 'رسوم التوصيل (:count طرود)',
+    'checkout.delivery_fee' => 'رسوم التوصيل',
     'checkout.total' => 'المجموع',
     'checkout.cod_note' => 'الدفع عند الاستلام. تدفع مباشرةً لموصّل أمانة عند وصول طرودك.',
     'checkout.confirm' => 'تأكيد الطلب',
@@ -339,6 +340,27 @@ return [
     'checkout.err_city' => 'اختر مدينة.',
     'checkout.err_phone' => 'رقم الهاتف مطلوب للتوصيل.',
     'checkout.err_empty' => 'سلتك فارغة.',
+    'checkout.customer_heading' => 'معلوماتك',
+    'checkout.first_name' => 'الاسم الشخصي',
+    'checkout.first_name_placeholder' => 'سارة',
+    'checkout.last_name' => 'الاسم العائلي',
+    'checkout.last_name_placeholder' => 'بناني',
+    'checkout.email' => 'البريد الإلكتروني',
+    'checkout.shipping_heading' => 'عنوان التوصيل',
+    'checkout.postal_code' => 'الرمز البريدي',
+    'checkout.country' => 'البلد',
+    'checkout.country_ma' => 'المغرب',
+    'checkout.payment_heading' => 'طريقة الدفع',
+    'checkout.payment_cod' => 'الدفع عند التسليم',
+    'checkout.coupon' => 'رمز الخصم',
+    'checkout.coupon_placeholder' => 'WELCOME10',
+    'checkout.coupon_apply' => 'تطبيق',
+    'checkout.err_first_name' => 'أدخل اسمك الشخصي.',
+    'checkout.err_last_name' => 'أدخل اسمك العائلي.',
+    'checkout.err_postal_code' => 'أدخل الرمز البريدي.',
+    'checkout.err_country' => 'نوصّل داخل المغرب فقط في الوقت الحالي.',
+    'checkout.err_payment_method' => 'اختر طريقة الدفع.',
+    'checkout.err_coupon_unknown' => 'رمز الخصم هذا غير صالح.',
     'checkout.placed' => 'تم تسجيل :count طلب بنجاح!',
 
     // ── صفحة المتجر ──────────────────────────────────────────────────────

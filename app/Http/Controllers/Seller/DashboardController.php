@@ -14,11 +14,16 @@ class DashboardController extends Controller
         $user = auth()->user();
         $store = $user->store;
 
-        // Defensive only — `store.setup` middleware already bounces a
-        // storeless seller. The old target here was `seller.store.create`,
-        // a route that has never existed.
+        /*
+         * Defensive only. Every seller has a shop — signup creates both in one
+         * transaction (RegistrationCodeService::completeSeller), and admin
+         * promotion creates one too (Admin\UserController) — so this guards a
+         * row deleted by hand rather than a state the app can reach. There is
+         * no setup wizard to send them to any more; the holding page copes
+         * with a null shop, so it is the honest fallback.
+         */
         if (! $store) {
-            return redirect()->route('seller.setup.store');
+            return redirect()->route('seller.welcome');
         }
 
         $stats = [

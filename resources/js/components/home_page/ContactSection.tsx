@@ -28,7 +28,7 @@ export default function ContactSection() {
     return (
         <section className="relative overflow-hidden">
             <div className="container">
-                <div className="mx-auto grid w-fit items-center gap-14 py-8 lg:grid-cols-2 lg:gap-8">
+                <div className="mx-auto grid w-fit items-center gap-14 py-6 lg:grid-cols-2 lg:gap-8">
                     <Reveal from={isRTL ? 'right' : 'left'}>
                         <h2 className="mt-4 font-display text-[clamp(2rem,4.2vw,3.5rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title">
                             <span className="block">

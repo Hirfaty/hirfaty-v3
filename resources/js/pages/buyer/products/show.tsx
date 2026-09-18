@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useCartSheet } from '@/contexts/CartSheetContext';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useTranslation } from '@/hooks/use-translation';
 import { login } from '@/routes';
@@ -194,10 +195,10 @@ function PriceBlock({
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="font-display text-4xl leading-none text-olive">
                         {money(trade)}
-                        <span className="ms-1.5 text-base">MAD</span>
+                        <span className="ms-1.5 text-base">MAD TTC</span>
                     </span>
                     <span className="text-sm text-souk-brown-deep/50 line-through">
-                        {money(retail)} MAD
+                        {money(retail)} MAD TTC
                     </span>
                     {saving > 0 && (
                         <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
@@ -227,11 +228,11 @@ function PriceBlock({
                 className={`font-display text-[2.6rem] leading-none ${strike ? 'text-terracotta' : 'text-souk-title'}`}
             >
                 {money(retail)}
-                <span className="ms-1.5 text-lg">MAD</span>
+                <span className="ms-1.5 text-lg">MAD TTC</span>
             </span>
             {strike && (
                 <span className="text-base text-souk-brown-deep/45 line-through">
-                    {money(strike)} MAD
+                    {money(strike)} MAD TTC
                 </span>
             )}
         </div>
@@ -352,11 +353,11 @@ function RelatedProductCard({
                         {t('buyer.products.price_coming_soon')}
                     </span>
                 ) : pTrade !== null ? (
-                    <span className="text-olive">{money(pTrade)} MAD</span>
+                    <span className="text-olive">{money(pTrade)} MAD TTC</span>
                 ) : pSale ? (
                     <>
                         <span className="text-terracotta">
-                            {money(Number(p.sale_price))} MAD
+                            {money(Number(p.sale_price))} MAD TTC
                         </span>{' '}
                         <span className="text-xs text-souk-brown-deep/45 line-through">
                             {money(Number(p.base_price))}
@@ -364,7 +365,7 @@ function RelatedProductCard({
                     </>
                 ) : (
                     <span className="text-souk-title">
-                        {money(Number(p.base_price))} MAD
+                        {money(Number(p.base_price))} MAD TTC
                     </span>
                 )}
             </p>
@@ -419,6 +420,8 @@ const ProductDetail = ({
     relatedProducts: DetailProduct[];
 }) => {
     const { t, locale } = useTranslation();
+    /* The drawer SiteHeader mounts — opened once the line is actually in. */
+    const { openCart } = useCartSheet();
     const { auth } = usePage().props as unknown as {
         auth: {
             user: {
@@ -587,11 +590,6 @@ const ProductDetail = ({
         setQty(minQty);
     };
 
-    /** Name the shopper actually chose, for the confirmation message. */
-    const addedLabel = selectedVariant
-        ? `${product.name} — ${selectedVariant.label}`
-        : product.name;
-
     /**
      * Add to cart, or send a guest to sign in first.
      *
@@ -624,10 +622,14 @@ const ProductDetail = ({
             },
             {
                 preserveScroll: true,
-                onSuccess: () =>
-                    toast.success(t('buyer.detail.added_to_cart'), {
-                        description: addedLabel,
-                    }),
+                /*
+                 * The drawer *is* the confirmation — it shows the line that
+                 * just landed, priced, against the rest of the basket. A
+                 * success toast on top of it would say the same thing twice.
+                 * The response carries the refreshed `cart` shared prop, so
+                 * the panel is already current by the time it slides in.
+                 */
+                onSuccess: () => openCart(),
                 /*
                  * The server still refuses on a stock race, a variant pulled
                  * mid-visit, or a quantity under the trade minimum. Surface

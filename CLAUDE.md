@@ -27,10 +27,12 @@ Route helpers and controller actions under `resources/js/routes/` and `resources
 
 1. Routes in `routes/web.php` (plus `routes/settings.php`, `routes/email-previews.php`) are grouped by middleware:
     - `role:super_admin` → `/admin/*`, `Admin\*` controllers, `pages/admin/*`
-    - `role:seller` + `store.setup` → `/seller/*`, `Seller\*` controllers, `pages/seller/*`
+    - `role:seller` → `/seller/*`, `Seller\*` controllers, `pages/seller/*`
     - `role:buyer` → cart/checkout/orders/wishlist, `Buyer\*` controllers, `pages/buyer/*`
     - Public: product listing/detail (`/products`, `/products/{slug}`) work unauthenticated.
-2. `RoleMiddleware` (alias `role`) hard-checks `$user->role` against a single string and 403s otherwise. `EnsureStoreIsSetup` (alias `store.setup`) redirects a seller with no `Store` to `seller.setup.store`.
+2. `RoleMiddleware` (alias `role`) hard-checks `$user->role` against a single string and 403s otherwise. Every seller is guaranteed to *have* a `Store`: signup creates the account and the shop in one transaction, and admin promotion creates one too.
+
+   **Sellers never create products.** Hirfaty's team contacts an artisan after signup and files every listing on their behalf through `Admin\ProductController`; `Seller\ProductController` is read-only (`index` + `show` only). The `EnsureStoreCanSell` middleware (alias `store.sellable`) that used to gate seller writes is still registered in `bootstrap/app.php` but no longer guards any route — `Store::canSell()` itself stays in use for the seller status bar.
 3. Controllers return `Inertia::render('page/path', [...])`, resolving to `resources/js/pages/<page/path>.tsx`.
 4. `HandleInertiaRequests::share()` injects globally on every response: `auth.user`, `flash.{success,error}`, `locale`, `direction`, `translations`, and a lazily-evaluated `cart` (server-side cart summary). New global props go here.
 

@@ -1,23 +1,11 @@
 import { Link, useForm } from '@inertiajs/react';
-import {
-    AlertCircle,
-    ArrowLeft,
-    Check,
-    MapPin,
-    Phone,
-    Plus,
-    ShieldCheck,
-    Truck,
-} from 'lucide-react';
-import type { FormEvent } from 'react';
+import { AlertCircle, ArrowLeft, Banknote, Check, Truck } from 'lucide-react';
+import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
-
-/** Museum-caption label, matching the rest of the storefront. */
-const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
 const LOCALE_TAGS: Record<string, string> = {
     fr: 'fr-MA',
@@ -25,12 +13,46 @@ const LOCALE_TAGS: Record<string, string> = {
     en: 'en-MA',
 };
 
-/** Flat delivery charge, once per workshop — see the cart page. */
-const AMANA_FEE = 20;
+/**
+ * Charged when the chosen destination somehow has no rate on file — mirrors
+ * `DeliveryFeeService::FALLBACK_FEE` so the quote and the bill agree even in
+ * that corner. One admin-run delivery covers the whole basket, so whatever
+ * figure applies is charged once, not per workshop or per product.
+ */
+const FALLBACK_DELIVERY_FEE = 20;
 
-/** Shared by every text input on this page. */
+/** Amana's rate card, as CheckoutController hands it over. */
+type DeliveryRates = {
+    countries: { code: string; name: string; fee: number | null }[];
+    /** Per Moroccan city, keyed by city id. */
+    cityFees: Record<string, number>;
+};
+
+/**
+ * Shared by every control on this page.
+ *
+ * Deliberately flat and light: the reference design leans on a pale field on
+ * white rather than on borders, so the eye follows the labels down the column
+ * instead of tracing boxes.
+ */
 const FIELD =
-    'w-full rounded-xl border border-souk-brown/20 bg-white/70 px-4 py-3 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/40 focus:border-souk-brown focus:outline-none';
+    'w-full rounded-lg border border-souk-brown/15 bg-souk-paper/60 px-3.5 py-2.5 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/35 focus:border-souk-brown focus:bg-white focus:outline-none';
+
+/** Same box, but for something the buyer cannot change here. */
+const FIELD_LOCKED =
+    'w-full cursor-not-allowed rounded-lg border border-souk-brown/10 bg-souk-brown/[0.04] px-3.5 py-2.5 text-sm text-souk-brown-deep/60';
+
+/**
+ * Opts a `<label>` out of the global eyebrow treatment.
+ *
+ * app.css styles every label in the app as 11px, wide-tracked and UPPERCASE.
+ * That is right for a one-word field caption and wrong for the labels on this
+ * page, which either read as sentences ("First name") or wrap whole blocks of
+ * body copy — a saved address, a payment description. Both `text-transform`
+ * and `letter-spacing` inherit, so an inner span setting its own size and
+ * colour does not undo them; they have to be cancelled on the label itself.
+ */
+const LABEL_RESET = 'mb-0 tracking-normal normal-case';
 
 type CheckoutLine = {
     id: number;
@@ -52,43 +74,71 @@ type SavedAddress = {
     address_line: string;
     city_id: number;
     city_name: string | null;
+    postal_code: string | null;
+    country: string;
     is_default: boolean;
 };
 
 type City = { id: number; name: string };
 
-/** Sentinel for the "type a new address" radio, so one control drives both. */
+type Customer = {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    phone: string | null;
+};
+
+/** Sentinel for the "ship somewhere else" radio, so one control drives both. */
 const NEW_ADDRESS = 'new';
 
 /**
- * Declared rather than inferred: `address_id` and `city_id` are genuinely
- * nullable (an empty address book, no cities loaded), and letting useForm
- * infer them from the initial values narrows both to `number`, which then
- * rejects clearing them when the buyer switches to a new address.
+ * Declared rather than inferred: `address_id`, `city_id` and the name fields
+ * are genuinely nullable (an empty address book, an account with no name), and
+ * letting useForm infer them from the initial values narrows them to
+ * non-nullable, which then rejects clearing them.
  */
 type CheckoutForm = {
+    first_name: string;
+    last_name: string;
+    shipping_phone: string;
     address_id: number | null;
     shipping_address: string;
     city_id: number | null;
-    shipping_phone: string;
+    postal_code: string;
+    country: string;
+    payment_method: string;
     save_address: boolean;
     address_label: string;
     notes: string;
 };
 
+function SectionHeading({ children }: { children: ReactNode }) {
+    return <h2 className="font-display text-lg text-souk-title">{children}</h2>;
+}
+
+/**
+ * Label above a field. The red dot marks required, matching the reference —
+ * `aria-hidden` because "required" is already carried by the input's own
+ * attribute, and a screen reader announcing a bullet adds nothing.
+ */
 function FieldLabel({
     children,
-    optional,
+    htmlFor,
+    required,
 }: {
-    children: React.ReactNode;
-    optional?: string;
+    children: ReactNode;
+    htmlFor?: string;
+    required?: boolean;
 }) {
     return (
-        <label className={`mb-2 block text-souk-brown-deep/55 ${EYEBROW}`}>
+        <label
+            htmlFor={htmlFor}
+            className={`${LABEL_RESET} mb-1.5 block text-xs text-souk-brown-deep/70`}
+        >
             {children}
-            {optional && (
-                <span className="ms-1.5 tracking-normal normal-case">
-                    ({optional})
+            {required && (
+                <span aria-hidden className="ms-1 text-terracotta">
+                    •
                 </span>
             )}
         </label>
@@ -107,12 +157,18 @@ const Checkout = ({
     items,
     cities,
     addresses,
-    accountPhone,
+    customer,
+    paymentMethods,
+    defaultCountry,
+    deliveryRates,
 }: {
     items: CheckoutLine[];
     cities: City[];
     addresses: SavedAddress[];
-    accountPhone: string | null;
+    customer: Customer;
+    paymentMethods: string[];
+    defaultCountry: string;
+    deliveryRates: DeliveryRates;
 }) => {
     const { t, locale } = useTranslation();
 
@@ -125,20 +181,43 @@ const Checkout = ({
     );
 
     const { data, setData, post, processing, errors } = useForm<CheckoutForm>({
+        /*
+         * Pre-filled from the account where it knows, blank where it does not.
+         * Signup asks only for a password now, so an empty name here is the
+         * normal case rather than an edge one — and whatever is typed is
+         * written back to the account if it had none, so this is the last time
+         * they fill it in. See CheckoutDestinationService::backfillProfile.
+         */
+        first_name: customer.first_name ?? '',
+        last_name: customer.last_name ?? '',
+        shipping_phone: preselected?.recipient_phone ?? customer.phone ?? '',
         address_id: preselected?.id ?? null,
         shipping_address: '',
         city_id: cities[0]?.id ?? null,
-        /*
-         * Pre-filled but always editable. A saved address may predate the
-         * phone being mandatory (the column is nullable), so this falls back
-         * to the number on the account rather than assuming the address has
-         * one — and the server requires it either way.
-         */
-        shipping_phone: preselected?.recipient_phone ?? accountPhone ?? '',
+        postal_code: '',
+        country: defaultCountry,
+        // Cash on delivery is the only method the server accepts today, so it
+        // is selected rather than offered as a choice of one.
+        payment_method: paymentMethods[0] ?? 'cod',
         save_address: false,
         address_label: '',
         notes: '',
     });
+
+    /*
+     * The discount code is its own form, posted to its own endpoint and
+     * reading its own error bag, so a rejected code cannot mark the delivery
+     * fields invalid — and typing one does not disturb the main form's state.
+     * There is no coupon table behind it yet; see
+     * CheckoutController::applyCoupon.
+     */
+    const coupon = useForm({ code: '' });
+
+    const applyCoupon = () =>
+        coupon.post(route('checkout.coupon'), {
+            preserveScroll: true,
+            errorBag: 'coupon',
+        });
 
     /*
      * `cart` is a whole-basket rejection (empty cart, a line that went out of
@@ -162,6 +241,7 @@ const Checkout = ({
             // Cleared so a half-typed new address can't ride along and be
             // saved to the book behind the buyer's back.
             shipping_address: '',
+            postal_code: '',
             save_address: false,
             address_label: '',
             shipping_phone:
@@ -174,29 +254,56 @@ const Checkout = ({
         setData((current) => ({
             ...current,
             address_id: null,
-            shipping_phone: current.shipping_phone || (accountPhone ?? ''),
+            shipping_phone: current.shipping_phone || (customer.phone ?? ''),
         }));
     };
 
-    // Grouped by workshop: checkout splits the basket into one order each, and
-    // the buyer receives that many parcels.
-    const grouped = items.reduce<Record<string, CheckoutLine[]>>(
-        (acc, line) => {
-            const key = String(line.store_id);
-            (acc[key] ??= []).push(line);
+    /** Morocco is priced per city; everywhere else has one rate per country. */
+    const isDomestic = data.country === defaultCountry;
 
-            return acc;
-        },
-        {},
-    );
+    /*
+     * Switching to a country with no city list would otherwise leave the
+     * previously selected Moroccan city attached, which the server rejects
+     * (see CheckoutRequest) and which would quote the wrong fee.
+     */
+    const chooseCountry = (code: string) => {
+        setData((current) => ({
+            ...current,
+            country: code,
+            city_id: code === defaultCountry ? (cities[0]?.id ?? null) : null,
+        }));
+    };
 
-    const storeCount = Object.keys(grouped).length;
-    const productsTotal = items.reduce(
+    /*
+     * Checkout still splits the basket into one order per workshop for
+     * fulfilment, but delivery is one job to one address, so the fee is
+     * charged once and follows the destination rather than the basket.
+     * CheckoutService resolves this same figure server-side when the order is
+     * placed — this is only the quote.
+     */
+    const subtotal = items.reduce(
         (sum, line) => sum + (line.line_total ?? 0),
         0,
     );
-    const deliveryTotal = AMANA_FEE * storeCount;
-    const grandTotal = productsTotal + deliveryTotal;
+
+    const deliveryTotal = (() => {
+        if (isDomestic) {
+            const cityFee =
+                data.city_id === null
+                    ? undefined
+                    : deliveryRates.cityFees[String(data.city_id)];
+
+            return cityFee ?? FALLBACK_DELIVERY_FEE;
+        }
+
+        const country = deliveryRates.countries.find(
+            (c) => c.code === data.country,
+        );
+
+        return country?.fee ?? FALLBACK_DELIVERY_FEE;
+    })();
+
+    const grandTotal = subtotal + deliveryTotal;
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -204,26 +311,22 @@ const Checkout = ({
     };
 
     return (
-        <div className="min-h-screen bg-souk-paper">
+        <div className="min-h-screen bg-white">
             <SiteHeader />
 
-            <section className="container pt-10 pb-6">
+            <section className="container pt-8 pb-4">
                 <Link
                     href={route('cart.show')}
-                    className={`inline-flex items-center gap-2 text-souk-brown-deep/60 transition-colors hover:text-souk-title ${EYEBROW}`}
+                    className="inline-flex items-center gap-2 text-xs text-souk-brown-deep/60 transition-colors hover:text-souk-title"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.6} />
                     {t('buyer.checkout.back')}
                 </Link>
-
-                <h1 className="mt-5 font-display text-[clamp(1.9rem,3.4vw,2.9rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
-                    {t('buyer.checkout.title')}
-                </h1>
             </section>
 
-            <section className="container pb-24">
+            <section className="container pb-20">
                 {cartError && (
-                    <div className="mb-8 flex items-start gap-3 rounded-xl border border-terracotta/25 bg-terracotta/5 px-4 py-3.5 text-sm text-terracotta">
+                    <div className="mb-8 flex items-start gap-3 rounded-lg border border-terracotta/25 bg-terracotta/5 px-4 py-3.5 text-sm text-terracotta">
                         <AlertCircle
                             className="mt-0.5 h-4 w-4 shrink-0"
                             strokeWidth={1.6}
@@ -232,45 +335,173 @@ const Checkout = ({
                     </div>
                 )}
 
+                {/*
+                 * Two columns from `lg`: the form on the leading edge, the
+                 * summary on the trailing one — and both mirror under RTL,
+                 * since the grid uses no physical direction of its own.
+                 */}
                 <form
                     onSubmit={submit}
-                    className="grid grid-cols-12 gap-8 lg:gap-12"
+                    className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-16"
                 >
-                    {/* ── Delivery ──────────────────────────────── */}
-                    <div className="col-span-12 space-y-10 lg:col-span-7">
-                        <div>
-                            <h2 className="border-b border-souk-brown/12 pb-3 font-display text-xl text-souk-title">
-                                {t('buyer.checkout.delivery_heading')}
-                            </h2>
+                    {/* ══ Left: the form ═══════════════════════════ */}
+                    <div>
+                        <h1 className="font-display text-3xl text-souk-title">
+                            {t('buyer.checkout.title')}
+                        </h1>
 
-                            {/* Saved addresses, when the buyer has any. */}
-                            {addresses.length > 0 && (
-                                <div className="mt-5">
-                                    <p
-                                        className={`text-souk-brown-deep/55 ${EYEBROW}`}
+                        {/* ── Customer details ──────────────────── */}
+                        <div className="mt-8">
+                            <SectionHeading>
+                                {t('buyer.checkout.customer_heading')}
+                            </SectionHeading>
+
+                            <div className="mt-4 grid gap-x-4 gap-y-4 sm:grid-cols-2">
+                                <div>
+                                    <FieldLabel htmlFor="first_name" required>
+                                        {t('buyer.checkout.first_name')}
+                                    </FieldLabel>
+                                    <input
+                                        id="first_name"
+                                        type="text"
+                                        required
+                                        autoComplete="given-name"
+                                        value={data.first_name}
+                                        onChange={(e) =>
+                                            setData(
+                                                'first_name',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder={t(
+                                            'buyer.checkout.first_name_placeholder',
+                                        )}
+                                        className={FIELD}
+                                    />
+                                    <FieldError message={errors.first_name} />
+                                </div>
+
+                                <div>
+                                    <FieldLabel htmlFor="last_name" required>
+                                        {t('buyer.checkout.last_name')}
+                                    </FieldLabel>
+                                    <input
+                                        id="last_name"
+                                        type="text"
+                                        required
+                                        autoComplete="family-name"
+                                        value={data.last_name}
+                                        onChange={(e) =>
+                                            setData('last_name', e.target.value)
+                                        }
+                                        placeholder={t(
+                                            'buyer.checkout.last_name_placeholder',
+                                        )}
+                                        className={FIELD}
+                                    />
+                                    <FieldError message={errors.last_name} />
+                                </div>
+
+                                {/*
+                                 * Shown, not asked for. This is the address the
+                                 * buyer signs in with — /account locks it for
+                                 * the same reason, and editing it here would
+                                 * either do nothing or change their login.
+                                 */}
+                                <div>
+                                    <FieldLabel htmlFor="email">
+                                        {t('buyer.checkout.email')}
+                                    </FieldLabel>
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        readOnly
+                                        disabled
+                                        dir="ltr"
+                                        value={customer.email ?? '—'}
+                                        className={FIELD_LOCKED}
+                                    />
+                                </div>
+
+                                <div>
+                                    <FieldLabel
+                                        htmlFor="shipping_phone"
+                                        required
                                     >
-                                        {t('buyer.checkout.saved_addresses')}
-                                    </p>
+                                        {t('buyer.checkout.phone')}
+                                    </FieldLabel>
+                                    <input
+                                        id="shipping_phone"
+                                        type="tel"
+                                        inputMode="tel"
+                                        required
+                                        autoComplete="tel"
+                                        dir="ltr"
+                                        value={data.shipping_phone}
+                                        onChange={(e) =>
+                                            setData(
+                                                'shipping_phone',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder={t(
+                                            'buyer.checkout.phone_placeholder',
+                                        )}
+                                        className={FIELD}
+                                    />
+                                    <FieldError
+                                        message={errors.shipping_phone}
+                                    />
+                                </div>
+                            </div>
 
-                                    <div className="mt-3 space-y-2.5">
+                            <p className="mt-2.5 flex items-center gap-1.5 text-xs text-souk-brown-deep/55">
+                                <Truck
+                                    className="h-3 w-3 shrink-0"
+                                    strokeWidth={1.6}
+                                />
+                                {t('buyer.checkout.phone_hint')}
+                            </p>
+                        </div>
+
+                        {/* ── Shipping details ──────────────────── */}
+                        <div className="mt-10">
+                            <SectionHeading>
+                                {t('buyer.checkout.shipping_heading')}
+                            </SectionHeading>
+
+                            {/* Saved addresses, when the buyer has any. A real
+                                radio group, so arrow keys move between them and
+                                a screen reader announces "2 of 3". */}
+                            {addresses.length > 0 && (
+                                <fieldset className="mt-4">
+                                    <legend className="mb-2 text-xs text-souk-brown-deep/70">
+                                        {t('buyer.checkout.saved_addresses')}
+                                    </legend>
+
+                                    <div className="space-y-2">
                                         {addresses.map((address) => {
                                             const active =
                                                 choice === address.id;
 
                                             return (
-                                                <button
+                                                <label
                                                     key={address.id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        chooseSaved(address)
-                                                    }
-                                                    aria-pressed={active}
-                                                    className={`flex w-full items-start gap-3 rounded-xl border p-4 text-start transition-colors ${
+                                                    className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
                                                         active
-                                                            ? 'border-souk-brown bg-souk-brown/5'
+                                                            ? 'border-souk-brown bg-souk-brown/[0.04]'
                                                             : 'border-souk-brown/15 hover:border-souk-brown/40'
                                                     }`}
                                                 >
+                                                    <input
+                                                        type="radio"
+                                                        name="address_choice"
+                                                        checked={active}
+                                                        onChange={() =>
+                                                            chooseSaved(address)
+                                                        }
+                                                        className="sr-only"
+                                                    />
                                                     <span
                                                         aria-hidden
                                                         className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
@@ -287,7 +518,7 @@ const Checkout = ({
                                                         )}
                                                     </span>
 
-                                                    <span className="min-w-0 flex-1">
+                                                    <span className="min-w-0 flex-1 text-sm">
                                                         <span className="flex flex-wrap items-center gap-2">
                                                             <span className="font-medium text-souk-title">
                                                                 {address.label ||
@@ -302,107 +533,74 @@ const Checkout = ({
                                                             )}
                                                         </span>
 
-                                                        <span className="mt-1 flex items-start gap-1.5 text-[13px] leading-relaxed text-souk-brown-deep/75">
-                                                            <MapPin
-                                                                className="mt-0.5 h-3 w-3 shrink-0"
-                                                                strokeWidth={
-                                                                    1.6
-                                                                }
-                                                            />
+                                                        <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
                                                             {
                                                                 address.address_line
                                                             }
                                                             {address.city_name &&
                                                                 `, ${address.city_name}`}
+                                                            {address.postal_code &&
+                                                                ` ${address.postal_code}`}
                                                         </span>
-
-                                                        {address.recipient_phone && (
-                                                            <span className="mt-1 flex items-center gap-1.5 text-[13px] text-souk-brown-deep/60">
-                                                                <Phone
-                                                                    className="h-3 w-3 shrink-0"
-                                                                    strokeWidth={
-                                                                        1.6
-                                                                    }
-                                                                />
-                                                                {
-                                                                    address.recipient_phone
-                                                                }
-                                                            </span>
-                                                        )}
                                                     </span>
-                                                </button>
+                                                </label>
                                             );
                                         })}
 
-                                        <button
-                                            type="button"
-                                            onClick={chooseNew}
-                                            aria-pressed={
+                                        <label
+                                            className={`${LABEL_RESET} flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3.5 text-sm transition-colors ${
                                                 choice === NEW_ADDRESS
-                                            }
-                                            className={`flex w-full items-center gap-3 rounded-xl border border-dashed p-4 text-start transition-colors ${
-                                                choice === NEW_ADDRESS
-                                                    ? 'border-souk-brown bg-souk-brown/5 text-souk-title'
+                                                    ? 'border-souk-brown bg-souk-brown/[0.04] text-souk-title'
                                                     : 'border-souk-brown/25 text-souk-brown-deep/70 hover:border-souk-brown/50'
                                             }`}
                                         >
-                                            <Plus
-                                                className="h-4 w-4 shrink-0"
-                                                strokeWidth={1.6}
+                                            <input
+                                                type="radio"
+                                                name="address_choice"
+                                                checked={choice === NEW_ADDRESS}
+                                                onChange={chooseNew}
+                                                className="sr-only"
                                             />
-                                            <span className="text-sm font-medium">
+                                            <span
+                                                aria-hidden
+                                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                    choice === NEW_ADDRESS
+                                                        ? 'border-souk-brown bg-souk-brown text-souk-cream'
+                                                        : 'border-souk-brown/30'
+                                                }`}
+                                            >
+                                                {choice === NEW_ADDRESS && (
+                                                    <Check
+                                                        className="h-2.5 w-2.5"
+                                                        strokeWidth={3}
+                                                    />
+                                                )}
+                                            </span>
+                                            <span className="font-medium">
                                                 {t(
                                                     'buyer.checkout.use_new_address',
                                                 )}
                                             </span>
-                                        </button>
+                                        </label>
                                     </div>
-                                </div>
+                                </fieldset>
                             )}
 
-                            {/* New address form. Always shown to a buyer with
-                                an empty address book. */}
+                            {/* The address itself. Always shown to a buyer with
+                                an empty book, since there is nothing to pick. */}
                             {choice === NEW_ADDRESS && (
-                                <div className="mt-6 space-y-4">
-                                    {addresses.length > 0 && (
-                                        <p
-                                            className={`text-souk-brown-deep/55 ${EYEBROW}`}
-                                        >
-                                            {t('buyer.checkout.new_address')}
-                                        </p>
-                                    )}
-
+                                <div className="mt-4 space-y-4">
                                     <div>
-                                        <FieldLabel>
-                                            {t('buyer.checkout.city')}
-                                        </FieldLabel>
-                                        <select
-                                            value={data.city_id ?? ''}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'city_id',
-                                                    Number(e.target.value),
-                                                )
-                                            }
-                                            className={FIELD}
+                                        <FieldLabel
+                                            htmlFor="shipping_address"
+                                            required
                                         >
-                                            {cities.map((city) => (
-                                                <option
-                                                    key={city.id}
-                                                    value={city.id}
-                                                >
-                                                    {city.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <FieldError message={errors.city_id} />
-                                    </div>
-
-                                    <div>
-                                        <FieldLabel>
                                             {t('buyer.checkout.address_line')}
                                         </FieldLabel>
-                                        <textarea
+                                        <input
+                                            id="shipping_address"
+                                            type="text"
+                                            autoComplete="street-address"
                                             value={data.shipping_address}
                                             onChange={(e) =>
                                                 setData(
@@ -410,7 +608,6 @@ const Checkout = ({
                                                     e.target.value,
                                                 )
                                             }
-                                            rows={3}
                                             placeholder={t(
                                                 'buyer.checkout.address_placeholder',
                                             )}
@@ -421,7 +618,125 @@ const Checkout = ({
                                         />
                                     </div>
 
-                                    <label className="flex cursor-pointer items-center gap-2.5 text-sm text-souk-brown-deep/80">
+                                    <div className="grid gap-x-4 gap-y-4 sm:grid-cols-3">
+                                        <div>
+                                            <FieldLabel
+                                                htmlFor="postal_code"
+                                                required
+                                            >
+                                                {t(
+                                                    'buyer.checkout.postal_code',
+                                                )}
+                                            </FieldLabel>
+                                            <input
+                                                id="postal_code"
+                                                type="text"
+                                                inputMode="numeric"
+                                                autoComplete="postal-code"
+                                                dir="ltr"
+                                                value={data.postal_code}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'postal_code',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="40000"
+                                                className={FIELD}
+                                            />
+                                            <FieldError
+                                                message={errors.postal_code}
+                                            />
+                                        </div>
+
+                                        {/*
+                                         * Every destination Amana quotes for —
+                                         * see AmanaDeliveryRateSeeder. Picking
+                                         * one moves the delivery line in the
+                                         * summary immediately, which is why the
+                                         * rate card is a prop rather than a
+                                         * lookup on the server.
+                                         */}
+                                        <div>
+                                            <FieldLabel
+                                                htmlFor="country"
+                                                required
+                                            >
+                                                {t('buyer.checkout.country')}
+                                            </FieldLabel>
+                                            <select
+                                                id="country"
+                                                value={data.country}
+                                                onChange={(e) =>
+                                                    chooseCountry(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className={FIELD}
+                                            >
+                                                {deliveryRates.countries.map(
+                                                    (country) => (
+                                                        <option
+                                                            key={country.code}
+                                                            value={country.code}
+                                                        >
+                                                            {country.name}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                            <FieldError
+                                                message={errors.country}
+                                            />
+                                        </div>
+
+                                        {/*
+                                         * Morocco only: `cities` is the list
+                                         * Amana prices domestic delivery
+                                         * against, so abroad there is nothing
+                                         * to pick from and the town rides in
+                                         * the address line instead.
+                                         */}
+                                        {isDomestic && (
+                                            <div>
+                                                <FieldLabel
+                                                    htmlFor="city_id"
+                                                    required
+                                                >
+                                                    {t('buyer.checkout.city')}
+                                                </FieldLabel>
+                                                <select
+                                                    id="city_id"
+                                                    value={data.city_id ?? ''}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'city_id',
+                                                            Number(
+                                                                e.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    className={FIELD}
+                                                >
+                                                    {cities.map((city) => (
+                                                        <option
+                                                            key={city.id}
+                                                            value={city.id}
+                                                        >
+                                                            {city.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <FieldError
+                                                    message={errors.city_id}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <label
+                                        className={`${LABEL_RESET} flex cursor-pointer items-center gap-2.5 text-sm text-souk-brown-deep/80`}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={data.save_address}
@@ -438,16 +753,13 @@ const Checkout = ({
 
                                     {data.save_address && (
                                         <div>
-                                            <FieldLabel
-                                                optional={t(
-                                                    'buyer.checkout.optional',
-                                                )}
-                                            >
+                                            <FieldLabel htmlFor="address_label">
                                                 {t(
                                                     'buyer.checkout.address_label',
                                                 )}
                                             </FieldLabel>
                                             <input
+                                                id="address_label"
                                                 type="text"
                                                 value={data.address_label}
                                                 onChange={(e) =>
@@ -466,234 +778,236 @@ const Checkout = ({
                                 </div>
                             )}
 
-                            {/*
-                             * Outside the branch above: the courier needs a
-                             * number whichever address was chosen, and a saved
-                             * one may not carry it.
-                             */}
-                            <div className="mt-6">
-                                <FieldLabel>
-                                    {t('buyer.checkout.phone')}
-                                </FieldLabel>
-                                <input
-                                    type="tel"
-                                    inputMode="tel"
-                                    required
-                                    value={data.shipping_phone}
-                                    onChange={(e) =>
-                                        setData(
-                                            'shipping_phone',
-                                            e.target.value,
-                                        )
-                                    }
-                                    placeholder={t(
-                                        'buyer.checkout.phone_placeholder',
-                                    )}
-                                    className={FIELD}
-                                />
-                                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-souk-brown-deep/60">
-                                    <Truck
-                                        className="h-3 w-3 shrink-0"
-                                        strokeWidth={1.6}
-                                    />
-                                    {t('buyer.checkout.phone_hint')}
-                                </p>
-                                <FieldError message={errors.shipping_phone} />
-                            </div>
-
-                            <div className="mt-5">
-                                <FieldLabel
-                                    optional={t('buyer.checkout.optional')}
-                                >
+                            <div className="mt-4">
+                                <FieldLabel htmlFor="notes">
                                     {t('buyer.checkout.notes')}
                                 </FieldLabel>
                                 <textarea
+                                    id="notes"
+                                    rows={2}
                                     value={data.notes}
                                     onChange={(e) =>
                                         setData('notes', e.target.value)
                                     }
-                                    rows={2}
                                     placeholder={t(
                                         'buyer.checkout.notes_placeholder',
                                     )}
-                                    className={FIELD}
+                                    className={`${FIELD} resize-y`}
                                 />
                             </div>
                         </div>
 
-                        {/* ── Shipments ─────────────────────────── */}
-                        <div>
-                            <h2 className="border-b border-souk-brown/12 pb-3 font-display text-xl text-souk-title">
-                                {t('buyer.checkout.shipments_heading')}
+                        {/* ── Payment method ────────────────────── */}
+                        <div className="mt-10">
+                            <h2
+                                id="payment-heading"
+                                className="font-display text-lg text-souk-title"
+                            >
+                                {t('buyer.checkout.payment_heading')}
                             </h2>
 
-                            <p className="mt-4 text-[13px] leading-relaxed text-souk-brown-deep/70">
-                                {(storeCount > 1
-                                    ? t('buyer.checkout.shipments_note_many')
-                                    : t('buyer.checkout.shipments_note_one')
-                                ).replaceAll(':count', String(storeCount))}
-                            </p>
+                            {/*
+                             * A one-option radio group rather than a bare
+                             * statement: the shape is what the design calls for
+                             * and what a second method will slot into, and the
+                             * server whitelists the same single value
+                             * (CheckoutRequest::PAYMENT_METHODS).
+                             *
+                             * Named by the heading above rather than by a
+                             * visually-hidden <legend> repeating it — two
+                             * identical strings would be announced twice.
+                             */}
+                            <fieldset
+                                className="mt-4"
+                                aria-labelledby="payment-heading"
+                            >
+                                <label
+                                    className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border border-souk-brown bg-souk-brown/[0.04] p-3.5`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="cod"
+                                        checked={data.payment_method === 'cod'}
+                                        onChange={() =>
+                                            setData('payment_method', 'cod')
+                                        }
+                                        className="sr-only"
+                                    />
+                                    <span
+                                        aria-hidden
+                                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-souk-brown bg-souk-brown text-souk-cream"
+                                    >
+                                        <Check
+                                            className="h-2.5 w-2.5"
+                                            strokeWidth={3}
+                                        />
+                                    </span>
 
-                            <div className="mt-5 space-y-4">
-                                {Object.entries(grouped).map(
-                                    ([storeId, lines]) => (
-                                        <div
-                                            key={storeId}
-                                            className="rounded-2xl border border-souk-brown/12 bg-souk-peach/30 p-5"
-                                        >
-                                            <p
-                                                className={`text-souk-brown ${EYEBROW}`}
-                                            >
-                                                {t(
-                                                    'buyer.checkout.shipped_by',
-                                                ).replace(
-                                                    ':store',
-                                                    lines[0].store_name,
-                                                )}
-                                            </p>
-
-                                            <ul className="mt-4 space-y-3">
-                                                {lines.map((line) => (
-                                                    <li
-                                                        key={line.id}
-                                                        className="flex items-center gap-3"
-                                                    >
-                                                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
-                                                            {line.image ? (
-                                                                <img
-                                                                    src={
-                                                                        line.image
-                                                                    }
-                                                                    alt={
-                                                                        line.name
-                                                                    }
-                                                                    loading="lazy"
-                                                                    className="h-full w-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
-                                                                    <ZellijStarIcon className="h-4 w-4" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm text-souk-title">
-                                                                {line.name}
-                                                            </p>
-                                                            {line.variant_label && (
-                                                                <p className="truncate text-xs text-souk-brown-deep/70">
-                                                                    {
-                                                                        line.variant_label
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                            <p className="text-xs text-souk-brown-deep/55">
-                                                                {t(
-                                                                    'buyer.checkout.quantity',
-                                                                ).replace(
-                                                                    ':count',
-                                                                    String(
-                                                                        line.quantity,
-                                                                    ),
-                                                                )}
-                                                            </p>
-                                                        </div>
-
-                                                        <span className="font-display text-sm text-souk-title">
-                                                            {money(
-                                                                line.line_total ??
-                                                                    0,
-                                                            )}{' '}
-                                                            MAD
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-
-                                            <div className="mt-4 flex items-center justify-between border-t border-souk-brown/10 pt-3 text-xs text-souk-brown-deep/65">
-                                                <span className="flex items-center gap-1.5">
-                                                    <Truck
-                                                        className="h-3 w-3"
-                                                        strokeWidth={1.6}
-                                                    />
-                                                    {t(
-                                                        'buyer.checkout.amana_standard',
-                                                    )}
-                                                </span>
-                                                <span>
-                                                    {money(AMANA_FEE)} MAD
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ),
-                                )}
-                            </div>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="flex items-center gap-2 text-sm font-medium text-souk-title">
+                                            <Banknote
+                                                className="h-4 w-4 shrink-0 text-souk-brown"
+                                                strokeWidth={1.6}
+                                            />
+                                            {t('buyer.checkout.payment_cod')}
+                                        </span>
+                                        <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                            {t('buyer.checkout.cod_note')}
+                                        </span>
+                                    </span>
+                                </label>
+                                <FieldError message={errors.payment_method} />
+                            </fieldset>
                         </div>
                     </div>
 
-                    {/* ── Summary ───────────────────────────────── */}
-                    <aside className="col-span-12 lg:col-span-5">
-                        <div className="rounded-2xl border border-souk-brown/12 bg-souk-peach/40 p-6 lg:sticky lg:top-6">
-                            <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
-                                {t('buyer.checkout.summary')}
-                            </p>
+                    {/* ══ Right: order summary ═════════════════════ */}
+                    <aside className="lg:sticky lg:top-6 lg:self-start">
+                        <SectionHeading>
+                            {t('buyer.checkout.summary')}
+                        </SectionHeading>
 
-                            <div className="mt-5 space-y-3 text-sm">
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-souk-brown-deep/75">
-                                        {t('buyer.checkout.products').replace(
-                                            ':count',
-                                            String(items.length),
+                        <ul className="mt-5 space-y-4">
+                            {items.map((line) => (
+                                <li key={line.id} className="flex gap-3.5">
+                                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-souk-brown/5 ring-1 ring-souk-brown/10">
+                                        {line.image ? (
+                                            <img
+                                                src={line.image}
+                                                alt={line.name}
+                                                loading="lazy"
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
+                                                <ZellijStarIcon className="h-5 w-5" />
+                                            </div>
                                         )}
-                                    </span>
-                                    <span className="text-souk-title">
-                                        {money(productsTotal)} MAD
-                                    </span>
-                                </div>
+                                    </div>
 
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-souk-brown-deep/75">
-                                        {t(
-                                            'buyer.checkout.delivery_fee',
-                                        ).replace(':count', String(storeCount))}
-                                    </span>
-                                    <span className="text-souk-title">
-                                        {money(deliveryTotal)} MAD
-                                    </span>
-                                </div>
-                            </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm leading-snug text-souk-title">
+                                            {line.name}
+                                        </p>
+                                        {line.variant_label && (
+                                            <p className="mt-0.5 truncate text-xs text-souk-brown-deep/65">
+                                                {line.variant_label}
+                                            </p>
+                                        )}
+                                        {/* Which workshop ships it — the basket
+                                            splits into one parcel each, so this
+                                            is what the delivery count counts. */}
+                                        <p className="mt-0.5 truncate text-xs text-souk-brown-deep/50">
+                                            {line.store_name}
+                                        </p>
 
-                            <div className="my-5 h-px bg-souk-brown/12" />
+                                        <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                                            <span className="font-display text-sm text-souk-title">
+                                                {money(line.line_total ?? 0)}{' '}
+                                                <span className="text-xs">
+                                                    MAD TTC
+                                                </span>
+                                            </span>
+                                            <span className="text-xs text-souk-brown-deep/60">
+                                                {t(
+                                                    'buyer.checkout.quantity',
+                                                ).replace(
+                                                    ':count',
+                                                    String(line.quantity),
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
 
-                            <div className="flex items-baseline justify-between">
-                                <span className="text-souk-title">
-                                    {t('buyer.checkout.total')}
-                                </span>
-                                <span className="font-display text-2xl leading-none text-souk-title">
-                                    {money(grandTotal)}
-                                    <span className="ms-1.5 text-sm">MAD</span>
-                                </span>
-                            </div>
+                        {/* ── Discount code ─────────────────────── */}
+                        <div className="mt-6 border-t border-souk-brown/12 pt-6">
+                            <FieldLabel htmlFor="coupon">
+                                {t('buyer.checkout.coupon')}
+                            </FieldLabel>
+                            <input
+                                id="coupon"
+                                type="text"
+                                value={coupon.data.code}
+                                onChange={(e) =>
+                                    coupon.setData('code', e.target.value)
+                                }
+                                placeholder={t(
+                                    'buyer.checkout.coupon_placeholder',
+                                )}
+                                className={FIELD}
+                            />
 
+                            {/*
+                             * `type="button"` and its own request: this sits
+                             * inside the checkout <form>, and a submit button
+                             * here would place the order instead of applying a
+                             * code. Nesting a second <form> would be invalid
+                             * HTML, so the post is made by hand.
+                             */}
                             <button
-                                type="submit"
-                                disabled={processing}
-                                className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-50"
+                                type="button"
+                                onClick={applyCoupon}
+                                disabled={
+                                    coupon.processing ||
+                                    !coupon.data.code.trim()
+                                }
+                                data-test="checkout-coupon-apply"
+                                className="mt-2.5 inline-flex items-center justify-center rounded-lg bg-souk-title px-5 py-2.5 text-xs font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                                {processing
-                                    ? t('buyer.checkout.processing')
-                                    : `${t('buyer.checkout.confirm')} · ${money(grandTotal)} MAD`}
+                                {t('buyer.checkout.coupon_apply')}
                             </button>
 
-                            <p className="mt-5 flex items-start gap-2.5 text-[12px] leading-relaxed text-souk-brown-deep/70">
-                                <ShieldCheck
-                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-souk-brown"
-                                    strokeWidth={1.5}
-                                />
-                                {t('buyer.checkout.cod_note')}
-                            </p>
+                            <FieldError message={coupon.errors.code} />
                         </div>
+
+                        {/* ── Totals ────────────────────────────── */}
+                        <div className="mt-6 space-y-3 border-t border-souk-brown/12 pt-6 text-sm">
+                            <div className="flex items-baseline justify-between">
+                                <span className="text-souk-brown-deep/70">
+                                    {t('buyer.checkout.products').replace(
+                                        ':count',
+                                        String(items.length),
+                                    )}
+                                </span>
+                                <span className="text-souk-title">
+                                    {money(subtotal)} MAD TTC
+                                </span>
+                            </div>
+
+                            <div className="flex items-baseline justify-between">
+                                <span className="text-souk-brown-deep/70">
+                                    {t('buyer.checkout.delivery_fee')}
+                                </span>
+                                <span className="text-souk-title">
+                                    {money(deliveryTotal)} MAD TTC
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 flex items-baseline justify-between border-t border-souk-brown/12 pt-5">
+                            <span className="font-medium text-souk-title">
+                                {t('buyer.checkout.total')}
+                            </span>
+                            <span className="font-display text-2xl leading-none text-souk-title">
+                                {money(grandTotal)}
+                                <span className="ms-1.5 text-sm">MAD TTC</span>
+                            </span>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            data-test="checkout-submit"
+                            className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-lg bg-souk-title px-6 py-3.5 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processing
+                                ? t('buyer.checkout.processing')
+                                : t('buyer.checkout.confirm')}
+                        </button>
                     </aside>
                 </form>
             </section>

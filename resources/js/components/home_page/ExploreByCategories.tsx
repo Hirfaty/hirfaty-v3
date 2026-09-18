@@ -1,27 +1,15 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
+import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
+import { WarmFill } from '@/components/WarmFill';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
 import { useTranslation } from '@/hooks/use-translation';
-import exploreArtVivre from '@/images/categories/art-vivre.jpeg';
-import exploreArt from '@/images/categories/art.jpeg';
-import exploreLantern from '@/images/categories/lantern.jpeg';
-import explorePottery from '@/images/categories/pottery.jpeg';
-import exploreTextile from '@/images/categories/textile.jpeg';
-import exploreWood from '@/images/categories/wood.jpeg';
-
-const EXPLORE_CATEGORIES = [
-    { key: 'pottery', image: explorePottery, slugMatch: 'poterie' },
-    { key: 'textile', image: exploreTextile, slugMatch: 'textile' },
-    { key: 'art', image: exploreArt, slugMatch: 'peinture' },
-    { key: 'lantern', image: exploreLantern, slugMatch: 'lanterne' },
-    { key: 'wood', image: exploreWood, slugMatch: 'bois' },
-    { key: 'art-vivre', image: exploreArtVivre, slugMatch: 'art-vivre' },
-] as const;
 
 type CategoryTile = {
-    key: string;
-    image: string;
+    key: number;
+    /** Admin-uploaded picture; null shows the placeholder. */
+    image: string | null;
     href: string;
     label: string;
 };
@@ -35,14 +23,26 @@ function CategoryTileCard({ tile }: { tile: CategoryTile }) {
     return (
         <Link
             href={tile.href}
-            className="group relative block aspect-[4/5] overflow-hidden rounded-md bg-souk-brown/5"
+            className="group relative block aspect-[5/4] overflow-hidden rounded-md bg-souk-brown/5 lg:aspect-[16/11]"
         >
-            <img
-                src={tile.image}
-                alt=""
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            {tile.image ? (
+                <img
+                    src={tile.image}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+            ) : (
+                <WarmFill
+                    variant="clay"
+                    className="flex h-full w-full items-center justify-center transition-transform duration-500 group-hover:scale-105"
+                >
+                    <ZellijStarIcon
+                        aria-hidden
+                        className="h-10 w-10 text-souk-brown/25"
+                    />
+                </WarmFill>
+            )}
             {/* Scrim only at the foot, where the
                         label sits — the rest of the
                         photograph stays true, since
@@ -88,7 +88,7 @@ function CategoryCarousel({
         useSnapCarousel<HTMLUListElement>(tiles.length, 4000, isRTL);
 
     return (
-        <div {...pauseProps} className="relative mt-10 sm:hidden">
+        <div {...pauseProps} className="relative mt-5 sm:hidden">
             <ul
                 ref={track}
                 className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -109,7 +109,7 @@ function CategoryCarousel({
                 <div
                     role="group"
                     aria-label={label}
-                    className="mt-5 flex items-center justify-center gap-2.5"
+                    className="mt-3 flex items-center justify-center gap-2.5"
                 >
                     {tiles.map((tile, i) => (
                         <button
@@ -134,38 +134,37 @@ function CategoryCarousel({
 export default function ExploreByCategories() {
     const { t, isRTL } = useTranslation();
 
+    // The same top-level categories the header menu lists, shared from
+    // HandleInertiaRequests — subcategories are not tiles.
     const { navCategories } = usePage<{
         navCategories?: Array<{
             id: number;
-            slug: string;
             translated_name: string;
+            image_url: string | null;
         }>;
     }>().props;
 
-    const categoryTiles = EXPLORE_CATEGORIES.map((tile) => {
-        const category = navCategories?.find((c) =>
-            c.slug.includes(tile.slugMatch),
-        );
+    const categoryTiles: CategoryTile[] = (navCategories ?? []).map(
+        (category) => ({
+            key: category.id,
+            image: category.image_url,
+            href: `/products?category_id=${category.id}`,
+            label: category.translated_name,
+        }),
+    );
 
-        return {
-            ...tile,
-            href: category
-                ? `/products?category_id=${category.id}`
-                : '/products',
-            label:
-                category?.translated_name ??
-                t(`welcome.categories_grid.${tile.key}`),
-        };
-    });
+    if (categoryTiles.length === 0) {
+        return null;
+    }
 
     return (
-        <section className="bg-souk-paper py-8 lg:py-8">
+        <section className="bg-souk-paper py-5 lg:py-4">
             <div className="container">
-                <Reveal delay={140}>
-                    <h2 className="mt-4 text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
+                {/* <Reveal delay={140}>
+                    <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
                         {t('welcome.categories_grid.heading')}
                     </h2>
-                </Reveal>
+                </Reveal> */}
 
                 <CategoryCarousel
                     tiles={categoryTiles}
@@ -173,7 +172,7 @@ export default function ExploreByCategories() {
                     label={t('welcome.categories_grid.heading')}
                 />
 
-                <div className="mt-14 hidden gap-6 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                     {categoryTiles.map((tile, i) => (
                         <Reveal key={tile.key} delay={200 + i * 100}>
                             <CategoryTileCard tile={tile} />

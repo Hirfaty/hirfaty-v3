@@ -25,9 +25,14 @@ export default function IdentitySection({ buyer }: { buyer: Buyer }) {
     const { t } = useTranslation();
     const [editing, setEditing] = useState(false);
 
+    // `?? ''`: a buyer from the fast-signup flow has never had a name at all
+    // (RegistrationCodeService::complete leaves both columns null), and an
+    // <input> given `null` as its value logs a React warning about switching
+    // between controlled and uncontrolled — the empty string is what an
+    // unfilled text field actually is.
     const form = useForm({
-        first_name: buyer.first_name,
-        last_name: buyer.last_name,
+        first_name: buyer.first_name ?? '',
+        last_name: buyer.last_name ?? '',
     });
 
     // Re-synced from the current prop on every open, not just at mount — a
@@ -35,8 +40,8 @@ export default function IdentitySection({ buyer }: { buyer: Buyer }) {
     // from before that save would otherwise show up the next time it opens.
     const startEditing = () => {
         form.setData({
-            first_name: buyer.first_name,
-            last_name: buyer.last_name,
+            first_name: buyer.first_name ?? '',
+            last_name: buyer.last_name ?? '',
         });
         form.clearErrors();
         setEditing(true);
@@ -120,7 +125,14 @@ export default function IdentitySection({ buyer }: { buyer: Buyer }) {
                 ) : (
                     <ViewRow
                         label={t('buyer.account.field_full_name')}
-                        value={`${buyer.first_name} ${buyer.last_name}`}
+                        value={
+                            // Neither field is set for a fast-signup buyer who
+                            // hasn't opened this section yet — say so, rather
+                            // than rendering the literal string "null null".
+                            buyer.first_name || buyer.last_name
+                                ? `${buyer.first_name ?? ''} ${buyer.last_name ?? ''}`.trim()
+                                : t('buyer.account.field_full_name_empty')
+                        }
                     />
                 )}
 

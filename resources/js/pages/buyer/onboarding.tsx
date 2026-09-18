@@ -7,12 +7,15 @@ import logo from '@/images/logo.png';
 interface OnboardingCategory {
     id: number;
     name: string;
-    icon: string | null;
 }
 
 interface Props {
     categories: OnboardingCategory[];
-    firstName: string;
+    // Null for the fast-signup flow, which no longer asks for a name at all —
+    // see RegistrationCodeService::complete. This is the very first screen a
+    // brand-new buyer lands on, so it is also the first place that has to
+    // cope with not having one yet.
+    firstName: string | null;
 }
 
 type StepId = 'welcome' | 'interests';
@@ -116,9 +119,13 @@ export default function Onboarding({ categories, firstName }: Props) {
                                     </span>
 
                                     <h1 className="mt-6 font-display text-[clamp(1.8rem,4vw,2.6rem)] leading-[1.1] tracking-[-0.02em] text-souk-title">
-                                        {t(
-                                            'buyer.onboarding.welcome.title',
-                                        ).replace(':name', firstName)}
+                                        {firstName
+                                            ? t(
+                                                  'buyer.onboarding.welcome.title',
+                                              ).replace(':name', firstName)
+                                            : t(
+                                                  'buyer.onboarding.welcome.title_generic',
+                                              )}
                                     </h1>
 
                                     <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-souk-brown-deep/75">
@@ -190,11 +197,6 @@ export default function Onboarding({ categories, firstName }: Props) {
                                                             : 'border-souk-brown/20 text-souk-brown-deep/75 hover:border-souk-brown/45 hover:bg-souk-brown/5'
                                                     }`}
                                                 >
-                                                    {c.icon && (
-                                                        <span aria-hidden="true">
-                                                            {c.icon}
-                                                        </span>
-                                                    )}
                                                     {c.name}
                                                     {active && (
                                                         <Check

@@ -32,17 +32,19 @@ interface Props {
 /**
  * The shell shared by the buyer account pages.
  *
- * The nav is a strip of tabs across the top rather than a rail down the side:
- * there are only four sections, and a 15rem column spent on four words pushed
- * the actual content into a narrow gutter on every page. Horizontal tabs give
- * the content the full width and put the sections where a reader looks for
- * them first.
+ * The nav is a rail down the left on desktop, where a 14rem column has room
+ * to spare next to the content. On a phone that same column would push the
+ * content into a narrow gutter, so below `lg` it drops back to the original
+ * horizontal, side-scrolling strip of tabs instead — two `<nav>`s with the
+ * same items, one hidden at each breakpoint, rather than one nav whose axis
+ * tries to flip with a handful of utility classes.
  *
  * Deliberately sparse on rules. The previous version drew a hairline down the
  * rail, another under the page heading, another above the content on small
  * screens and another above the sign-out button — four lines carving up a page
- * that is already visually grouped by whitespace. Only one survives: the tab
- * strip's baseline, which an underline-tab pattern structurally needs.
+ * that is already visually grouped by whitespace. The rail's items now carry
+ * their own state as a filled pill instead of a border, so no baseline is
+ * needed there either.
  *
  * No avatar or name either. The header above already says who is signed in;
  * repeating it here spent the most prominent spot on the page telling the
@@ -109,7 +111,7 @@ export default function BuyerAccountLayout({
             <Head title={title} />
             <SiteHeader />
 
-            <div className="container py-10 lg:py-14">
+            <div className="container py-10 lg:max-w-screen-xl lg:py-14">
                 {/* ── Standing + sign out ───────────────────────────────── */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <span
@@ -135,70 +137,107 @@ export default function BuyerAccountLayout({
                     </button>
                 </div>
 
-                {/*
-                 * Scrolls sideways rather than wrapping: four tabs fit on a
-                 * phone at a glance, and a second row of them would read as a
-                 * different kind of thing.
-                 */}
-                <nav
-                    aria-label={t('buyer.account.title')}
-                    className="mt-7 -mb-px flex gap-1 overflow-x-auto border-b border-souk-brown/12 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden"
-                >
-                    {items.map((item) => {
-                        const Icon = item.icon;
-                        const current = active === item.id;
+                <div className="lg:grid lg:grid-cols-[14rem_1fr] lg:items-start lg:gap-12">
+                    {/*
+                     * The rail. `lg` and up only — see the layout's docblock
+                     * for why a narrower viewport keeps the horizontal strip
+                     * below instead.
+                     */}
+                    <nav
+                        aria-label={t('buyer.account.title')}
+                        className="mt-7 hidden lg:flex lg:flex-col lg:gap-1"
+                    >
+                        {items.map((item) => {
+                            const Icon = item.icon;
+                            const current = active === item.id;
 
-                        return (
-                            <Link
-                                key={item.id}
-                                href={item.href}
-                                aria-current={current ? 'page' : undefined}
-                                className={`group relative flex shrink-0 items-center gap-2.5 px-3 pb-3.5 text-base whitespace-nowrap transition-colors sm:px-4 ${
-                                    current
-                                        ? 'text-souk-green'
-                                        : 'text-souk-brown-deep/65 hover:text-souk-title'
-                                }`}
-                            >
-                                <Icon
-                                    className="h-[1.1rem] w-[1.1rem] shrink-0"
-                                    strokeWidth={1.6}
-                                />
-                                {item.label}
-
-                                {/* Sits on the strip's own baseline, so the
-                                    active tab reads as joined to the page
-                                    below it rather than merely coloured. */}
-                                <span
-                                    aria-hidden="true"
-                                    className={`absolute inset-x-1 -bottom-px h-[2px] rounded-full transition-colors ${
+                            return (
+                                <Link
+                                    key={item.id}
+                                    href={item.href}
+                                    aria-current={current ? 'page' : undefined}
+                                    className={`flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-base transition-colors ${
                                         current
-                                            ? 'bg-souk-green'
-                                            : 'bg-transparent group-hover:bg-souk-brown/20'
+                                            ? 'bg-souk-green/10 text-souk-green'
+                                            : 'text-souk-brown-deep/65 hover:bg-souk-brown/5 hover:text-souk-title'
                                     }`}
-                                />
-                            </Link>
-                        );
-                    })}
-                </nav>
+                                >
+                                    <Icon
+                                        className="h-[1.1rem] w-[1.1rem] shrink-0"
+                                        strokeWidth={1.6}
+                                    />
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
 
-                {/* ── Content ───────────────────────────────────────────── */}
-                <main className="min-w-0 pt-9">
-                    <header className="flex flex-wrap items-end justify-between gap-4">
-                        <div>
-                            <h1 className="font-display text-[clamp(1.9rem,3.2vw,2.6rem)] leading-tight tracking-[-0.02em] text-souk-title">
-                                {title}
-                            </h1>
-                            {description && (
-                                <p className="mt-2.5 max-w-2xl text-base leading-relaxed text-souk-brown-deep/70">
-                                    {description}
-                                </p>
-                            )}
-                        </div>
-                        {action}
-                    </header>
+                    {/*
+                     * Scrolls sideways rather than wrapping: four tabs fit on
+                     * a phone at a glance, and a second row of them would
+                     * read as a different kind of thing. Hidden from `lg` up,
+                     * where the rail on the left takes over instead.
+                     */}
+                    <nav
+                        aria-label={t('buyer.account.title')}
+                        className="mt-7 -mb-px flex gap-1 overflow-x-auto border-b border-souk-brown/12 [scrollbar-width:none] sm:gap-2 lg:hidden [&::-webkit-scrollbar]:hidden"
+                    >
+                        {items.map((item) => {
+                            const Icon = item.icon;
+                            const current = active === item.id;
 
-                    <div className="pt-8">{children}</div>
-                </main>
+                            return (
+                                <Link
+                                    key={item.id}
+                                    href={item.href}
+                                    aria-current={current ? 'page' : undefined}
+                                    className={`group relative flex shrink-0 items-center gap-2.5 px-3 pb-3.5 text-base whitespace-nowrap transition-colors sm:px-4 ${
+                                        current
+                                            ? 'text-souk-green'
+                                            : 'text-souk-brown-deep/65 hover:text-souk-title'
+                                    }`}
+                                >
+                                    <Icon
+                                        className="h-[1.1rem] w-[1.1rem] shrink-0"
+                                        strokeWidth={1.6}
+                                    />
+                                    {item.label}
+
+                                    {/* Sits on the strip's own baseline, so the
+                                        active tab reads as joined to the page
+                                        below it rather than merely coloured. */}
+                                    <span
+                                        aria-hidden="true"
+                                        className={`absolute inset-x-1 -bottom-px h-[2px] rounded-full transition-colors ${
+                                            current
+                                                ? 'bg-souk-green'
+                                                : 'bg-transparent group-hover:bg-souk-brown/20'
+                                        }`}
+                                    />
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    {/* ── Content ───────────────────────────────────────── */}
+                    <main className="min-w-0 pt-9 lg:pt-7">
+                        <header className="flex flex-wrap items-end justify-between gap-4">
+                            <div>
+                                <h1 className="font-display text-[clamp(1.9rem,3.2vw,2.6rem)] leading-tight tracking-[-0.02em] text-souk-title">
+                                    {title}
+                                </h1>
+                                {description && (
+                                    <p className="mt-2.5 max-w-2xl text-base leading-relaxed text-souk-brown-deep/70">
+                                        {description}
+                                    </p>
+                                )}
+                            </div>
+                            {action}
+                        </header>
+
+                        <div className="pt-8">{children}</div>
+                    </main>
+                </div>
             </div>
 
             <SiteFooter />

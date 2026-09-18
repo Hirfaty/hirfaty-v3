@@ -6,6 +6,7 @@ use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
 use App\Services\RegistrationCodeService;
+use App\Services\SocialAuthService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -89,6 +90,14 @@ class FortifyServiceProvider extends ServiceProvider
                     'maskedEmail' => $pending->maskedEmail(),
                     'step' => $pending->nextStep(),
                 ] : null,
+                /*
+                 * Only the providers that actually have credentials, so the
+                 * screen never renders a button that would bounce the visitor
+                 * to an OAuth error page. Empty on a fresh checkout, which the
+                 * page treats as "no social sign-in" and hides the divider with
+                 * it — see pages/auth/login/identify.tsx.
+                 */
+                'socialProviders' => app(SocialAuthService::class)->configuredProviders(),
             ]);
         });
 

@@ -2,6 +2,7 @@ import { createInertiaApp, router } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CartProvider } from '@/contexts/CartContext';
+import { CartSheetProvider } from '@/contexts/CartSheetContext';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
@@ -64,8 +65,15 @@ createInertiaApp({
         return (
             <TooltipProvider delayDuration={0}>
                 <CartProvider>
-                    {app}
-                    <Toaster />
+                    {/*
+                     * Above the app, not inside a page: the drawer is opened
+                     * from a product page but rendered by SiteHeader, and the
+                     * two are siblings. See CartSheetContext.
+                     */}
+                    <CartSheetProvider>
+                        {app}
+                        <Toaster />
+                    </CartSheetProvider>
                 </CartProvider>
             </TooltipProvider>
         );

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
-import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
 import { store as createAccount } from '@/routes/login/details';
@@ -17,21 +16,23 @@ const labelClass =
     'mb-1 block text-xs tracking-normal text-souk-brown-deep/60 normal-case';
 
 /**
- * Step 3: the last of it — name, a delivery phone number and a password.
+ * Step 3: the last of it — a password, nothing else.
  *
- * No email field: the address is settled by now, and showing it as an editable
- * input would imply it can be changed here, which would throw away the code
- * they just typed. The server already knows it from the pending row/cookie,
- * so there is nothing this screen needs the address *for* — see
- * RegistrationController::showDetails, which stopped passing it once the
- * confirmed-email badge that used to display it was removed.
+ * Used to also ask for a name and a delivery phone number here. Both are
+ * nullable on `users` and neither gates anything a fresh buyer needs to do
+ * next — the point of this step is to get them into the marketplace as fast
+ * as possible, not to collect a profile up front. Buyer\ProfileController on
+ * /account is where a name and phone get filled in whenever the buyer gets
+ * around to it, and checkout asks for its own delivery contact regardless.
  *
- * `wide` and `thumbnails={false}`: this screen holds five fields rather than
- * one, and reads cramped at the same width as the rest of the flow — and
- * dense enough already without a decorative photo strip pulling the eye
- * further down. `step={null}` drops the 1-2-3 indicator for the same reason
- * the sign-in screens do: it is chrome, not information the visitor needs to
- * fill in a form.
+ * No email field either: the address is settled by now, and showing it as an
+ * editable input would imply it can be changed here, which would throw away
+ * the code they just typed. The server already knows it from the pending
+ * row/cookie — see RegistrationController::showDetails.
+ *
+ * Back to the default width and thumbnail strip (no `wide`, no
+ * `thumbnails={false}`): with two password fields this is a short screen
+ * again, the same shape as every other step in the flow.
  */
 export default function LoginDetails() {
     const { t } = useTranslation();
@@ -46,8 +47,6 @@ export default function LoginDetails() {
     return (
         <AuthShell
             step={null}
-            wide
-            thumbnails={false}
             title={t('common.auth.login.details_title')}
             titleAccent={t('common.auth.login.details_title_accent')}
             subtitle={t('common.auth.login.details_subtitle')}
@@ -56,97 +55,20 @@ export default function LoginDetails() {
                 {...createAccount.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
-                className="mt-5"
+                className="mt-7"
             >
                 {({ processing, errors }) => (
                     <>
-                        {/* Single column on a phone — five fields squeezed
-                            two-to-a-row is what "should be under each other on
-                            mobile" is about. Pairs up from `sm` and wider. */}
-                        <div className="grid grid-cols-1 gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                        <div className="space-y-3.5">
                             <div>
-                                <label
-                                    htmlFor="first_name"
-                                    className={labelClass}
-                                >
-                                    {t('common.auth.login.first_name')}
-                                </label>
-                                <Input
-                                    id="first_name"
-                                    name="first_name"
-                                    type="text"
-                                    required
-                                    autoFocus
-                                    autoComplete="given-name"
-                                    className={fieldClass}
-                                />
-                                <InputError
-                                    message={errors.first_name}
-                                    className="mt-1.5"
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="last_name"
-                                    className={labelClass}
-                                >
-                                    {t('common.auth.login.last_name')}
-                                </label>
-                                <Input
-                                    id="last_name"
-                                    name="last_name"
-                                    type="text"
-                                    required
-                                    autoComplete="family-name"
-                                    className={fieldClass}
-                                />
-                                <InputError
-                                    message={errors.last_name}
-                                    className="mt-1.5"
-                                />
-                            </div>
-
-                            {/* Phone needs the full width once the grid is
-                                two columns — a formatted international number
-                                does not fit a half column. Below `sm` every
-                                field is already full width, so there is
-                                nothing to span. */}
-                            <div className="sm:col-span-2">
-                                <label
-                                    htmlFor="phone_number"
-                                    className={labelClass}
-                                >
-                                    {t('common.auth.login.phone')}
-                                </label>
-                                <Input
-                                    id="phone_number"
-                                    name="phone_number"
-                                    type="tel"
-                                    required
-                                    autoComplete="tel"
-                                    placeholder="+212 6 12 34 56 78"
-                                    className={fieldClass}
-                                />
-                                <InputError
-                                    message={errors.phone_number}
-                                    className="mt-1.5"
-                                />
-                            </div>
-
-                            {/* Masked fields tolerate a narrow column, so they
-                                pair up even on a phone. */}
-                            <div>
-                                <label
-                                    htmlFor="password"
-                                    className={labelClass}
-                                >
+                                <label htmlFor="password" className={labelClass}>
                                     {t('common.auth.login.password')}
                                 </label>
                                 <PasswordInput
                                     id="password"
                                     name="password"
                                     required
+                                    autoFocus
                                     autoComplete="new-password"
                                     className={fieldClass}
                                     onChange={(e) =>

@@ -51,9 +51,8 @@ return [
      */
     'hero.badge_script' => 'حرفتي',
     'hero.badge' => 'Mon artisanat · Artisans marocains',
-    'hero.line1' => 'Quand l’artisanat ancien',
-    'hero.line2' => 'rencontre nos vies',
-    'hero.lead' => 'Découvrez le patrimoine vivant du Maroc — rencontrez des maîtres artisans, achetez des pièces authentiques faites main et plongez dans des siècles de tradition.',
+    'hero.line' => 'L’ÂME MAROCAINE, SIGNÉE',
+    'hero.lead' => "Plongez au cœur d'un patrimoine millénaire vivant — à la rencontre de maîtres artisans et de leurs pièces uniques, témoins vivants de traditions ancestrales.",
     'hero.cta_primary' => 'Explorer le marché',
     'hero.cta_secondary' => 'Vendre sur Hirfaty',
     'hero.stat_artisans' => 'Artisans',

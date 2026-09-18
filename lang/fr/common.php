@@ -58,6 +58,7 @@ return [
     // « Hirfaty Seller » et « Hirfaty Business » sont des noms de produits :
     // ils restent en alphabet latin dans toutes les langues, comme le font
     // habituellement les noms de marque.
+    'auth.login.card_seller_brand' => 'Vendeur',
     'auth.login.card_seller_body' => 'Vendez votre artisanat partout au Maroc.',
     'auth.login.card_seller_cta' => 'Créer un compte artisan',
     'auth.login.card_business_body' => 'Vous achetez pour le travail ? Commandez au tarif professionnel.',
@@ -106,10 +107,8 @@ return [
     'auth.login.resume_body' => 'Nous avons déjà envoyé un code à :email.',
     'auth.login.resume_cta' => 'Reprendre où j\'en étais',
 
-    // ── Pages d'attente Hirfaty Seller / Hirfaty Business ───────────────
+    // ── Page d'attente Hirfaty Business ─────────────────────────────────
     'auth.login.placeholder_soon' => 'Bientôt disponible',
-    'auth.login.placeholder_seller_title' => 'L\'inscription artisan n\'est pas encore ouverte.',
-    'auth.login.placeholder_seller_body' => 'Nous construisons une vraie maison pour les ateliers — votre boutique, vos pièces, vos revenus. Parlez-nous de votre métier et nous reviendrons vers vous dès l\'ouverture.',
     'auth.login.placeholder_business_title' => 'Les comptes professionnels s\'ouvrent à la main.',
     'auth.login.placeholder_business_body' => 'Les tarifs de gros sont validés avant d\'être accordés : les comptes professionnels ne sont donc pas encore en libre-service. Contactez-nous et nous créerons le vôtre. Vous achetez déjà chez nous ? Vous pouvez demander l\'accès professionnel depuis votre compte.',
     'auth.login.placeholder_contact' => 'Nous contacter',
@@ -134,7 +133,7 @@ return [
     'auth.login.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
     'auth.login.details_title' => 'Presque',
     'auth.login.details_title_accent' => 'terminé',
-    'auth.login.details_subtitle' => 'Simplement votre nom, un téléphone pour les livraisons et un mot de passe.',
+    'auth.login.details_subtitle' => 'Juste un mot de passe. Vous compléterez votre profil plus tard, depuis votre compte.',
     'auth.login.details_submit' => 'Créer mon compte',
     'auth.login.email_confirmed' => 'E-mail confirmé',
 
@@ -207,4 +206,11 @@ return [
     // `:year` est remplacé côté React par l'année en cours.
     'footer.copyright' => '© :year Hirfaty.com — Tous droits réservés.',
     'footer.shipping' => 'Livraison dans tout le Maroc.',
+    // ── Connexion via Google / Facebook ─────────────────────────────────
+    'auth.login.social_divider' => 'ou',
+    'auth.login.social_google' => 'Continuer avec Google',
+    'auth.login.social_facebook' => 'Continuer avec Facebook',
+    'auth.login.social_failed' => 'La connexion a échoué. Veuillez réessayer.',
+    'auth.login.social_unusable' => 'Ce compte ne nous a pas transmis d’adresse e-mail confirmée. Utilisez votre e-mail ci-dessus.',
+    'auth.login.social_banned' => 'Ce compte est suspendu. Contactez-nous si vous pensez qu’il s’agit d’une erreur.',
 ];

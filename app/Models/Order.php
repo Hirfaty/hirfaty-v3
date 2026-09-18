@@ -17,6 +17,8 @@ class Order extends Model
 
     protected $fillable = [
         'reference',
+        // Shared by every order one checkout produced — see the migration.
+        'group_reference',
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
         'total_amount', 'platform_fee', 'amana_fee', 'seller_earnings',
@@ -66,6 +68,22 @@ class Order extends Model
         } while (self::where('reference', $reference)->exists());
 
         return $reference;
+    }
+
+    /**
+     * Every order from the same checkout, this one included.
+     *
+     * Not a relationship: `group_reference` is nullable for orders placed
+     * before it existed, and a `hasMany` on a null key would match every
+     * other ungrouped order in the table. Falls back to a collection of one.
+     */
+    public function groupOrders()
+    {
+        if (! $this->group_reference) {
+            return self::where('id', $this->id);
+        }
+
+        return self::where('group_reference', $this->group_reference);
     }
 
     // ─── Relationships ───────────────────────────────────────

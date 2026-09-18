@@ -42,6 +42,11 @@ class AddressService
                 'recipient_phone' => $data['recipient_phone'] ?? null,
                 'address_line' => $data['address_line'],
                 'city_id' => $data['city_id'],
+                'postal_code' => $data['postal_code'] ?? null,
+                // Coalesced rather than passed straight through: the column
+                // has a default, but handing Eloquent an explicit null would
+                // override it and store nothing.
+                'country' => $data['country'] ?? Address::DEFAULT_COUNTRY,
                 'is_default' => $makeDefault,
             ]);
         });
@@ -65,6 +70,8 @@ class AddressService
             'recipient_phone' => $data['recipient_phone'] ?? null,
             'address_line' => $data['address_line'],
             'city_id' => $data['city_id'],
+            'postal_code' => $data['postal_code'] ?? null,
+            'country' => $data['country'] ?? Address::DEFAULT_COUNTRY,
         ]);
 
         return $address;

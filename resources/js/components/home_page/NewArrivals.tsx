@@ -72,7 +72,7 @@ export default function NewArrivals({
     }
 
     return (
-        <section className="bg-souk-paper py-8 lg:py-10">
+        <section className="bg-souk-paper py-6 lg:py-8">
             <div className="container">
                 <Reveal delay={80}>
                     <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
@@ -80,7 +80,7 @@ export default function NewArrivals({
                     </h2>
                 </Reveal>
 
-                <Reveal delay={160} className="mt-8 lg:mt-10">
+                <Reveal delay={160} className="mt-6 lg:mt-8">
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <Link

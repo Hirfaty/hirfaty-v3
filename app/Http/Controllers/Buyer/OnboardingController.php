@@ -40,7 +40,6 @@ class OnboardingController extends Controller
                 ->map(fn (Category $c) => [
                     'id' => $c->id,
                     'name' => $c->translated_name,
-                    'icon' => $c->icon,
                 ]),
             'firstName' => $user->first_name,
         ]);

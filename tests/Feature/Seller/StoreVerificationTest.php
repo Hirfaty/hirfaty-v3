@@ -2,11 +2,13 @@
 
 use App\Models\Category;
 use App\Models\City;
+use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use App\Notifications\StoreApproved;
 use App\Notifications\StoreRejected;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 /**
  * A seller with a shop, approved and complete unless overridden.
@@ -44,69 +46,78 @@ function verifiableSeller(array $attributes = []): User
     return $seller->refresh();
 }
 
+/**
+ * A published listing on that seller's shop.
+ *
+ * Created straight through the model, because the seller-facing route that
+ * used to do it is exactly what these tests assert no longer exists. Named
+ * for this file for the same collision reason as `verifiableSeller` above.
+ */
+function verifiableSellerProduct(User $seller): Product
+{
+    return Product::create([
+        'store_id' => $seller->store->id,
+        'name' => 'Lanterne',
+        'slug' => Str::slug('lanterne-'.Str::random(6)),
+        'base_price' => 120,
+        'stock' => 3,
+        'status' => 'published',
+    ]);
+}
+
 // ── The gate ────────────────────────────────────────────────────────
 
-test('an approved and complete shop can reach the product form', function () {
+/*
+ * There used to be five tests here covering `store.sellable`, the middleware
+ * that let an approved-and-complete shop reach the product form and bounced
+ * everyone else. That gate is gone with the form: artisans no longer file
+ * their own listings at all — Hirfaty's team contacts them and publishes on
+ * their behalf through Admin\ProductController.
+ *
+ * What replaces them is stricter. Rather than asserting *who* may write, the
+ * tests below assert that no seller-facing write path exists to guard.
+ */
+test('no seller route can create or change a listing', function () {
+    // Approved and complete — the shop that used to be allowed to publish.
     $seller = verifiableSeller();
+    $product = verifiableSellerProduct($seller);
 
-    $this->actingAs($seller)
-        ->get(route('seller.products.create'))
-        ->assertOk();
+    foreach ([
+        ['get', '/seller/products/create'],
+        ['post', '/seller/products'],
+        ['get', "/seller/products/{$product->id}/edit"],
+        ['put', "/seller/products/{$product->id}"],
+        ['patch', "/seller/products/{$product->id}"],
+        ['delete', "/seller/products/{$product->id}"],
+    ] as [$verb, $uri]) {
+        /*
+         * 404 where the URI is gone entirely, 405 where it survives as a
+         * read-only GET (`/seller/products`) and only the write verb was
+         * dropped. Either answer means the same thing here: nothing routes.
+         */
+        $status = $this->actingAs($seller)
+            ->{$verb}($uri, ['name' => 'Contrebande'])
+            ->getStatusCode();
+
+        expect($status)
+            ->toBeIn([404, 405], "{$verb} {$uri} should no longer be routable");
+    }
+
+    expect($seller->store->products()->count())->toBe(1);
 });
 
-test('a pending shop cannot reach the product form', function () {
+test('the products list and detail stay reachable, verified or not', function () {
     $seller = verifiableSeller(['verification_status' => Store::VERIFICATION_PENDING]);
+    $product = verifiableSellerProduct($seller);
 
-    $this->actingAs($seller)
-        ->get(route('seller.products.create'))
-        ->assertRedirect(route('seller.products.index'))
-        ->assertSessionHas('error');
-});
-
-test('a rejected shop cannot reach the product form', function () {
-    $seller = verifiableSeller(['verification_status' => Store::VERIFICATION_REJECTED]);
-
-    $this->actingAs($seller)
-        ->get(route('seller.products.create'))
-        ->assertRedirect(route('seller.products.index'));
-});
-
-/**
- * The important half: approval alone is not enough. A shop cleared once and
- * later emptied out must stop being able to publish.
- */
-test('an approved but incomplete shop cannot reach the product form', function () {
-    $seller = verifiableSeller([
-        'verification_status' => Store::VERIFICATION_APPROVED,
-        'description' => null,
-    ]);
-
-    $this->actingAs($seller)
-        ->get(route('seller.products.create'))
-        ->assertRedirect(route('seller.products.index'));
-});
-
-/**
- * The screen is not the boundary — a hand-rolled POST must be refused too,
- * or an unreviewed shop could publish straight past the missing button.
- */
-test('a pending shop cannot post a product', function () {
-    $seller = verifiableSeller(['verification_status' => Store::VERIFICATION_PENDING]);
-
-    $this->actingAs($seller)
-        ->post(route('seller.products.store'), ['name' => 'Contrebande'])
-        ->assertRedirect(route('seller.products.index'));
-
-    expect($seller->store->products()->count())->toBe(0);
-});
-
-test('the products list stays reachable while unverified', function () {
-    $seller = verifiableSeller(['verification_status' => Store::VERIFICATION_PENDING]);
-
-    // This is where the status bar explains the block, so it must never be
-    // caught by the same gate.
+    // Read-only, so shop standing is irrelevant — this is where the status bar
+    // explains what is still outstanding.
     $this->actingAs($seller)
         ->get(route('seller.products.index'))
+        ->assertOk();
+
+    $this->actingAs($seller)
+        ->get(route('seller.products.show', $product->id))
         ->assertOk();
 });
 

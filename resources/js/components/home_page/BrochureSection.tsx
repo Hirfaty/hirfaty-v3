@@ -8,7 +8,7 @@ export default function BrochureSection() {
     const { t } = useTranslation();
 
     return (
-        <section className="py-8 lg:py-8">
+        <section className="py-6 lg:py-6">
             <div className="container">
                 <Reveal from="scale">
                     <div className="relative isolate overflow-hidden rounded-md bg-souk-brown">

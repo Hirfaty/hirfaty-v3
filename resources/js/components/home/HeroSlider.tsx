@@ -47,7 +47,7 @@ export default function HeroSlider({
         <div {...pauseProps} className="relative mx-auto max-w-384">
             <ul
                 ref={track}
-                className="flex h-[clamp(24rem,72svh,42rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex h-[clamp(18rem,50svh,30rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 {order.map((slide, position) => (
                     <li
@@ -76,7 +76,7 @@ export default function HeroSlider({
 
             <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-10 bg-souk-title/40"
+                className="pointer-events-none absolute inset-0 z-10"
             />
             <div
                 aria-hidden="true"

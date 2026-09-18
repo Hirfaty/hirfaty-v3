@@ -62,20 +62,49 @@ return [
     'setup.terms_and' => 'et les',
     'setup.terms_conditions' => 'conditions d’utilisation',
 
-    // ── Confirmation après création (/seller/store-created) ──────────
-    'created.eyebrow' => 'Atelier créé',
-    'created.title' => 'Bienvenue parmi les artisans de Hirfaty',
-    'created.body' => '« :name » est enregistré. Avant que vos pièces n’apparaissent sur le marché, notre équipe les relit une par une.',
+    // ── Inscription artisan (/sell) ─────────────────────────────────
+    'join.page_title' => 'Vendre sur Hirfaty',
+    'join.quote' => 'Votre métier mérite mieux qu’une étagère de souk.',
+    'join.quote_verify' => 'Encore un instant, et votre atelier ouvre ses portes.',
+    'join.quote_details' => 'Les acheteurs viennent pour l’objet et reviennent pour l’artisan.',
 
-    'created.steps_title' => 'La suite, en trois temps',
-    'created.step_add' => 'Ajoutez vos produits — photos, prix, matières et délais de fabrication.',
-    'created.step_review' => 'Notre équipe relit chaque fiche pour vérifier les photos et la description. Comptez un à deux jours ouvrés.',
-    'created.step_live' => 'Une fois validée, la pièce est publiée sur le marché et visible par tous les acheteurs.',
+    'join.identify_title' => 'Ouvrez votre atelier',
+    'join.identify_title_accent' => 'sur Hirfaty',
+    'join.identify_subtitle' => 'Vendez vos pièces partout au Maroc, sans site à construire ni logistique à gérer. Commencez par votre adresse e-mail.',
+    'join.identify_submit' => 'Commencer',
+    'join.privacy_note' => 'Nous vous enverrons un code à six chiffres pour confirmer votre adresse. Aucun engagement, aucun frais d’ouverture.',
 
-    'created.later_title' => 'Rien ne presse',
-    'created.later_body' => 'Votre présentation, votre logo et votre bannière peuvent être complétés quand vous voulez depuis vos paramètres.',
+    'join.point_shop' => 'Votre boutique en ligne, à votre nom, prête en quelques minutes.',
+    'join.point_delivery' => 'La livraison partout au Maroc, gérée pour vous.',
+    'join.point_trust' => 'Chaque atelier vérifié : les acheteurs savent à qui ils achètent.',
 
-    'created.complete_profile' => 'Compléter mon atelier maintenant',
-    'created.to_dashboard' => 'Aller à mon tableau de bord',
-    'created.add_product' => 'Ajouter un premier produit',
+    'join.section_you' => 'Vos informations',
+    'join.section_shop' => 'Votre atelier',
+
+    'join.category_label' => 'Métier principal',
+    'join.category_placeholder' => 'Choisissez un métier',
+    'join.city_label' => 'Ville de l’atelier',
+    'join.city_placeholder' => 'Choisissez une ville',
+
+    'join.description_label' => 'Présentation de l’atelier',
+    'join.description_hint' => 'Quelques phrases sur vos techniques et vos matières. C’est ce que lisent les acheteurs — et notre équipe lors de la vérification.',
+
+    'join.details_title' => 'Presque fini,',
+    'join.details_title_accent' => 'parlez-nous de vous',
+    'join.details_subtitle' => 'Votre compte et votre atelier, en une seule fois. Tout reste modifiable ensuite depuis vos paramètres.',
+    'join.details_submit' => 'Créer mon atelier',
+
+    // ── Confirmation après inscription (/seller/welcome) ─────────────
+    'welcome.eyebrow' => 'Atelier créé',
+    'welcome.title' => 'Bienvenue parmi les artisans de Hirfaty',
+    'welcome.body' => '« :name » est enregistré. Notre équipe vérifie chaque atelier avant sa mise en ligne — comptez un à deux jours ouvrés. Vous recevrez un e-mail dès que c’est fait.',
+    'welcome.body_approved' => '« :name » est vérifié et en ligne. Vos pièces peuvent désormais être publiées sur le marché.',
+
+    'welcome.steps_title' => 'La suite, en trois temps',
+    'welcome.step_review' => 'Notre équipe vérifie votre atelier : votre métier, votre ville et votre présentation.',
+    'welcome.step_add' => 'Pendant ce temps, préparez vos produits — photos, prix, matières et délais de fabrication.',
+    'welcome.step_live' => 'Une fois votre atelier validé, vos pièces sont publiées et visibles par tous les acheteurs.',
+
+    'welcome.to_dashboard' => 'Aller à mon tableau de bord',
+    'welcome.redirecting' => 'Redirection dans :seconds s…',
 ];

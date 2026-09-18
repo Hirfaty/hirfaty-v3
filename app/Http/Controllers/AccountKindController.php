@@ -6,28 +6,21 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The two account kinds that are not "I am a shopper": Hirfaty Seller and
- * Hirfaty Business.
+ * Hirfaty Business — the trade door, still a holding page.
  *
- * Holding pages for now — the entry points on /login are settled, the flows
- * behind them are not.
+ * This used to serve a pair. Hirfaty Seller outgrew it once /sell became a
+ * real signup and moved to Auth\SellerRegistrationController; what is left
+ * here is the one door that genuinely has nothing behind it yet.
  *
  * Deliberately *outside* the auth namespace and off the /login prefix.
- * `/login/seller` would read as "sign in as a seller", which is the opposite
- * of what these pages are: they are where someone goes to find out about, and
- * eventually apply for, an account they do not have. `/sell` and `/business`
- * say that, and are what a marketplace conventionally uses.
+ * `/login/business` would read as "sign in as a business", which is the
+ * opposite of what this page is: it is where someone goes to find out about,
+ * and eventually apply for, an account they do not have.
  */
 class AccountKindController extends Controller
 {
-    /** Hirfaty Seller — the artisan door. */
-    public function seller(): Response
-    {
-        return Inertia::render('join/seller');
-    }
-
     /**
-     * Hirfaty Business — the trade door.
+     * The trade door.
      *
      * The one with a real design question behind it: `professional_buyer`
      * decides which price list an account is billed on, so it is deliberately

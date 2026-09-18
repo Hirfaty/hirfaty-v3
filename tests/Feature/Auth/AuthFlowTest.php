@@ -383,19 +383,22 @@ function verifiedSignup(string $email = 'buyer@example.com'): string
     return $cookie;
 }
 
+/**
+ * The whole point of the fast-signup flow: nothing here but a password and
+ * consent. `first_name`/`last_name`/`phone_number` are deliberately absent —
+ * that is what the real /login/details form sends, and RegistrationController
+ * no longer requires any of them for a buyer.
+ */
 function detailsPayload(array $overrides = []): array
 {
     return array_merge([
-        'first_name' => 'Achraf',
-        'last_name' => 'Ess',
-        'phone_number' => '0600000001',
         'password' => 'Password!234',
         'password_confirmation' => 'Password!234',
         'terms_accepted' => true,
     ], $overrides);
 }
 
-test('the final step creates an already-verified buyer and signs them in', function () {
+test('the final step creates an already-verified buyer with no profile yet, and signs them in', function () {
     $cookie = verifiedSignup();
 
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
@@ -408,9 +411,12 @@ test('the final step creates an already-verified buyer and signs them in', funct
     $user = User::firstWhere('email', 'buyer@example.com');
 
     expect($user)->not->toBeNull()
-        ->and($user->first_name)->toBe('Achraf')
         ->and($user->role)->toBe('buyer')
-        ->and($user->phone_number)->toBe('0600000001')
+        // Nothing was asked for beyond the password, so nothing is set yet —
+        // Buyer\ProfileController is where these get filled in later.
+        ->and($user->first_name)->toBeNull()
+        ->and($user->last_name)->toBeNull()
+        ->and($user->phone_number)->toBeNull()
         ->and($user->terms_accepted)->toBeTruthy()
         // The code *was* the proof of inbox access — asking for a second
         // round-trip through an emailed link would be the same check twice.
@@ -418,6 +424,29 @@ test('the final step creates an already-verified buyer and signs them in', funct
 
     // The pending row is spent.
     expect(PendingRegistration::count())->toBe(0);
+});
+
+/**
+ * The endpoint still accepts a name and a phone number when they are sent —
+ * the artisan branch of this same controller action requires them — a buyer
+ * client is simply not obliged to send them any more.
+ */
+test('a buyer may still supply a name and phone if they want to', function () {
+    $cookie = verifiedSignup();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.details.store'), detailsPayload([
+            'first_name' => 'Achraf',
+            'last_name' => 'Ess',
+            'phone_number' => '0600000001',
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $user = User::firstWhere('email', 'buyer@example.com');
+
+    expect($user->first_name)->toBe('Achraf')
+        ->and($user->last_name)->toBe('Ess')
+        ->and($user->phone_number)->toBe('0600000001');
 });
 
 test('the terms must be accepted', function () {
@@ -653,13 +682,13 @@ test('banned accounts cannot sign in with a code', function () {
 // ── The two non-shopper doors ───────────────────────────────────────────
 
 /*
- * Holding pages for now, but the routes and names are what the cards on
- * /login link to — so a rename here breaks the front door silently. Pinned.
+ * The routes and names here are what the cards on /login link to, so a rename
+ * breaks the front door silently. Pinned.
  */
 test('the artisan door renders', function () {
     $this->get(route('sell'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('join/seller'));
+        ->assertInertia(fn ($page) => $page->component('auth/seller/identify'));
 });
 
 test('the trade door renders', function () {

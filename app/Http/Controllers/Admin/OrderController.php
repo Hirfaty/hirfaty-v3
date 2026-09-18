@@ -4,15 +4,28 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 
+/**
+ * The fulfilment desk's view of orders.
+ *
+ * Presented by *purchase*, not by order row. `CheckoutService` splits a basket
+ * into one order per workshop because each artisan is paid separately, but
+ * Hirfaty collects and delivers the whole basket as one job — so a buyer who
+ * bought from three workshops is one line of work here, not three.
+ *
+ * Grouping is on `orders.group_reference` (see its migration). Orders placed
+ * before that column existed have none; they fall back to their own reference,
+ * so they simply appear as groups of one rather than vanishing.
+ */
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::query()
-            ->with(['buyer', 'store', 'items.product', 'city']);
+        $query = Order::query()->with(['buyer', 'store', 'items.product.images', 'city']);
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
@@ -20,8 +33,13 @@ class OrderController extends Controller
                 // rather than the column — keeps this index-friendly and
                 // works on both Postgres and the SQLite used in tests.
                 $q->where('reference', 'like', '%'.strtoupper($search).'%')
+                    ->orWhere('group_reference', 'like', '%'.strtoupper($search).'%')
                     ->orWhere('tracking_number', 'like', "%{$search}%")
-                    ->orWhereHas('buyer', fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('buyer', function ($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
                     ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
             });
         }
@@ -38,36 +56,160 @@ class OrderController extends Controller
             $query->whereDate('created_at', '<=', $to);
         }
 
-        $orders = $query->latest()->paginate(20)->withQueryString();
+        /*
+         * Paginated over orders, then folded into groups — not paginated over
+         * groups directly. A GROUP BY paginator would have to count distinct
+         * references in a subquery on every page, and the split is small (a
+         * basket spans a handful of workshops at most), so the simpler query
+         * wins. The trade-off is that a page holds 40 order rows rather than
+         * exactly 20 purchases; `perPage` is set high enough that a group is
+         * very unlikely to straddle a page boundary.
+         */
+        $paginator = $query->latest()->paginate(40)->withQueryString();
+
+        $groups = collect($paginator->items())
+            ->groupBy(fn (Order $order) => $order->group_reference ?? $order->reference)
+            ->map(fn ($orders, $reference) => $this->summariseGroup($reference, $orders))
+            ->values();
 
         return Inertia::render('admin/orders/index', [
-            'orders' => $orders,
+            'groups' => $groups,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+                'links' => $paginator->linkCollection(),
+            ],
             'filters' => $request->only(['search', 'status', 'from', 'to']),
         ]);
     }
 
+    /**
+     * One purchase, whole — every workshop's order in the same checkout.
+     *
+     * Route-model-bound on a single order because that is what a link carries;
+     * the group is reassembled from it here.
+     */
     public function show(Order $order)
     {
-        $order->load(['buyer', 'store', 'items.product.media', 'city']);
+        $orders = $order->groupOrders()
+            ->with(['buyer', 'store', 'items.product.images', 'city'])
+            ->orderBy('id')
+            ->get();
 
         return Inertia::render('admin/orders/show', [
-            'order' => $order,
+            'group' => $this->summariseGroup(
+                $order->group_reference ?? $order->reference,
+                $orders,
+            ),
         ]);
     }
 
-    public function updateStatus(Request $request, Order $order)
+    /**
+     * Move a purchase — or one workshop's parcel out of it — to a new status.
+     *
+     * `scope` is what the "handle this workshop separately" checkbox sends.
+     * The whole group is the default because the desk normally collects
+     * everything and ships it as one parcel under one tracking number; a
+     * single order is the exception, for when one workshop's piece has to
+     * travel on its own.
+     */
+    public function updateStatus(Request $request, Order $order, OrderStatusService $orderStatus)
     {
         $data = $request->validate([
             'status' => ['required', 'in:pending,confirmed,shipped,delivered,cancelled'],
+            'tracking_number' => ['nullable', 'string', 'max:255'],
+            'scope' => ['nullable', 'in:group,single'],
         ]);
 
-        $order->update(['status' => $data['status']]);
+        $targets = ($data['scope'] ?? 'group') === 'single'
+            ? collect([$order])
+            : $order->groupOrders()->orderBy('id')->get();
 
-        // If delivered, mark earning as available
-        if ($data['status'] === 'delivered') {
-            $order->earning?->update(['status' => 'available']);
+        $attributes = array_filter(
+            ['tracking_number' => $data['tracking_number'] ?? null],
+            fn ($value) => $value !== null,
+        );
+
+        foreach ($targets as $target) {
+            // Per order rather than in bulk: the service also flips the
+            // earning to available on delivery and emails the buyer, and both
+            // are per-order concerns.
+            $orderStatus->transition($target, $data['status'], $attributes);
         }
 
-        return back()->with('success', 'Order status updated.');
+        return back()->with('success', 'Statut mis à jour.');
+    }
+
+    /**
+     * Flatten one checkout's orders into the shape both admin screens read.
+     *
+     * @param  Collection<int, Order>  $orders
+     * @return array<string, mixed>
+     */
+    private function summariseGroup(string $reference, $orders): array
+    {
+        $first = $orders->first();
+        $buyer = $first->buyer;
+
+        $buyerName = trim(($buyer->first_name ?? '').' '.($buyer->last_name ?? ''));
+
+        return [
+            'reference' => $reference,
+            // What a link to this purchase points at — route-model binding is
+            // on a single order, and the group is rebuilt from it in show().
+            'primary_reference' => $first->reference,
+            'created_at' => $first->created_at,
+            'buyer' => [
+                'name' => $buyerName !== '' ? $buyerName : ($buyer->email ?? '—'),
+                'email' => $buyer->email ?? null,
+            ],
+            'shipping_address' => $first->shipping_address,
+            'shipping_phone' => $first->shipping_phone,
+            'city_name' => $first->city?->name,
+            'notes' => $first->notes,
+
+            /*
+             * Money is summed across the whole purchase. `amana_fee` lands
+             * entirely on whichever order was created first (see
+             * CheckoutService), so summing is what recovers the one delivery
+             * charge the buyer actually paid.
+             */
+            'products_total' => (float) $orders->sum(fn (Order $o) => (float) $o->total_amount),
+            'delivery_total' => (float) $orders->sum(fn (Order $o) => (float) $o->amana_fee),
+
+            /*
+             * One status when every parcel agrees, null when they have been
+             * moved apart — which is exactly the state the "handle separately"
+             * checkbox creates, so the page can say so rather than pick one
+             * order's status and present it as the purchase's.
+             */
+            'status' => $orders->pluck('status')->unique()->count() === 1
+                ? $orders->first()->status
+                : null,
+
+            'tracking_numbers' => $orders->pluck('tracking_number')->filter()->unique()->values(),
+
+            'orders' => $orders->map(fn (Order $o) => [
+                'id' => $o->id,
+                'reference' => $o->reference,
+                'status' => $o->status,
+                'tracking_number' => $o->tracking_number,
+                'total_amount' => (float) $o->total_amount,
+                'amana_fee' => (float) $o->amana_fee,
+                'store' => [
+                    'id' => $o->store?->id,
+                    'name' => $o->store?->store_name ?? '—',
+                ],
+                'items' => $o->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'name' => $item->product?->name ?? 'Produit supprimé',
+                    'variant_label' => $item->variant_label,
+                    'quantity' => $item->quantity,
+                    'subtotal' => (float) $item->subtotal,
+                    'image' => $item->product?->images->first()?->url,
+                ])->values(),
+            ])->values(),
+        ];
     }
 }

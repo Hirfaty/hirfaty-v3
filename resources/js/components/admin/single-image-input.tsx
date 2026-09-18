@@ -10,6 +10,10 @@ interface Props {
     value: File | null;
     onChange: (file: File | null) => void;
     error?: string;
+    /** Already-saved image, shown until a new file is picked. */
+    current?: string | null;
+    /** Removes `current`; without it the saved image can only be replaced. */
+    onRemoveCurrent?: () => void;
 }
 
 /**
@@ -24,6 +28,8 @@ export default function SingleImageInput({
     value,
     onChange,
     error,
+    current = null,
+    onRemoveCurrent,
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
     // Client-side rejection (too large / wrong resolution) — separate from
@@ -46,6 +52,9 @@ export default function SingleImageInput({
             }
         };
     }, [previewUrl]);
+
+    const shown = previewUrl ?? current;
+    const canRemove = previewUrl !== null || onRemoveCurrent !== undefined;
 
     const pick = async (files: FileList | null) => {
         const file = files?.[0];
@@ -73,10 +82,10 @@ export default function SingleImageInput({
             <div
                 className={`mt-2 ${aspect === 'wide' ? 'aspect-[3/1]' : 'aspect-square max-w-[180px]'}`}
             >
-                {previewUrl ? (
+                {shown ? (
                     <div className="group relative h-full w-full overflow-hidden rounded-xl border border-border bg-muted/40">
                         <img
-                            src={previewUrl}
+                            src={shown}
                             alt=""
                             className="h-full w-full object-cover"
                         />
@@ -89,14 +98,20 @@ export default function SingleImageInput({
                             >
                                 <Upload className="h-4 w-4" />
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => onChange(null)}
-                                className="rounded-md bg-white/90 p-2 text-red-600 shadow-sm transition hover:bg-white"
-                                aria-label="Retirer l'image"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+                            {canRemove && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        previewUrl
+                                            ? onChange(null)
+                                            : onRemoveCurrent?.()
+                                    }
+                                    className="rounded-md bg-white/90 p-2 text-red-600 shadow-sm transition hover:bg-white"
+                                    aria-label="Retirer l'image"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 ) : (

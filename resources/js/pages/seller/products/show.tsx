@@ -1,7 +1,6 @@
 ﻿import { Link } from '@inertiajs/react';
-import { ArrowLeft, Pencil, Package, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import SellerLayout from '@/layouts/seller/layout';
@@ -85,18 +84,8 @@ function SellerProductPreview({
                             'Aucune description disponible pour ce produit.'}
                     </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="h-11 gap-2 rounded-xl"
-                    >
-                        <Link href={route('seller.products.edit', product.id)}>
-                            <Pencil className="h-4 w-4" />
-                            Modifier
-                        </Link>
-                    </Button>
-                </div>
+                {/* No "Modifier": listings are maintained by the Hirfaty
+                    team, so this page is a read-only record of the piece. */}
             </div>
 
             {product.status === 'rejected' && (

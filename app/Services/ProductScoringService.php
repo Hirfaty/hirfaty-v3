@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductView;
+use App\Models\User;
 use App\Models\Wishlist;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Inertia\Inertia;
 
 class ProductScoringService
@@ -60,6 +62,32 @@ class ProductScoringService
                 now()->subDays(30),
             ]
         )->orderByDesc('score');
+    }
+
+    /**
+     * Popular pieces to browse next, for the bottom of the cart page.
+     *
+     * Same visibility/pricing gate as the listing (`storefront()` +
+     * `visibility`), ranked by the same demand score, with whatever is
+     * already in the basket excluded so the row never just repeats it.
+     *
+     * @param  array<int, int>  $excludeProductIds
+     */
+    public function suggestionsFor(?User $user, array $excludeProductIds = [], int $limit = 8): Collection
+    {
+        $audience = Product::audienceFor($user);
+
+        $query = Product::query()
+            ->storefront()
+            ->whereIn('visibility', ['both', $audience])
+            ->when(
+                $excludeProductIds !== [],
+                fn ($q) => $q->whereNotIn('id', $excludeProductIds),
+            )
+            ->with(['store.city', 'category', 'images', 'variants.media'])
+            ->withCount(['wishlists', 'orderItems']);
+
+        return $this->apply($query)->limit($limit)->get();
     }
 
     // ─── Product detail ──────────────────────────────────────

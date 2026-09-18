@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CollectionCard } from '@/components/buyer/CollectionCard';
+import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -25,16 +27,6 @@ const LOCALE_TAGS: Record<string, string> = {
     ar: 'ar-MA',
     en: 'en-MA',
 };
-
-/**
- * Flat delivery charge, once per workshop.
- *
- * Checkout splits one basket into an order per store and bills Amana on each,
- * so the basket has to count stores — not items — or it quotes a total the
- * next screen contradicts. This page used to charge 20 per *unit*, which on a
- * five-of-one-thing basket over-quoted the delivery fivefold.
- */
-const AMANA_FEE = 20;
 
 /** One basket line, already priced for this viewer by CartLineResource. */
 type CartLine = {
@@ -78,15 +70,30 @@ function Thumbnail({ line }: { line: CartLine }) {
     );
 }
 
-const CartPage = ({ items }: { items: CartLine[] }) => {
+const CartPage = ({
+    items,
+    suggestions,
+    audience,
+    wishlisted,
+    canWishlist,
+}: {
+    items: CartLine[];
+    /** Popular pieces to browse next, already excluding what's in the basket. */
+    suggestions: ListingProduct[];
+    audience: Audience;
+    /** Product ids, among `suggestions`, the signed-in buyer already wishlisted. */
+    wishlisted: number[];
+    canWishlist: boolean;
+}) => {
     const { t, locale } = useTranslation();
     const [busyId, setBusyId] = useState<number | null>(null);
+    const wished = new Set(wishlisted);
 
-    const money = (value: number) =>
+    const money = (value: number | string) =>
         new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 2,
-        }).format(value);
+        }).format(Number(value));
 
     const count = items.reduce((sum, line) => sum + line.quantity, 0);
 
@@ -105,10 +112,12 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
         );
     }, 0);
 
-    // One Amana fee per workshop, mirroring how checkout splits the basket.
-    const storeCount = new Set(items.map((line) => line.store_id)).size;
-    const delivery = AMANA_FEE * storeCount;
-    const total = subtotal + delivery;
+    /*
+     * The delivery charge is a flat, checkout-only line (see
+     * CheckoutService::AMANA_FEE) — the cart only ever sells products, so its
+     * total is the products' total, full stop.
+     */
+    const total = subtotal;
 
     /*
      * An admin can publish a piece before its price is agreed. Checkout
@@ -285,7 +294,7 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                                                                         line.line_total,
                                                                     )}
                                                                     <span className="ms-1 text-xs">
-                                                                        MAD
+                                                                        MAD TTC
                                                                     </span>
                                                                 </p>
                                                                 <p className="mt-1 text-[11px] text-souk-brown-deep/55">
@@ -301,7 +310,7 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                                                                         line.unit_price ??
                                                                             0,
                                                                     )}{' '}
-                                                                    MAD{' '}
+                                                                    MAD TTC{' '}
                                                                     {t(
                                                                         'buyer.cart.per_unit',
                                                                     )}
@@ -434,40 +443,16 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                                         {t('buyer.cart.subtotal')}
                                     </span>
                                     <span className="text-souk-title">
-                                        {money(subtotal)} MAD
+                                        {money(subtotal)} MAD TTC
                                     </span>
                                 </div>
 
                                 {savings > 0 && (
                                     <div className="flex items-baseline justify-between text-terracotta">
                                         <span>{t('buyer.cart.savings')}</span>
-                                        <span>−{money(savings)} MAD</span>
+                                        <span>−{money(savings)} MAD TTC</span>
                                     </div>
                                 )}
-
-                                <div className="flex items-baseline justify-between">
-                                    <span className="text-souk-brown-deep/75">
-                                        {t('buyer.cart.delivery')}
-                                        <span className="ms-1.5 text-[11px] text-souk-brown-deep/50">
-                                            (
-                                            {(storeCount > 1
-                                                ? t(
-                                                      'buyer.cart.delivery_many_stores',
-                                                  )
-                                                : t(
-                                                      'buyer.cart.delivery_one_store',
-                                                  )
-                                            ).replace(
-                                                ':count',
-                                                String(storeCount),
-                                            )}
-                                            )
-                                        </span>
-                                    </span>
-                                    <span className="text-souk-title">
-                                        {money(delivery)} MAD
-                                    </span>
-                                </div>
                             </div>
 
                             <div className="my-5 h-px bg-souk-brown/12" />
@@ -478,7 +463,9 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                                 </span>
                                 <span className="font-display text-2xl leading-none text-souk-title">
                                     {money(total)}
-                                    <span className="ms-1.5 text-sm">MAD</span>
+                                    <span className="ms-1.5 text-sm">
+                                        MAD TTC
+                                    </span>
                                 </span>
                             </div>
 
@@ -522,6 +509,27 @@ const CartPage = ({ items }: { items: CartLine[] }) => {
                             </div>
                         </div>
                     </aside>
+                </section>
+            )}
+
+            {suggestions.length > 0 && (
+                <section className="container border-t border-souk-brown/10 py-14">
+                    <h2 className="font-display text-2xl text-souk-title">
+                        {t('buyer.cart.you_might_also_like')}
+                    </h2>
+                    <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-7">
+                        {suggestions.map((product) => (
+                            <CollectionCard
+                                key={product.id}
+                                product={product}
+                                audience={audience}
+                                money={money}
+                                t={t}
+                                wishlisted={wished.has(product.id)}
+                                canWishlist={canWishlist}
+                            />
+                        ))}
+                    </div>
                 </section>
             )}
 

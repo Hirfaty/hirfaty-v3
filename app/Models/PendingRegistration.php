@@ -7,11 +7,17 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * A buyer signup that has started but not finished — see the migration for why
- * this is its own table rather than a half-filled `users` row.
+ * A signup that has started but not finished — see the migration for why this
+ * is its own table rather than a half-filled `users` row.
+ *
+ * Serves both doors. `intent` says which one: a shopper who typed their address
+ * on /login, or an artisan who typed it on /sell. The code step is identical
+ * either way; the screen after it, and the account that comes out the far end,
+ * are not.
  *
  * @property int $id
  * @property string $email
+ * @property string $intent One of INTENTS: buyer or seller.
  * @property string $code_hash
  * @property string $resume_token_hash
  * @property CarbonImmutable|null $verified_at
@@ -28,6 +34,14 @@ use Illuminate\Database\Eloquent\Model;
 #[Hidden(['code_hash', 'resume_token_hash'])]
 class PendingRegistration extends Model
 {
+    /** Someone signing up to shop — the /login door. */
+    public const INTENT_BUYER = 'buyer';
+
+    /** Someone signing up to sell — the /sell door. */
+    public const INTENT_SELLER = 'seller';
+
+    public const INTENTS = [self::INTENT_BUYER, self::INTENT_SELLER];
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -58,6 +72,19 @@ class PendingRegistration extends Model
     public function nextStep(): string
     {
         return $this->isVerified() ? 'details' : 'verify';
+    }
+
+    /**
+     * This signup is headed for a workshop rather than a shopping account.
+     *
+     * Read off the row rather than off the request, which is the whole point
+     * of storing it: the browser picks the door once, on the page that sends
+     * the first code, and cannot change its mind on the way to the details
+     * screen and self-assign the seller role.
+     */
+    public function isSeller(): bool
+    {
+        return $this->intent === self::INTENT_SELLER;
     }
 
     /**

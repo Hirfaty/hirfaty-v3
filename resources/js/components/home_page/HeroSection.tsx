@@ -17,7 +17,7 @@ export default function HeroSection() {
     const { t, isRTL } = useTranslation();
 
     return (
-        <section className="overflow-x-clip bg-souk-paper px-5 pb-5 sm:px-8 sm:pb-8 lg:px-12 lg:pb-4">
+        <section className="overflow-x-clip bg-souk-paper px-5 pb-3 sm:px-8 sm:pb-4 lg:px-12 lg:pb-2">
             <HeroSlider
                 slides={HERO_SLIDES.map((slide) => ({
                     src: slide.src,
@@ -30,23 +30,18 @@ export default function HeroSection() {
             >
                 <h1 className="font-display text-[clamp(1.75rem,4.8vw,4rem)] leading-[1.08] tracking-[0.04em] text-white uppercase rtl:tracking-normal">
                     <Reveal delay={80}>
-                        <span className="block">{t('welcome.hero.line1')}</span>
-                    </Reveal>
-                    <Reveal delay={180}>
-                        <span className="block text-souk-cream">
-                            {t('welcome.hero.line2')}
-                        </span>
+                        <span className="block">{t('welcome.hero.line')}</span>
                     </Reveal>
                 </h1>
 
                 <Reveal delay={280}>
-                    <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-souk-cream sm:text-xl">
+                    <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-souk-cream sm:text-xl">
                         {t('welcome.hero.lead')}
                     </p>
                 </Reveal>
 
                 <Reveal delay={360}>
-                    <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                         <Link
                             href="/products"
                             className="group pointer-events-auto relative inline-flex items-center gap-2.5 overflow-hidden rounded-md bg-souk-brown px-7 py-3.5 font-semibold text-souk-cream shadow-lg shadow-black/25 hover:bg-souk-brown/90"

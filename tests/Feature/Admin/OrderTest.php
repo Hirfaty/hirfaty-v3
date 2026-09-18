@@ -42,16 +42,25 @@ test('super admin can view an order', function () {
     $response = $this->actingAs($admin)
         ->get(route('admin.orders.show', $order));
 
+    /*
+     * `group`, not `order`: the admin desk works a whole purchase at a time
+     * now — every workshop's order from one checkout, shown together. An order
+     * placed before `group_reference` existed (as here) has none, so it falls
+     * back to a group of one. See Admin\OrderController::summariseGroup.
+     */
     $response->assertOk();
     $response->assertInertia(fn (Assert $page) => $page
         ->component('admin/orders/show')
-        ->has('order', fn (Assert $page) => $page
-            ->where('id', $order->id)
-            ->where('total_amount', '100.00')
+        ->has('group', fn (Assert $page) => $page
+            ->where('reference', $order->reference)
+            ->where('primary_reference', $order->reference)
+            // Ints, not floats: a whole-number float serialises to JSON
+            // without its decimal part.
+            ->where('products_total', 100)
+            ->where('delivery_total', 15)
+            ->where('status', 'pending')
             ->has('buyer')
-            ->has('store')
-            ->has('items')
-            ->has('city')
+            ->has('orders', 1)
             ->etc()
         )
     );

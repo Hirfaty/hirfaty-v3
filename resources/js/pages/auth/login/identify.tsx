@@ -1,13 +1,14 @@
 import { Form, Link, usePage } from '@inertiajs/react';
-import { Briefcase, Hammer, RotateCcw } from 'lucide-react';
+import { Hammer, RotateCcw } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
-import { business, sell } from '@/routes';
+import { sell } from '@/routes';
 import { details, identify, verify } from '@/routes/login';
 import AuthShell from './AuthShell';
 import CraftCardStack from './CraftCardStack';
+import SocialButtons, { type SocialProvider } from './SocialButtons';
 
 /*
  * The one field on this screen gets a boxed treatment rather than the house
@@ -22,18 +23,6 @@ const fieldClass = 'border-b-0 pe-0 text-base text-souk-title';
 
 const fieldBoxClass =
     'rounded-lg border border-souk-brown/30 bg-white px-4 transition-colors focus-within:border-souk-brown';
-
-/**
- * The two doors that are not "I am a shopper".
- *
- * `brand` is hardcoded rather than translated: "Hirfaty Seller" and "Hirfaty
- * Business" are product names, and product names stay in Latin script in
- * every locale. Only the supporting line and the button are translated.
- */
-const ACCOUNT_KINDS = [
-    { key: 'seller', brand: 'Seller', href: sell, Icon: Hammer },
-    { key: 'business', brand: 'Business', href: business, Icon: Briefcase },
-] as const;
 
 /**
  * The front door — one email field, for signing in *and* signing up.
@@ -51,12 +40,19 @@ const ACCOUNT_KINDS = [
  */
 export default function LoginIdentify({
     resume,
+    socialProviders = [],
 }: {
     /**
      * A signup already in progress in this browser, if any. Server-resolved
      * from the resume cookie — see RegistrationCodeService::resolve.
      */
     resume: { maskedEmail: string; step: 'verify' | 'details' } | null;
+    /**
+     * Which of Google/Facebook have credentials configured. Server-decided so
+     * the screen cannot offer a button whose route would 404; defaults to none
+     * so a partial reload that drops the prop hides them rather than throwing.
+     */
+    socialProviders?: SocialProvider[];
 }) {
     const { t } = useTranslation();
     const { flash } = usePage<{ flash?: { error?: string } }>().props;
@@ -69,31 +65,37 @@ export default function LoginIdentify({
             subtitle={t('common.auth.login.identify_subtitle')}
             aside={<CraftCardStack />}
             footer={
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {ACCOUNT_KINDS.map(({ key, brand, href, Icon }) => (
-                        <div
-                            key={key}
-                            className="rounded-2xl border border-souk-brown/12 bg-souk-peach/40 px-6 py-6 text-center"
-                        >
-                            <p className="font-display text-xl text-souk-title">
-                                Hirfaty{' '}
-                                <span className="text-souk-brown">{brand}</span>
-                            </p>
-                            <p className="mt-1.5 text-sm text-souk-brown-deep/70">
-                                {t(`common.auth.login.card_${key}_body`)}
-                            </p>
-                            <Link
-                                href={href()}
-                                className="group mt-4 inline-flex items-center gap-2 rounded-full border border-souk-brown/35 px-5 py-2.5 text-sm text-souk-title transition-colors hover:border-souk-brown hover:bg-souk-brown/5"
-                            >
-                                <Icon
-                                    className="h-4 w-4 text-souk-brown"
-                                    strokeWidth={1.5}
-                                />
-                                {t(`common.auth.login.card_${key}_cta`)}
-                            </Link>
-                        </div>
-                    ))}
+                /*
+                 * One door, not two. Hirfaty Business used to sit beside this
+                 * as a second card, but it is a holding page with no flow
+                 * behind it — giving a dead end equal billing with a working
+                 * signup made the shelf look twice as full as it is.
+                 *
+                 * "Hirfaty" stays Latin (it is the brand, and the header
+                 * renders it that way in every locale) while the word after it
+                 * is translated, so the card reads as the product name in the
+                 * visitor's own language rather than as English furniture.
+                 */
+                <div className="rounded-2xl border border-souk-brown/12 bg-souk-peach/40 px-6 py-6 text-center">
+                    <p className="font-display text-xl text-souk-title">
+                        Hirfaty{' '}
+                        <span className="text-souk-brown">
+                            {t('common.auth.login.card_seller_brand')}
+                        </span>
+                    </p>
+                    <p className="mt-1.5 text-sm text-souk-brown-deep/70">
+                        {t('common.auth.login.card_seller_body')}
+                    </p>
+                    <Link
+                        href={sell()}
+                        className="group mt-4 inline-flex items-center gap-2 rounded-full border border-souk-brown/35 px-5 py-2.5 text-sm text-souk-title transition-colors hover:border-souk-brown hover:bg-souk-brown/5"
+                    >
+                        <Hammer
+                            className="h-4 w-4 text-souk-brown"
+                            strokeWidth={1.5}
+                        />
+                        {t('common.auth.login.card_seller_cta')}
+                    </Link>
                 </div>
             }
         >
@@ -181,6 +183,11 @@ export default function LoginIdentify({
                     </>
                 )}
             </Form>
+
+            {/* Outside the <Form>, deliberately: these are links out to the
+                provider, not submissions, and nesting them would let a stray
+                Enter keypress send the email form instead of following them. */}
+            <SocialButtons providers={socialProviders} />
         </AuthShell>
     );
 }

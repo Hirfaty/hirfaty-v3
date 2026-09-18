@@ -1,6 +1,14 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {
+    ChevronDown,
+    ChevronRight,
+    Menu,
+    Search,
+    ShoppingBag,
+    User,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SearchPanel from '@/components/SearchPanel';
@@ -16,11 +24,10 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { useCartSheet } from '@/contexts/CartSheetContext';
+import { useCartSummary } from '@/hooks/use-cart-summary';
 import { useTranslation } from '@/hooks/use-translation';
-
-import { useGuestCart } from '@/hooks/useGuestCart';
 import logo from '@/images/logo.png';
-import { login } from '@/routes';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -57,83 +64,47 @@ type SiteHeaderProps = {
 
 export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
     const { t, locale, isRTL } = useTranslation();
-    const { getItems, count: getGuestCount } = useGuestCart();
-    // const [guestItems, setGuestItems] = useState(getItems());
-    const { cart, auth, navCategories } = usePage<{
+    const { auth, navCategories } = usePage<{
         auth: {
             user: {
                 id: number;
-                first_name: string;
-                last_name: string;
+                // Nullable: the fast-signup buyer flow no longer asks for a
+                // name at all — see RegistrationCodeService::complete — so a
+                // freshly registered buyer has neither until they fill it in
+                // from /account.
+                first_name: string | null;
+                last_name: string | null;
                 email: string;
                 role: string;
             } | null;
         };
         /**
-         * Top-level crafts behind the "Categories" menu, shared from
-         * HandleInertiaRequests so the header has them on every route.
-         * Optional because a partial reload may not carry it.
+         * Top-level crafts behind the "Categories" menu, each with its
+         * subcategories nested — shared from HandleInertiaRequests so the
+         * header has them on every route. `children` is an empty array for a
+         * parent with no subcategories. Optional because a partial reload
+         * may not carry it.
          */
         navCategories?: Array<{
             id: number;
             slug: string;
             translated_name: string;
-        }>;
-        cart?: {
-            items: Array<{
+            children: Array<{
                 id: number;
-                name: string;
-                /** "Rouge / 4m" — absent on a product without variants. */
-                variant?: string | null;
-                image?: string | null;
-                seller: string;
-                qty: number;
-                price: number;
-                line_total: number;
+                slug: string;
+                translated_name: string;
             }>;
-            count: number;
-            subtotal: number;
-        };
+        }>;
     }>().props;
 
     const user = auth?.user;
     const currentUrl = usePage().url.split('?')[0];
 
-    // const guestItems = getItems();
-    const [guestItems, setGuestItems] = useState(getItems());
-    const cartData = user
-        ? (cart ?? { items: [], count: 0, subtotal: 0 })
-        : {
-              items: guestItems.map((item) => ({
-                  id: item.product_id,
-                  name: item.name,
-                  // Guest lines keep the label under a different key; surface
-                  // it under the same name the server cart uses so the
-                  // dropdown renders identically either side of logging in.
-                  variant: item.variant_label ?? null,
-                  image: item.image,
-                  seller: item.store_name,
-                  qty: item.quantity,
-                  price: Number(item.price),
-                  line_total: Number(item.price) * item.quantity,
-              })),
-              count: getGuestCount(),
-              subtotal: guestItems.reduce(
-                  (sum, item) => sum + Number(item.price) * item.quantity,
-                  0,
-              ),
-          };
+    /** Server cart when signed in, localStorage cart for a guest. */
+    const cartData = useCartSummary();
 
-    useEffect(() => {
-        const syncCart = () => {
-            setGuestItems(getItems());
-        };
-        window.addEventListener('guest-cart-updated', syncCart);
-
-        return () => {
-            window.removeEventListener('guest-cart-updated', syncCart);
-        };
-    });
+    /* The drawer itself is rendered below; this only summons it. */
+    const { openCart } = useCartSheet();
 
     /*
      * The drawer is controlled rather than left to Radix: the header persists
@@ -145,6 +116,26 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
     /** The search sheet under the bar — see SearchPanel. */
     const [searchOpen, setSearchOpen] = useState(false);
 
+    /** The categories mega-menu; controlled so it can open on hover. */
+    const [categoriesOpen, setCategoriesOpen] = useState(false);
+    const categoriesCloseTimer = useRef<number | null>(null);
+
+    const openCategories = () => {
+        if (categoriesCloseTimer.current !== null) {
+            window.clearTimeout(categoriesCloseTimer.current);
+            categoriesCloseTimer.current = null;
+        }
+
+        setCategoriesOpen(true);
+    };
+
+    const closeCategoriesSoon = () => {
+        categoriesCloseTimer.current = window.setTimeout(
+            () => setCategoriesOpen(false),
+            150,
+        );
+    };
+
     const switchLocale = (code: string) => {
         setMenuOpen(false);
         router.post(route('locale.switch', code), {}, { preserveScroll: true });
@@ -154,7 +145,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
         { href: '/products', label: t('header.marketplace') },
         { href: '/new-arrivals', label: t('header.new_products') },
         // { href: '/sellers', label: t('header.sellers') },
-        // { href: '/about', label: t('header.about') },
+        { href: '/about', label: t('header.about') },
     ];
 
     const categories = navCategories ?? [];
@@ -300,18 +291,26 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                     ))}
 
                     {/*
-                     * Categories as a menu rather than as more top-level
-                     * links: there are eight crafts, and spelling them out in
-                     * the bar would crowd out everything else at every width.
+                     * Categories as a grouped mega-menu, the way large
+                     * marketplaces lay them out: every top-level craft is a
+                     * column heading (itself a link), with its subcategories
+                     * listed underneath. A craft without subcategories is
+                     * just its heading.
                      *
-                     * A Popover rather than a hover-only flyout so it works
-                     * on a touch screen, where there is no hover, and can be
-                     * driven from the keyboard.
+                     * Opens on hover for pointer users, but stays a Popover
+                     * so a tap (touch screens have no hover) and the keyboard
+                     * open it too. The close is delayed a beat so the pointer
+                     * can cross the gap between the trigger and the panel.
                      */}
                     {categories.length > 0 && (
-                        <Popover>
+                        <Popover
+                            open={categoriesOpen}
+                            onOpenChange={setCategoriesOpen}
+                        >
                             <PopoverTrigger asChild>
                                 <button
+                                    onMouseEnter={openCategories}
+                                    onMouseLeave={closeCategoriesSoon}
                                     className={`group relative flex cursor-pointer items-center gap-1.5 py-1 transition-colors ${
                                         light
                                             ? 'text-white/85 hover:text-white'
@@ -335,49 +334,84 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                             </PopoverTrigger>
                             <PopoverContent
                                 align="start"
-                                className="w-72 rounded-xl border-ink/15 bg-paper p-2"
+                                collisionPadding={16}
+                                onMouseEnter={openCategories}
+                                onMouseLeave={closeCategoriesSoon}
+                                className="w-[min(92vw,60rem)] rounded-xl border-ink/15 bg-paper p-6"
                             >
-                                <ul className="grid gap-0.5">
-                                    {categories.map((category) => {
-                                        const current =
-                                            activeCategoryId ===
-                                            String(category.id);
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
+                                    {categories.map((category) => (
+                                        <div key={category.id}>
+                                            <Link
+                                                href={categoryHref(category.id)}
+                                                onClick={() =>
+                                                    setCategoriesOpen(false)
+                                                }
+                                                aria-current={
+                                                    activeCategoryId ===
+                                                    String(category.id)
+                                                        ? 'page'
+                                                        : undefined
+                                                }
+                                                className="flex items-center gap-2 border-b border-ink/10 pb-2 text-sm font-semibold text-ink transition-colors hover:text-terracotta aria-[current=page]:text-terracotta"
+                                            >
+                                                <ZellijStarIcon
+                                                    aria-hidden
+                                                    className="h-2.5 w-2.5 shrink-0 text-terracotta/70"
+                                                />
+                                                {category.translated_name}
+                                            </Link>
 
-                                        return (
-                                            <li key={category.id}>
-                                                <Link
-                                                    href={categoryHref(
-                                                        category.id,
+                                            {(category.children ?? []).length >
+                                                0 && (
+                                                <ul className="mt-2 space-y-1">
+                                                    {category.children.map(
+                                                        (child) => (
+                                                            <li key={child.id}>
+                                                                <Link
+                                                                    href={categoryHref(
+                                                                        child.id,
+                                                                    )}
+                                                                    onClick={() =>
+                                                                        setCategoriesOpen(
+                                                                            false,
+                                                                        )
+                                                                    }
+                                                                    aria-current={
+                                                                        activeCategoryId ===
+                                                                        String(
+                                                                            child.id,
+                                                                        )
+                                                                            ? 'page'
+                                                                            : undefined
+                                                                    }
+                                                                    className="block py-1 text-sm text-ink/70 transition-colors hover:text-terracotta aria-[current=page]:font-medium aria-[current=page]:text-terracotta"
+                                                                >
+                                                                    {
+                                                                        child.translated_name
+                                                                    }
+                                                                </Link>
+                                                            </li>
+                                                        ),
                                                     )}
-                                                    aria-current={
-                                                        current
-                                                            ? 'page'
-                                                            : undefined
-                                                    }
-                                                    className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-                                                        current
-                                                            ? 'bg-sand/45 text-ink'
-                                                            : 'text-ink/80 hover:bg-cream-deep/60 hover:text-ink'
-                                                    }`}
-                                                >
-                                                    <ZellijStarIcon
-                                                        aria-hidden
-                                                        className="h-2.5 w-2.5 shrink-0 text-terracotta/70"
-                                                    />
-                                                    {category.translated_name}
-                                                </Link>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                                                </ul>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
 
-                                <Separator className="my-2 bg-ink/10" />
+                                <Separator className="my-5 bg-ink/10" />
 
                                 <Link
                                     href="/products"
-                                    className="block rounded-md px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-cream-deep/60 hover:text-ink"
+                                    onClick={() => setCategoriesOpen(false)}
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink"
                                 >
                                     {t('header.all_categories')}
+                                    <ChevronRight
+                                        aria-hidden
+                                        className="h-3.5 w-3.5 rtl:rotate-180"
+                                    />
                                 </Link>
                             </PopoverContent>
                         </Popover>
@@ -396,251 +430,153 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                             strokeWidth={1.5}
                         />
                     </button>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <button
-                                aria-label={t('header.cart_aria')}
-                                className={`relative ${iconButton(light)}`}
-                            >
-                                <ShoppingBag
-                                    className="h-[18px] w-[18px] cursor-pointer"
-                                    strokeWidth={1.5}
-                                />
-                                {cartData.count > 0 && (
-                                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[10px] font-medium text-cream">
-                                        {cartData.count}
-                                    </span>
-                                )}
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            align="end"
-                            className="w-96 overflow-hidden rounded-xl border-ink/15 bg-paper p-0"
-                        >
-                            <div className="border-b border-ink/10 px-5 py-4">
-                                <p className="eyebrow">
-                                    {t('header.cart_title')}
-                                </p>
-                            </div>
-                            {cartData.items.length === 0 ? (
-                                <div className="px-5 py-10 text-center text-sm text-ink-soft">
-                                    {t('header.cart_empty')}
-                                </div>
-                            ) : (
-                                <>
-                                    <ul className="max-h-80 divide-y divide-ink/10 overflow-auto">
-                                        {cartData.items.map((item) => (
-                                            <li
-                                                key={item.id}
-                                                className="flex gap-3 px-5 py-4"
-                                            >
-                                                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-ink/10 bg-cream-deep/60">
-                                                    {item.image ? (
-                                                        <img
-                                                            src={item.image}
-                                                            alt={item.name}
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex h-full w-full items-center justify-center">
-                                                            <ShoppingBag
-                                                                className="h-5 w-5 text-ink/20"
-                                                                strokeWidth={
-                                                                    1.5
-                                                                }
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate font-display text-sm leading-tight text-ink">
-                                                        {item.name}
-                                                    </p>
-                                                    {/* Distinguishes two variants of one product. */}
-                                                    {item.variant && (
-                                                        <p className="mt-0.5 truncate text-xs text-ink">
-                                                            {item.variant}
-                                                        </p>
-                                                    )}
-                                                    <p className="mt-0.5 truncate text-xs text-ink-soft">
-                                                        {item.seller}
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-ink-soft">
-                                                        {t(
-                                                            'header.cart_qty',
-                                                        ).replace(
-                                                            ':count',
-                                                            String(item.qty),
-                                                        )}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-col items-end justify-between">
-                                                    <span className="font-display text-sm text-ink">
-                                                        {item.line_total}{' '}
-                                                        <span className="text-[10px]">
-                                                            MAD
-                                                        </span>
-                                                    </span>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <Separator className="bg-ink/10" />
-                                    <div className="space-y-3 px-5 py-4">
-                                        <div className="flex items-baseline justify-between">
-                                            <span className="text-xs text-ink-soft">
-                                                {t('header.cart_subtotal')}
-                                            </span>
-                                            <span className="font-display text-lg text-ink">
-                                                {cartData.subtotal}{' '}
-                                                <span className="text-xs">
-                                                    MAD
-                                                </span>
-                                            </span>
-                                        </div>
-                                        <Link
-                                            href={route('cart.show')}
-                                            className="block w-full rounded-xl bg-ink py-2.5 text-center font-display text-sm text-cream transition-colors hover:bg-ink/90"
-                                        >
-                                            {t('header.cart_checkout')}
-                                        </Link>
-                                    </div>
-                                </>
-                            )}
-                        </PopoverContent>
-                    </Popover>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <button
-                                aria-label="Compte"
-                                className={iconButton(light)}
-                            >
-                                <User
-                                    className="h-[18px] w-[18px]"
-                                    strokeWidth={1.5}
-                                />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            align="end"
-                            className="w-64 rounded-none rounded-xl border-ink/15 bg-paper p-0"
-                        >
-                            <div className="border-b border-ink/10 px-5 py-4">
-                                <p className="eyebrow">Mon compte</p>
-                                <p className="mt-1 text-xs text-ink-soft">
-                                    {user
-                                        ? `Bonjour, ${user.first_name}`
-                                        : 'Bienvenue chez Hirfaty'}
-                                </p>
-                            </div>
-                            <div className="p-2">
-                                {/* Both buyer kinds, not just 'buyer': a
-                                    professional_buyer used to fall through to
-                                    the guest menu and be offered "sign in"
-                                    while already signed in. */}
-                                {user &&
-                                (user.role === 'buyer' ||
-                                    user.role === 'professional_buyer') ? (
-                                    <>
-                                        {/* The four pages of the account area,
-                                            each a route of its own. */}
-                                        <Link
-                                            href={route('buyer.dashboard')}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Mon compte
-                                        </Link>
-                                        <Link
-                                            href={route(
-                                                'buyer.account.orders.index',
-                                            )}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Mes commandes
-                                        </Link>
-                                        <Link
-                                            href={route('buyer.wishlist')}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Mes coups de cœur
-                                        </Link>
-                                        <Link
-                                            href={route(
-                                                'buyer.payment_methods',
-                                            )}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Paiement
-                                        </Link>
-                                        <button
-                                            onClick={() =>
-                                                router.post(route('logout'))
-                                            }
-                                            className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Déconnexion
-                                        </button>
-                                    </>
-                                ) : user && user.role === 'seller' ? (
-                                    <>
-                                        <Link
-                                            href={route('seller.dashboard')}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Dashboard
-                                        </Link>
-                                        <button
-                                            onClick={() =>
-                                                router.post(route('logout'))
-                                            }
-                                            className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Déconnexion
-                                        </button>
-                                    </>
-                                ) : user && user.role === 'super_admin' ? (
-                                    <>
-                                        <Link
-                                            href={route('admin.dashboard')}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Hirfaty Dashboard
-                                        </Link>
-                                        <button
-                                            onClick={() =>
-                                                router.post(route('logout'))
-                                            }
-                                            className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Déconnexion
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Link
-                                            href="/login"
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Se connecter
-                                        </Link>
-                                        <Link
-                                            href={login()}
-                                            className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
-                                        >
-                                            Créer un compte
-                                        </Link>
-                                    </>
-                                )}
-                                <Separator className="my-2 bg-ink/10" />
-                                <Link
-                                    href="/seller/dashboard"
-                                    className="block px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-cream-deep/60 hover:text-ink"
+                    <button
+                        type="button"
+                        onClick={openCart}
+                        aria-label={t('header.cart_aria')}
+                        className={`relative cursor-pointer ${iconButton(light)}`}
+                    >
+                        <ShoppingBag
+                            className="h-[18px] w-[18px]"
+                            strokeWidth={1.5}
+                        />
+                        {cartData.count > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-terracotta px-1 text-[10px] font-medium text-cream">
+                                {cartData.count}
+                            </span>
+                        )}
+                    </button>
+                    {user ? (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button
+                                    aria-label="Compte"
+                                    className={iconButton(light)}
                                 >
-                                    Espace vendeur
-                                </Link>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
+                                    <User
+                                        className="h-[18px] w-[18px]"
+                                        strokeWidth={1.5}
+                                    />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                className="w-64 rounded-none rounded-xl border-ink/15 bg-paper p-0"
+                            >
+                                <div className="border-b border-ink/10 px-5 py-4">
+                                    <p className="eyebrow">Mon compte</p>
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                        {user.first_name
+                                            ? `Bonjour, ${user.first_name}`
+                                            : `Bonjour, ${user.email}`}
+                                    </p>
+                                </div>
+                                <div className="p-2">
+                                    {/* Both buyer kinds, not just 'buyer': a
+                                        professional_buyer used to fall
+                                        through to the guest menu and be
+                                        offered "sign in" while already signed
+                                        in. */}
+                                    {user.role === 'buyer' ||
+                                    user.role === 'professional_buyer' ? (
+                                        <>
+                                            {/* The four pages of the account
+                                                area, each a route of its
+                                                own. */}
+                                            <Link
+                                                href={route('buyer.dashboard')}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Mon compte
+                                            </Link>
+                                            <Link
+                                                href={route(
+                                                    'buyer.account.orders.index',
+                                                )}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Mes commandes
+                                            </Link>
+                                            <Link
+                                                href={route('buyer.wishlist')}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Mes coups de cœur
+                                            </Link>
+                                            <Link
+                                                href={route(
+                                                    'buyer.payment_methods',
+                                                )}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Paiement
+                                            </Link>
+                                            <button
+                                                onClick={() =>
+                                                    router.post(route('logout'))
+                                                }
+                                                className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Déconnexion
+                                            </button>
+                                        </>
+                                    ) : user.role === 'seller' ? (
+                                        <>
+                                            <Link
+                                                href={route('seller.dashboard')}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Dashboard
+                                            </Link>
+                                            <button
+                                                onClick={() =>
+                                                    router.post(route('logout'))
+                                                }
+                                                className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Déconnexion
+                                            </button>
+                                        </>
+                                    ) : user.role === 'super_admin' ? (
+                                        <>
+                                            <Link
+                                                href={route('admin.dashboard')}
+                                                className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Hirfaty Dashboard
+                                            </Link>
+                                            <button
+                                                onClick={() =>
+                                                    router.post(route('logout'))
+                                                }
+                                                className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
+                                            >
+                                                Déconnexion
+                                            </button>
+                                        </>
+                                    ) : null}
+                                    <Separator className="my-2 bg-ink/10" />
+                                    <Link
+                                        href="/seller/dashboard"
+                                        className="block px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-cream-deep/60 hover:text-ink"
+                                    >
+                                        Espace vendeur
+                                    </Link>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    ) : (
+                        <Link
+                            href="/login"
+                            className={`hidden items-center rounded-md border bg-souk-paper px-4 py-2 text-sm font-medium transition-colors sm:inline-flex ${
+                                light
+                                    ? 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
+                                    : 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
+                            }`}
+                        >
+                            Se connecter
+                        </Link>
+                    )}
 
                     <span
                         className={`hidden h-5 w-px md:block ${light ? 'bg-white/25' : 'bg-ink/15'}`}
@@ -760,39 +696,94 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
                                         </Link>
                                     ))}
 
-                                    {/* Listed flat rather than behind a second
-                                        disclosure: the drawer is already the
-                                        disclosure, and nesting one inside it
-                                        buys nothing but an extra tap. */}
+                                    {/* Every craft is a tappable link to its
+                                        own listing; a parent with
+                                        subcategories gets them listed
+                                        indented underneath rather than
+                                        behind a second disclosure — the
+                                        drawer is already the disclosure, and
+                                        nesting one inside it buys nothing but
+                                        an extra tap. There is no hover on
+                                        touch, so the desktop flyout becomes
+                                        this flat, always-expanded list. */}
                                     {categories.length > 0 && (
                                         <>
                                             <p className="mt-5 px-3 pb-1 text-[11px] tracking-[0.18em] text-ink/50 uppercase">
                                                 {t('header.categories')}
                                             </p>
                                             {categories.map((category) => (
-                                                <Link
+                                                <div
                                                     key={category.id}
-                                                    href={categoryHref(
-                                                        category.id,
-                                                    )}
-                                                    onClick={() =>
-                                                        setMenuOpen(false)
-                                                    }
-                                                    aria-current={
-                                                        activeCategoryId ===
-                                                        String(category.id)
-                                                            ? 'page'
-                                                            : undefined
-                                                    }
-                                                    className={`rounded-md px-3 py-2.5 text-sm transition-colors ${
-                                                        activeCategoryId ===
-                                                        String(category.id)
-                                                            ? 'bg-sand/40 text-ink'
-                                                            : 'text-ink/75 hover:bg-sand/30 hover:text-ink'
-                                                    }`}
+                                                    className="mb-1"
                                                 >
-                                                    {category.translated_name}
-                                                </Link>
+                                                    <Link
+                                                        href={categoryHref(
+                                                            category.id,
+                                                        )}
+                                                        onClick={() =>
+                                                            setMenuOpen(false)
+                                                        }
+                                                        aria-current={
+                                                            activeCategoryId ===
+                                                            String(category.id)
+                                                                ? 'page'
+                                                                : undefined
+                                                        }
+                                                        className={`block rounded-md px-3 py-2.5 text-sm transition-colors ${
+                                                            activeCategoryId ===
+                                                            String(category.id)
+                                                                ? 'bg-sand/40 text-ink'
+                                                                : 'text-ink/75 hover:bg-sand/30 hover:text-ink'
+                                                        }`}
+                                                    >
+                                                        {
+                                                            category.translated_name
+                                                        }
+                                                    </Link>
+                                                    {(category.children ?? [])
+                                                        .length > 0 && (
+                                                        <div className="ms-3 border-s border-ink/10 ps-2">
+                                                            {(
+                                                                category.children ??
+                                                                []
+                                                            ).map((child) => (
+                                                                <Link
+                                                                    key={
+                                                                        child.id
+                                                                    }
+                                                                    href={categoryHref(
+                                                                        child.id,
+                                                                    )}
+                                                                    onClick={() =>
+                                                                        setMenuOpen(
+                                                                            false,
+                                                                        )
+                                                                    }
+                                                                    aria-current={
+                                                                        activeCategoryId ===
+                                                                        String(
+                                                                            child.id,
+                                                                        )
+                                                                            ? 'page'
+                                                                            : undefined
+                                                                    }
+                                                                    className={`block rounded-md px-3 py-2 text-sm transition-colors ${
+                                                                        activeCategoryId ===
+                                                                        String(
+                                                                            child.id,
+                                                                        )
+                                                                            ? 'bg-sand/40 text-ink'
+                                                                            : 'text-ink/60 hover:bg-sand/30 hover:text-ink'
+                                                                    }`}
+                                                                >
+                                                                    {
+                                                                        child.translated_name
+                                                                    }
+                                                                </Link>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
                                         </>
                                     )}
@@ -842,6 +833,13 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
              * the typed term and its results are dropped on close.
              */}
             {searchOpen && <SearchPanel onClose={() => setSearchOpen(false)} />}
+
+            {/*
+             * Mounted here rather than per page so that adding to the basket
+             * from anywhere opens the one drawer — the bag button above and
+             * the product page's Add-to-Cart both just flip its shared state.
+             */}
+            <CartSheet />
         </header>
     );
 };

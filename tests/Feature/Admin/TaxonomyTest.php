@@ -25,7 +25,6 @@ test('super admin can create a category', function () {
 
         ->post(route('admin.categories.store'), [
             'name' => ['fr' => 'Catégorie test', 'ar' => 'فئة', 'en' => 'Test Category'],
-            'icon' => '🧶',
         ]);
 
     $response->assertRedirect();

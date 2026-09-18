@@ -83,22 +83,40 @@
 
 @theme {
     /*
-     * Brand font — Didot everywhere, body and display alike.
+     * Brand type — split by the seam that was already there.
      *
-     * The two tokens stay separate names because ~156 call sites already use
-     * `font-display`/`h-editorial` for headings, and that seam is now doing
-     * real work: headings get the titling cut, body copy gets the text cut.
-     * Same typeface, the size-appropriate drawing of it.
+     * ~156 call sites use `font-display`/`h-editorial` for big titles, and
+     * that seam now separates the two families rather than just the two cuts
+     * of one: `--font-display` keeps Didot Title, exactly as before, so every
+     * large heading is untouched by this change. `--font-sans` — the body
+     * default, wired on in the `body` rule below, and everything that doesn't
+     * explicitly reach for `.font-display` — moved off Didot's text cut onto
+     * Plus Jakarta Sans.
      *
-     * Only the generic `serif` trails them, as the fallback for the moment
-     * before the webfont loads.
+     * Why: Didot is a display face. Drawn for the isolated weight of a large
+     * headline, its thin/thick contrast and tight fit read as elegant at
+     * heading sizes and as strain at paragraph sizes — the whole reason type
+     * foundries cut separate text and display faces of the same design in the
+     * first place. A geometric-humanist sans at body sizes is the legible
+     * counterpart, and pairing a serif display face with a sans body face is
+     * an old, deliberately unremarkable typographic pattern, not a brand
+     * change: Didot still opens every page the reader looks at first.
      *
-     * --font-arabic stays: Didot ships no Arabic glyphs at all (verified —
-     * zero codepoints in U+0600–U+06FF across all four cuts), so the ar
-     * locale physically cannot render in it. See the [lang='ar'] block near
-     * the bottom of this file.
+     * Loaded via Bunny (see app.blade.php), not self-hosted like Didot: Plus
+     * Jakarta Sans is an open-licence font freely served from there, unlike
+     * Didot's licensed desktop cuts, so there is nothing to gain from
+     * vendoring the files. `ui-sans-serif`/`system-ui` trail it as the
+     * fallback for the moment before the webfont loads, so that moment is a
+     * system sans rather than a flash of serif.
+     *
+     * --font-arabic stays exactly as it was: Didot ships no Arabic glyphs at
+     * all (verified — zero codepoints in U+0600–U+06FF across all four
+     * cuts), and Plus Jakarta Sans has none either, so the ar locale is
+     * routed to Naskh regardless of which Latin face `--font-sans` points at.
+     * See the [lang='ar'] block near the bottom of this file.
      */
-    --font-sans: 'Didot', serif;
+    --font-sans:
+        'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
     --font-display: 'Didot Title', 'Didot', serif;
     --font-arabic: 'Noto Naskh Arabic', serif;
 
@@ -631,7 +649,15 @@
         @apply border-border;
     }
     body {
-        @apply bg-background font-sans text-foreground antialiased;
+        /*
+         * `leading-relaxed` (1.625) rather than preflight's own 1.5: a sans
+         * body face reads best a touch looser than that, and headings never
+         * see this value anyway — every one of them sets its own explicit
+         * `leading-*`/`h-editorial` line-height at the call site, which wins
+         * over this default the ordinary cascade way. This is only ever felt
+         * by copy that was inheriting the browser default before.
+         */
+        @apply bg-background font-sans leading-relaxed text-foreground antialiased;
     }
 
     label {

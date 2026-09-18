@@ -70,17 +70,19 @@
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>Edit your product</strong> by fixing the points mentioned.</p>
+                <p class="step-text"><strong>Get in touch with our team</strong> with the corrected photos, price or description.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>Resubmit</strong> — our team will review it again quickly.</p>
+                <p class="step-text"><strong>We republish the listing</strong> on your behalf once the points are settled.</p>
             </li>
         </ul>
 
+        {{-- Sellers no longer edit their own listings — the Hirfaty team files
+             and corrects them — so this points at the read-only record. --}}
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/seller/products/{{ $product->id }}/edit" class="cta-btn">
-                Edit and resubmit →
+            <a href="{{ config('app.url') }}/seller/products/{{ $product->id }}" class="cta-btn">
+                View the product →
             </a>
         </div>
 

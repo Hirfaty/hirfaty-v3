@@ -15,13 +15,14 @@ return [
     'menu' => 'Menu',
     'language' => 'Langue',
 
-    // ── Cart dropdown ──────────────────────────────────────────────
+    // ── Tiroir du panier ───────────────────────────────────────────
     'cart_aria' => 'Panier',
     'cart_title' => 'Votre panier',
+    'cart_count' => ':count article(s)',
     'cart_empty' => 'Votre panier est vide.',
     'cart_qty' => 'Qté :count',
     'cart_subtotal' => 'Sous-total',
-    'cart_checkout' => 'Passer commande',
+    'cart_view' => 'Voir le panier',
 
     // ── Panneau de recherche ───────────────────────────────────────
     'search_placeholder' => 'Rechercher une pièce, un métier, un artisan…',

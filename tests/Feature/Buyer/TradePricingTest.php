@@ -53,12 +53,24 @@ function checkoutAs(User $user, Product $product, int $qty = 2): void
     $cart = Cart::firstOrCreate(['user_id' => $user->id]);
     CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => $qty]);
 
+    /*
+     * The full payload, not just the address. Checkout also insists on a
+     * recipient name, a postal code, a country and a payment method — see
+     * CheckoutRequest. Asserted here rather than fired blind: without it a
+     * validation change silently stops creating orders, and these tests then
+     * fail much later on a null OrderItem instead of on the actual cause.
+     */
     test()->actingAs($user)->post(route('checkout.store'), [
+        'first_name' => 'Yasmine',
+        'last_name' => 'Alaoui',
         'shipping_address' => '1 Rue Test',
         'city_id' => $city->id,
+        'postal_code' => '30000',
+        'country' => 'MA',
         // Required now: Amana rings the buyer to deliver.
         'shipping_phone' => '0600000000',
-    ]);
+        'payment_method' => 'cod',
+    ])->assertSessionHasNoErrors();
 }
 
 test('a verified trade buyer is billed the wholesale rate', function () {

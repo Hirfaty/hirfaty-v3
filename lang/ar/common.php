@@ -55,6 +55,7 @@ return [
     // بابا الحرفي والأعمال، في بطاقتين أسفل الاستمارة. «Hirfaty Seller»
     // و«Hirfaty Business» أسماء منتجات تبقى بالحرف اللاتيني في كل اللغات،
     // كما هي العادة مع أسماء العلامات.
+    'auth.login.card_seller_brand' => 'للحرفيين',
     'auth.login.card_seller_body' => 'بِع منتجاتك اليدوية في كل أنحاء المغرب.',
     'auth.login.card_seller_cta' => 'إنشاء حساب حرفي',
     'auth.login.card_business_body' => 'تشتري لحساب عملك؟ اطلب بأسعار الجملة.',
@@ -103,10 +104,8 @@ return [
     'auth.login.resume_body' => 'سبق أن أرسلنا رمزاً إلى :email.',
     'auth.login.resume_cta' => 'أكمل من حيث توقفت',
 
-    // ── صفحتا Hirfaty Seller و Hirfaty Business ────────────────────────
+    // ── صفحة Hirfaty Business ──────────────────────────────────────────
     'auth.login.placeholder_soon' => 'قريباً',
-    'auth.login.placeholder_seller_title' => 'تسجيل الحرفيين لم يُفتح بعد.',
-    'auth.login.placeholder_seller_body' => 'نبني بيتاً حقيقياً للورشات — متجرك وقطعك وأرباحك. حدّثنا عن حرفتك وسنعود إليك لحظة افتتاحه.',
     'auth.login.placeholder_business_title' => 'حسابات الأعمال تُفتح يدوياً.',
     'auth.login.placeholder_business_body' => 'تُراجَع أسعار الجملة قبل منحها، لذلك لا تتوفّر حسابات الأعمال ذاتياً بعد. تواصل معنا وسننشئ حسابك. تشتري معنا بالفعل؟ يمكنك طلب صلاحية الأعمال من حسابك.',
     'auth.login.placeholder_contact' => 'تواصل معنا',
@@ -131,7 +130,7 @@ return [
     'auth.login.password_hint' => '12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
     'auth.login.details_title' => 'أوشكت على',
     'auth.login.details_title_accent' => 'الانتهاء',
-    'auth.login.details_subtitle' => 'اسمك فقط، ورقم هاتف للتوصيل، وكلمة مرور.',
+    'auth.login.details_subtitle' => 'كلمة مرور فقط. يمكنك إكمال بياناتك لاحقاً من حسابك.',
     'auth.login.details_submit' => 'إنشاء حسابي',
     'auth.login.email_confirmed' => 'تم تأكيد البريد',
 
@@ -196,4 +195,11 @@ return [
     // `:year` يُستبدل في React بالسنة الجارية.
     'footer.copyright' => '© :year Hirfaty.com — جميع الحقوق محفوظة.',
     'footer.shipping' => 'التوصيل إلى جميع أنحاء المغرب.',
+    // ── تسجيل الدخول عبر Google / Facebook ──────────────────────────────
+    'auth.login.social_divider' => 'أو',
+    'auth.login.social_google' => 'المتابعة عبر Google',
+    'auth.login.social_facebook' => 'المتابعة عبر Facebook',
+    'auth.login.social_failed' => 'تعذّر تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+    'auth.login.social_unusable' => 'لم يزوّدنا هذا الحساب بعنوان بريد إلكتروني مؤكَّد. استخدم بريدك أعلاه بدلاً من ذلك.',
+    'auth.login.social_banned' => 'هذا الحساب موقوف. تواصل معنا إن كنت ترى أن هناك خطأ.',
 ];

@@ -151,6 +151,7 @@ return [
     'onboarding.finish' => 'Explore the market',
 
     'onboarding.welcome.title' => 'Welcome, :name',
+    'onboarding.welcome.title_generic' => 'Welcome',
     'onboarding.welcome.body' => 'Hirfaty brings Morocco\'s artisans together in one place. Two minutes to get acquainted, then the market is yours.',
     'onboarding.welcome.point_direct' => 'You buy straight from the artisan — no middleman.',
     'onboarding.welcome.point_authentic' => 'Every piece is handmade, and every shop is vetted by our team.',
@@ -220,6 +221,7 @@ return [
     'account.section_address_desc' => 'Where your orders are sent. Checkout fills this in for you.',
 
     'account.field_full_name' => 'Full name',
+    'account.field_full_name_empty' => 'Add your name',
     'account.field_first_name' => 'First name',
     'account.field_last_name' => 'Last name',
     'account.field_email' => 'Email address',
@@ -290,13 +292,12 @@ return [
     'cart.summary' => 'Summary',
     'cart.subtotal' => 'Subtotal',
     'cart.savings' => 'Savings',
-    'cart.delivery' => 'Amana delivery',
-    'cart.delivery_one_store' => 'One workshop',
-    'cart.delivery_many_stores' => ':count workshops',
     'cart.total' => 'Total',
     'cart.checkout' => 'Checkout',
     'cart.secure_payment' => 'Secure payment',
     'cart.split_note' => 'Your cart will be split into one order per workshop.',
+
+    'cart.you_might_also_like' => 'You might also like',
 
     // ── Checkout ─────────────────────────────────────────────────────────
     'checkout.title' => 'Complete your order',
@@ -329,7 +330,7 @@ return [
 
     'checkout.summary' => 'Summary',
     'checkout.products' => 'Items (:count)',
-    'checkout.delivery_fee' => 'Delivery (:count parcels)',
+    'checkout.delivery_fee' => 'Delivery fee',
     'checkout.total' => 'Total',
     'checkout.cod_note' => 'Cash on delivery. You pay the Amana courier directly when your parcels arrive.',
     'checkout.confirm' => 'Place order',
@@ -339,6 +340,27 @@ return [
     'checkout.err_city' => 'Please choose a city.',
     'checkout.err_phone' => 'A phone number is required for delivery.',
     'checkout.err_empty' => 'Your cart is empty.',
+    'checkout.customer_heading' => 'Your details',
+    'checkout.first_name' => 'First name',
+    'checkout.first_name_placeholder' => 'Sarah',
+    'checkout.last_name' => 'Last name',
+    'checkout.last_name_placeholder' => 'Bennani',
+    'checkout.email' => 'Email',
+    'checkout.shipping_heading' => 'Delivery address',
+    'checkout.postal_code' => 'Postal code',
+    'checkout.country' => 'Country',
+    'checkout.country_ma' => 'Morocco',
+    'checkout.payment_heading' => 'Payment method',
+    'checkout.payment_cod' => 'Cash on delivery',
+    'checkout.coupon' => 'Discount code',
+    'checkout.coupon_placeholder' => 'WELCOME10',
+    'checkout.coupon_apply' => 'Apply',
+    'checkout.err_first_name' => 'Please enter your first name.',
+    'checkout.err_last_name' => 'Please enter your last name.',
+    'checkout.err_postal_code' => 'Please enter a postal code.',
+    'checkout.err_country' => 'We only deliver within Morocco for now.',
+    'checkout.err_payment_method' => 'Choose a payment method.',
+    'checkout.err_coupon_unknown' => 'That discount code isn’t valid.',
     'checkout.placed' => ':count order(s) placed successfully!',
 
     // ── Shop page ────────────────────────────────────────────────────────

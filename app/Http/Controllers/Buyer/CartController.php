@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BuyerProductResource;
 use App\Http\Resources\CartLineResource;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Product;
 use App\Services\CartService;
+use App\Services\ProductScoringService;
+use App\Services\WishlistService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +18,11 @@ use Inertia\Inertia;
 
 class CartController extends Controller
 {
-    public function __construct(private readonly CartService $cart) {}
+    public function __construct(
+        private readonly CartService $cart,
+        private readonly ProductScoringService $scoring,
+        private readonly WishlistService $wishlist,
+    ) {}
 
     public function show(Request $request)
     {
@@ -29,10 +37,22 @@ class CartController extends Controller
             'items.variant.media',
         ]);
 
+        // A row of popular pieces at the bottom of the basket, nudging the
+        // buyer to keep browsing instead of the page ending at the total.
+        // Excludes what's already in the basket so it never just repeats it.
+        $suggestions = $this->scoring->suggestionsFor(
+            $request->user(),
+            $cart->items->pluck('product_id')->all(),
+        );
+
         return Inertia::render('buyer/cart', [
             // Priced through CartLineResource rather than handed over raw, so
             // the page cannot recompute a total the checkout disagrees with.
             'items' => CartLineResource::collection($cart->items)->resolve($request),
+            'suggestions' => BuyerProductResource::collection($suggestions)->resolve($request),
+            'audience' => Product::audienceFor($request->user()),
+            'wishlisted' => $this->wishlist->idsFor($request->user(), $suggestions),
+            'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
     }
 

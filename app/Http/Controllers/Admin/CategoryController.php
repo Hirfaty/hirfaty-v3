@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\CategoryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CategoryController extends Controller
 {
+    public function __construct(private readonly CategoryService $categories) {}
+
     public function index()
     {
         $categories = Category::withCount(['products', 'stores'])
@@ -28,14 +31,7 @@ class CategoryController extends Controller
     {
         $data = $request->validate($this->rules());
 
-        Category::create([
-            'name' => $data['name'],
-            // The slug is the URL key, so it is derived once from the French
-            // name and never changes per locale.
-            'slug' => $this->uniqueSlug($data['name'][Category::FALLBACK_LOCALE]),
-            'parent_id' => $data['parent_id'] ?? null,
-            'icon' => $data['icon'] ?? null,
-        ]);
+        $this->categories->create($data, $request->file('image'));
 
         return back()->with('success', "Category \"{$data['name'][Category::FALLBACK_LOCALE]}\" created.");
     }
@@ -44,33 +40,50 @@ class CategoryController extends Controller
     {
         $data = $request->validate($this->rules());
 
-        // Prevent setting itself as parent
         if (isset($data['parent_id']) && $data['parent_id'] == $category->id) {
             return back()->withErrors(['parent_id' => 'A category cannot be its own parent.']);
         }
 
-        // Slug intentionally left untouched — changing it would break existing
-        // links to the category.
-        $category->update([
-            'name' => $data['name'],
-            'parent_id' => $data['parent_id'] ?? null,
-            'icon' => $data['icon'] ?? null,
-        ]);
+        $this->categories->update(
+            $category,
+            $data,
+            $request->file('image'),
+            $request->boolean('remove_image'),
+        );
 
         return back()->with('success', 'Category updated.');
+    }
+
+    public function destroy(Category $category)
+    {
+        if (! $this->categories->delete($category)) {
+            return back()->withErrors([
+                'delete' => "Cannot delete \"{$category->nameFor()}\" — it has products or stores attached.",
+            ]);
+        }
+
+        return back()->with('success', 'Category deleted.');
     }
 
     /**
      * Every locale is required so the storefront never falls back to another
      * language mid-page.
      *
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, mixed>>
      */
     private function rules(): array
     {
         $rules = [
             'parent_id' => ['nullable', 'exists:categories,id'],
-            'icon' => ['nullable', 'string', 'max:50'],
+            'image' => [
+                'nullable',
+                'image',
+                'max:'.config('media.image.max_kb'),
+                Rule::dimensions()
+                    ->maxWidth(config('media.image.max_width'))
+                    ->maxHeight(config('media.image.max_height')),
+            ],
+            'remove_image' => ['nullable', 'boolean'],
             'name' => ['required', 'array'],
         ];
 
@@ -79,32 +92,5 @@ class CategoryController extends Controller
         }
 
         return $rules;
-    }
-
-    private function uniqueSlug(string $from): string
-    {
-        $base = Str::slug($from);
-        $slug = $base;
-        $i = 2;
-
-        while (Category::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$i}";
-            $i++;
-        }
-
-        return $slug;
-    }
-
-    public function destroy(Category $category)
-    {
-        if ($category->products()->count() > 0 || $category->stores()->count() > 0) {
-            return back()->withErrors([
-                'delete' => "Cannot delete \"{$category->nameFor()}\" — it has products or stores attached.",
-            ]);
-        }
-
-        $category->delete();
-
-        return back()->with('success', 'Category deleted.');
     }
 }

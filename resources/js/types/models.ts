@@ -33,7 +33,8 @@ export interface Category {
     translated_name: string;
     slug: string;
     parent_id: number | null;
-    icon: string | null;
+    /** Public URL of the picture; only top-level categories have one. */
+    image_url: string | null;
 }
 
 export interface City {

@@ -97,7 +97,7 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
                                         )}
                                     </span>
                                     <span className="font-display text-base text-souk-green">
-                                        {money(order.total_amount)} MAD
+                                        {money(order.total_amount)} MAD TTC
                                     </span>
                                 </div>
                             </div>
@@ -125,7 +125,7 @@ export default function BuyerOrders({ orders }: { orders: BuyerOrder[] }) {
                                             ×{item.quantity}
                                         </span>
                                         <span className="shrink-0 text-sm text-souk-brown-deep/70 tabular-nums">
-                                            {money(item.subtotal)} MAD
+                                            {money(item.subtotal)} MAD TTC
                                         </span>
                                     </li>
                                 ))}

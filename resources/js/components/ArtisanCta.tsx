@@ -14,7 +14,7 @@ export default function ArtisanCta() {
     const { t } = useTranslation();
 
     return (
-        <section className="bg-souk-paper py-24 lg:py-4 lg:pb-0">
+        <section className="bg-souk-paper py-12 lg:py-4 lg:pb-0">
             <div className="container px-2!">
                 <Reveal from="scale">
                     <div className="relative overflow-hidden rounded-[2rem] bg-souk-brown px-8 py-16 text-center sm:px-16">

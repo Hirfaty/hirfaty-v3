@@ -1,346 +1,379 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
-    CheckCircle2,
-    Clock,
+    ImageOff,
     MapPin,
     Package,
     Phone,
-    ShoppingBag,
+    StickyNote,
     Truck,
     User,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import AdminLayout from '@/layouts/admin/layout';
-import type { Order, PageProps } from '@/types';
+import { formatDate } from '@/lib/utils';
+import type { OrderStatus } from '@/types';
+import type { OrderGroup } from './index';
 
-const Show = ({ order }: PageProps & { order: Order }) => {
-    const handleStatusUpdate = (status: string) => {
+const STATUS_BADGE: Record<OrderStatus, string> = {
+    pending: 'bg-slate-100 text-slate-700',
+    confirmed: 'bg-amber-100 text-amber-700',
+    shipped: 'bg-blue-100 text-blue-700',
+    delivered: 'bg-emerald-100 text-emerald-700',
+    cancelled: 'bg-rose-100 text-rose-700',
+};
+
+const STATUS_LABEL: Record<OrderStatus, string> = {
+    pending: 'En attente',
+    confirmed: 'Confirmée',
+    shipped: 'Expédiée',
+    delivered: 'Livrée',
+    cancelled: 'Annulée',
+};
+
+/** The moves the desk can make, in the order fulfilment actually happens. */
+const ACTIONS: { status: OrderStatus; label: string }[] = [
+    { status: 'confirmed', label: 'Confirmer' },
+    { status: 'shipped', label: 'Marquer expédiée' },
+    { status: 'delivered', label: 'Marquer livrée' },
+    { status: 'cancelled', label: 'Annuler' },
+];
+
+const currency = (value: number) =>
+    new Intl.NumberFormat('fr-MA', {
+        style: 'currency',
+        currency: 'MAD',
+    }).format(value);
+
+/**
+ * One purchase, as the fulfilment desk works it.
+ *
+ * Shows every piece across every workshop in the basket, because the desk
+ * collects the lot and delivers it to one address. Status and tracking apply
+ * to the whole purchase by default; the per-workshop checkbox is there for the
+ * exception where one artisan's piece has to travel on its own.
+ */
+const Show = ({ group }: { group: OrderGroup }) => {
+    const [tracking, setTracking] = useState(
+        group.orders[0]?.tracking_number ?? '',
+    );
+
+    /*
+     * Which workshop's parcel an action applies to. `null` — the default — is
+     * the whole purchase. Selecting one sends `scope: 'single'`, which is what
+     * splits the group's statuses apart.
+     */
+    const [separateOrderId, setSeparateOrderId] = useState<number | null>(null);
+
+    const target = separateOrderId
+        ? group.orders.find((o) => o.id === separateOrderId)
+        : null;
+
+    const apply = (status: OrderStatus) => {
+        const reference = target?.reference ?? group.primary_reference;
+
         router.patch(
-            route('admin.orders.status', order.reference),
-            { status },
+            route('admin.orders.status', reference),
             {
-                onSuccess: () => toast.success(`Order marked as ${status}`),
+                status,
+                tracking_number: tracking || null,
+                scope: target ? 'single' : 'group',
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () =>
+                    toast.success(
+                        target
+                            ? `${target.store.name} : ${STATUS_LABEL[status].toLowerCase()}`
+                            : `Achat ${STATUS_LABEL[status].toLowerCase()}`,
+                    ),
+                onError: (errors) =>
+                    toast.error(
+                        (Object.values(errors)[0] as string) ??
+                            'Mise à jour impossible.',
+                    ),
             },
         );
     };
 
-    const getStatusStep = () => {
-        switch (order.status) {
-            case 'pending':
-                return 1;
-            case 'confirmed':
-                return 2;
-            case 'shipped':
-                return 3;
-            case 'delivered':
-                return 4;
-            default:
-                return 0;
-        }
-    };
+    const itemCount = group.orders.reduce(
+        (sum, order) =>
+            sum + order.items.reduce((n, item) => n + item.quantity, 0),
+        0,
+    );
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
-            <Head title={`Order ${order.reference}`} />
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={`Achat ${group.reference}`} />
 
-            <div className="mx-auto max-w-5xl">
-                <header className="mb-10 flex items-center justify-between">
-                    <div>
-                        <Link
-                            href={route('admin.orders.index')}
-                            className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-ink-soft uppercase transition-colors hover:text-ink"
+            <header className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <Link
+                        href={route('admin.orders.index')}
+                        className="inline-flex items-center gap-1.5 text-sm text-ink-soft transition hover:text-ink"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Commandes
+                    </Link>
+                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+                        Achat {group.reference}
+                    </h1>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {itemCount} article{itemCount > 1 ? 's' : ''} ·{' '}
+                        {group.orders.length} atelier
+                        {group.orders.length > 1 ? 's' : ''} ·{' '}
+                        {formatDate(group.created_at)}
+                    </p>
+                </div>
+
+                {group.status ? (
+                    <span
+                        className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${STATUS_BADGE[group.status]}`}
+                    >
+                        {STATUS_LABEL[group.status]}
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center rounded-full bg-violet-100 px-3 py-1.5 text-sm font-medium text-violet-700">
+                        Colis séparés
+                    </span>
+                )}
+            </header>
+
+            <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
+                {/* ── Left: what to collect, from whom ─────────── */}
+                <div className="flex flex-col gap-4">
+                    {group.orders.map((order) => (
+                        <div
+                            key={order.id}
+                            className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
                         >
-                            <ArrowLeft className="h-3 w-3" />
-                            Back to Registry
-                        </Link>
-                        <h1 className="mt-4 h-editorial text-4xl text-ink">
-                            Order{' '}
-                            <span className="font-mono text-2xl">
-                                {order.reference}
-                            </span>
-                        </h1>
-                    </div>
-
-                    <div className="flex gap-2">
-                        {order.status === 'pending' && (
-                            <button
-                                onClick={() => handleStatusUpdate('confirmed')}
-                                className="bg-ink px-6 py-3 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
-                            >
-                                Confirm Order
-                            </button>
-                        )}
-                        {order.status === 'confirmed' && (
-                            <button
-                                onClick={() => handleStatusUpdate('shipped')}
-                                className="bg-ink px-6 py-3 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
-                            >
-                                Mark as Shipped
-                            </button>
-                        )}
-                        {order.status === 'shipped' && (
-                            <button
-                                onClick={() => handleStatusUpdate('delivered')}
-                                className="bg-ink px-6 py-3 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta"
-                            >
-                                Complete Delivery
-                            </button>
-                        )}
-                        {order.status !== 'cancelled' &&
-                            order.status !== 'delivered' && (
-                                <button
-                                    onClick={() =>
-                                        handleStatusUpdate('cancelled')
-                                    }
-                                    className="border border-ink/10 px-6 py-3 text-xs font-bold tracking-widest text-ink uppercase transition-colors hover:bg-red-50 hover:text-red-600"
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-5 py-3">
+                                <div>
+                                    <p className="font-medium text-ink">
+                                        {order.store.name}
+                                    </p>
+                                    <p className="text-xs text-ink-soft">
+                                        {order.reference}
+                                        {order.tracking_number &&
+                                            ` · Suivi ${order.tracking_number}`}
+                                    </p>
+                                </div>
+                                <span
+                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[order.status]}`}
                                 >
-                                    Cancel
-                                </button>
-                            )}
-                    </div>
-                </header>
-
-                <div className="grid grid-cols-12 gap-10">
-                    <div className="col-span-12 space-y-10 lg:col-span-8">
-                        {/* Status Progress */}
-                        <section className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <div className="flex justify-between">
-                                {[
-                                    {
-                                        id: 'pending',
-                                        label: 'Received',
-                                        icon: Clock,
-                                    },
-                                    {
-                                        id: 'confirmed',
-                                        label: 'Confirmed',
-                                        icon: CheckCircle2,
-                                    },
-                                    {
-                                        id: 'shipped',
-                                        label: 'In Transit',
-                                        icon: Truck,
-                                    },
-                                    {
-                                        id: 'delivered',
-                                        label: 'Delivered',
-                                        icon: Package,
-                                    },
-                                ].map((step, i) => {
-                                    const isActive = getStatusStep() > i;
-                                    const isCurrent = getStatusStep() === i + 1;
-
-                                    return (
-                                        <div
-                                            key={step.id}
-                                            className="relative flex flex-1 flex-col items-center gap-3"
-                                        >
-                                            <div
-                                                className={`z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-colors ${isActive || isCurrent ? 'border-terracotta bg-terracotta text-cream' : 'border-ink/5 bg-cream/20 text-ink/20'}`}
-                                            >
-                                                <step.icon className="h-4 w-4" />
-                                            </div>
-                                            <span
-                                                className={`text-[10px] font-bold tracking-widest uppercase ${isCurrent ? 'text-ink' : 'text-ink-soft'}`}
-                                            >
-                                                {step.label}
-                                            </span>
-                                            {i < 3 && (
-                                                <div
-                                                    className={`absolute top-5 left-1/2 -z-0 h-0.5 w-full ${getStatusStep() > i + 1 ? 'bg-terracotta' : 'bg-ink/5'}`}
-                                                />
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                    {STATUS_LABEL[order.status]}
+                                </span>
                             </div>
-                        </section>
 
-                        {/* Items */}
-                        <section className="overflow-hidden border border-ink/5 bg-white shadow-sm">
-                            <div className="border-b border-ink/5 bg-ink/[0.02] px-8 py-5">
-                                <h3 className="font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                    Manifest Breakdown
-                                </h3>
-                            </div>
-                            <div className="divide-y divide-ink/5">
-                                {order.items?.map((item) => (
-                                    <div
+                            <ul className="divide-y divide-border">
+                                {order.items.map((item) => (
+                                    <li
                                         key={item.id}
-                                        className="flex items-center gap-6 p-8"
+                                        className="flex items-center gap-4 px-5 py-3.5"
                                     >
-                                        <div className="h-20 w-20 overflow-hidden border border-ink/5 bg-cream/50">
-                                            {item.product?.media?.[0] && (
+                                        <span className="h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                                            {item.image ? (
                                                 <img
-                                                    src={
-                                                        item.product.media[0]
-                                                            .url
-                                                    }
+                                                    src={item.image}
+                                                    alt={item.name}
+                                                    loading="lazy"
                                                     className="h-full w-full object-cover"
                                                 />
+                                            ) : (
+                                                <span className="flex h-full w-full items-center justify-center">
+                                                    <ImageOff className="h-5 w-5 text-ink-soft/40" />
+                                                </span>
                                             )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-ink">
-                                                {item.product?.name}
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-medium text-ink">
+                                                {item.name}
                                             </p>
-                                            <p className="mt-1 text-[10px] tracking-widest text-ink-soft uppercase">
-                                                Qty: {item.quantity} ×{' '}
-                                                {new Intl.NumberFormat(
-                                                    'fr-MA',
-                                                    {
-                                                        style: 'currency',
-                                                        currency: 'MAD',
-                                                    },
-                                                ).format(
-                                                    Number(item.unit_price),
-                                                )}
+                                            {item.variant_label && (
+                                                <p className="truncate text-xs text-ink-soft">
+                                                    {item.variant_label}
+                                                </p>
+                                            )}
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                Quantité : {item.quantity}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-sans text-xs font-bold text-ink">
-                                                {new Intl.NumberFormat(
-                                                    'fr-MA',
-                                                    {
-                                                        style: 'currency',
-                                                        currency: 'MAD',
-                                                    },
-                                                ).format(
-                                                    Number(item.unit_price) *
-                                                        item.quantity,
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
+                                        <span className="shrink-0 text-sm font-medium text-ink tabular-nums">
+                                            {currency(item.subtotal)}
+                                        </span>
+                                    </li>
                                 ))}
-                            </div>
-                            <div className="border-t border-ink/5 bg-cream/5 p-8">
-                                <div className="ml-auto flex max-w-[300px] items-center justify-between">
-                                    <span className="text-[10px] font-bold tracking-widest text-ink-soft uppercase">
-                                        Order Total
-                                    </span>
-                                    <span className="h-editorial text-2xl text-ink">
-                                        {new Intl.NumberFormat('fr-MA', {
-                                            style: 'currency',
-                                            currency: 'MAD',
-                                        }).format(Number(order.total_amount))}
-                                    </span>
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Right: where it goes, and what to do ──────── */}
+                <div className="flex flex-col gap-4">
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <h2 className="text-sm font-semibold text-ink">
+                            Client
+                        </h2>
+                        <dl className="mt-3 space-y-2.5 text-sm">
+                            <div className="flex items-start gap-2.5">
+                                <User className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft/60" />
+                                <div>
+                                    <p className="text-ink">
+                                        {group.buyer.name}
+                                    </p>
+                                    {group.buyer.email && (
+                                        <p className="text-xs text-ink-soft">
+                                            {group.buyer.email}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                        </section>
+                            {group.shipping_phone && (
+                                <div className="flex items-start gap-2.5">
+                                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft/60" />
+                                    <p className="text-ink">
+                                        {group.shipping_phone}
+                                    </p>
+                                </div>
+                            )}
+                            <div className="flex items-start gap-2.5">
+                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft/60" />
+                                <p className="text-ink">
+                                    {group.shipping_address}
+                                </p>
+                            </div>
+                            {group.notes && (
+                                <div className="flex items-start gap-2.5">
+                                    <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft/60" />
+                                    <p className="text-ink-soft italic">
+                                        {group.notes}
+                                    </p>
+                                </div>
+                            )}
+                        </dl>
                     </div>
 
-                    <div className="col-span-12 space-y-10 lg:col-span-4">
-                        {/* Buyer Info */}
-                        <section className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="mb-6 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                Client Acquisition
-                            </h3>
-                            <div className="space-y-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink/5 bg-cream text-ink-soft">
-                                        <User className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-ink">
-                                            {order.buyer?.first_name}{' '}
-                                            {order.buyer?.last_name}
-                                        </p>
-                                        <p className="text-[10px] tracking-wider text-ink-soft uppercase">
-                                            {order.buyer?.email}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink/5 bg-cream text-ink-soft">
-                                        <Phone className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="mb-0.5 text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                            Contact
-                                        </p>
-                                        <p className="text-sm font-medium text-ink">
-                                            {order.buyer?.phone_number || 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink/5 bg-cream text-ink-soft">
-                                        <MapPin className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="mb-0.5 text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                            Destination
-                                        </p>
-                                        <p className="text-sm font-medium text-ink">
-                                            {order.city?.name}
-                                        </p>
-                                        <p className="mt-1 text-xs leading-relaxed text-ink/60">
-                                            {order.shipping_address}
-                                        </p>
-                                    </div>
-                                </div>
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <h2 className="text-sm font-semibold text-ink">
+                            Total
+                        </h2>
+                        <dl className="mt-3 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <dt className="text-ink-soft">Produits</dt>
+                                <dd className="text-ink tabular-nums">
+                                    {currency(group.products_total)}
+                                </dd>
                             </div>
-                        </section>
+                            <div className="flex justify-between">
+                                <dt className="text-ink-soft">
+                                    Livraison Amana
+                                </dt>
+                                <dd className="text-ink tabular-nums">
+                                    {currency(group.delivery_total)}
+                                </dd>
+                            </div>
+                            <div className="flex justify-between border-t border-border pt-2 font-medium">
+                                <dt className="text-ink">À encaisser</dt>
+                                <dd className="text-ink tabular-nums">
+                                    {currency(
+                                        group.products_total +
+                                            group.delivery_total,
+                                    )}
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
 
-                        {/* Artisan Info */}
-                        <section className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="mb-6 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                Fulfilling Artisan
-                            </h3>
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-ink/5 bg-cream text-ink-soft">
-                                    <ShoppingBag className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-ink">
-                                        {order.store?.store_name}
-                                    </p>
-                                    <Link
-                                        href={route('admin.users.index')}
-                                        className="text-[10px] font-bold tracking-widest text-terracotta uppercase hover:text-ink"
-                                    >
-                                        Visit Storefront
-                                    </Link>
-                                </div>
-                            </div>
-                        </section>
+                    {/* ── Fulfilment ──────────────────────────── */}
+                    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <h2 className="text-sm font-semibold text-ink">
+                            Traitement
+                        </h2>
 
-                        {/* Financials */}
-                        <section className="border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="mb-6 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                Revenue Allocation
-                            </h3>
-                            <div className="space-y-4 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-ink-soft">
-                                        Platform Fee
-                                    </span>
-                                    <span className="font-medium text-ink">
-                                        -
-                                        {new Intl.NumberFormat('fr-MA', {
-                                            style: 'currency',
-                                            currency: 'MAD',
-                                        }).format(Number(order.platform_fee))}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between border-t border-ink/5 pt-4">
-                                    <span className="text-[10px] font-bold tracking-widest text-ink uppercase">
-                                        Artisan Share
-                                    </span>
-                                    <span className="font-bold text-terracotta">
-                                        {new Intl.NumberFormat('fr-MA', {
-                                            style: 'currency',
-                                            currency: 'MAD',
-                                        }).format(
-                                            Number(order.seller_earnings),
-                                        )}
-                                    </span>
+                        <label className="mt-3 block">
+                            <span className="mb-1.5 block text-xs text-ink-soft">
+                                Numéro de suivi Amana
+                            </span>
+                            <div className="relative">
+                                <Truck className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                                <input
+                                    value={tracking}
+                                    onChange={(e) =>
+                                        setTracking(e.target.value)
+                                    }
+                                    placeholder="AMN-…"
+                                    className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                                />
+                            </div>
+                        </label>
+
+                        {/*
+                         * The exception, not the rule: normally the desk picks
+                         * everything up at once and one tracking number covers
+                         * the purchase. Ticking a workshop here sends
+                         * `scope: single`, so only that artisan's parcel moves.
+                         */}
+                        {group.orders.length > 1 && (
+                            <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3.5">
+                                <p className="text-xs font-medium text-ink">
+                                    Expédier un atelier séparément
+                                </p>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Par défaut, l’action ci-dessous s’applique à
+                                    tout l’achat.
+                                </p>
+                                <div className="mt-2.5 space-y-1.5">
+                                    {group.orders.map((order) => (
+                                        <label
+                                            key={order.id}
+                                            className="flex cursor-pointer items-center gap-2 text-sm text-ink"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    separateOrderId === order.id
+                                                }
+                                                onChange={(e) =>
+                                                    setSeparateOrderId(
+                                                        e.target.checked
+                                                            ? order.id
+                                                            : null,
+                                                    )
+                                                }
+                                                className="h-4 w-4 rounded border-border text-ink focus:ring-ink/20"
+                                            />
+                                            {order.store.name}
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
-                        </section>
+                        )}
+
+                        <p className="mt-4 text-xs text-ink-soft">
+                            {target
+                                ? `S’applique à : ${target.store.name}`
+                                : 'S’applique à tout l’achat'}
+                        </p>
+
+                        <div className="mt-2 grid gap-2">
+                            {ACTIONS.map((action) => (
+                                <button
+                                    key={action.status}
+                                    type="button"
+                                    onClick={() => apply(action.status)}
+                                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+                                        action.status === 'cancelled'
+                                            ? 'border border-rose-200 text-rose-700 hover:bg-rose-50'
+                                            : 'bg-ink text-white hover:bg-ink/90'
+                                    }`}
+                                >
+                                    <Package className="h-4 w-4" />
+                                    {action.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
