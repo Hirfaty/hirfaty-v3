@@ -481,8 +481,8 @@ const AdminDashboard = ({
                                 >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-ink-soft">
-                                            {user.first_name[0]}
-                                            {user.last_name[0]}
+                                            {user.first_name?.[0]}
+                                            {user.last_name?.[0]}
                                         </div>
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-ink">

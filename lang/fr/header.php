@@ -3,6 +3,7 @@
 return [
     'marketplace' => 'Marché',
     'new_products' => 'Nouveautés',
+    'journal' => 'Journal',
     'categories' => 'Catégories',
     'all_categories' => 'Parcourir tous les métiers',
     'sellers' => 'Vendeurs',
@@ -32,4 +33,20 @@ return [
     'search_all_one' => 'Voir le résultat',
     'search_close' => 'Fermer la recherche',
     'search_searching' => 'Recherche…',
+
+    // ── Popover « Mon compte » ────────────────────────────────────
+    'account_aria' => 'Compte',
+    'account_heading' => 'Mon compte',
+    'account_greeting' => 'Bonjour, :name',
+    'account_welcome' => 'Bienvenue chez Hirfaty',
+    'account_my_account' => 'Mon compte',
+    'account_orders' => 'Mes commandes',
+    'account_wishlist' => 'Mes coups de cœur',
+    'account_payment' => 'Paiement',
+    'account_logout' => 'Déconnexion',
+    'account_dashboard' => 'Tableau de bord',
+    'account_admin_dashboard' => 'Hirfaty Dashboard',
+    'account_login' => 'Se connecter',
+    'account_register' => 'Créer un compte',
+    'account_seller_space' => 'Espace vendeur',
 ];

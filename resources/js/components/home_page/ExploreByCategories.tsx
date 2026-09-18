@@ -3,8 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import { WarmFill } from '@/components/WarmFill';
-import { useSnapCarousel } from '@/hooks/use-snap-carousel';
-import { useTranslation } from '@/hooks/use-translation';
 
 type CategoryTile = {
     key: number;
@@ -14,11 +12,7 @@ type CategoryTile = {
     label: string;
 };
 
-/**
- * One tile's contents, shared between the grid (`sm` and up) and the mobile
- * carousel — same photograph, scrim, and label, just wrapped by a different
- * layout container.
- */
+/** One tile: photograph (or placeholder), scrim, and label. */
 function CategoryTileCard({ tile }: { tile: CategoryTile }) {
     return (
         <Link
@@ -69,71 +63,7 @@ function CategoryTileCard({ tile }: { tile: CategoryTile }) {
     );
 }
 
-/**
- * Phone-only rail: one tile at a time, swipable and auto-advancing, the same
- * scroll-snap behaviour `HeroSlider` uses for the hero photographs. Replaces
- * the grid below `sm`, where six tiles across the width would otherwise be
- * squeezed into a scrollable but static two-column block.
- */
-function CategoryCarousel({
-    tiles,
-    isRTL,
-    label,
-}: {
-    tiles: CategoryTile[];
-    isRTL: boolean;
-    label: string;
-}) {
-    const { track, index, goTo, order, pauseProps } =
-        useSnapCarousel<HTMLUListElement>(tiles.length, 4000, isRTL);
-
-    return (
-        <div {...pauseProps} className="relative mt-5 sm:hidden">
-            <ul
-                ref={track}
-                className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-                {order.map((tile, position) => (
-                    <li
-                        // Positional, because `order` repeats a tile at each
-                        // end — see `useSnapCarousel`.
-                        key={position}
-                        className="w-full shrink-0 grow-0 basis-full snap-start snap-always"
-                    >
-                        <CategoryTileCard tile={tiles[tile]} />
-                    </li>
-                ))}
-            </ul>
-
-            {tiles.length > 1 && (
-                <div
-                    role="group"
-                    aria-label={label}
-                    className="mt-3 flex items-center justify-center gap-2.5"
-                >
-                    {tiles.map((tile, i) => (
-                        <button
-                            key={tile.key}
-                            type="button"
-                            onClick={() => goTo(i)}
-                            aria-label={tile.label}
-                            aria-current={i === index}
-                            className={`h-1.5 rounded-full transition-all duration-500 ${
-                                i === index
-                                    ? 'w-8 bg-souk-brown'
-                                    : 'w-1.5 bg-souk-brown/25 hover:bg-souk-brown/50'
-                            }`}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
 export default function ExploreByCategories() {
-    const { t, isRTL } = useTranslation();
-
     // The same top-level categories the header menu lists, shared from
     // HandleInertiaRequests — subcategories are not tiles.
     const { navCategories } = usePage<{
@@ -158,7 +88,7 @@ export default function ExploreByCategories() {
     }
 
     return (
-        <section className="bg-souk-paper py-5 lg:py-4">
+        <section className="hidden bg-souk-paper py-5 sm:block lg:py-4">
             <div className="container">
                 {/* <Reveal delay={140}>
                     <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
@@ -166,13 +96,7 @@ export default function ExploreByCategories() {
                     </h2>
                 </Reveal> */}
 
-                <CategoryCarousel
-                    tiles={categoryTiles}
-                    isRTL={isRTL}
-                    label={t('welcome.categories_grid.heading')}
-                />
-
-                <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                     {categoryTiles.map((tile, i) => (
                         <Reveal key={tile.key} delay={200 + i * 100}>
                             <CategoryTileCard tile={tile} />

@@ -173,6 +173,7 @@ export const SiteFooter = () => {
                             >
                                 Instagram
                             </a>
+                            {t('footer.follow_tiktok')}
                         </li>
                         <li>
                             <a

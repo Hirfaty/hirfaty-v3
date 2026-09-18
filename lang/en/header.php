@@ -3,6 +3,7 @@
 return [
     'marketplace' => 'Marketplace',
     'new_products' => 'New in',
+    'journal' => 'Journal',
     'categories' => 'Categories',
     'all_categories' => 'Browse every craft',
     'sellers' => 'Sellers',
@@ -34,4 +35,20 @@ return [
     'search_all_one' => 'See the result',
     'search_close' => 'Close search',
     'search_searching' => 'Searching…',
+
+    // ── "My account" popover ─────────────────────────────────────
+    'account_aria' => 'Account',
+    'account_heading' => 'My account',
+    'account_greeting' => 'Hello, :name',
+    'account_welcome' => 'Welcome to Hirfaty',
+    'account_my_account' => 'My account',
+    'account_orders' => 'My orders',
+    'account_wishlist' => 'My favorites',
+    'account_payment' => 'Payment',
+    'account_logout' => 'Log out',
+    'account_dashboard' => 'Dashboard',
+    'account_admin_dashboard' => 'Hirfaty Dashboard',
+    'account_login' => 'Sign in',
+    'account_register' => 'Create an account',
+    'account_seller_space' => 'Seller space',
 ];

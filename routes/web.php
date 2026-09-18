@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginIdentifyController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SellerRegistrationController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrochureController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
@@ -35,6 +36,10 @@ use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+// Public journal. Open to guests, like the product listing.
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
 // Static marketing page — no backend data, so no dedicated controller.
 Route::inertia('/about', 'about')->name('about');
@@ -130,6 +135,22 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
         Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
+
+        // Journal (blog)
+        Route::get('/blogs', [Admin\BlogController::class, 'index'])->name('blogs.index');
+        // `create` and `images` must stay above `{blog}`, or they're matched
+        // as an id — same reasoning as the products routes above.
+        Route::get('/blogs/create', [Admin\BlogController::class, 'create'])->name('blogs.create');
+        Route::post('/blogs/images', [Admin\BlogController::class, 'uploadImage'])->name('blogs.images.store');
+        Route::post('/blogs', [Admin\BlogController::class, 'store'])->name('blogs.store');
+        Route::get('/blogs/{blog}/edit', [Admin\BlogController::class, 'edit'])->name('blogs.edit');
+        Route::get('/blogs/{blog}/preview', [Admin\BlogController::class, 'preview'])->name('blogs.preview');
+        // POST, not PATCH: the form ships a cover image as multipart, which
+        // browsers can only send on a POST — see BlogForm's own comment.
+        Route::post('/blogs/{blog}', [Admin\BlogController::class, 'update'])->name('blogs.update');
+        Route::patch('/blogs/{blog}/archive', [Admin\BlogController::class, 'archive'])->name('blogs.archive');
+        Route::patch('/blogs/{blog}/publish', [Admin\BlogController::class, 'publishNow'])->name('blogs.publish');
+        Route::delete('/blogs/{blog}', [Admin\BlogController::class, 'destroy'])->name('blogs.destroy');
 
         // Stores — the review queue a shop sits in before it may sell.
         Route::get('/stores', [Admin\StoreController::class, 'index'])->name('stores.index');
