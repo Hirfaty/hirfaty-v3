@@ -110,8 +110,40 @@ test('the sales trend totals orders placed this month and excludes cancelled one
             // The current month is always the last of the six buckets.
             fn ($page) => $page
                 ->where('salesTrend.5.total', 200)
-                ->where('salesTrend.5.commission', 40)
                 ->where('salesTrend.5.count', 1)
+                // The platform's cut is no longer reported anywhere, so the
+                // trend carries order value alone.
+                ->missing('salesTrend.5.commission')
+        );
+});
+
+test('no admin dashboard figure reports the platform commission or seller payouts', function () {
+    $buyer = User::factory()->create(['role' => 'buyer']);
+
+    Order::create([
+        'buyer_id' => $buyer->id,
+        'store_id' => $this->store->id,
+        'city_id' => $this->city->id,
+        'status' => 'delivered',
+        'total_amount' => 200,
+        'platform_fee' => 40,
+        'delivery_fee' => 20,
+        'seller_earnings' => 140,
+        'shipping_address' => 'Test Address',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.dashboard'))
+        ->assertInertia(
+            fn ($page) => $page
+                // Order money is still reported...
+                ->where('stats.total_revenue', 200)
+                // ...but nothing derived from the fee split is.
+                ->missing('stats.total_platform_fees')
+                ->missing('stats.pending_payouts')
+                ->missing('stats.total_paid_out')
+                ->missing('stats.seller_balance_pending')
+                ->missing('stats.seller_balance_available')
         );
 });
 

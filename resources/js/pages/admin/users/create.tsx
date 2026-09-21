@@ -90,6 +90,40 @@ function Field({
 }
 
 /**
+ * Placeholder for the artisan's contract type, and by extension Hirfaty's cut.
+ *
+ * Deliberately inert: it holds no state, is absent from the submitted payload
+ * and has no matching column or validation rule server-side. It is disabled
+ * and greyed so it reads as "coming, not yet" rather than as a field the admin
+ * forgot to fill — the commercial terms are still being decided.
+ */
+function ContractTypePlaceholder() {
+    return (
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
+            <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="text-sm font-medium text-ink-soft/80">
+                    Type de contrat
+                </label>
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-ink-soft/70">
+                    Bientôt
+                </span>
+            </div>
+            <select
+                disabled
+                aria-hidden="true"
+                tabIndex={-1}
+                className="w-full cursor-not-allowed rounded-lg border border-border bg-muted/50 px-3.5 py-2.5 text-sm text-ink-soft/50 shadow-sm"
+            >
+                <option>À définir</option>
+            </select>
+            <p className="mt-2 text-xs text-ink-soft/70">
+                La commission Hirfaty dépendra de ce choix. Pas encore actif.
+            </p>
+        </div>
+    );
+}
+
+/**
  * "I don't have it yet" toggle sitting under an optional contact field.
  * Ticking it clears whatever was typed, so the waiver and the value can never
  * disagree — the server reads the empty field, not the checkbox.
@@ -639,6 +673,21 @@ const Create = ({
                                                     })}
                                                 </div>
                                             </Field>
+                                        </div>
+
+                                        {/*
+                                            Held space, not a field. There is
+                                            no contract column on `stores` and
+                                            nothing is submitted from here —
+                                            the commercial terms are still
+                                            being decided, so the control is
+                                            rendered greyed and disabled rather
+                                            than half-wired. Give it a real
+                                            `data.contract_type` (and a
+                                            validation rule) when the terms land.
+                                        */}
+                                        <div className="sm:col-span-2">
+                                            <ContractTypePlaceholder />
                                         </div>
 
                                         <Field

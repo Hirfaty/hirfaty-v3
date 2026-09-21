@@ -8,7 +8,8 @@ import { sell } from '@/routes';
 import { details, identify, verify } from '@/routes/login';
 import AuthShell from './AuthShell';
 import CraftCardStack from './CraftCardStack';
-import SocialButtons, { type SocialProvider } from './SocialButtons';
+import SocialButtons from './SocialButtons';
+import type { SocialProvider } from './SocialButtons';
 
 /*
  * The one field on this screen gets a boxed treatment rather than the house

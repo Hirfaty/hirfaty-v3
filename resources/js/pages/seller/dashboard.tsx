@@ -20,8 +20,12 @@ interface Store {
 }
 
 interface Stats {
-    total_revenue: number;
-    pending_payout: number;
+    /**
+     * Order money, not a payout. The commission/net split still exists in the
+     * `earnings` ledger but is deliberately not shown anywhere for now.
+     */
+    total_sales: number;
+    pending_sales: number;
     total_orders: number;
     orders_today: number;
     orders_week: number;
@@ -32,7 +36,7 @@ interface Stats {
     total_views: number;
 }
 
-interface RevenueChartItem {
+interface SalesChartItem {
     label: string;
     total: number;
 }
@@ -63,7 +67,7 @@ interface TopProduct {
 interface DashboardProps {
     store: Store;
     stats: Stats;
-    revenueChart: RevenueChartItem[];
+    salesChart: SalesChartItem[];
     orderBreakdown: Record<string, number>;
     recentOrders: RecentOrder[];
     topProducts: TopProduct[];
@@ -86,14 +90,14 @@ const money = (n: number) =>
 export default function SellerDashboard({
     store,
     stats,
-    revenueChart,
+    salesChart,
     orderBreakdown,
     recentOrders,
     topProducts,
 }: DashboardProps) {
     // Scale the bars against the tallest month so a flat run of small months
     // still reads as a chart rather than a row of slivers.
-    const peak = Math.max(...revenueChart.map((r) => r.total), 1);
+    const peak = Math.max(...salesChart.map((r) => r.total), 1);
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -121,9 +125,9 @@ export default function SellerDashboard({
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                     Icon={Coins}
-                    label="Total encaissé"
-                    value={money(stats.total_revenue)}
-                    hint={`${money(stats.pending_payout)} en attente de versement`}
+                    label="Ventes livrées"
+                    value={money(stats.total_sales)}
+                    hint={`${money(stats.pending_sales)} de commandes en cours`}
                     accent="text-emerald-600 bg-emerald-50"
                 />
                 <StatCard
@@ -152,18 +156,18 @@ export default function SellerDashboard({
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
-                {/* ── Revenue chart ────────────────────────── */}
+                {/* ── Sales chart ──────────────────────────── */}
                 <Panel
                     className="lg:col-span-2"
-                    title="Revenus"
+                    title="Ventes"
                     hint="Six derniers mois"
                     Icon={TrendingUp}
                 >
-                    {revenueChart.length === 0 ? (
-                        <Empty>Aucun revenu enregistré pour l’instant.</Empty>
+                    {salesChart.length === 0 ? (
+                        <Empty>Aucune vente enregistrée pour l’instant.</Empty>
                     ) : (
                         <div className="flex h-52 items-end gap-3 pt-2">
-                            {revenueChart.map((row) => (
+                            {salesChart.map((row) => (
                                 <div
                                     key={row.label}
                                     className="flex flex-1 flex-col items-center gap-2"

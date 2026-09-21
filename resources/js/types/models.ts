@@ -207,11 +207,17 @@ export interface Order {
     tracking_number: string | null;
     status: OrderStatus;
     total_amount: string;
-    platform_fee: string;
     delivery_fee: string;
-    seller_earnings: string;
+    /*
+     * `platform_fee` and `seller_earnings` are absent on purpose: the model
+     * hides them (app/Models/Order.php), so they are not in the payload at
+     * all. Omitting them here makes rendering the platform's cut a type error
+     * rather than a silent `undefined`.
+     */
     shipping_address: string;
     notes: string | null;
+    /** Why the order was cancelled, when it was — set by OrderStatusService. */
+    cancellation_reason: string | null;
     delivered_at: string | null;
     buyer: User;
     items: OrderItem[];
@@ -221,21 +227,13 @@ export interface Order {
     updated_at: string;
 }
 
-export interface Earning {
-    id: number;
-    store_id: number;
-    order_id: number;
-    gross_amount: string;
-    platform_fee: string;
-    delivery_fee: string;
-    net_amount: string;
-    status: 'pending' | 'available' | 'paid_out';
-    created_at: string;
-    updated_at: string;
-    order: Order;
-    store: Store;
-    buyer: User;
-}
+/*
+ * The `Earning` interface that stood here is gone along with the screens that
+ * rendered it. The ledger itself is untouched — CheckoutService still writes
+ * an Earning per store on every checkout — but nothing in the UI reads what
+ * Hirfaty or an artisan makes on an order, so no page needs the shape. Bring
+ * it back (mirroring app/Models/Earning.php) if those figures are shown again.
+ */
 
 export interface CartItem {
     cart_id: number;

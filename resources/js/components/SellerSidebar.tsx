@@ -62,8 +62,8 @@ const salesItems: NavItem[] = [
         icon: ShoppingBag,
     },
     {
-        title: 'Revenus',
-        url: route('seller.earnings.index', undefined, false),
+        title: 'Ventes',
+        url: route('seller.sales.index', undefined, false),
         icon: Coins,
     },
 ];

@@ -184,7 +184,9 @@ export default function SellerDetails({
                                         htmlFor="password_confirmation"
                                         className={labelClass}
                                     >
-                                        {t('common.auth.login.password_confirm')}
+                                        {t(
+                                            'common.auth.login.password_confirm',
+                                        )}
                                     </label>
                                     <PasswordInput
                                         id="password_confirmation"
@@ -467,7 +469,7 @@ function SelectField({
     return (
         <div className="relative">
             <Icon
-                className="pointer-events-none absolute top-1/2 start-4 h-4 w-4 -translate-y-1/2 text-souk-brown-deep/35"
+                className="pointer-events-none absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-souk-brown-deep/35"
                 strokeWidth={1.6}
             />
             <select
@@ -488,7 +490,7 @@ function SelectField({
             </select>
             <span
                 aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 end-4 -translate-y-1/2 text-souk-brown-deep/40"
+                className="pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 text-souk-brown-deep/40"
             >
                 ▾
             </span>

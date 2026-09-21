@@ -71,6 +71,18 @@ class BuyerProductResource extends JsonResource
                 'slug' => $this->store?->slug,
                 'description' => $this->store?->description,
                 'store_name' => $this->store?->store_name,
+                /*
+                 * Drives the "Vérifié par Hirfaty" mark beside the shop name.
+                 *
+                 * This is the same approval that lets a shop sell at all
+                 * (Store::isApproved, granted by StoreVerificationService),
+                 * not a second flag — so in practice every shop a buyer can
+                 * reach carries it. Exposed as a boolean rather than the raw
+                 * `verification_status` so the storefront never learns the
+                 * internal state names, and so splitting "cleared to sell"
+                 * from "trusted" later only changes this one line.
+                 */
+                'is_verified' => (bool) $this->store?->isApproved(),
                 // A store without a city must not fatal the whole listing.
                 'city_name' => $this->store?->city?->name,
                 // For the storefront's seller card. Nullable — a shop that

@@ -59,6 +59,10 @@ class StoreController extends Controller
                 'id' => $store->id,
                 'slug' => $store->slug,
                 'store_name' => $store->store_name,
+                // Same flag, same reasoning as BuyerProductResource: the
+                // approval that cleared the shop to sell is what the public
+                // "Vérifié par Hirfaty" mark reflects.
+                'is_verified' => $store->isApproved(),
                 'description' => $store->description,
                 'type' => $store->type,
                 'logo' => $store->logo,

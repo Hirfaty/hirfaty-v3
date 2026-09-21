@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
+    BadgeCheck,
     Ban,
     Calendar,
     CheckCircle2,
@@ -68,11 +69,15 @@ const STORE_TYPE_LABEL: Record<StoreType, string> = {
     cooperative: 'Coopérative',
 };
 
-export type EarningsSummary = {
-    total: number;
-    pending: number;
-    available: number;
-    paid_out: number;
+/**
+ * Order money for this shop. Replaced an earnings summary (net / available /
+ * pending off the `earnings` ledger) — what the artisan is owed after
+ * commission is not reported anywhere for now. See the disabled
+ * "Contrat & commission" card further down, which holds its place.
+ */
+export type SalesSummary = {
+    delivered_total: number;
+    in_progress_total: number;
 };
 
 export type OrderStats = {
@@ -97,6 +102,16 @@ interface Props {
             slug: string;
             description: string;
             type: StoreType;
+            /**
+             * The shop vetting an admin performs from /admin/stores. Approved
+             * is what clears the shop to sell *and* what puts the public
+             * "Vérifié par Hirfaty" mark on its storefront, so it is shown
+             * and actioned here too rather than only on the stores table.
+             */
+            verification_status: 'pending' | 'approved' | 'rejected';
+            rejection_reason: string | null;
+            /** Required fields the seller still owes; blocks approval. */
+            missing_fields: string[];
             logo: string | null;
             banner: string | null;
             city: { name: string };
@@ -108,7 +123,7 @@ interface Props {
             products: (Product & { order_items_count?: number })[];
         };
     };
-    earnings: EarningsSummary;
+    sales: SalesSummary;
     orderStats: OrderStats;
     productStats: ProductStats;
     recentOrders: Order[];
@@ -196,9 +211,68 @@ function Stat({
     );
 }
 
+/**
+ * Reserved space for the artisan's contract and Hirfaty's cut of it.
+ *
+ * Intentionally inert: nothing here is wired to state, a form or an endpoint,
+ * and there is no contract/commission column on `stores` yet. It exists so the
+ * shape of the feature is visible and its spot on the page is held while the
+ * commercial terms are still being decided. Everything is rendered greyed and
+ * `aria-hidden`/`disabled` so it can't be tabbed into or mistaken for live
+ * data — swap the dashes for real values once the fields exist.
+ */
+function ContractPlaceholderCard() {
+    const rows = [
+        { label: 'Type de contrat', value: '—' },
+        { label: 'Commission Hirfaty', value: '—' },
+        { label: 'Montant dû à Hirfaty', value: '—' },
+        { label: 'Reste à verser à l’artisan', value: '—' },
+    ];
+
+    return (
+        <div className="overflow-hidden rounded-xl border border-dashed border-border bg-muted/30 shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-dashed border-border px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-ink-soft/60" />
+                    <h2 className="text-sm font-semibold text-ink-soft/80">
+                        Contrat &amp; commission
+                    </h2>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-ink-soft/70">
+                    Bientôt
+                </span>
+            </div>
+
+            <div className="space-y-3 p-5 select-none" aria-hidden="true">
+                {rows.map((row) => (
+                    <div
+                        key={row.label}
+                        className="flex items-center justify-between gap-3"
+                    >
+                        <span className="text-xs text-ink-soft/70">
+                            {row.label}
+                        </span>
+                        <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium text-ink-soft/50 tabular-nums">
+                            {row.value}
+                        </span>
+                    </div>
+                ))}
+
+                <button
+                    type="button"
+                    disabled
+                    className="mt-1 w-full cursor-not-allowed rounded-lg border border-border bg-muted/50 px-4 py-2.5 text-xs font-medium text-ink-soft/50"
+                >
+                    Définir le contrat
+                </button>
+            </div>
+        </div>
+    );
+}
+
 const ShowSeller = ({
     user,
-    earnings,
+    sales,
     orderStats,
     productStats,
     recentOrders,
@@ -208,6 +282,90 @@ const ShowSeller = ({
     /** The product awaiting delete confirmation, or null when none is. */
     const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+
+    /**
+     * Grant the badge. Same endpoint as the stores table, so the seller gets
+     * the StoreApproved email from StoreVerificationService either way.
+     */
+    const handleVerify = () => {
+        if (!user.store) {
+            return;
+        }
+
+        setVerifying(true);
+        router.patch(
+            route('admin.stores.approve', user.store.id),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const flash = (page.props as unknown as PageProps).flash;
+
+                    if (flash?.error) {
+                        toast.error(flash.error);
+
+                        return;
+                    }
+
+                    toast.success(
+                        flash?.success ??
+                            'Atelier vérifié. Le vendeur a été prévenu.',
+                    );
+                },
+                onError: () => toast.error('La vérification a échoué.'),
+                onFinish: () => setVerifying(false),
+            },
+        );
+    };
+
+    /**
+     * Withdraw the badge. The reject endpoint requires a reason of at least
+     * ten characters — it is mailed to the seller as their only explanation —
+     * so this prompts rather than sending a blank one.
+     */
+    const handleUnverify = () => {
+        if (!user.store) {
+            return;
+        }
+
+        const reason = window.prompt(
+            'Pourquoi retirez-vous la vérification ? (10 caractères minimum — ce message est envoyé au vendeur)',
+        );
+
+        if (reason === null) {
+            return;
+        }
+
+        if (reason.trim().length < 10) {
+            toast.error('Le motif doit faire au moins 10 caractères.');
+
+            return;
+        }
+
+        setVerifying(true);
+        router.patch(
+            route('admin.stores.reject', user.store.id),
+            { reason },
+            {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const flash = (page.props as unknown as PageProps).flash;
+
+                    toast.success(
+                        flash?.success ??
+                            'Vérification retirée. Le vendeur a été prévenu.',
+                    );
+                },
+                onError: (errs) =>
+                    toast.error(
+                        errs.reason ??
+                            'Le retrait de la vérification a échoué.',
+                    ),
+                onFinish: () => setVerifying(false),
+            },
+        );
+    };
 
     const confirmDeleteProduct = () => {
         if (!deleteTarget) {
@@ -302,6 +460,34 @@ const ShowSeller = ({
                             ) : (
                                 <></>
                             )}
+                            {/* The same approval that drives the public
+                                "Vérifié par Hirfaty" mark on the storefront. */}
+                            {user.store?.verification_status === 'approved' && (
+                                <span
+                                    title="Cet atelier porte la mention « Vérifié par Hirfaty » sur la boutique."
+                                    className="inline-flex items-center gap-1 rounded-full bg-souk-green/10 px-2.5 py-1 text-xs font-medium text-souk-green"
+                                >
+                                    <BadgeCheck className="h-3.5 w-3.5" />
+                                    Vérifié
+                                </span>
+                            )}
+                            {user.store?.verification_status === 'pending' && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    En attente de validation
+                                </span>
+                            )}
+                            {user.store?.verification_status === 'rejected' && (
+                                <span
+                                    title={
+                                        user.store.rejection_reason ?? undefined
+                                    }
+                                    className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700"
+                                >
+                                    <Ban className="h-3.5 w-3.5" />
+                                    Refusé
+                                </span>
+                            )}
                         </div>
                         <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-soft">
                             <Calendar className="h-3.5 w-3.5" />
@@ -310,6 +496,46 @@ const ShowSeller = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2.5">
+                        {/*
+                         * Verify / un-verify, hitting the same endpoints the
+                         * stores table uses (StoreVerificationService), so the
+                         * seller gets the same StoreApproved / StoreRejected
+                         * email either way.
+                         *
+                         * Approving is hidden while the shop is still missing
+                         * required fields: the endpoint refuses those, and a
+                         * button guaranteed to fail reads as broken.
+                         */}
+                        {user.store?.verification_status !== 'approved' &&
+                            (user.store?.missing_fields?.length ?? 0) === 0 && (
+                                <Button
+                                    className="rounded-lg"
+                                    disabled={verifying}
+                                    onClick={handleVerify}
+                                >
+                                    <BadgeCheck className="h-4 w-4" />
+                                    Marquer comme vérifié
+                                </Button>
+                            )}
+                        {user.store?.verification_status !== 'approved' &&
+                            (user.store?.missing_fields?.length ?? 0) > 0 && (
+                                <span className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-ink-soft">
+                                    Profil incomplet — manque&nbsp;:{' '}
+                                    {user.store.missing_fields.join(', ')}
+                                </span>
+                            )}
+                        {user.store?.verification_status === 'approved' && (
+                            <Button
+                                variant="outline"
+                                className="rounded-lg"
+                                disabled={verifying}
+                                onClick={handleUnverify}
+                            >
+                                <Ban className="h-4 w-4" />
+                                Retirer la vérification
+                            </Button>
+                        )}
+
                         <Link
                             href={route('admin.products.create', {
                                 store_id: user.store.id,
@@ -357,21 +583,16 @@ const ShowSeller = ({
             </div>
 
             {/* ── KPI row ──────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <Stat
-                    label="Gains nets"
-                    value={formatMAD(earnings.total)}
-                    icon={Wallet}
-                />
-                <Stat
-                    label="Disponible"
-                    value={formatMAD(earnings.available)}
+                    label="Ventes livrées"
+                    value={formatMAD(sales.delivered_total)}
                     icon={CheckCircle2}
                     tone="positive"
                 />
                 <Stat
-                    label="En attente"
-                    value={formatMAD(earnings.pending)}
+                    label="Commandes en cours"
+                    value={formatMAD(sales.in_progress_total)}
                     icon={Clock}
                     tone="warning"
                 />
@@ -501,6 +722,8 @@ const ShowSeller = ({
                             </p>
                         </div>
                     </Card>
+
+                    <ContractPlaceholderCard />
                 </aside>
 
                 {/* Main column */}

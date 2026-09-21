@@ -9,7 +9,7 @@ import {
     Settings,
     ShoppingBag,
     Users,
-    Wallet,
+    XCircle,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -27,23 +27,24 @@ import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { PageProps, Product, User, UserRole } from '@/types';
 
+/**
+ * Order money only. The platform-fee take, payout balances and seller-owed
+ * figures were removed on purpose — no screen reports what Hirfaty or an
+ * artisan earns for now. The ledger behind them is still written.
+ */
 interface DashboardStats {
     total_orders: number;
     total_revenue: number;
+    pending_revenue: number;
+    cancelled_orders: number;
     pending_products: number;
     total_users: number;
     total_sellers: number;
     total_buyers: number;
-    total_platform_fees: number;
-    pending_payouts: number;
-    total_paid_out: number;
-    seller_balance_pending: number;
-    seller_balance_available: number;
 }
 
 interface SalesTrend {
     total: number;
-    commission: number;
     count: number;
     month: string;
 }
@@ -163,29 +164,29 @@ const AdminDashboard = ({
                 </p>
             </header>
 
-            {/* ── Financials ───────────────────────────────── */}
+            {/* ── Order money ──────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <Stat
                     label="Chiffre d'affaires"
                     value={formatCurrency(stats.total_revenue)}
                     icon={ShoppingBag}
+                    tone="positive"
                 />
                 <Stat
-                    label="Frais de plateforme"
-                    value={formatCurrency(stats.total_platform_fees)}
-                    icon={Wallet}
-                />
-                <Stat
-                    label="Paiements en attente"
-                    value={formatCurrency(stats.pending_payouts)}
+                    label="Commandes en cours"
+                    value={formatCurrency(stats.pending_revenue)}
                     icon={Clock}
                     tone="warning"
                 />
                 <Stat
-                    label="Total versé"
-                    value={formatCurrency(stats.total_paid_out)}
+                    label="Total commandes"
+                    value={stats.total_orders}
                     icon={CheckCircle2}
-                    tone="positive"
+                />
+                <Stat
+                    label="Commandes annulées"
+                    value={stats.cancelled_orders}
+                    icon={XCircle}
                 />
             </div>
 
@@ -219,37 +220,25 @@ const AdminDashboard = ({
                 />
             </div>
 
-            {/* ── Seller balances ──────────────────────────── */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Stat
-                    label="Solde vendeurs en transit"
-                    value={formatCurrency(stats.seller_balance_pending)}
-                    icon={Clock}
-                    tone="warning"
-                />
-                <Stat
-                    label="Gains vendeurs réclamables"
-                    value={formatCurrency(stats.seller_balance_available)}
-                    icon={CheckCircle2}
-                    tone="positive"
-                />
-            </div>
+            {/*
+                A "Solde vendeurs" row sat here, reporting what artisans were
+                owed in transit and what they could claim. Both came off the
+                `earnings` ledger and are gone with the rest of the payout
+                figures — nothing reports what Hirfaty or a seller makes.
+            */}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                 {/* ── Sales trend chart ──────────────────────── */}
                 <div className="lg:col-span-8">
                     <Card title="Évolution des ventes">
+                        {/* One series now — the "Commission plateforme" swatch
+                            that sat beside it is gone with the series it
+                            labelled. */}
                         <div className="flex items-center gap-4 border-b border-border px-5 py-3">
                             <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-terracotta" />
                                 <span className="text-xs font-medium text-ink-soft">
-                                    Brut
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="h-2 w-2 rounded-full bg-ink" />
-                                <span className="text-xs font-medium text-ink-soft">
-                                    Commission plateforme
+                                    Montant des commandes
                                 </span>
                             </div>
                         </div>
@@ -272,24 +261,6 @@ const AdminDashboard = ({
                                             <stop
                                                 offset="95%"
                                                 stopColor={CHART_TERRACOTTA}
-                                                stopOpacity={0}
-                                            />
-                                        </linearGradient>
-                                        <linearGradient
-                                            id="colorComm"
-                                            x1="0"
-                                            y1="0"
-                                            x2="0"
-                                            y2="1"
-                                        >
-                                            <stop
-                                                offset="5%"
-                                                stopColor={CHART_INK}
-                                                stopOpacity={0.15}
-                                            />
-                                            <stop
-                                                offset="95%"
-                                                stopColor={CHART_INK}
                                                 stopOpacity={0}
                                             />
                                         </linearGradient>
@@ -332,23 +303,20 @@ const AdminDashboard = ({
                                         itemStyle={{ color: '#fff' }}
                                         labelStyle={{ color: '#fff' }}
                                     />
+                                    {/*
+                                        One series: order value. The
+                                        "Commission" area that used to sit
+                                        alongside it is gone — the platform's
+                                        take is not plotted anywhere for now.
+                                    */}
                                     <Area
                                         type="monotone"
                                         dataKey="total"
-                                        name="Brut"
+                                        name="Ventes"
                                         stroke={CHART_TERRACOTTA}
                                         strokeWidth={2}
                                         fillOpacity={1}
                                         fill="url(#colorTotal)"
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="commission"
-                                        name="Commission"
-                                        stroke={CHART_INK}
-                                        strokeWidth={2}
-                                        fillOpacity={1}
-                                        fill="url(#colorComm)"
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>

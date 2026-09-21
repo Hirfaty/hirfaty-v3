@@ -108,16 +108,19 @@ function locateCategory(
     categories: Category[],
     categoryId: number | string | null | undefined,
 ): { mainId: number | string; subId: number | string } {
-    const id = categoryId === null || categoryId === undefined || categoryId === ''
-        ? null
-        : Number(categoryId);
+    const id =
+        categoryId === null || categoryId === undefined || categoryId === ''
+            ? null
+            : Number(categoryId);
 
     if (id !== null) {
         for (const root of categories) {
             if (root.id === id) {
                 return { mainId: root.id, subId: '' };
             }
+
             const child = (root.children ?? []).find((c) => c.id === id);
+
             if (child) {
                 return { mainId: root.id, subId: child.id };
             }
@@ -189,8 +192,7 @@ export default function ProductForm({
         initialCategory.subId,
     );
     const subCategories =
-        categories.find((c) => c.id === Number(categoryMainId))?.children ??
-        [];
+        categories.find((c) => c.id === Number(categoryMainId))?.children ?? [];
 
     const [media, setMedia] = useState<MediaItem[]>(
         buildExistingItems((product?.media ?? []) as ExistingMedia[]),

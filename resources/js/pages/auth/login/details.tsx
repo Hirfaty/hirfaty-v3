@@ -61,7 +61,10 @@ export default function LoginDetails() {
                     <>
                         <div className="space-y-3.5">
                             <div>
-                                <label htmlFor="password" className={labelClass}>
+                                <label
+                                    htmlFor="password"
+                                    className={labelClass}
+                                >
                                     {t('common.auth.login.password')}
                                 </label>
                                 <PasswordInput

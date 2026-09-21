@@ -379,6 +379,9 @@ return [
     'store.type_company' => 'Company',
     'store.type_cooperative' => 'Cooperative',
     'store.since' => 'On Hirfaty since :date',
+    // The trust mark beside a shop's name, on the product page and the shop's
+    // own page. Reflects the admin approval the shop passed before it could sell.
+    'store.verified' => 'Verified by Hirfaty',
     'store.count_one' => ':count piece',
     'store.count_many' => ':count pieces',
     'store.creations' => 'From this workshop',

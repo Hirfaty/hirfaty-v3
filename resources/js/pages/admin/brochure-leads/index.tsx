@@ -92,8 +92,8 @@ const Index = ({ leads, counts, filters }: Props) => {
                         Demandes de brochure
                     </h1>
                     <p className="mt-1 text-sm text-ink-soft">
-                        {counts.all ?? 0} demande{(counts.all ?? 0) > 1 ? 's' : ''}{' '}
-                        au total.
+                        {counts.all ?? 0} demande
+                        {(counts.all ?? 0) > 1 ? 's' : ''} au total.
                     </p>
                 </div>
             </header>

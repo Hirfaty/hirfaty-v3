@@ -74,6 +74,10 @@ export type BuyerProductResource = Omit<
     option_groups?: VariantOptionGroup[];
     store: Pick<Store, 'id' | 'store_name' | 'slug' | 'description'> & {
         city_name: string;
+        /** Public "Vérifié par Hirfaty" mark — see BuyerProductResource. */
+        is_verified: boolean;
+        /** Shop avatar; null when none was uploaded. */
+        logo: string | null;
     };
 };
 

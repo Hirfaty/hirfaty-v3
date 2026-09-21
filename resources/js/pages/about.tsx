@@ -35,7 +35,10 @@ export default function About() {
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader variant="overlay" overlayAnchor={heroRef} />
 
-                <section ref={heroRef} className="relative isolate overflow-hidden">
+                <section
+                    ref={heroRef}
+                    className="relative isolate overflow-hidden"
+                >
                     <img
                         src={riadBackground}
                         alt="A traditional Moroccan riad courtyard"

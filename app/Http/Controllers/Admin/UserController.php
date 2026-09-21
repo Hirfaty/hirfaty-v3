@@ -318,9 +318,21 @@ class UserController extends Controller
         $query = User::query()
             ->where('role', '!=', 'super_admin')
             ->withCount('products')
-            // Shop name, type, and city are shown as columns for sellers —
-            // eager load so the table doesn't N+1 per row.
-            ->with('store:id,user_id,store_name,type,city_id', 'store.city:id,name');
+            /*
+             * Shop name, type, and city are shown as columns for sellers —
+             * eager load so the table doesn't N+1 per row.
+             *
+             * `verification_status` rides along for the "Vérifié par Hirfaty"
+             * tick beside the shop name. It is an explicit column in the
+             * select list because this is a constrained eager load: a column
+             * missing from here arrives `undefined` on the page rather than
+             * erroring, which is exactly how the tick would silently never
+             * render.
+             */
+            ->with(
+                'store:id,user_id,store_name,type,city_id,verification_status',
+                'store.city:id,name',
+            );
 
         if ($search = $request->input('search')) {
             // Name, email, phone, or the seller's shop name all match — the
@@ -405,12 +417,31 @@ class UserController extends Controller
                 'store.products.images',
                 'store.products.category',
             ]);
-            // Earnings summary
-            $earnings = [
-                'total' => $user->store?->earnings()->sum('net_amount') ?? 0,
-                'pending' => $user->store?->earnings()->where('status', 'pending')->sum('net_amount') ?? 0,
-                'available' => $user->store?->earnings()->where('status', 'available')->sum('net_amount') ?? 0,
-                'paid_out' => $user->store?->earnings()->where('status', 'paid_out')->sum('net_amount') ?? 0,
+
+            /*
+             * What the shop still owes before it can be approved. Computed
+             * rather than serialised because `missingProfileFields()` is a
+             * method, and the approve endpoint refuses an incomplete shop —
+             * so the button on this page has to know the same thing the
+             * stores table does, from the same source.
+             */
+            $user->store?->setAttribute(
+                'missing_fields',
+                $user->store->missingProfileFields(),
+            );
+            /*
+             * Sales summary — order money, never a payout.
+             *
+             * This replaced an earnings summary (net / pending / available /
+             * paid_out off the `earnings` ledger). What the artisan is owed
+             * after commission is not reported on any screen for now; the
+             * ledger is still written by CheckoutService, it simply has no UI.
+             * The page shows a disabled "contrat & commission" placeholder in
+             * its place.
+             */
+            $sales = [
+                'delivered_total' => (float) ($user->store?->orders()->where('status', 'delivered')->sum('total_amount') ?? 0),
+                'in_progress_total' => (float) ($user->store?->orders()->whereNotIn('status', ['delivered', 'cancelled'])->sum('total_amount') ?? 0),
             ];
             // Order stats
             $orderStats = [
@@ -435,7 +466,7 @@ class UserController extends Controller
 
             return Inertia::render('admin/users/showSeller', [
                 'user' => $user,
-                'earnings' => $earnings,
+                'sales' => $sales,
                 'orderStats' => $orderStats,
                 'productStats' => $productStats,
                 'recentOrders' => $recentOrders, ]);

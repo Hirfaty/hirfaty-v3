@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Earning;
 use App\Models\Order;
-use App\Models\Payout;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\HealthReportService;
@@ -23,10 +21,21 @@ class DashboardController extends Controller
 
     public function index(HealthReportService $health)
     {
-        // ── KPI Stats ───────────────────────────────────────────
+        /*
+         * ── KPI Stats ──────────────────────────────────────────
+         *
+         * Order money only. The commission take, payout balances and
+         * seller-owed figures that used to live here are deliberately gone:
+         * no screen reports what Hirfaty or an artisan earns for now. The
+         * `earnings` ledger is still written on every checkout
+         * (CheckoutService), so this is a display decision, not a data one —
+         * turning the numbers back on is a matter of re-adding the queries.
+         */
         $stats = [
             'total_orders' => Order::count(),
             'total_revenue' => (float) Order::where('status', 'delivered')->sum('total_amount'),
+            'pending_revenue' => (float) Order::whereNotIn('status', ['delivered', 'cancelled'])->sum('total_amount'),
+            'cancelled_orders' => Order::where('status', 'cancelled')->count(),
             // 'pending_review' is the actual Product::status value — this
             // previously filtered on 'pending', a status that never exists,
             // so this count (and the list below) were always zero.
@@ -34,13 +43,6 @@ class DashboardController extends Controller
             'total_users' => User::count(),
             'total_sellers' => User::where('role', 'seller')->count(),
             'total_buyers' => User::where('role', 'buyer')->count(),
-
-            // Financial Deep Dive
-            'total_platform_fees' => (float) Order::where('status', 'delivered')->sum('platform_fee'),
-            'pending_payouts' => (float) Payout::where('status', 'pending')->sum('amount'),
-            'total_paid_out' => (float) Payout::where('status', 'processed')->sum('amount'),
-            'seller_balance_pending' => (float) Earning::where('status', 'pending')->sum('net_amount'),
-            'seller_balance_available' => (float) Earning::where('status', 'available')->sum('net_amount'),
         ];
 
         // ── Recent Activity ────────────────────────────────────
@@ -65,13 +67,15 @@ class DashboardController extends Controller
     }
 
     /**
-     * Revenue/commission per month for the last 6 months, always including
-     * every month even when it had zero orders — the previous DB::raw()
-     * GROUP BY skipped empty months (leaving gaps in the chart) and used
-     * MySQL's DATE_FORMAT(), which doesn't exist under the SQLite driver
-     * tests run on.
+     * Order value per month for the last 6 months, always including every
+     * month even when it had zero orders — the previous DB::raw() GROUP BY
+     * skipped empty months (leaving gaps in the chart) and used MySQL's
+     * DATE_FORMAT(), which doesn't exist under the SQLite driver tests run on.
      *
-     * @return array<int, array{month: string, total: float, commission: float, count: int}>
+     * The `commission` series this used to carry alongside `total` is gone:
+     * the platform's take is not plotted anywhere for now.
+     *
+     * @return array<int, array{month: string, total: float, count: int}>
      */
     private function salesTrend(): array
     {
@@ -79,7 +83,7 @@ class DashboardController extends Controller
 
         $orders = Order::where('status', '!=', 'cancelled')
             ->where('created_at', '>=', $since)
-            ->get(['total_amount', 'platform_fee', 'created_at']);
+            ->get(['total_amount', 'created_at']);
 
         return collect(range(5, 0))
             ->map(function (int $monthsAgo) use ($orders) {
@@ -91,7 +95,6 @@ class DashboardController extends Controller
                 return [
                     'month' => self::MONTHS[(int) $month->format('n')],
                     'total' => (float) $matching->sum('total_amount'),
-                    'commission' => (float) $matching->sum('platform_fee'),
                     'count' => $matching->count(),
                 ];
             })

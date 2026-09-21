@@ -379,6 +379,9 @@ return [
     'store.type_company' => 'شركة',
     'store.type_cooperative' => 'تعاونية',
     'store.since' => 'على حرفتي منذ :date',
+    // علامة الثقة بجانب اسم الورشة، في صفحة المنتج وصفحة الورشة نفسها. تعكس
+    // مصادقة الإدارة التي وجب على الورشة الحصول عليها قبل أن تبيع.
+    'store.verified' => 'موثّق من حرفتي',
     'store.count_one' => 'قطعة واحدة',
     'store.count_many' => ':count قطع',
     'store.creations' => 'إبداعات الورشة',

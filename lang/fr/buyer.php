@@ -381,6 +381,10 @@ return [
     'store.type_company' => 'Entreprise',
     'store.type_cooperative' => 'Coopérative',
     'store.since' => 'Sur Hirfaty depuis :date',
+    // La marque de confiance à côté du nom de l'atelier, sur la fiche produit
+    // et sur la page de l'atelier. Reflète la validation admin que l'atelier a
+    // dû obtenir pour pouvoir vendre.
+    'store.verified' => 'Vérifié par Hirfaty',
     'store.count_one' => ':count pièce',
     'store.count_many' => ':count pièces',
     'store.creations' => 'Les créations de l’atelier',

@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import {
+    BadgeCheck,
     Ban,
     CheckCircle2,
     ChevronLeft,
@@ -55,6 +56,8 @@ type UserRow = User & {
         store_name: string;
         type: StoreType;
         city: { name: string } | null;
+        /** Approved is what shows the public "Vérifié par Hirfaty" mark. */
+        verification_status: 'pending' | 'approved' | 'rejected';
     } | null;
 };
 
@@ -553,8 +556,23 @@ export default function UsersIndex({
                                     <TableCell>
                                         {user.store ? (
                                             <div className="flex flex-col text-sm">
-                                                <span className="font-medium text-ink">
+                                                <span className="flex items-center gap-1.5 font-medium text-ink">
                                                     {user.store.store_name}
+                                                    {/* Same approval that puts
+                                                        "Vérifié par Hirfaty" on
+                                                        the storefront. */}
+                                                    {user.store
+                                                        .verification_status ===
+                                                        'approved' && (
+                                                        <span
+                                                            role="img"
+                                                            aria-label="Vérifié par Hirfaty"
+                                                            title="Vérifié par Hirfaty"
+                                                            className="inline-flex shrink-0 text-souk-green"
+                                                        >
+                                                            <BadgeCheck className="h-3.5 w-3.5" />
+                                                        </span>
+                                                    )}
                                                 </span>
                                                 <span className="text-xs text-ink-soft">
                                                     {

@@ -212,21 +212,18 @@ function SellerOrderDetail({
                                 </TableBody>
                             </Table>
                             <Separator />
+                            {/*
+                                Order money only. The platform-fee and
+                                net-payout lines that used to sit here are
+                                deliberately gone — the split is still recorded
+                                in the `earnings` ledger but is not shown.
+                            */}
                             <div className="flex justify-end p-4">
                                 <div className="w-full max-w-xs space-y-1.5">
                                     <div className="flex justify-between text-sm text-muted-foreground">
-                                        <span>Total commande</span>
+                                        <span>Sous-total produits</span>
                                         <span className="tabular-nums">
                                             {total.toLocaleString('fr-FR')} MAD
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-sm text-muted-foreground">
-                                        <span>Frais plateforme</span>
-                                        <span className="tabular-nums">
-                                            {Number(
-                                                order.platform_fee,
-                                            ).toLocaleString('fr-FR')}{' '}
-                                            MAD
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-sm text-muted-foreground">
@@ -240,10 +237,11 @@ function SellerOrderDetail({
                                     </div>
                                     <Separator className="my-2" />
                                     <div className="flex justify-between font-display text-lg">
-                                        <span>Gain vendeur</span>
+                                        <span>Total commande</span>
                                         <span className="tabular-nums">
-                                            {Number(
-                                                order.seller_earnings,
+                                            {(
+                                                total +
+                                                Number(order.delivery_fee)
                                             ).toLocaleString('fr-FR')}{' '}
                                             MAD
                                         </span>

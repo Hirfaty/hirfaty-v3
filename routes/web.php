@@ -26,9 +26,9 @@ use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Seller\DashboardController;
-use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\SalesController;
 use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\WelcomeController as SellerWelcomeController;
 use App\Models\User;
@@ -126,9 +126,13 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/coupons', [Admin\CouponController::class, 'store'])->name('coupons.store');
         Route::delete('/coupons/{coupon}', [Admin\CouponController::class, 'destroy'])->name('coupons.destroy');
 
-        // Payouts
-        Route::get('/payouts', [Admin\PayoutController::class, 'index'])->name('payouts.index');
-        Route::patch('/payouts/{payout}/process', [Admin\PayoutController::class, 'process'])->name('payouts.process');
+        /*
+         * Payout routes used to sit here, pointing at an empty
+         * Admin\PayoutController — both methods were undefined, so either URL
+         * 500'd on any request. Nothing linked to them. Removed alongside the
+         * earnings screens rather than left as a trap; the `payouts` table and
+         * model are untouched for when paying artisans is actually built.
+         */
 
         // Categories
         Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories.index');
@@ -229,8 +233,13 @@ Route::middleware(['auth', 'verified', 'role:seller'])
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
 
-        // Earnings
-        Route::get('earnings', [EarningController::class, 'index'])->name('earnings.index');
+        /*
+         * Sales — order money only. Replaced the earnings screen, which broke
+         * each order into gross / platform fee / net payout; that split is not
+         * surfaced to anyone for now, though the ledger behind it is still
+         * written on every checkout.
+         */
+        Route::get('sales', [SalesController::class, 'index'])->name('sales.index');
 
         /*
          * Settings. The controller and the page have both existed for a while

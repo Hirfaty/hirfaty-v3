@@ -3,6 +3,7 @@ import { Loader2, MapPin, Package, Store as StoreIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -23,6 +24,8 @@ type Shop = {
     id: number;
     slug: string;
     store_name: string;
+    /** Public "Vérifié par Hirfaty" mark — see Buyer\StoreController. */
+    is_verified: boolean;
     description: string | null;
     type: StoreType;
     logo: string | null;
@@ -152,9 +155,12 @@ export default function StoreShow({
                                     ` · ${store.category_name}`}
                             </p>
 
-                            <h1 className="mt-2 font-display text-[clamp(1.8rem,3.2vw,2.6rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
-                                {store.store_name}
-                            </h1>
+                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                                <h1 className="font-display text-[clamp(1.8rem,3.2vw,2.6rem)] leading-[1.08] tracking-[-0.02em] text-souk-title">
+                                    {store.store_name}
+                                </h1>
+                                {store.is_verified && <VerifiedBadge />}
+                            </div>
 
                             <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-souk-brown-deep/70">
                                 {store.city_name && (

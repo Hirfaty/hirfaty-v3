@@ -40,6 +40,23 @@ class Order extends Model
     ];
 
     /**
+     * What Hirfaty takes and what the artisan is left with never leaves the
+     * server.
+     *
+     * Both columns are still written on every checkout (CheckoutService) and
+     * are readable in PHP as normal — this only stops them being serialised
+     * into an Inertia prop or a JSON response. Orders are handed to the
+     * frontend as whole models in several places (seller + admin order
+     * screens), so dropping the figures from the pages alone would have left
+     * them a devtools panel away from any seller who looked. Delete these two
+     * entries to put the numbers back on the wire.
+     */
+    protected $hidden = [
+        'platform_fee',
+        'seller_earnings',
+    ];
+
+    /**
      * Assigning the reference here rather than in CheckoutService means every
      * creation path gets one — the checkout, seeders, factories and tests.
      */

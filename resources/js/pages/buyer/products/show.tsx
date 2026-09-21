@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -1090,8 +1091,11 @@ const ProductDetail = ({
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="font-display text-xl text-souk-title">
+                                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-xl text-souk-title">
                                     {product.store.store_name}
+                                    {product.store.is_verified && (
+                                        <VerifiedBadge />
+                                    )}
                                 </p>
                                 {product.store.city_name && (
                                     <p className="mt-0.5 flex items-center gap-1.5 text-xs text-souk-brown-deep/65">
