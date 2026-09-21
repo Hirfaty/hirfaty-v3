@@ -5,13 +5,9 @@ import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 /**
  * Charged when the chosen destination somehow has no rate on file — mirrors
@@ -192,7 +188,7 @@ const Checkout = ({
     deliveryServices: DeliveryServiceOption[];
     deliveryRates: DeliveryRatesMap;
 }) => {
-    const { t, locale } = useTranslation();
+    const { t } = useTranslation();
 
     // Default first (the query orders on is_default), so a buyer with a book
     // lands on their usual address rather than an empty form.
@@ -251,11 +247,12 @@ const Checkout = ({
      */
     const cartError = (errors as Record<string, string | undefined>).cart;
 
-    const money = (value: number) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-        }).format(value);
+    /*
+     * Totals arrive in MAD. `money()` shows them in whatever the buyer is
+     * reading; `baseMoney()` keeps a figure in dirhams, which the total below
+     * needs — the courier collects MAD whatever the page is displaying.
+     */
+    const { money, baseMoney, currency, isBase } = useCurrency();
 
     const chooseSaved = (address: SavedAddress) => {
         setChoice(address.id);
@@ -1027,7 +1024,7 @@ const Checkout = ({
                                             <span className="font-display text-sm text-souk-title">
                                                 {money(line.line_total ?? 0)}{' '}
                                                 <span className="text-xs">
-                                                    MAD TTC
+                                                    TTC
                                                 </span>
                                             </span>
                                             <span className="text-xs text-souk-brown-deep/60">
@@ -1095,7 +1092,7 @@ const Checkout = ({
                                     )}
                                 </span>
                                 <span className="text-souk-title">
-                                    {money(subtotal)} MAD TTC
+                                    {money(subtotal)} TTC
                                 </span>
                             </div>
 
@@ -1104,7 +1101,7 @@ const Checkout = ({
                                     {t('buyer.checkout.delivery_fee')}
                                 </span>
                                 <span className="text-souk-title">
-                                    {money(deliveryTotal)} MAD TTC
+                                    {money(deliveryTotal)} TTC
                                 </span>
                             </div>
                         </div>
@@ -1115,9 +1112,32 @@ const Checkout = ({
                             </span>
                             <span className="font-display text-2xl leading-none text-souk-title">
                                 {money(grandTotal)}
-                                <span className="ms-1.5 text-sm">MAD TTC</span>
+                                <span className="ms-1.5 text-sm">TTC</span>
                             </span>
                         </div>
+
+                        {/*
+                         * The one place the converted figure is not enough.
+                         * Everything above is indicative; the courier collects
+                         * dirhams, so the actual amount has to be stated here
+                         * rather than left for the buyer to discover at the
+                         * door. Hidden for anyone already reading MAD, where
+                         * it would just repeat the line above it.
+                         */}
+                        {!isBase && (
+                            <p className="mt-3 rounded-lg bg-souk-brown/5 px-3 py-2.5 text-xs leading-relaxed text-souk-brown-deep/75">
+                                {t('common.currency_note').replace(
+                                    ':currency',
+                                    currency.code,
+                                )}
+                                <span className="mt-1 block font-medium text-souk-title">
+                                    {t('common.currency_charged').replace(
+                                        ':amount',
+                                        baseMoney(grandTotal),
+                                    )}
+                                </span>
+                            </p>
+                        )}
 
                         <button
                             type="submit"

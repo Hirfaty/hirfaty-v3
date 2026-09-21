@@ -26,6 +26,7 @@ import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCartSheet } from '@/contexts/CartSheetContext';
+import { useCurrency } from '@/hooks/use-currency';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useTranslation } from '@/hooks/use-translation';
 import { login } from '@/routes';
@@ -38,11 +39,6 @@ import type {
 /** Museum-caption label, matching the listing page. */
 const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 type DetailProduct = BuyerProductResource & {
     wishlists_count?: number;
@@ -196,10 +192,10 @@ function PriceBlock({
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="font-display text-4xl leading-none text-olive">
                         {money(trade)}
-                        <span className="ms-1.5 text-base">MAD TTC</span>
+                        <span className="ms-1.5 text-base">TTC</span>
                     </span>
                     <span className="text-sm text-souk-brown-deep/50 line-through">
-                        {money(retail)} MAD TTC
+                        {money(retail)} TTC
                     </span>
                     {saving > 0 && (
                         <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
@@ -229,11 +225,11 @@ function PriceBlock({
                 className={`font-display text-[2.6rem] leading-none ${strike ? 'text-terracotta' : 'text-souk-title'}`}
             >
                 {money(retail)}
-                <span className="ms-1.5 text-lg">MAD TTC</span>
+                <span className="ms-1.5 text-lg">TTC</span>
             </span>
             {strike && (
                 <span className="text-base text-souk-brown-deep/45 line-through">
-                    {money(strike)} MAD TTC
+                    {money(strike)} TTC
                 </span>
             )}
         </div>
@@ -354,11 +350,11 @@ function RelatedProductCard({
                         {t('buyer.products.price_coming_soon')}
                     </span>
                 ) : pTrade !== null ? (
-                    <span className="text-olive">{money(pTrade)} MAD TTC</span>
+                    <span className="text-olive">{money(pTrade)} TTC</span>
                 ) : pSale ? (
                     <>
                         <span className="text-terracotta">
-                            {money(Number(p.sale_price))} MAD TTC
+                            {money(Number(p.sale_price))} TTC
                         </span>{' '}
                         <span className="text-xs text-souk-brown-deep/45 line-through">
                             {money(Number(p.base_price))}
@@ -366,7 +362,7 @@ function RelatedProductCard({
                     </>
                 ) : (
                     <span className="text-souk-title">
-                        {money(Number(p.base_price))} MAD TTC
+                        {money(Number(p.base_price))} TTC
                     </span>
                 )}
             </p>
@@ -420,7 +416,7 @@ const ProductDetail = ({
     moreFromStore: DetailProduct[];
     relatedProducts: DetailProduct[];
 }) => {
-    const { t, locale } = useTranslation();
+    const { t } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
     const { openCart } = useCartSheet();
     const { auth } = usePage().props as unknown as {
@@ -534,10 +530,12 @@ const ProductDetail = ({
      */
     const belowMinimum = !needsChoice && !soldOut && stock < minQty;
 
-    const money = (v: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            maximumFractionDigits: 0,
-        }).format(Number(v));
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     const onSale =
         product.sale_price &&

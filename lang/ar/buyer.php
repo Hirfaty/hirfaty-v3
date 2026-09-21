@@ -196,6 +196,9 @@ return [
     // ── مساحة الحساب: أربع صفحات تتقاسم الشريط الجانبي ────────────────────
     'account.title' => 'حسابي',
     'account.subtitle' => 'معلوماتك وطلباتك والقطع التي احتفظت بها.',
+    'account.preferences_title' => 'اللغة والعملة',
+    'account.preferences_subtitle' => 'طريقة عرض الموقع لك. تُكتشف من منطقتك ما لم تختر بنفسك.',
+    'account.currency_auto' => 'تُعرض الأسعار بالدرهم المغربي (MAD)، وهي العملة التي تُحتسب بها الطلبات.',
 
     'account.nav_overview' => 'حسابي',
     'account.nav_orders' => 'الطلبات',

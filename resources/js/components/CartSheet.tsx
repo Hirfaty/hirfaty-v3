@@ -5,13 +5,8 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useCartSheet } from '@/contexts/CartSheetContext';
 import { useCartSummary } from '@/hooks/use-cart-summary';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
-
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 /**
  * The cart drawer.
@@ -25,7 +20,7 @@ const LOCALE_TAGS: Record<string, string> = {
  * page and is already inside Inertia's page context, which the summary needs.
  */
 export default function CartSheet() {
-    const { t, locale, isRTL } = useTranslation();
+    const { t, isRTL } = useTranslation();
     const { open, setOpen } = useCartSheet();
     const cart = useCartSummary();
 
@@ -38,10 +33,9 @@ export default function CartSheet() {
      */
     useEffect(() => router.on('start', () => setOpen(false)), [setOpen]);
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            maximumFractionDigits: 2,
-        }).format(Number(value));
+    // Server figures are MAD; this renders them in whatever the visitor is
+    // browsing in, currency label included.
+    const { money } = useCurrency();
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -138,7 +132,7 @@ export default function CartSheet() {
                                         <span className="shrink-0 font-display text-sm text-ink">
                                             {money(item.line_total)}{' '}
                                             <span className="text-[10px]">
-                                                MAD TTC
+                                                TTC
                                             </span>
                                         </span>
                                     </li>
@@ -160,7 +154,7 @@ export default function CartSheet() {
                                     </span>
                                     <span className="font-display text-lg text-ink">
                                         {money(cart.subtotal)}{' '}
-                                        <span className="text-xs">MAD TTC</span>
+                                        <span className="text-xs">TTC</span>
                                     </span>
                                 </div>
                                 <Link

@@ -3,6 +3,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ShowcaseProduct } from '@/components/home/ProductShowcase';
 import { GridRail } from '@/components/home/ProductShowcase';
 import Reveal from '@/components/home/Reveal';
+import { useCurrency } from '@/hooks/use-currency';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -46,6 +47,7 @@ export default function NewArrivals({
     products?: ShowcaseProduct[];
 }) {
     const { t, isRTL } = useTranslation();
+    const { money } = useCurrency();
 
     /*
      * Floored, so a trailing partial slide never leaves gaps in the row — the
@@ -138,7 +140,7 @@ export default function NewArrivals({
                                 slides={slides}
                                 track={rail.track}
                                 order={rail.order}
-                                currency={t('welcome.products.currency')}
+                                money={money}
                                 fill={false}
                                 bandSize={SLIDE_SIZE}
                                 columnsClassName={COLUMNS}

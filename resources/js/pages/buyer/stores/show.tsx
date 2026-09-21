@@ -7,6 +7,7 @@ import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
 /** Museum-caption label, matching the rest of the storefront. */
@@ -66,10 +67,12 @@ export default function StoreShow({
 
     const tag = LOCALE_TAGS[locale as string] ?? 'fr-MA';
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }).format(
-            Number(value),
-        );
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     const memberSince = store.created_at
         ? new Intl.DateTimeFormat(tag, {

@@ -213,4 +213,13 @@ return [
     'auth.login.social_failed' => 'Sign-in failed. Please try again.',
     'auth.login.social_unusable' => 'That account did not give us a confirmed email address. Use your email above instead.',
     'auth.login.social_banned' => 'This account is suspended. Contact us if you believe this is a mistake.',
+
+    // ── Currency ─────────────────────────────────────────────────────────
+    // Prices are stored and charged in MAD; the display currency follows the
+    // visitor's IP unless they pick one from the header.
+    'currency_label' => 'Display currency',
+    'language_label' => 'Language',
+    'region_label' => 'Language and currency',
+    'currency_note' => 'Prices shown in :currency as a guide. Orders are charged in dirhams (MAD).',
+    'currency_charged' => 'Charged: :amount',
 ];

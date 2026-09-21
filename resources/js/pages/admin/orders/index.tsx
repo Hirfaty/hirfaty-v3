@@ -40,6 +40,14 @@ export type OrderGroup = {
     notes: string | null;
     products_total: number;
     delivery_total: number;
+    /**
+     * What currency the buyer was reading at checkout, and the rate live then.
+     * Null for MAD buyers and for orders placed before this was tracked. The
+     * totals above are always MAD — this is presentation history, so the desk
+     * can answer "they say they saw €38".
+     */
+    display_currency: string | null;
+    display_rate: number | null;
     /** Which carrier the purchase shipped by (snapshot from checkout). */
     delivery_service_name: string | null;
     /** Null when the workshops' parcels have been moved apart. */

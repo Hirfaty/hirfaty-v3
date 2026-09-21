@@ -22,6 +22,9 @@ class Order extends Model
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
         'total_amount', 'platform_fee', 'delivery_fee', 'seller_earnings',
+        // What the buyer was reading at checkout, and the rate that was live
+        // then. Presentation history, not money: the order settles in MAD.
+        'display_currency', 'display_rate',
         // Which carrier shipped and what it was called then — a snapshot, like
         // shipping_address, so a carrier renamed later can't rewrite the
         // history of an order it already carried. `delivery_service_id` alone
@@ -36,8 +39,27 @@ class Order extends Model
         'platform_fee' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'seller_earnings' => 'decimal:2',
+        'display_rate' => 'decimal:6',
         'delivered_at' => 'datetime',
     ];
+
+    /**
+     * What this order's total looked like to the buyer, or null when they
+     * were reading MAD (or the order predates currency tracking).
+     *
+     * Uses the rate stored at checkout, never a live one — re-converting an
+     * old order at today's rate would misreport what was actually quoted.
+     */
+    public function displayTotal(): ?float
+    {
+        if ($this->display_currency === null || $this->display_rate === null) {
+            return null;
+        }
+
+        $decimals = (int) (config("currency.supported.{$this->display_currency}.decimals") ?? 2);
+
+        return round((float) $this->total_amount * (float) $this->display_rate, $decimals);
+    }
 
     /**
      * What Hirfaty takes and what the artisan is left with never leaves the

@@ -195,6 +195,9 @@ return [
     // ── Account area: four pages sharing the tab strip at the top ────────
     'account.title' => 'My account',
     'account.subtitle' => 'Your details, your orders and the pieces you saved.',
+    'account.preferences_title' => 'Language and currency',
+    'account.preferences_subtitle' => 'How the site reads to you. Detected from your region unless you pick.',
+    'account.currency_auto' => 'Prices are shown in dirhams (MAD), the currency orders are charged in.',
 
     'account.nav_overview' => 'My account',
     'account.nav_orders' => 'Orders',

@@ -195,6 +195,15 @@ class CheckoutService
                     // then — the id is a reference, the name a snapshot.
                     'delivery_service_id' => $service?->id,
                     'delivery_service_name' => $service?->name,
+                    /*
+                     * What the buyer was reading, and the rate that was live
+                     * then. Presentation history only — every figure above is
+                     * MAD and stays MAD. Null when the caller supplied none
+                     * (seeders, tests, older callers), which reads honestly as
+                     * "unknown" rather than claiming MAD.
+                     */
+                    'display_currency' => $checkoutData['display_currency'] ?? null,
+                    'display_rate' => $checkoutData['display_rate'] ?? null,
                     'seller_earnings' => $sellerEarnings,
                     'shipping_address' => $checkoutData['shipping_address'],
                     // Every order a split basket produces ships to the same

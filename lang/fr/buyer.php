@@ -197,6 +197,9 @@ return [
     // ── Espace compte : quatre pages partageant la barre latérale ─────────
     'account.title' => 'Mon compte',
     'account.subtitle' => 'Vos informations, vos commandes et les pièces que vous avez enregistrées.',
+    'account.preferences_title' => 'Langue et devise',
+    'account.preferences_subtitle' => 'La façon dont le site s’affiche pour vous. Détectée depuis votre région, sauf si vous choisissez.',
+    'account.currency_auto' => 'Les prix sont affichés en dirhams (MAD), la devise dans laquelle les commandes sont facturées.',
 
     'account.nav_overview' => 'Mon compte',
     'account.nav_orders' => 'Commandes',

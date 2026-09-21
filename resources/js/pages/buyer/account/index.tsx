@@ -1,6 +1,7 @@
 import AddressCard from '@/components/buyer/account/AddressCard';
 import IdentitySection from '@/components/buyer/account/IdentitySection';
 import PasswordSection from '@/components/buyer/account/PasswordSection';
+import PreferencesSection from '@/components/buyer/account/PreferencesSection';
 import type { AddressRow, Buyer } from '@/components/buyer/account/types';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
@@ -29,6 +30,11 @@ export default function BuyerAccount({ buyer, defaultAddress, cities }: Props) {
                 <div>
                     <IdentitySection buyer={buyer} />
                     <PasswordSection />
+                    {/* Language and display currency. Last in the flow: they
+                        already have a sensible default (the header sets one
+                        from the visitor's region), so this is where a buyer
+                        comes to correct it, not to complete setup. */}
+                    <PreferencesSection />
                 </div>
 
                 <AddressCard address={defaultAddress} cities={cities} />

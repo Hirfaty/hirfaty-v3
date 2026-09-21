@@ -17,16 +17,12 @@ import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Spinner } from '@/components/ui/spinner';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
 /** Museum-caption label, matching the listing and detail pages. */
 const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 /** One basket line, already priced for this viewer by CartLineResource. */
 type CartLine = {
@@ -85,15 +81,16 @@ const CartPage = ({
     wishlisted: number[];
     canWishlist: boolean;
 }) => {
-    const { t, locale } = useTranslation();
+    const { t } = useTranslation();
     const [busyId, setBusyId] = useState<number | null>(null);
     const wished = new Set(wishlisted);
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-        }).format(Number(value));
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     const count = items.reduce((sum, line) => sum + line.quantity, 0);
 
@@ -294,7 +291,7 @@ const CartPage = ({
                                                                         line.line_total,
                                                                     )}
                                                                     <span className="ms-1 text-xs">
-                                                                        MAD TTC
+                                                                        TTC
                                                                     </span>
                                                                 </p>
                                                                 <p className="mt-1 text-[11px] text-souk-brown-deep/55">
@@ -310,7 +307,7 @@ const CartPage = ({
                                                                         line.unit_price ??
                                                                             0,
                                                                     )}{' '}
-                                                                    MAD TTC{' '}
+                                                                    TTC{' '}
                                                                     {t(
                                                                         'buyer.cart.per_unit',
                                                                     )}
@@ -443,14 +440,14 @@ const CartPage = ({
                                         {t('buyer.cart.subtotal')}
                                     </span>
                                     <span className="text-souk-title">
-                                        {money(subtotal)} MAD TTC
+                                        {money(subtotal)} TTC
                                     </span>
                                 </div>
 
                                 {savings > 0 && (
                                     <div className="flex items-baseline justify-between text-terracotta">
                                         <span>{t('buyer.cart.savings')}</span>
-                                        <span>−{money(savings)} MAD TTC</span>
+                                        <span>−{money(savings)} TTC</span>
                                     </div>
                                 )}
                             </div>
@@ -464,7 +461,7 @@ const CartPage = ({
                                 <span className="font-display text-2xl leading-none text-souk-title">
                                     {money(total)}
                                     <span className="ms-1.5 text-sm">
-                                        MAD TTC
+                                        TTC
                                     </span>
                                 </span>
                             </div>

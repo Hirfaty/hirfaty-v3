@@ -258,11 +258,11 @@ export function CollectionCard({
                     ) : (
                         <>
                             <span className="text-sm font-semibold text-souk-brown">
-                                {money(retail as number)} MAD TTC
+                                {money(retail as number)} TTC
                             </span>
                             {onSale && (
                                 <span className="text-xs text-souk-brown-deep/50 line-through">
-                                    {money(base)} MAD TTC
+                                    {money(base)} TTC
                                 </span>
                             )}
                         </>
@@ -277,7 +277,7 @@ export function CollectionCard({
                         className="mt-1.5 text-[10px] tracking-[0.12em] text-olive uppercase"
                         title={t('buyer.products.pro_price_hint')}
                     >
-                        {t('buyer.products.pro_short')} {money(pro)} MAD TTC
+                        {t('buyer.products.pro_short')} {money(pro)} TTC
                     </p>
                 )}
             </div>

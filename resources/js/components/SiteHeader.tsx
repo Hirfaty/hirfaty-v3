@@ -12,6 +12,7 @@ import type { RefObject } from 'react';
 import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import RegionMenu from '@/components/RegionMenu';
 import SearchPanel from '@/components/SearchPanel';
 import {
     Popover,
@@ -27,6 +28,7 @@ import {
 } from '@/components/ui/sheet';
 import { useCartSheet } from '@/contexts/CartSheetContext';
 import { useCartSummary } from '@/hooks/use-cart-summary';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
 
@@ -77,6 +79,7 @@ export const SiteHeader = ({
     overlayAnchor,
 }: SiteHeaderProps) => {
     const { t, locale, isRTL } = useTranslation();
+    const { currency, options: currencyOptions } = useCurrency();
     const { auth, navCategories } = usePage<{
         auth: {
             user: {
@@ -152,6 +155,15 @@ export const SiteHeader = ({
     const switchLocale = (code: string) => {
         setMenuOpen(false);
         router.post(route('locale.switch', code), {}, { preserveScroll: true });
+    };
+
+    const switchCurrency = (code: string) => {
+        setMenuOpen(false);
+        router.post(
+            route('currency.switch', code),
+            {},
+            { preserveScroll: true },
+        );
     };
 
     const navLinks = [
@@ -607,40 +619,12 @@ export const SiteHeader = ({
                         className={`hidden h-5 w-px md:block ${light ? 'bg-white/25' : 'bg-ink/15'}`}
                     />
 
-                    {/* Locale switcher */}
-                    <div
-                        className={`hidden items-center gap-0.5 text-[11px] font-medium tracking-[0.18em] md:flex ${
-                            light ? 'text-white/70' : 'text-ink/60'
-                        }`}
-                    >
-                        {locales.map((l) => (
-                            <button
-                                key={l.code}
-                                onClick={() => switchLocale(l.code)}
-                                aria-current={
-                                    locale === l.code ? 'true' : undefined
-                                }
-                                /*
-                                 * The chosen language sits on its own small
-                                 * glazed tile. Replaces the "FR / AR / EN"
-                                 * slashes, which read as a breadcrumb — and,
-                                 * being a separator baked into each button's
-                                 * label, were announced as part of it.
-                                 */
-                                className={`rounded-sm px-2 py-1 transition-colors ${
-                                    locale === l.code
-                                        ? light
-                                            ? 'bg-white/20 text-white ring-1 ring-white/35'
-                                            : 'bg-terracotta/12 text-terracotta ring-1 ring-terracotta/25'
-                                        : light
-                                          ? 'hover:bg-white/15 hover:text-white'
-                                          : 'hover:bg-sand/40 hover:text-ink'
-                                }`}
-                            >
-                                {l.label}
-                            </button>
-                        ))}
-                    </div>
+                    {/*
+                     * Language and currency together — see RegionMenu. They
+                     * were two controls side by side, which was a lot of
+                     * chrome for two preferences set once.
+                     */}
+                    <RegionMenu light={light} />
 
                     {/*
                      * Hidden below sm: the label is long enough in fr/ar to wrap
@@ -814,33 +798,67 @@ export const SiteHeader = ({
                                     )}
                                 </nav>
 
-                                {/* Pushed to the foot of the panel: language is
-                                    a setting, not a destination. */}
-                                <div className="mt-auto border-t border-ink/10 px-6 py-5">
-                                    <p className="text-[11px] tracking-[0.18em] text-ink/50 uppercase">
-                                        {t('header.language')}
-                                    </p>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        {locales.map((l) => (
-                                            <button
-                                                key={l.code}
-                                                onClick={() =>
-                                                    switchLocale(l.code)
-                                                }
-                                                aria-current={
-                                                    locale === l.code
-                                                        ? 'true'
-                                                        : undefined
-                                                }
-                                                className={`rounded-sm px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] transition-colors ${
-                                                    locale === l.code
-                                                        ? 'bg-terracotta/12 text-terracotta ring-1 ring-terracotta/25'
-                                                        : 'text-ink/60 hover:bg-sand/40 hover:text-ink'
-                                                }`}
-                                            >
-                                                {l.label}
-                                            </button>
-                                        ))}
+                                {/* Pushed to the foot of the panel: language
+                                    and currency are settings, not
+                                    destinations. The desktop header folds
+                                    these into one popover (RegionMenu); on a
+                                    phone the panel has the room to lay both
+                                    out flat, which is fewer taps. */}
+                                <div className="mt-auto space-y-5 border-t border-ink/10 px-6 py-5">
+                                    <div>
+                                        <p className="text-[11px] tracking-[0.18em] text-ink/50 uppercase">
+                                            {t('header.language')}
+                                        </p>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            {locales.map((l) => (
+                                                <button
+                                                    key={l.code}
+                                                    onClick={() =>
+                                                        switchLocale(l.code)
+                                                    }
+                                                    aria-current={
+                                                        locale === l.code
+                                                            ? 'true'
+                                                            : undefined
+                                                    }
+                                                    className={`rounded-sm px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] transition-colors ${
+                                                        locale === l.code
+                                                            ? 'bg-terracotta/12 text-terracotta ring-1 ring-terracotta/25'
+                                                            : 'text-ink/60 hover:bg-sand/40 hover:text-ink'
+                                                    }`}
+                                                >
+                                                    {l.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[11px] tracking-[0.18em] text-ink/50 uppercase">
+                                            {t('common.currency_label')}
+                                        </p>
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                            {currencyOptions.map((c) => (
+                                                <button
+                                                    key={c.code}
+                                                    onClick={() =>
+                                                        switchCurrency(c.code)
+                                                    }
+                                                    aria-current={
+                                                        currency.code === c.code
+                                                            ? 'true'
+                                                            : undefined
+                                                    }
+                                                    className={`rounded-sm px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] transition-colors ${
+                                                        currency.code === c.code
+                                                            ? 'bg-terracotta/12 text-terracotta ring-1 ring-terracotta/25'
+                                                            : 'text-ink/60 hover:bg-sand/40 hover:text-ink'
+                                                    }`}
+                                                >
+                                                    {c.code}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

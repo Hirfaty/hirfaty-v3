@@ -285,6 +285,36 @@ const Show = ({ group }: { group: OrderGroup }) => {
                                 </dd>
                             </div>
                         </dl>
+
+                        {/*
+                         * What the buyer was reading when they ordered, using
+                         * the rate stored on the order rather than a live one
+                         * — re-converting at today's rate would misreport what
+                         * was actually quoted. Absent for MAD buyers and for
+                         * orders placed before this was tracked.
+                         */}
+                        {group.display_currency &&
+                            group.display_currency !== 'MAD' && (
+                                <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-ink-soft">
+                                    L’acheteur consultait le site en{' '}
+                                    <span className="font-medium text-ink">
+                                        {group.display_currency}
+                                    </span>{' '}
+                                    — soit environ{' '}
+                                    <span className="font-medium text-ink tabular-nums">
+                                        {new Intl.NumberFormat('fr-FR', {
+                                            maximumFractionDigits: 2,
+                                        }).format(
+                                            (group.products_total +
+                                                group.delivery_total) *
+                                                Number(group.display_rate ?? 0),
+                                        )}{' '}
+                                        {group.display_currency}
+                                    </span>{' '}
+                                    au taux du jour de la commande. Le montant
+                                    encaissé reste en dirhams.
+                                </p>
+                            )}
                     </div>
 
                     {/* ── Fulfilment ──────────────────────────── */}

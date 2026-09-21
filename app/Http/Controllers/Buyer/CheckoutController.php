@@ -10,6 +10,7 @@ use App\Models\Cart;
 use App\Models\City;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
+use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,6 +146,7 @@ class CheckoutController extends Controller
         CheckoutRequest $request,
         CheckoutService $checkout,
         CheckoutDestinationService $destinations,
+        CurrencyService $currencies,
     ) {
         $cart = Cart::where('user_id', Auth::id())
             ->with(['items.product.store'])
@@ -157,6 +159,22 @@ class CheckoutController extends Controller
         // Where it ships, resolved from either the address book or the typed
         // form, before CheckoutService works out what it costs.
         $destination = $destinations->resolve($request->user(), $request->validated());
+
+        /*
+         * What the buyer was reading while they filled this in. Recorded on
+         * the order so the desk can answer "they say they saw €38" months
+         * later, once the rate has moved.
+         *
+         * Resolved here rather than trusted from the form: a currency posted
+         * by the client would let anyone claim any rate, and this is written
+         * to the order as a fact about what we showed.
+         */
+        $currency = $currencies->resolve($request);
+        $destination['display_currency'] = $currency;
+        // The raw multiplier, not `convert(1.0, ...)` — that would round the
+        // rate to the currency's display decimals and skew everything derived
+        // from it.
+        $destination['display_rate'] = $currencies->rateFor($currency);
 
         $orders = $checkout->process($cart, $destination);
 

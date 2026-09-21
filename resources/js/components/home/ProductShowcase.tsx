@@ -237,11 +237,17 @@ function Spotlight({
  */
 export function ShowcaseCard({
     product,
-    currency,
+    money,
     fill = true,
 }: {
     product: ShowcaseProduct;
-    currency: string;
+    /**
+     * Formats a MAD figure in whatever currency the visitor is reading, the
+     * currency label included. Passed in rather than read from
+     * `useCurrency` here so this stays a dumb component — the same contract
+     * `labels` and `isRTL` already work to.
+     */
+    money: (value: number | string) => string;
     /**
      * Whether the photograph should stretch to fill the height its row was
      * given, rather than keep its own 4:5 shape.
@@ -332,14 +338,12 @@ export function ShowcaseCard({
                     {base !== null ? (
                         <>
                             <span className="font-display text-[15px] text-souk-brown">
-                                {onSale ? sale : base}{' '}
-                                <span className="text-[10px]">
-                                    {currency} TTC
-                                </span>
+                                {money(onSale ? sale : base)}{' '}
+                                <span className="text-[10px]">TTC</span>
                             </span>
                             {onSale && (
                                 <span className="text-xs text-souk-brown-deep/45 line-through">
-                                    {base}
+                                    {money(base)}
                                 </span>
                             )}
                         </>
@@ -382,7 +386,7 @@ export function GridRail({
     slides,
     track,
     order,
-    currency,
+    money,
     fill = true,
     bandSize = BAND_SIZE,
     columnsClassName = 'grid-cols-2 lg:grid-cols-4',
@@ -396,7 +400,7 @@ export function GridRail({
     track: RefObject<HTMLUListElement | null>;
     /** Render order including the wrap-around clone — see `useSnapCarousel`. */
     order: number[];
-    currency: string;
+    money: (value: number | string) => string;
     /**
      * Whether the rail fills the height it was given rather than taking its
      * own from its cards — see `ShowcaseCard`. False for a row standing on its
@@ -446,7 +450,7 @@ export function GridRail({
                                 <ShowcaseCard
                                     key={product.id}
                                     product={product}
-                                    currency={currency}
+                                    money={money}
                                     fill={fill}
                                 />
                             ))}
@@ -490,13 +494,13 @@ export function GridRail({
  */
 export default function ProductShowcase({
     products,
-    currency,
+    money,
     labels,
     isRTL,
 }: {
     products: ShowcaseProduct[];
-    /** Already-translated currency suffix, e.g. "MAD". */
-    currency: string;
+    /** Formats a MAD figure in the visitor's currency — see ShowcaseCard. */
+    money: (value: number | string) => string;
     /**
      * Passed in rather than read from `useTranslation` so this stays a dumb
      * component — the same contract `HeroSlider` next door works to.
@@ -678,7 +682,7 @@ export default function ProductShowcase({
                                     slides={slides}
                                     track={rail.track}
                                     order={rail.order}
-                                    currency={currency}
+                                    money={money}
                                 />
                             </div>
                         ))
@@ -692,7 +696,7 @@ export default function ProductShowcase({
                                 <ShowcaseCard
                                     key={product.id}
                                     product={product}
-                                    currency={currency}
+                                    money={money}
                                 />
                             ))}
                         </div>

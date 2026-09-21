@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -57,6 +58,19 @@ class HandleInertiaRequests extends Middleware
             'locale' => app()->getLocale(),
             'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
             'translations' => $this->getTranslations(),
+            /*
+             * Display currency, resolved from the buyer's own choice or their
+             * IP (CurrencyService). Carries the rate so the client can convert
+             * the dozens of prices on a listing page without a round trip
+             * each — everything in the database is MAD, and this is applied
+             * on the way out only.
+             *
+             * Lazy: resolving can cost a geolocation lookup on a first visit,
+             * and a response whose page never renders a price should not pay
+             * for one.
+             */
+            'currency' => fn () => app(CurrencyService::class)->payload($request),
+            'currencyOptions' => fn () => app(CurrencyService::class)->options(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'cart' => fn () => $this->getSharedCart($request),
             'navCategories' => fn () => $this->getNavCategories(),

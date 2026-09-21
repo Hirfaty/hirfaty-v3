@@ -11,7 +11,9 @@ use App\Models\Store;
 use App\Models\User;
 use App\Notifications\NewOrderReceived;
 use App\Notifications\OrderPlaced;
+use App\Services\CurrencyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -597,4 +599,81 @@ test('every discount code is rejected for now', function () {
     $this->actingAs($buyer)->from(route('checkout.show'))
         ->post(route('checkout.coupon'), ['code' => 'WELCOME10'])
         ->assertSessionHasErrors('code', null, 'coupon');
+});
+
+/*
+ * Display currency is recorded on the order but never billed in.
+ *
+ * The desk has to be able to answer "the buyer says they saw €38" months
+ * later, which needs both the code and the rate that was live at the time —
+ * re-converting at today's rate would misreport what was actually quoted.
+ * What must not change is the money: `total_amount` stays MAD.
+ */
+test('an order records the currency the buyer was reading without billing in it', function () {
+    Notification::fake();
+
+    /*
+     * The rates API is off suite-wide (phpunit.xml) so no other test reaches
+     * the network. This one asserts the exact rate that got stored, so it
+     * turns the fetch back on and stubs it — left off, the service falls back
+     * to config/currency.php and the assertion would pin the wrong figure.
+     */
+    config(['currency.rates_api.enabled' => true]);
+    Http::fake([
+        'open.er-api.com/*' => Http::response(['rates' => ['EUR' => 0.0925]]),
+    ]);
+
+    $buyer = createBuyer();
+    $city = City::create(['name' => 'Rabat', 'region' => 'Rabat-Salé-Kénitra']);
+    $store = createStoreWithSeller('Zellige');
+    $product = createProductForStore($store, 'Carreau', 100.00, 5);
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => 2]);
+
+    $this->actingAs($buyer)
+        ->withSession([CurrencyService::SESSION_KEY => 'EUR'])
+        ->post(route('checkout.store'), checkoutPayload([
+            'shipping_address' => '9 Rue des Consuls',
+            'city_id' => $city->id,
+        ]))
+        ->assertRedirect();
+
+    $order = Order::firstOrFail();
+
+    expect($order->display_currency)->toBe('EUR')
+        // The raw rate, not one rounded to the currency's display decimals.
+        ->and((float) $order->display_rate)->toBe(0.0925)
+        // The money itself is untouched: 2 × 100 MAD, in dirhams.
+        ->and((float) $order->total_amount)->toBe(200.0)
+        // And the stored rate is what reproduces what the buyer was shown.
+        ->and($order->displayTotal())->toBe(18.5);
+});
+
+test('a dirham buyer records dirhams, not a null currency', function () {
+    Notification::fake();
+
+    $buyer = createBuyer();
+    $city = City::create(['name' => 'Fès', 'region' => 'Fès-Meknès']);
+    $store = createStoreWithSeller('Cuir');
+    $product = createProductForStore($store, 'Babouche', 80.00, 4);
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => 1]);
+
+    $this->actingAs($buyer)
+        ->post(route('checkout.store'), checkoutPayload([
+            'shipping_address' => '3 Derb Talaa',
+            'city_id' => $city->id,
+        ]))
+        ->assertRedirect();
+
+    $order = Order::firstOrFail();
+
+    // No geolocation in tests, so this is the base currency path.
+    expect($order->display_currency)->toBe('MAD')
+        ->and((float) $order->display_rate)->toBe(1.0)
+        // displayTotal() is null-ish only in the sense that MAD needs no
+        // second figure; it still reproduces the same amount.
+        ->and($order->displayTotal())->toBe(80.0);
 });

@@ -18,6 +18,19 @@
         </include>
     </source>
     <php>
+        <!--
+            The suite runs in one process, so every test's allocations stack
+            up against PHP's default 128M. It was already close: adding a
+            dozen tests tipped it over, and the failure surfaces as a fatal
+            OOM part-way through rather than as a test failure — with the
+            stack pointing at whatever happened to be allocating (usually
+            Laravel's debug error page, which is large and renders whenever a
+            test provokes an HTTP exception).
+
+            Raising the ceiling rather than chasing the last allocation: the
+            figure is a test-runner limit, not a production one.
+        -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
@@ -40,5 +53,17 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            Currency lookups are off by default under test. Both services call
+            out to the network, and the display currency is resolved on every
+            page that renders a price — left on, the suite would make a live
+            request per test, which is slow, flaky and dependent on someone
+            else's uptime. Off, they fall back to config/currency.php's rates
+            and to the base currency, which is what most tests want anyway.
+
+            CurrencyTest re-enables them per test and fakes the HTTP.
+        -->
+        <env name="CURRENCY_RATES_ENABLED" value="false"/>
+        <env name="CURRENCY_GEO_ENABLED" value="false"/>
     </php>
 </phpunit>

@@ -1,6 +1,7 @@
 import ProductShowcase from '@/components/home/ProductShowcase';
 import type { ShowcaseProduct } from '@/components/home/ProductShowcase';
 import Reveal from '@/components/home/Reveal';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import jewelry from '@/images/cat-jewelry.jpg';
 import leather from '@/images/cat-leather.jpg';
@@ -17,6 +18,7 @@ export function ExploreProducts({
     featuredProducts: ShowcaseProduct[];
 }) {
     const { t, isRTL } = useTranslation();
+    const { money } = useCurrency();
 
     return (
         <section className="relative bg-souk-paper py-6 lg:py-8">
@@ -31,7 +33,7 @@ export function ExploreProducts({
                     <Reveal delay={160} className="mt-6 lg:mt-8">
                         <ProductShowcase
                             products={featuredProducts}
-                            currency={t('welcome.products.currency')}
+                            money={money}
                             labels={{
                                 prev: t('welcome.products.prev'),
                                 next: t('welcome.products.next'),

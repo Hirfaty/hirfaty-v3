@@ -179,6 +179,18 @@ class OrderController extends Controller
             'delivery_total' => (float) $orders->sum(fn (Order $o) => (float) $o->delivery_fee),
 
             /*
+             * What the buyer was reading when they ordered, and the rate that
+             * was live then. Every figure above is MAD and the desk collects
+             * MAD — this exists purely so "they say they saw €38" is
+             * answerable months later, once the rate has moved.
+             *
+             * Taken from the first order: one checkout produces the whole
+             * group, so they all carry the same pair.
+             */
+            'display_currency' => $first->display_currency,
+            'display_rate' => $first->display_rate === null ? null : (float) $first->display_rate,
+
+            /*
              * What the parcel shipped by, snapshotted at checkout so a carrier
              * renamed later still reads correctly on dispatch screens.
              */

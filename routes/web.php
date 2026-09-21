@@ -32,6 +32,7 @@ use App\Http\Controllers\Seller\SalesController;
 use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\WelcomeController as SellerWelcomeController;
 use App\Models\User;
+use App\Services\CurrencyService;
 use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
@@ -511,6 +512,23 @@ Route::post('/locale/{locale}', function (string $locale) {
 
     return back();
 })->name('locale.switch');
+
+/*
+ * Display currency. Sits beside the locale switch and works the same way: the
+ * choice lives in the session and outranks whatever the visitor's IP suggested
+ * (CurrencyService). Display only — products, orders and payouts are all MAD.
+ */
+Route::post('/currency/{currency}', function (string $currency, CurrencyService $currencies) {
+    /*
+     * 404 rather than 400 for an unknown code. It is the honest status — that
+     * currency is not offered here — and it is the one `withExceptions` above
+     * renders through the light Inertia error page. A 400 falls through to
+     * Laravel's full debug renderer, which is enormous.
+     */
+    abort_unless($currencies->remember(request(), $currency), 404);
+
+    return back();
+})->name('currency.switch');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/email-previews.php';

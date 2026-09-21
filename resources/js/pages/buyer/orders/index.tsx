@@ -1,5 +1,6 @@
 import EmptyShowcase from '@/components/buyer/EmptyShowcase';
 import OrderReviewPanel from '@/components/buyer/OrderReviewPanel';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
 import type { BuyerPurchase, OrderStatus } from '@/types/orders';
@@ -51,10 +52,12 @@ export default function BuyerOrders({
     const { t, locale } = useTranslation();
     const tag = LOCALE_TAGS[locale as string] ?? 'fr-MA';
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(tag, { maximumFractionDigits: 0 }).format(
-            Number(value),
-        );
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     const date = (value: string | null) =>
         value
@@ -136,7 +139,7 @@ export default function BuyerOrders({
                                             )}
                                         </span>
                                         <span className="font-display text-base text-souk-green">
-                                            {money(purchase.total_amount)} MAD
+                                            {money(purchase.total_amount)}
                                             TTC
                                         </span>
                                     </div>
@@ -195,7 +198,7 @@ export default function BuyerOrders({
                                                             {money(
                                                                 item.subtotal,
                                                             )}{' '}
-                                                            MAD TTC
+                                                            TTC
                                                         </span>
                                                     </li>
                                                 ))}
@@ -231,7 +234,7 @@ export default function BuyerOrders({
                                             </dt>
                                             <dd className="tabular-nums">
                                                 {money(purchase.items_total)}{' '}
-                                                MAD TTC
+                                                TTC
                                             </dd>
                                         </div>
                                         <div className="flex justify-between gap-4 text-souk-brown-deep/60">
@@ -240,14 +243,14 @@ export default function BuyerOrders({
                                             </dt>
                                             <dd className="tabular-nums">
                                                 {money(purchase.delivery_fee)}{' '}
-                                                MAD TTC
+                                                TTC
                                             </dd>
                                         </div>
                                         <div className="flex justify-between gap-4 pt-1 text-souk-title">
                                             <dt>{t('buyer.orders.total')}</dt>
                                             <dd className="font-display tabular-nums">
                                                 {money(purchase.total_amount)}{' '}
-                                                MAD TTC
+                                                TTC
                                             </dd>
                                         </div>
                                     </dl>

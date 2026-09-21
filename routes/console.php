@@ -24,3 +24,16 @@ Schedule::command(ScheduleCheckHeartbeatCommand::class)->everyMinute();
 // QueueCheck works the same way: this pushes a job the queue worker must pick
 // up, proving the worker is actually consuming jobs.
 Schedule::command(DispatchQueueCheckJobsCommand::class)->everyMinute();
+
+/*
+ * ── Exchange rates ──────────────────────────────────────────────────
+ *
+ * Warms the rate cache so no buyer ever waits on the rates API.
+ * ExchangeRateService fetches lazily if this hasn't run, and falls back to
+ * config/currency.php if the fetch fails, so a missed run degrades the
+ * freshness of a displayed price and nothing more.
+ *
+ * Early morning, before Moroccan traffic picks up. Daily is plenty: these
+ * figures are indicative, and prices settle in MAD regardless.
+ */
+Schedule::command('currency:refresh-rates')->dailyAt('04:30');

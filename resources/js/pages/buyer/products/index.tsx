@@ -13,6 +13,7 @@ import type { ListingProduct } from '@/components/buyer/ProductCard';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
 type Filters = {
@@ -76,11 +77,6 @@ const ARCH_OUTER_W = 'w-[min(72vw,760px)]';
 const ARCH_INNER_W = 'w-[min(66vw,700px)]';
 
 /** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 export default function ProductsIndex({
     products,
@@ -91,7 +87,7 @@ export default function ProductsIndex({
     wishlisted,
     canWishlist,
 }: Props) {
-    const { t, locale, isRTL } = useTranslation();
+    const { t, isRTL } = useTranslation();
     const [search, setSearch] = useState(filters.search);
     const [busy, setBusy] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -165,10 +161,12 @@ export default function ProductsIndex({
 
     const wished = new Set(wishlisted);
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            maximumFractionDigits: 0,
-        }).format(Number(value));
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     /**
      * Any filter change restarts the listing at page 1, so `products` must be

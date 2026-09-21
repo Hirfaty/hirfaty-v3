@@ -215,4 +215,13 @@ return [
     'auth.login.social_failed' => 'La connexion a échoué. Veuillez réessayer.',
     'auth.login.social_unusable' => 'Ce compte ne nous a pas transmis d’adresse e-mail confirmée. Utilisez votre e-mail ci-dessus.',
     'auth.login.social_banned' => 'Ce compte est suspendu. Contactez-nous si vous pensez qu’il s’agit d’une erreur.',
+
+    // ── Devise ───────────────────────────────────────────────────────────
+    // Les prix sont enregistrés et facturés en MAD ; la devise affichée suit
+    // l'IP du visiteur, sauf s'il en choisit une depuis l'en-tête.
+    'currency_label' => 'Devise affichée',
+    'language_label' => 'Langue',
+    'region_label' => 'Langue et devise',
+    'currency_note' => 'Prix affichés en :currency à titre indicatif. Les commandes sont facturées en dirhams (MAD).',
+    'currency_charged' => 'Facturé : :amount',
 ];

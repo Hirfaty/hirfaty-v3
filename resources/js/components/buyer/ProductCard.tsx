@@ -107,8 +107,10 @@ function PriceBlock({
                 <span
                     className={`font-display text-lg leading-none ${onSale ? 'text-white' : 'text-souk-cream'}`}
                 >
+                    {/* `money()` carries the currency itself — the hardcoded
+                        "MAD" that sat here would contradict it the moment a
+                        visitor switched. */}
                     {money(retail)}
-                    <span className="ms-1 text-[11px]">MAD</span>
                 </span>
                 {onSale && (
                     <span className="text-xs text-souk-cream/60 line-through">

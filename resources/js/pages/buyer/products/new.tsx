@@ -5,6 +5,7 @@ import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
 type Props = {
@@ -25,13 +26,6 @@ type Props = {
 /** Museum-caption label, shared with the cards below. */
 const EYEBROW = 'text-[10px] font-semibold uppercase tracking-[0.16em]';
 
-/** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
-
 /**
  * The newest pieces in the catalogue.
  *
@@ -46,15 +40,16 @@ export default function NewArrivals({
     wishlisted,
     canWishlist,
 }: Props) {
-    const { t, locale } = useTranslation();
+    const { t } = useTranslation();
     const [loadingMore, setLoadingMore] = useState(false);
 
     const wished = new Set(wishlisted);
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            maximumFractionDigits: 0,
-        }).format(Number(value));
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading and appends the currency itself.
+     */
+    const { money } = useCurrency();
 
     const loadMore = () => {
         // reload() already forces preserveScroll/preserveState, which is why

@@ -1,15 +1,11 @@
 import CollectionCard from '@/components/buyer/CollectionCard';
 import EmptyShowcase from '@/components/buyer/EmptyShowcase';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
 
 /** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
-const LOCALE_TAGS: Record<string, string> = {
-    fr: 'fr-MA',
-    ar: 'ar-MA',
-    en: 'en-MA',
-};
 
 /**
  * The saved-pieces list.
@@ -34,12 +30,14 @@ export default function BuyerWishlists({
     audience: Audience;
     canWishlist: boolean;
 }) {
-    const { t, locale } = useTranslation();
+    const { t } = useTranslation();
 
-    const money = (value: number | string) =>
-        new Intl.NumberFormat(LOCALE_TAGS[locale as string] ?? 'fr-MA', {
-            maximumFractionDigits: 0,
-        }).format(Number(value));
+    /*
+     * Prices arrive from the server in MAD. `money()` renders them in the
+     * currency this visitor is reading (their own pick, or their IP's) and
+     * appends the currency itself — so nothing here should add a suffix.
+     */
+    const { money } = useCurrency();
 
     return (
         <BuyerAccountLayout
