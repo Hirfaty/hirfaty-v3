@@ -1,12 +1,19 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Globe, Info, MapPin, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
 import type { PageProps } from '@/types';
 
+type DeliveryService = {
+    id: number;
+    slug: string;
+    name: string;
+};
+
 type Rate = {
     id: number;
+    service_name: string;
     country_code: string;
     country_name: string;
     /** Null on an international rate, which is priced per country. */
@@ -19,14 +26,27 @@ const money = (value: number) =>
     `${new Intl.NumberFormat('fr-MA', { maximumFractionDigits: 2 }).format(value)} MAD`;
 
 /**
- * Amana's rate card, read-only.
+ * The delivery service rate cards, read-only.
  *
  * No add / edit / delete anywhere on this page, and no route behind one
  * either — see Admin\DeliveryRateController for why. This is a lookup table
- * the fulfilment desk consults, not settings it owns.
+ * the fulfilment desk consults, not settings it owns. Each carrier's card is
+ * loaded by its seeder; the selector above narrows to one card once a second
+ * carrier (DHL, say) makes the page need one.
  */
-const Index = ({ rates }: PageProps & { rates: Rate[] }) => {
+const Index = ({
+    services,
+    selectedService,
+    rates,
+}: PageProps & {
+    services: DeliveryService[];
+    selectedService: number | null;
+    rates: Rate[];
+}) => {
     const [search, setSearch] = useState('');
+
+    const selected =
+        services.find((s) => s.id === selectedService) ?? services[0];
 
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
@@ -47,20 +67,66 @@ const Index = ({ rates }: PageProps & { rates: Rate[] }) => {
     const domesticCount = rates.filter((r) => r.city_name !== null).length;
     const internationalCount = rates.length - domesticCount;
 
+    const visit = (service: DeliveryService) =>
+        router.get(
+            route(
+                'admin.delivery-rates.index',
+                { service: service.slug },
+                false,
+            ),
+            {},
+            { preserveScroll: true, replace: true },
+        );
+
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Tarifs Amana" />
+            <Head title="Tarifs de livraison" />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-ink">
-                        Tarifs de livraison Amana
+                        Tarifs de livraison
                     </h1>
                     <p className="mt-1 text-sm text-ink-soft">
-                        {domesticCount} ville{domesticCount > 1 ? 's' : ''} au
-                        Maroc · {internationalCount} pays à l’international
+                        {selected?.name} · {domesticCount} ville
+                        {domesticCount > 1 ? 's' : ''} au Maroc ·{' '}
+                        {internationalCount} pays à l’international
                     </p>
                 </div>
+
+                {/*
+                 * Segmented control to swap carrier cards. One service today
+                 * renders a single button, which is fine — it stays a plain
+                 * label until a second carrier exists.
+                 */}
+                {services.length > 1 && (
+                    <div
+                        role="tablist"
+                        aria-label="Prestataires de livraison"
+                        className="inline-flex rounded-lg border border-border bg-card p-1 shadow-sm"
+                    >
+                        {services.map((service) => {
+                            const active = service.id === selected?.id;
+
+                            return (
+                                <button
+                                    key={service.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={active}
+                                    onClick={() => visit(service)}
+                                    className={`rounded-md px-4 py-1.5 text-sm transition ${
+                                        active
+                                            ? 'bg-ink text-card shadow-sm'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    {service.name}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </header>
 
             {/* Says plainly why there is nothing to click, so the absence of
@@ -68,9 +134,9 @@ const Index = ({ rates }: PageProps & { rates: Rate[] }) => {
             <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-5 py-3.5 shadow-sm">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
                 <p className="text-sm text-ink-soft">
-                    Grille tarifaire fournie par Amana, en lecture seule. Les
-                    frais sont appliqués une seule fois par commande, selon la
-                    ville marocaine ou le pays de destination choisi au
+                    Grille tarifaire fournie par {selected?.name}, en lecture
+                    seule. Les frais sont appliqués une seule fois par commande,
+                    selon la ville marocaine ou le pays de destination choisi au
                     paiement.
                 </p>
             </div>

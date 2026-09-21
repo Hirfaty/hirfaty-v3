@@ -207,7 +207,7 @@ test('a seller with orders cannot be demoted', function () {
     Order::create([
         'buyer_id' => $buyer->id, 'store_id' => $store->id, 'city_id' => $this->city->id,
         'status' => 'pending', 'total_amount' => 100, 'platform_fee' => 5,
-        'amana_fee' => 15, 'seller_earnings' => 80, 'shipping_address' => 'Adresse',
+        'delivery_fee' => 15, 'seller_earnings' => 80, 'shipping_address' => 'Adresse',
     ]);
 
     $this->actingAs($this->admin)

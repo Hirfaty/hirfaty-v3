@@ -24,6 +24,9 @@
         .tracking-box { border: 1px solid rgba(193,82,42,0.3); background: rgba(193,82,42,0.06); padding: 20px; margin: 24px 0; text-align: center; }
         .tracking-box .label { font-size: 10px; color: #78716C; margin-bottom: 8px; }
         .tracking-box .number { font-size: 22px; font-weight: 700; color: #C1522A; letter-spacing: 0.02em; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-direction: row-reverse; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .shipping-box { background: rgba(28,25,23,0.04); padding: 16px; margin: 24px 0; }
         .shipping-box p { font-size: 13px; line-height: 1.8; color: rgba(28,25,23,0.7); }
         .shipping-box .label { font-size: 10px; color: #78716C; margin-bottom: 8px; }
@@ -47,6 +50,14 @@
             <a href="{{ config('app.url') }}" class="logo">حرفتي<span>.</span></a>
         </div>
 
+        @php
+            // رقم تتبع مشترك يعني عادة طرداً واحداً فعلياً: مكتب حرفتي يجمع
+            // الطلبية من كل ورشة لمستها ثم يسلّمها للناقل كعمل واحد (انظر
+            // Admin\OrderController). مُدرَجة هنا احتياطاً إن حمل سجل
+            // المجموعة أكثر من رقم.
+            $trackingNumbers = $orders->pluck('tracking_number')->filter()->unique()->values();
+        @endphp
+
         <span class="badge">🚚 تم شحن الطلب</span>
 
         <p class="eyebrow">في طريقه إليك</p>
@@ -57,40 +68,54 @@
         </h1>
 
         <p class="body-text">
-            مرحباً {{ $user->first_name }}، قام {{ $order->store->store_name }} للتو
-            بتسليم طلبك {{ $order->reference }} لأمانة.
+            @if($orders->count() > 1)
+                مرحباً {{ $user->first_name }}، طلبك {{ $reference }} خرج للتوصيل
+                — قامت كل ورشة من الورشات الـ{{ $orders->count() }} المعنية
+                بتحضير حصتها.
+            @else
+                مرحباً {{ $user->first_name }}، طلبك {{ $reference }} من
+                {{ $orders->first()->store->store_name }} خرج للتوصيل.
+            @endif
         </p>
 
+        @if($trackingNumbers->count() === 1)
         <div class="tracking-box">
-            <p class="label">رقم تتبع أمانة</p>
-            <p class="number">{{ $order->tracking_number }}</p>
+            <p class="label">رقم التتبع</p>
+            <p class="number">{{ $trackingNumbers->first() }}</p>
         </div>
+        @endif
 
         <div class="order-meta">
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->reference }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
                 <span class="order-meta-label">رقم الطلب</span>
             </div>
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
-                <span class="order-meta-label">المتجر</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $orders->first()->shipping_address }}</span>
                 <span class="order-meta-label">عنوان التوصيل</span>
             </div>
         </div>
 
+        @if($orders->count() > 1)
+        {{-- كتلة لكل ورشة، ليبقى الطرد المُجمَّع مقروءاً كعملية شراء واحدة. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-ref">{{ $order->reference }}{{ $order->tracking_number && $trackingNumbers->count() > 1 ? ' · '.$order->tracking_number : '' }}</span>
+            <span class="store-name">{{ $order->store->store_name }}</span>
+        </div>
+        @endforeach
+        @endif
+
         <div class="shipping-box">
-            <p class="label">التوصيل عبر أمانة</p>
+            <p class="label">التوصيل</p>
             <p>
-                تقوم أمانة عادة بالتوصيل خلال 3 إلى 7 أيام في جميع أنحاء المغرب.
-                احتفظ برقم التتبع في متناول يدك في حال اتصل بك عون التوصيل.
+                يستغرق التوصيل عادة من 3 إلى 7 أيام في جميع أنحاء المغرب.
+                احتفظ بهاتفك قريباً منك، فعون التوصيل سيتصل بك قبل تسليم الطرد.
             </p>
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
                 ← تتبع طلبي
             </a>
         </div>
@@ -101,11 +126,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>تم التأكيد</strong> من طرف البائع.</p>
+                <p class="step-text"><strong>تم التأكيد</strong> من طرف {{ $orders->count() > 1 ? 'الورشات' : 'الورشة' }}.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>تم الشحن</strong> عبر أمانة.</p>
+                <p class="step-text"><strong>خرج للتوصيل</strong>.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
@@ -114,7 +139,7 @@
         </ul>
 
         <div class="footer">
-            <p>هل لديك سؤال؟ تواصل مع البائع من صفحة طلباتك.</p>
+            <p>هل لديك سؤال؟ تواصل معنا من صفحة طلباتك.</p>
             <p>
                 © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
                 <a href="{{ config('app.url') }}/orders">طلباتي</a>

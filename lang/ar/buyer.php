@@ -17,6 +17,7 @@ return [
     'products.collection_eyebrow' => 'المجموعة الكاملة',
     'products.collection_title' => 'قطع لها حكاية',
     'products.category_all' => 'الكل',
+    'products.categories' => 'الفئات',
     'products.count_pieces' => 'قطعة مصنوعة يدوياً',
     'products.made_in_morocco' => 'صنع في المغرب',
 
@@ -62,6 +63,13 @@ return [
     'orders.status_shipped' => 'تم الشحن',
     'orders.status_delivered' => 'تم التسليم',
     'orders.status_cancelled' => 'ملغى',
+
+    // البطاقة الواحدة = طلب واحد، وقد يشمل عدة ورشات — انظر
+    // BuyerAccountService::purchases().
+    'orders.shops_count' => ':count ورشات',
+    'orders.items_total' => 'القطع',
+    'orders.delivery' => 'التوصيل',
+    'orders.total' => 'المجموع',
 
     // الحالة الفارغة — components/buyer/orders/EmptyOrders.tsx.
     'orders.empty_eyebrow' => 'مرحباً',
@@ -205,7 +213,9 @@ return [
     'account.badge_personal' => 'حساب شخصي',
     'account.badge_professional' => 'حساب مهني',
 
-    'account.orders_intro' => 'تُقسَّم السلة إلى طلب لكل ورشة، لذا قد تظهر عملية شراء واحدة هنا أكثر من مرة.',
+    // بطاقة واحدة لكل عملية شراء منذ أن صار السجل يجمعها — توزّعها على
+    // الورشات يظهر داخل البطاقة، لا كبطاقات إضافية.
+    'account.orders_intro' => 'كل ما طلبته. عملية الشراء التي تشمل عدة ورشات تبقى طلباً واحداً هنا، مع متابعة كل ورشة على حدة.',
     'account.wishlist_intro' => 'القطع التي احتفظت بها، تبقى إلى أن تحذفها.',
     'account.payment_intro' => 'البطاقات ووسائل الأداء المستعملة لتسوية طلباتك.',
     'account.professional_intro' => 'اطلب الوصول المهني، أو تحقق من حالة طلب سبق إرساله.',
@@ -326,13 +336,13 @@ return [
     'checkout.shipments_note_many' => 'سلتك من :count ورشات: ستصلك :count طرود منفصلة.',
     'checkout.shipped_by' => 'شحن بواسطة :store',
     'checkout.quantity' => 'الكمية: :count',
-    'checkout.amana_standard' => 'توصيل أمانة (عادي)',
 
     'checkout.summary' => 'ملخص الطلب',
     'checkout.products' => 'المنتجات (:count)',
     'checkout.delivery_fee' => 'رسوم التوصيل',
+    'checkout.delivery_service_heading' => 'طريقة التوصيل',
     'checkout.total' => 'المجموع',
-    'checkout.cod_note' => 'الدفع عند الاستلام. تدفع مباشرةً لموصّل أمانة عند وصول طرودك.',
+    'checkout.cod_note' => 'الدفع عند الاستلام. تدفع مباشرةً للموصّل عند وصول طرودك.',
     'checkout.confirm' => 'تأكيد الطلب',
     'checkout.processing' => 'جارٍ المعالجة…',
 

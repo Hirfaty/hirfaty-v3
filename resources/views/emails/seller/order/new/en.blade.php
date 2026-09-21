@@ -48,14 +48,15 @@
 
         <p class="body-text">
             Hello {{ $user->first_name }}, you just received a new order.
-            Confirm it quickly to give the buyer a great experience.
+            Prepare the pieces and confirm it — we take care of the delivery
+            to the buyer from there.
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row"><span class="order-meta-label">Order</span><span class="order-meta-value">{{ $order->reference }}</span></div>
             <div class="order-meta-row"><span class="order-meta-label">Buyer</span><span class="order-meta-value">{{ $order->buyer->first_name }} {{ $order->buyer->last_name }}</span></div>
             <div class="order-meta-row"><span class="order-meta-label">Date</span><span class="order-meta-value">{{ $order->created_at->format('d/m/Y H:i') }}</span></div>
-            <div class="order-meta-row"><span class="order-meta-label">Ship to</span><span class="order-meta-value">{{ $order->shipping_address }}</span></div>
+            <div class="order-meta-row"><span class="order-meta-label">Delivery to</span><span class="order-meta-value">{{ $order->shipping_address }}</span></div>
         </div>
 
         <table class="items-table">
@@ -71,15 +72,24 @@
             </tbody>
         </table>
 
+        {{-- The figures the order actually carries, rather than one net
+             number the seller has to take on trust. Delivery is listed only
+             when this order is the one the checkout's delivery fee landed on
+             (see CheckoutService: a basket split across workshops attaches it
+             to a single order and leaves the others at 0). --}}
         <div class="total-row"><span>Order total</span><span>{{ number_format($order->total_amount, 2) }} MAD</span></div>
+        <div class="total-row"><span>Hirfaty commission (20%)</span><span>− {{ number_format($order->platform_fee, 2) }} MAD</span></div>
+        @if((float) $order->delivery_fee > 0)
+        <div class="total-row"><span>Delivery</span><span>+ {{ number_format($order->delivery_fee, 2) }} MAD</span></div>
+        @endif
 
         <div class="earnings-box">
-            <p>Your earnings on this order (after 20% commission + Amana)</p>
+            <p>Your earnings on this order</p>
             <p class="amount">{{ number_format($order->seller_earnings, 2) }} MAD</p>
         </div>
 
         <div class="urgent-note">
-            <p>⏱ Confirm this order as soon as possible. Buyers value fast responses and it improves your ranking on Hirfaty.</p>
+            <p>⏱ Confirm this order as soon as possible so we can collect it from your workshop. Your earnings become available once it has been delivered.</p>
         </div>
 
         <a href="{{ config('app.url') }}/seller/orders/{{ $order->reference }}" class="cta-btn">View and confirm order →</a>

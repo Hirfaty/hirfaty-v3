@@ -9,6 +9,7 @@ use App\Models\ProductReview;
 use App\Models\Store;
 use App\Models\StoreReview;
 use App\Models\User;
+use App\Services\BuyerAccountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
@@ -64,7 +65,7 @@ function orderFor(User $buyer, Store $store, Product $product, string $status = 
         'status' => $status,
         'total_amount' => 120,
         'platform_fee' => 24,
-        'amana_fee' => 20,
+        'delivery_fee' => 20,
         'seller_earnings' => 76,
         'shipping_address' => '1 rue des potiers',
         'delivered_at' => $status === 'delivered' ? now() : null,
@@ -310,11 +311,18 @@ test('the orders page marks only delivered orders as rateable', function () {
     orderFor($this->buyer, $this->store, $product, 'delivered');
     orderFor($this->buyer, $this->store, $product, 'shipped');
 
+    // Two separate checkouts, so two cards — grouping only folds together
+    // orders that came from the same one.
     $this->actingAs($this->buyer)
         ->get(route('buyer.account.orders.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('buyer/orders/index')
-            ->has('orders', 2)
+            ->has('purchases', 2)
         );
+
+    $rateable = collect(app(BuyerAccountService::class)->purchases($this->buyer))
+        ->where('can_review', true);
+
+    expect($rateable)->toHaveCount(1);
 });

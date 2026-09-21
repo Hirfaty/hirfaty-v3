@@ -21,9 +21,14 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; }
+        .store-head { background: rgba(28,25,23,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 10px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); }
+        .items-table td { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .items-table tr:last-child td { border-bottom: none; }
         .items-table .amount { text-align: right; }
         .cta-wrap { margin: 32px 0; }
         .cta-btn { display: inline-block; background-color: #C1522A; color: #FAF7F2 !important; text-decoration: none; font-size: 14px; font-family: 'Georgia', serif; letter-spacing: 0.04em; padding: 14px 32px; }
@@ -55,47 +60,62 @@
         </h1>
 
         <p class="body-text">
-            Bonjour {{ $user->first_name }}, votre commande {{ $order->reference }} de
-            {{ $order->store->store_name }} a été livrée. Nous espérons qu'elle vous
-            plaira autant que nous avons aimé vous la faire découvrir.
+            @if($orders->count() > 1)
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }},
+                réunissant {{ $orders->count() }} ateliers, a été livrée. Nous espérons
+                qu'elle vous plaira autant que nous avons aimé vous la faire découvrir.
+            @else
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }} de
+                {{ $orders->first()->store->store_name }} a été livrée. Nous espérons qu'elle vous
+                plaira autant que nous avons aimé vous la faire découvrir.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Numéro de commande</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Boutique</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Livrée le</span>
-                <span class="order-meta-value">{{ optional($order->delivered_at)->format('d/m/Y') }}</span>
+                <span class="order-meta-value">{{ optional($orders->first()->delivered_at)->format('d/m/Y') }}</span>
             </div>
         </div>
 
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Produit</th>
-                    <th style="text-align:center">Qté</th>
-                    <th style="text-align:right">Prix</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td>{{ $item->product->name }}</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td class="amount">{{ number_format($item->subtotal, 2) }} MAD TTC</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        {{-- Un bloc par atelier, pour qu'une commande livrée par plusieurs
+             vendeurs reste lisible comme un seul et même achat. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <div class="store-head">
+                <span class="store-name">{{ $order->store->store_name }}</span>
+                <span class="store-ref">{{ $order->reference }}</span>
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th style="text-align:center">Qté</th>
+                        <th style="text-align:right">Prix</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->items as $item)
+                    <tr>
+                        <td>{{ $item->product->name }}</td>
+                        <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
+                        <td class="amount">{{ number_format($item->subtotal, 2) }} MAD TTC</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endforeach
 
+        {{-- Les avis se déposent depuis la page d'une commande
+             (buyer.orders.reviews.store) : un achat auprès d'un seul atelier
+             y renvoie directement, un achat groupé retombe sur la liste. --}}
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders{{ $orders->count() === 1 ? '/'.$orders->first()->reference : '' }}" class="cta-btn">
                 Laisser un avis →
             </a>
         </div>
@@ -106,11 +126,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Confirmée</strong> par le vendeur.</p>
+                <p class="step-text"><strong>Confirmée</strong> par {{ $orders->count() > 1 ? 'les ateliers' : "l'atelier" }}.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Expédiée</strong> via Amana.</p>
+                <p class="step-text"><strong>Partie en livraison</strong>.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
@@ -119,7 +139,7 @@
         </ul>
 
         <div class="footer">
-            <p>Un souci avec cette commande ? Contactez le vendeur depuis votre espace commandes.</p>
+            <p>Un souci avec cette commande ? Contactez-nous depuis votre espace commandes.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
                 <a href="{{ config('app.url') }}/orders">Mes commandes</a>

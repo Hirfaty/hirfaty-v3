@@ -14,6 +14,7 @@ return [
     'products.collection_eyebrow' => 'La collection complète',
     'products.collection_title' => 'Des objets qui ont une histoire',
     'products.category_all' => 'Tout',
+    'products.categories' => 'Catégories',
     'products.count_pieces' => 'pièces faites main',
     'products.made_in_morocco' => 'Fabriqué au Maroc',
 
@@ -61,6 +62,13 @@ return [
     'orders.status_shipped' => 'Expédiée',
     'orders.status_delivered' => 'Livrée',
     'orders.status_cancelled' => 'Annulée',
+
+    // Une carte = une commande passée, qui peut couvrir plusieurs ateliers —
+    // voir BuyerAccountService::purchases().
+    'orders.shops_count' => ':count ateliers',
+    'orders.items_total' => 'Pièces',
+    'orders.delivery' => 'Livraison',
+    'orders.total' => 'Total',
 
     // État vide — components/buyer/orders/EmptyOrders.tsx.
     'orders.empty_eyebrow' => 'Bienvenue',
@@ -207,7 +215,9 @@ return [
     'account.badge_personal' => 'Compte particulier',
     'account.badge_professional' => 'Compte professionnel',
 
-    'account.orders_intro' => 'Un panier est réparti en une commande par atelier : un même achat peut donc apparaître plusieurs fois ici.',
+    // Une carte par achat depuis que l'historique les regroupe — la
+    // répartition entre ateliers apparaît dans la carte, pas en cartes de plus.
+    'account.orders_intro' => 'Tout ce que vous avez commandé. Un achat qui touche plusieurs ateliers reste une seule commande ici, chaque atelier étant suivi séparément.',
     'account.wishlist_intro' => 'Les pièces que vous avez enregistrées, conservées jusqu\'à ce que vous les retiriez.',
     'account.payment_intro' => 'Les cartes et moyens utilisés pour régler vos commandes.',
     'account.professional_intro' => 'Demandez l\'accès professionnel, ou consultez l\'état d\'une demande déjà envoyée.',
@@ -328,13 +338,13 @@ return [
     'checkout.shipments_note_many' => 'Votre panier vient de :count ateliers : vous recevrez :count colis distincts.',
     'checkout.shipped_by' => 'Expédié par :store',
     'checkout.quantity' => 'Quantité : :count',
-    'checkout.amana_standard' => 'Livraison Amana (standard)',
 
     'checkout.summary' => 'Récapitulatif',
     'checkout.products' => 'Produits (:count)',
     'checkout.delivery_fee' => 'Frais de livraison',
+    'checkout.delivery_service_heading' => 'Mode de livraison',
     'checkout.total' => 'Total',
-    'checkout.cod_note' => 'Paiement à la livraison. Vous réglez directement le livreur Amana à réception de vos colis.',
+    'checkout.cod_note' => 'Paiement à la livraison. Vous réglez directement le livreur à réception de vos colis.',
     'checkout.confirm' => 'Confirmer la commande',
     'checkout.processing' => 'Traitement en cours…',
 

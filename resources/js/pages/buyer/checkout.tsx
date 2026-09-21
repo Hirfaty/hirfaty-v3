@@ -19,14 +19,32 @@ const LOCALE_TAGS: Record<string, string> = {
  * that corner. One admin-run delivery covers the whole basket, so whatever
  * figure applies is charged once, not per workshop or per product.
  */
-const FALLBACK_DELIVERY_FEE = 20;
+const FALLBACK_DELIVERY_FEE = 40;
 
-/** Amana's rate card, as CheckoutController hands it over. */
-type DeliveryRates = {
+/** A carrier the buyer can check out with, as CheckoutController hands it over. */
+type DeliveryServiceOption = {
+    id: number;
+    slug: string;
+    name: string;
+    description: string | null;
+};
+
+/** One service's rate card, as the checkout page consumes it. */
+type RateCard = {
     countries: { code: string; name: string; fee: number | null }[];
     /** Per Moroccan city, keyed by city id. */
     cityFees: Record<string, number>;
 };
+
+/**
+ * Every active service's card, keyed by service slug. The page picks the
+ * selected service's card for the quote, so adding a carrier later is purely
+ * a data change — the third carrier shows up here with no frontend edit.
+ */
+type DeliveryRatesMap = Record<string, RateCard>;
+
+/** The empty card a service with no rates on file falls back to. */
+const EMPTY_CARD: RateCard = { countries: [], cityFees: {} };
 
 /**
  * Shared by every control on this page.
@@ -107,6 +125,8 @@ type CheckoutForm = {
     postal_code: string;
     country: string;
     payment_method: string;
+    /** Which carrier ships the basket — one of `deliveryServices`. */
+    delivery_service_id: number | null;
     save_address: boolean;
     address_label: string;
     notes: string;
@@ -160,6 +180,7 @@ const Checkout = ({
     customer,
     paymentMethods,
     defaultCountry,
+    deliveryServices,
     deliveryRates,
 }: {
     items: CheckoutLine[];
@@ -168,7 +189,8 @@ const Checkout = ({
     customer: Customer;
     paymentMethods: string[];
     defaultCountry: string;
-    deliveryRates: DeliveryRates;
+    deliveryServices: DeliveryServiceOption[];
+    deliveryRates: DeliveryRatesMap;
 }) => {
     const { t, locale } = useTranslation();
 
@@ -199,6 +221,8 @@ const Checkout = ({
         // Cash on delivery is the only method the server accepts today, so it
         // is selected rather than offered as a choice of one.
         payment_method: paymentMethods[0] ?? 'cod',
+        // The first carrier in display order (Amana today) is pre-selected.
+        delivery_service_id: deliveryServices[0]?.id ?? null,
         save_address: false,
         address_label: '',
         notes: '',
@@ -275,6 +299,20 @@ const Checkout = ({
     };
 
     /*
+     * The carrier the buyer picked decides which rate card the quote reads
+     * off. CheckoutService re-resolves the same service server-side when the
+     * order is placed, so a stale pick here can only under-quote, never
+     * under-bill — and the server ignores unknown ids.
+     */
+    const selectedService =
+        deliveryServices.find((s) => s.id === data.delivery_service_id) ??
+        deliveryServices[0];
+
+    const rates = selectedService
+        ? (deliveryRates[selectedService.slug] ?? EMPTY_CARD)
+        : EMPTY_CARD;
+
+    /*
      * Checkout still splits the basket into one order per workshop for
      * fulfilment, but delivery is one job to one address, so the fee is
      * charged once and follows the destination rather than the basket.
@@ -291,14 +329,12 @@ const Checkout = ({
             const cityFee =
                 data.city_id === null
                     ? undefined
-                    : deliveryRates.cityFees[String(data.city_id)];
+                    : rates.cityFees[String(data.city_id)];
 
             return cityFee ?? FALLBACK_DELIVERY_FEE;
         }
 
-        const country = deliveryRates.countries.find(
-            (c) => c.code === data.country,
-        );
+        const country = rates.countries.find((c) => c.code === data.country);
 
         return country?.fee ?? FALLBACK_DELIVERY_FEE;
     })();
@@ -650,9 +686,9 @@ const Checkout = ({
                                         </div>
 
                                         {/*
-                                         * Every destination Amana quotes for —
-                                         * see AmanaDeliveryRateSeeder. Picking
-                                         * one moves the delivery line in the
+                                         * Every destination the selected
+                                         * service quotes for. Picking one
+                                         * moves the delivery line in the
                                          * summary immediately, which is why the
                                          * rate card is a prop rather than a
                                          * lookup on the server.
@@ -674,7 +710,7 @@ const Checkout = ({
                                                 }
                                                 className={FIELD}
                                             >
-                                                {deliveryRates.countries.map(
+                                                {rates.countries.map(
                                                     (country) => (
                                                         <option
                                                             key={country.code}
@@ -691,8 +727,9 @@ const Checkout = ({
                                         </div>
 
                                         {/*
-                                         * Morocco only: `cities` is the list
-                                         * Amana prices domestic delivery
+                                         * Morocco only: `cities` holds Moroccan
+                                         * cities, which is what the selected
+                                         * service prices domestic delivery
                                          * against, so abroad there is nothing
                                          * to pick from and the town rides in
                                          * the address line instead.
@@ -795,6 +832,90 @@ const Checkout = ({
                                     className={`${FIELD} resize-y`}
                                 />
                             </div>
+                        </div>
+
+                        {/* ── Delivery method ──────────────────── */}
+                        <div className="mt-10">
+                            <h2
+                                id="delivery-service-heading"
+                                className="font-display text-lg text-souk-title"
+                            >
+                                {t('buyer.checkout.delivery_service_heading')}
+                            </h2>
+
+                            {/*
+                             * A radio group like the payment method below: with
+                             * one carrier (Amana) it is a single selected
+                             * option, and a second carrier — DHL, say — slots
+                             * into the same shape with no page change. Picking
+                             * a service swaps which rate card the summary
+                             * quotes, and the server whitelists the same list
+                             * (CheckoutRequest rules on delivery_service_id).
+                             */}
+                            <fieldset
+                                className="mt-4 space-y-2"
+                                aria-labelledby="delivery-service-heading"
+                            >
+                                {deliveryServices.map((service) => {
+                                    const active =
+                                        data.delivery_service_id === service.id;
+
+                                    return (
+                                        <label
+                                            key={service.id}
+                                            className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
+                                                active
+                                                    ? 'border-souk-brown bg-souk-brown/[0.04]'
+                                                    : 'border-souk-brown/15 hover:border-souk-brown/40'
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="delivery_service"
+                                                value={service.id}
+                                                checked={active}
+                                                onChange={() =>
+                                                    setData(
+                                                        'delivery_service_id',
+                                                        service.id,
+                                                    )
+                                                }
+                                                className="sr-only"
+                                            />
+                                            <span
+                                                aria-hidden
+                                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                    active
+                                                        ? 'border-souk-brown bg-souk-brown text-souk-cream'
+                                                        : 'border-souk-brown/30'
+                                                }`}
+                                            >
+                                                {active && (
+                                                    <Check
+                                                        className="h-2.5 w-2.5"
+                                                        strokeWidth={3}
+                                                    />
+                                                )}
+                                            </span>
+
+                                            <span className="min-w-0 flex-1 text-sm">
+                                                <span className="flex items-center gap-2 font-medium text-souk-title">
+                                                    <Truck
+                                                        className="h-4 w-4 shrink-0 text-souk-brown"
+                                                        strokeWidth={1.6}
+                                                    />
+                                                    {service.name}
+                                                </span>
+                                                {service.description && (
+                                                    <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                                        {service.description}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </fieldset>
                         </div>
 
                         {/* ── Payment method ────────────────────── */}

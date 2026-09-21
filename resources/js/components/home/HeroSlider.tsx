@@ -41,7 +41,7 @@ export default function HeroSlider({
     }
 
     const arrow =
-        'group absolute cursor-pointer top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 rotate-45 place-items-center bg-souk-paper text-souk-brown duration-500  transition-colors hover:bg-souk-brown hover:text-souk-cream sm:h-14 sm:w-14';
+        'group absolute cursor-pointer top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 rotate-45 place-items-center bg-souk-paper text-souk-brown sm:h-14 sm:w-14';
 
     return (
         <div {...pauseProps} className="relative mx-auto max-w-384">
@@ -96,7 +96,7 @@ export default function HeroSlider({
                         className={`${arrow} -start-5 sm:-start-7`}
                     >
                         <ChevronLeft
-                            className="h-5 w-5 -rotate-45 rtl:rotate-[135deg]"
+                            className="h-5 w-5 -rotate-45 transition-transform duration-300 group-hover:scale-125 rtl:rotate-[135deg]"
                             strokeWidth={1.5}
                         />
                     </button>
@@ -107,7 +107,7 @@ export default function HeroSlider({
                         className={`${arrow} -end-5 sm:-end-7`}
                     >
                         <ChevronRight
-                            className="h-5 w-5 -rotate-45 rtl:rotate-[135deg]"
+                            className="h-5 w-5 -rotate-45 transition-transform duration-300 group-hover:scale-125 rtl:rotate-[135deg]"
                             strokeWidth={1.5}
                         />
                     </button>

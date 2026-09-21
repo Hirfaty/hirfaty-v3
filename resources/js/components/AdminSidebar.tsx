@@ -106,7 +106,7 @@ const settingsItems: NavItem[] = [
         icon: MapPin,
     },
     {
-        title: 'Tarifs Amana',
+        title: 'Tarifs de livraison',
         url: route('admin.delivery-rates.index', undefined, false),
         icon: Truck,
     },

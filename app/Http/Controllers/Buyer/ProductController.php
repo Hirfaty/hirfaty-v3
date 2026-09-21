@@ -80,17 +80,28 @@ class ProductController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-            // Drives the tab row above the grid. Top level only — the row is a
-            // browse control, not a full taxonomy tree. `translated_name` is
-            // appended by the model accessor, since `name` is a per-locale
-            // object that must never be rendered raw.
+            // Drives the filter rail beside the grid. A full tree rather than
+            // top-level pills: shoppers filter by a craft or by one of its
+            // subcategories, and the rail renders each parent's `children` as
+            // the nested set. `translated_name` is appended by the model
+            // accessor, since `name` is a per-locale object that must never
+            // be rendered raw; the same shape (minus `image_url`) as the
+            // header's `navCategories`.
             'categories' => Category::whereNull('parent_id')
                 ->orderBy('id')
+                ->with(['children' => fn ($query) => $query->orderBy('id')])
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'slug' => $category->slug,
                     'translated_name' => $category->translated_name,
+                    'children' => $category->children
+                        ->map(fn (Category $child) => [
+                            'id' => $child->id,
+                            'slug' => $child->slug,
+                            'translated_name' => $child->translated_name,
+                        ])
+                        ->all(),
                 ]),
             'filters' => [
                 'search' => $request->input('search', ''),

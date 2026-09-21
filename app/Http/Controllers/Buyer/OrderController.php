@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Notifications\OrderCancelledByBuyer;
 use App\Services\BuyerAccountService;
+use App\Services\OrderStatusService;
 use Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,13 +17,16 @@ class OrderController extends Controller
 
     /**
      * The order history, at /orders — one of the four pages sharing the
-     * account sidebar. The listing is a placeholder for now; the `orders`
-     * prop is already the flattened shape the cards will read.
+     * account sidebar.
+     *
+     * One card per *purchase*, not per Order row: a basket spanning three
+     * workshops is three orders in the database but one thing the buyer
+     * bought. See BuyerAccountService::purchases().
      */
     public function index(Request $request)
     {
         return Inertia::render('buyer/orders/index', [
-            'orders' => $this->account->orders($request->user()),
+            'purchases' => $this->account->purchases($request->user()),
         ]);
     }
 
@@ -39,7 +43,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function cancel(Request $request, Order $order)
+    public function cancel(Request $request, Order $order, OrderStatusService $orderStatus)
     {
         if ($order->buyer_id !== Auth::id()) {
             abort(403);
@@ -49,8 +53,7 @@ class OrderController extends Controller
             return back()->withErrors(['message' => 'Only pending orders can be cancelled.']);
         }
 
-        $order->update([
-            'status' => 'cancelled',
+        $orderStatus->transition($order, 'cancelled', [
             'cancellation_reason' => $request->input('cancellation_reason'),
         ]);
 
@@ -59,10 +62,6 @@ class OrderController extends Controller
             $order->store->user->notify(new OrderCancelledByBuyer($order));
         } catch (\Exception $e) {
             \Log::warning('Failed to notify seller of cancellation: '.$e->getMessage());
-        }
-
-        foreach ($order->items as $item) {
-            $item->product->increment('stock', $item->quantity);
         }
 
         return back()->with('success', 'Order cancelled successfully.');

@@ -40,6 +40,8 @@ export type OrderGroup = {
     notes: string | null;
     products_total: number;
     delivery_total: number;
+    /** Which carrier the purchase shipped by (snapshot from checkout). */
+    delivery_service_name: string | null;
     /** Null when the workshops' parcels have been moved apart. */
     status: OrderStatus | null;
     tracking_numbers: string[];
@@ -49,7 +51,7 @@ export type OrderGroup = {
         status: OrderStatus;
         tracking_number: string | null;
         total_amount: number;
-        amana_fee: number;
+        delivery_fee: number;
         store: { id: number | null; name: string };
         items: {
             id: number;

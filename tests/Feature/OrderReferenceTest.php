@@ -33,7 +33,7 @@ function makeOrder(array $attributes = []): Order
         'status' => 'pending',
         'total_amount' => 100,
         'platform_fee' => 20,
-        'amana_fee' => 20,
+        'delivery_fee' => 20,
         'seller_earnings' => 100,
         'shipping_address' => '1 Rue Test',
     ], $attributes));

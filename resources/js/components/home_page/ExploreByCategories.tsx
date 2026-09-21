@@ -1,8 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import { WarmFill } from '@/components/WarmFill';
+import useSnapCarousel from '@/hooks/use-snap-carousel';
+import { useTranslation } from '@/hooks/use-translation';
 
 type CategoryTile = {
     key: number;
@@ -74,6 +76,8 @@ export default function ExploreByCategories() {
         }>;
     }>().props;
 
+    const { t, isRTL } = useTranslation();
+
     const categoryTiles: CategoryTile[] = (navCategories ?? []).map(
         (category) => ({
             key: category.id,
@@ -83,20 +87,84 @@ export default function ExploreByCategories() {
         }),
     );
 
+    /*
+     * Behind the wheel on narrow screens, where the categories become a
+     * one-per-swipe carousel rather than a grid. Reuses the hero's rail logic
+     * (paging tween, wrap-around, reduced-motion, display:none reset), and —
+     * unlike the hero — never advances on its own, because these are
+     * destinations, not something to watch. Hooks must run before the empty
+     * check below, so this is called even when there are no tiles to show.
+     */
+    const { track, step, order, pauseProps } =
+        useSnapCarousel<HTMLUListElement>(
+            categoryTiles.length,
+            Number.POSITIVE_INFINITY,
+            isRTL,
+        );
+
     if (categoryTiles.length === 0) {
         return null;
     }
 
-    return (
-        <section className="hidden bg-souk-paper py-5 sm:block lg:py-4">
-            <div className="container">
-                {/* <Reveal delay={140}>
-                    <h2 className="text-center font-display text-[clamp(2rem,4vw,1.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                        {t('welcome.categories_grid.heading')}
-                    </h2>
-                </Reveal> */}
+    const arrow = `absolute top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 rotate-45 place-items-center rounded-sm bg-souk-paper/95 text-souk-brown shadow-lg transition-colors duration-300 hover:bg-souk-brown hover:text-souk-cream`;
+    const chevron = `h-4.5 w-4.5 -rotate-45 rtl:rotate-[135deg]`;
 
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+    return (
+        <section className="bg-souk-paper py-5 lg:py-4">
+            <div className="container">
+                {/* The grid these tiles form is only comfortable four-or-more
+                    columns across. Below `sm` there is no room for it, so the
+                    same links become a swipable rail — one category per
+                    screen, arrows to page, a swipe to browse (see the hook
+                    above). `sm:hidden` hides it where the grid takes over. */}
+                <div {...pauseProps} className="relative sm:hidden">
+                    <ul
+                        ref={track}
+                        className="flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
+                        {order.map((tileIndex, position) => (
+                            // Positional, because `order` repeats the first
+                            // tile at the end — see `useSnapCarousel`.
+                            <li
+                                key={position}
+                                className="relative w-full shrink-0 grow-0 basis-full snap-start snap-always"
+                            >
+                                <CategoryTileCard
+                                    tile={categoryTiles[tileIndex]}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+
+                    {categoryTiles.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => step(-1)}
+                                aria-label={t('welcome.categories_grid.prev')}
+                                className={`${arrow} start-2`}
+                            >
+                                <ChevronLeft
+                                    className={chevron}
+                                    strokeWidth={1.5}
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => step(1)}
+                                aria-label={t('welcome.categories_grid.next')}
+                                className={`${arrow} end-2`}
+                            >
+                                <ChevronRight
+                                    className={chevron}
+                                    strokeWidth={1.5}
+                                />
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                <div className="hidden gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                     {categoryTiles.map((tile, i) => (
                         <Reveal key={tile.key} delay={200 + i * 100}>
                             <CategoryTileCard tile={tile} />

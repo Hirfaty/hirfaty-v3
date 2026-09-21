@@ -35,6 +35,8 @@ export interface Category {
     parent_id: number | null;
     /** Public URL of the picture; only top-level categories have one. */
     image_url: string | null;
+    /** Subcategories, when eager-loaded on a top-level category. */
+    children?: Category[];
 }
 
 export interface City {
@@ -172,16 +174,6 @@ export interface Product {
     media?: Media[];
     variants?: ProductVariant[];
     category: Category | null;
-    delivery_options?: DeliveryOption[];
-}
-
-export interface DeliveryOption {
-    id: number;
-    name: string;
-    slug: string;
-    description: string | null;
-    price: string;
-    is_active: boolean;
 }
 
 export interface OrderItem {
@@ -216,7 +208,7 @@ export interface Order {
     status: OrderStatus;
     total_amount: string;
     platform_fee: string;
-    amana_fee: string;
+    delivery_fee: string;
     seller_earnings: string;
     shipping_address: string;
     notes: string | null;
@@ -235,7 +227,7 @@ export interface Earning {
     order_id: number;
     gross_amount: string;
     platform_fee: string;
-    amana_fee: string;
+    delivery_fee: string;
     net_amount: string;
     status: 'pending' | 'available' | 'paid_out';
     created_at: string;

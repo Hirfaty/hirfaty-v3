@@ -88,7 +88,7 @@
             <p>تلقيت هذا البريد الإلكتروني لأنك بائع على حرفتي.</p>
             <p>
                 © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
-                <a href="{{ config('app.url') }}/seller/products">إدارة منتجاتي</a>
+                <a href="{{ config('app.url') }}/seller/products">منتجاتي</a>
                 &nbsp;·&nbsp;
                 <a href="{{ config('app.url') }}/seller/dashboard">لوحة التحكم</a>
             </p>

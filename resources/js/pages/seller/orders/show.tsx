@@ -233,7 +233,7 @@ function SellerOrderDetail({
                                         <span>Frais livraison</span>
                                         <span className="tabular-nums">
                                             {Number(
-                                                order.amana_fee,
+                                                order.delivery_fee,
                                             ).toLocaleString('fr-FR')}{' '}
                                             MAD
                                         </span>

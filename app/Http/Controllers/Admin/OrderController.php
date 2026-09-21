@@ -131,12 +131,12 @@ class OrderController extends Controller
             fn ($value) => $value !== null,
         );
 
-        foreach ($targets as $target) {
-            // Per order rather than in bulk: the service also flips the
-            // earning to available on delivery and emails the buyer, and both
-            // are per-order concerns.
-            $orderStatus->transition($target, $data['status'], $attributes);
-        }
+        // One call for the whole target set, not one per order: the earning
+        // flip and the DB write are still per order inside the service, but
+        // the buyer email is for the group — see transitionMany()'s
+        // docblock for why looping transition() here used to send the buyer
+        // one email per workshop for what was one status change.
+        $orderStatus->transitionMany($targets, $data['status'], $attributes);
 
         return back()->with('success', 'Statut mis à jour.');
     }
@@ -170,13 +170,19 @@ class OrderController extends Controller
             'notes' => $first->notes,
 
             /*
-             * Money is summed across the whole purchase. `amana_fee` lands
+             * Money is summed across the whole purchase. `delivery_fee` lands
              * entirely on whichever order was created first (see
              * CheckoutService), so summing is what recovers the one delivery
              * charge the buyer actually paid.
              */
             'products_total' => (float) $orders->sum(fn (Order $o) => (float) $o->total_amount),
-            'delivery_total' => (float) $orders->sum(fn (Order $o) => (float) $o->amana_fee),
+            'delivery_total' => (float) $orders->sum(fn (Order $o) => (float) $o->delivery_fee),
+
+            /*
+             * What the parcel shipped by, snapshotted at checkout so a carrier
+             * renamed later still reads correctly on dispatch screens.
+             */
+            'delivery_service_name' => $first->delivery_service_name ?? 'Amana',
 
             /*
              * One status when every parcel agrees, null when they have been
@@ -196,7 +202,7 @@ class OrderController extends Controller
                 'status' => $o->status,
                 'tracking_number' => $o->tracking_number,
                 'total_amount' => (float) $o->total_amount,
-                'amana_fee' => (float) $o->amana_fee,
+                'delivery_fee' => (float) $o->delivery_fee,
                 'store' => [
                     'id' => $o->store?->id,
                     'name' => $o->store?->store_name ?? '—',

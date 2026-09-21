@@ -13,6 +13,7 @@ return [
     'products.collection_eyebrow' => 'The full collection',
     'products.collection_title' => 'Objects with a story',
     'products.category_all' => 'All',
+    'products.categories' => 'Categories',
     'products.count_pieces' => 'handcrafted pieces',
     'products.made_in_morocco' => 'Made in Morocco',
 
@@ -60,6 +61,13 @@ return [
     'orders.status_shipped' => 'Shipped',
     'orders.status_delivered' => 'Delivered',
     'orders.status_cancelled' => 'Cancelled',
+
+    // A card is one checkout, which may span workshops — see
+    // BuyerAccountService::purchases().
+    'orders.shops_count' => ':count workshops',
+    'orders.items_total' => 'Pieces',
+    'orders.delivery' => 'Delivery',
+    'orders.total' => 'Total',
 
     // Empty state — components/buyer/orders/EmptyOrders.tsx.
     'orders.empty_eyebrow' => 'Welcome',
@@ -205,7 +213,9 @@ return [
     'account.badge_personal' => 'Personal account',
     'account.badge_professional' => 'Trade account',
 
-    'account.orders_intro' => 'A basket is split into one order per workshop, so a single purchase can appear here more than once.',
+    // One card per purchase since the history started grouping them — the
+    // split across workshops shows up inside the card, not as extra cards.
+    'account.orders_intro' => 'Everything you have ordered. A purchase reaching several workshops stays one order here, with each workshop followed separately.',
     'account.wishlist_intro' => 'The pieces you saved, kept until you remove them.',
     'account.payment_intro' => 'The cards and methods used to pay for your orders.',
     'account.professional_intro' => 'Request trade access, or check the status of a request already sent.',
@@ -326,13 +336,13 @@ return [
     'checkout.shipments_note_many' => 'Your cart comes from :count workshops: you will receive :count separate parcels.',
     'checkout.shipped_by' => 'Shipped by :store',
     'checkout.quantity' => 'Quantity: :count',
-    'checkout.amana_standard' => 'Amana delivery (standard)',
 
     'checkout.summary' => 'Summary',
     'checkout.products' => 'Items (:count)',
     'checkout.delivery_fee' => 'Delivery fee',
+    'checkout.delivery_service_heading' => 'Delivery method',
     'checkout.total' => 'Total',
-    'checkout.cod_note' => 'Cash on delivery. You pay the Amana courier directly when your parcels arrive.',
+    'checkout.cod_note' => 'Cash on delivery. You pay the courier directly when your parcels arrive.',
     'checkout.confirm' => 'Place order',
     'checkout.processing' => 'Processing…',
 

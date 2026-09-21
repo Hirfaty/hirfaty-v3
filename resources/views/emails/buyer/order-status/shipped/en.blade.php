@@ -24,6 +24,9 @@
         .tracking-box { border: 1px solid rgba(193,82,42,0.3); background: rgba(193,82,42,0.06); padding: 20px; margin: 24px 0; text-align: center; }
         .tracking-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; margin-bottom: 8px; }
         .tracking-box .number { font-size: 22px; font-weight: 700; color: #C1522A; letter-spacing: 0.06em; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .shipping-box { background: rgba(28,25,23,0.04); padding: 16px; margin: 24px 0; }
         .shipping-box p { font-size: 13px; line-height: 1.7; color: rgba(28,25,23,0.7); }
         .shipping-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; margin-bottom: 8px; }
@@ -47,6 +50,15 @@
             <a href="{{ config('app.url') }}" class="logo">Hirfaty<span>.</span></a>
         </div>
 
+        @php
+            // A shared tracking number usually means one physical parcel:
+            // Hirfaty's desk collects the purchase from every workshop it
+            // touched and hands the whole thing over for delivery as one job
+            // (see Admin\OrderController). Listed in case the group's
+            // history carries more than one.
+            $trackingNumbers = $orders->pluck('tracking_number')->filter()->unique()->values();
+        @endphp
+
         <span class="badge">🚚 Order shipped</span>
 
         <p class="eyebrow">On its way to you</p>
@@ -57,40 +69,56 @@
         </h1>
 
         <p class="body-text">
-            Hello {{ $user->first_name }}, {{ $order->store->store_name }} has just
-            handed your order {{ $order->reference }} to Amana.
+            @if($orders->count() > 1)
+                Hello {{ $user->first_name }}, your order {{ $reference }} is out
+                for delivery — each of the {{ $orders->count() }} workshops it
+                involves has prepared their share.
+            @else
+                Hello {{ $user->first_name }}, your order {{ $reference }} from
+                {{ $orders->first()->store->store_name }} is out for delivery.
+            @endif
         </p>
 
+        @if($trackingNumbers->count() === 1)
         <div class="tracking-box">
-            <p class="label">Amana tracking number</p>
-            <p class="number">{{ $order->tracking_number }}</p>
+            <p class="label">Tracking number</p>
+            <p class="number">{{ $trackingNumbers->first() }}</p>
         </div>
+        @endif
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Order number</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Store</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Delivery to</span>
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $orders->first()->shipping_address }}</span>
             </div>
         </div>
 
+        @if($orders->count() > 1)
+        {{-- One block per workshop, so a grouped parcel still reads as one
+             purchase. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-name">{{ $order->store->store_name }}</span>
+            <span class="store-ref">{{ $order->reference }}{{ $order->tracking_number && $trackingNumbers->count() > 1 ? ' · '.$order->tracking_number : '' }}</span>
+        </div>
+        @endforeach
+        @endif
+
         <div class="shipping-box">
-            <p class="label">Delivery via Amana</p>
+            <p class="label">Delivery</p>
             <p>
-                Amana typically delivers within 3 to 7 days anywhere in Morocco.
-                Keep your tracking number handy in case the courier calls you.
+                Delivery usually takes 3 to 7 days anywhere in Morocco.
+                Keep your phone nearby — the courier will call you before
+                dropping the parcel off.
             </p>
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
                 Track my order →
             </a>
         </div>
@@ -101,11 +129,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Confirmed</strong> by the seller.</p>
+                <p class="step-text"><strong>Confirmed</strong> by {{ $orders->count() > 1 ? 'the workshops' : 'the workshop' }}.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Shipped</strong> via Amana.</p>
+                <p class="step-text"><strong>Out for delivery</strong>.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
@@ -114,7 +142,7 @@
         </ul>
 
         <div class="footer">
-            <p>Have a question? Contact the seller from your orders page.</p>
+            <p>Have a question? Contact us from your orders page.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
                 <a href="{{ config('app.url') }}/orders">My orders</a>

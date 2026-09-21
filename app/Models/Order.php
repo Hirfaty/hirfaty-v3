@@ -21,14 +21,20 @@ class Order extends Model
         'group_reference',
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
-        'total_amount', 'platform_fee', 'amana_fee', 'seller_earnings',
+        'total_amount', 'platform_fee', 'delivery_fee', 'seller_earnings',
+        // Which carrier shipped and what it was called then — a snapshot, like
+        // shipping_address, so a carrier renamed later can't rewrite the
+        // history of an order it already carried. `delivery_service_id` alone
+        // would go null if that service were deleted; the name is what emails
+        // and dispatch screens actually read.
+        'delivery_service_id', 'delivery_service_name',
         'shipping_address', 'shipping_phone', 'notes', 'delivered_at', 'cancellation_reason',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'platform_fee' => 'decimal:2',
-        'amana_fee' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
         'seller_earnings' => 'decimal:2',
         'delivered_at' => 'datetime',
     ];
@@ -100,6 +106,12 @@ class Order extends Model
     public function city()
     {
         return $this->belongsTo(City::class);
+    }
+
+    /** The carrier, nulled if it was ever deleted — the name snapshot stays. */
+    public function deliveryService()
+    {
+        return $this->belongsTo(DeliveryService::class, 'delivery_service_id');
     }
 
     public function items()

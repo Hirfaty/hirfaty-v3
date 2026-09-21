@@ -105,7 +105,7 @@ class TestSeeder extends Seeder
             'status' => 'pending',
             'total_amount' => 150.00,
             'platform_fee' => 7.50,   // 5%
-            'amana_fee' => 15.00,
+            'delivery_fee' => 15.00,
             'seller_earnings' => 127.50,
             'shipping_address' => '12 Rue Ibn Khaldoun, Fès',
             'notes' => null,
@@ -124,7 +124,7 @@ class TestSeeder extends Seeder
             'order_id' => $order1->id,
             'gross_amount' => 150.00,
             'platform_fee' => 7.50,
-            'amana_fee' => 15.00,
+            'delivery_fee' => 15.00,
             'net_amount' => 127.50,
             'status' => 'pending',
         ]);
@@ -138,7 +138,7 @@ class TestSeeder extends Seeder
             'status' => 'pending',
             'total_amount' => 280.00,
             'platform_fee' => 14.00,  // 5%
-            'amana_fee' => 15.00,
+            'delivery_fee' => 15.00,
             'seller_earnings' => 251.00,
             'shipping_address' => '12 Rue Ibn Khaldoun, Fès',
             'notes' => null,
@@ -157,7 +157,7 @@ class TestSeeder extends Seeder
             'order_id' => $order2->id,
             'gross_amount' => 280.00,
             'platform_fee' => 14.00,
-            'amana_fee' => 15.00,
+            'delivery_fee' => 15.00,
             'net_amount' => 251.00,
             'status' => 'pending',
         ]);

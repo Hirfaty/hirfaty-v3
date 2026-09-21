@@ -34,6 +34,18 @@ class CheckoutController extends Controller
 
         $user = $request->user();
 
+        /*
+         * The carriers the buyer can check out with, plus each one's rate
+         * card. Delivery is priced per Moroccan city and per foreign country,
+         * so the page needs the figures to move the total the moment the
+         * destination changes — asking the server on every change would put a
+         * round-trip between picking a city and seeing what it costs.
+         * CheckoutService re-resolves the same fee against the chosen service
+         * when the order is placed, so what is here is a quote and never the
+         * bill.
+         */
+        $delivery = $deliveryFees->cards();
+
         return Inertia::render('buyer/checkout', [
             /*
              * The same resource the basket uses, so the two screens cannot
@@ -90,15 +102,12 @@ class CheckoutController extends Controller
             'defaultCountry' => Address::DEFAULT_COUNTRY,
 
             /*
-             * Amana's rate card, handed over whole. Delivery is priced per
-             * Moroccan city and per foreign country, so the page needs the
-             * figures to move the total the moment the destination changes —
-             * asking the server on every change would put a round-trip between
-             * picking a city and seeing what it costs. CheckoutService
-             * re-resolves the same fee when the order is placed, so what is
-             * here is a quote and never the bill.
+             * `services` is ordered by sort_order — the order the page offers
+             * them in — while `rates` is keyed by slug, so the two do not line
+             * up by position.
              */
-            'deliveryRates' => $deliveryFees->rateCard(),
+            'deliveryServices' => $delivery['services'],
+            'deliveryRates' => $delivery['rates'],
         ]);
     }
 

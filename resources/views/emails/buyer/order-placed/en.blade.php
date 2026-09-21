@@ -69,7 +69,7 @@
             // placed a single order, so the totals shown are summed across
             // every one CheckoutService split it into.
             $subtotal = $orders->sum(fn ($o) => (float) $o->total_amount);
-            $delivery = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $delivery = $orders->sum(fn ($o) => (float) $o->delivery_fee);
             $first = $orders->first();
         @endphp
 
@@ -77,10 +77,11 @@
             Hello {{ $user->first_name }}, we've received your order.
             @if($orders->count() > 1)
                 It touches {{ $orders->count() }} different workshops, so it's
-                shown below store by store — each will prepare and ship its
-                own part.
+                shown below workshop by workshop — each prepares its own part
+                and we bring the whole order together before it goes out.
             @else
-                The seller will prepare it and you'll get an email as soon as it ships.
+                The workshop will prepare it and you'll get an email as soon as
+                it's on its way to you.
             @endif
         </p>
 
@@ -96,6 +97,13 @@
             <div class="order-meta-row">
                 <span class="order-meta-label">Delivery to</span>
                 <span class="order-meta-value">{{ $first->shipping_address }}</span>
+            </div>
+            {{-- Cash on delivery is the only method checkout accepts
+                 (CheckoutRequest::PAYMENT_METHODS), so the buyer is told
+                 plainly that nothing has been charged yet. --}}
+            <div class="order-meta-row">
+                <span class="order-meta-label">Payment</span>
+                <span class="order-meta-value">Cash on delivery</span>
             </div>
         </div>
 
@@ -135,20 +143,21 @@
                 <span>{{ number_format($subtotal, 2) }} MAD TTC</span>
             </div>
             <div class="total-row">
-                <span>Amana shipping</span>
+                <span>Delivery</span>
                 <span>{{ number_format($delivery, 2) }} MAD TTC</span>
             </div>
             <div class="total-row final">
-                <span>Total</span>
+                <span>Total to pay on delivery</span>
                 <span>{{ number_format($subtotal + $delivery, 2) }} MAD TTC</span>
             </div>
         </div>
 
         <div class="shipping-box">
-            <p class="label">Delivery via Amana</p>
+            <p class="label">Delivery</p>
             <p>
-                Your order will ship via Amana. You'll receive a tracking number
-                by email as soon as the seller hands over the package.
+                Your order will be delivered to the address above, usually
+                within 3 to 7 days anywhere in Morocco. You'll receive a
+                tracking number by email as soon as the parcel leaves.
             </p>
         </div>
 
@@ -164,20 +173,20 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number">1</div>
-                <p class="step-text"><strong>Each seller prepares</strong> their part of your order and hands it to Amana.</p>
+                <p class="step-text"><strong>{{ $orders->count() > 1 ? 'Each workshop prepares' : 'The workshop prepares' }}</strong> your order and hands it over to us.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>You'll receive an email</strong> with an Amana tracking number for each part.</p>
+                <p class="step-text"><strong>You'll receive an email</strong> with a tracking number as soon as it's out for delivery.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>Amana delivers</strong> your order to the address provided.</p>
+                <p class="step-text"><strong>Your order is delivered</strong> to the address provided.</p>
             </li>
         </ul>
 
         <div class="footer">
-            <p>Have a question? Contact the seller from your orders page.</p>
+            <p>Have a question? Contact us and we'll follow it up with the workshop.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
                 <a href="{{ config('app.url') }}/orders">My orders</a>

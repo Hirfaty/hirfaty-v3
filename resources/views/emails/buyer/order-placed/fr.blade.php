@@ -69,7 +69,7 @@
             // affichés sont donc la somme de toutes les commandes que
             // CheckoutService en a tirées.
             $subtotal = $orders->sum(fn ($o) => (float) $o->total_amount);
-            $delivery = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $delivery = $orders->sum(fn ($o) => (float) $o->delivery_fee);
             $first = $orders->first();
         @endphp
 
@@ -77,10 +77,11 @@
             Bonjour {{ $user->first_name }}, nous avons bien reçu votre commande.
             @if($orders->count() > 1)
                 Elle concerne {{ $orders->count() }} ateliers différents, elle
-                est donc détaillée ci-dessous boutique par boutique — chacune
-                préparera et expédiera sa propre part.
+                est donc détaillée ci-dessous atelier par atelier — chacun
+                prépare sa part et nous rassemblons l'ensemble avant le départ.
             @else
-                Le vendeur va la préparer et vous recevrez un email dès qu'elle sera expédiée.
+                L'atelier va la préparer et vous recevrez un email dès qu'elle
+                sera en route vers vous.
             @endif
         </p>
 
@@ -96,6 +97,13 @@
             <div class="order-meta-row">
                 <span class="order-meta-label">Livraison à</span>
                 <span class="order-meta-value">{{ $first->shipping_address }}</span>
+            </div>
+            {{-- Le paiement à la livraison est le seul mode accepté au
+                 checkout (CheckoutRequest::PAYMENT_METHODS) : on le dit
+                 clairement, rien n'a encore été débité. --}}
+            <div class="order-meta-row">
+                <span class="order-meta-label">Paiement</span>
+                <span class="order-meta-value">À la livraison</span>
             </div>
         </div>
 
@@ -135,20 +143,21 @@
                 <span>{{ number_format($subtotal, 2) }} MAD TTC</span>
             </div>
             <div class="total-row">
-                <span>Livraison Amana</span>
+                <span>Livraison</span>
                 <span>{{ number_format($delivery, 2) }} MAD TTC</span>
             </div>
             <div class="total-row final">
-                <span>Total</span>
+                <span>Total à payer à la livraison</span>
                 <span>{{ number_format($subtotal + $delivery, 2) }} MAD TTC</span>
             </div>
         </div>
 
         <div class="shipping-box">
-            <p class="label">Livraison via Amana</p>
+            <p class="label">Livraison</p>
             <p>
-                Votre commande sera expédiée via Amana. Vous recevrez un numéro de suivi
-                par email dès que le vendeur aura remis le colis.
+                Votre commande sera livrée à l'adresse indiquée ci-dessus,
+                généralement sous 3 à 7 jours partout au Maroc. Vous recevrez un
+                numéro de suivi par email dès le départ du colis.
             </p>
         </div>
 
@@ -164,20 +173,20 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number">1</div>
-                <p class="step-text"><strong>Chaque vendeur prépare</strong> sa part de votre commande et la remet à Amana.</p>
+                <p class="step-text"><strong>{{ $orders->count() > 1 ? 'Chaque atelier prépare' : "L'atelier prépare" }}</strong> votre commande et nous la remet.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>Vous recevrez un email</strong> avec un numéro de suivi Amana pour chaque part.</p>
+                <p class="step-text"><strong>Vous recevrez un email</strong> avec un numéro de suivi dès que la commande part en livraison.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>Amana livre</strong> votre commande à l'adresse indiquée.</p>
+                <p class="step-text"><strong>Votre commande est livrée</strong> à l'adresse indiquée.</p>
             </li>
         </ul>
 
         <div class="footer">
-            <p>Vous avez une question ? Contactez le vendeur depuis votre espace commandes.</p>
+            <p>Vous avez une question ? Contactez-nous, nous faisons le lien avec l'atelier.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
                 <a href="{{ config('app.url') }}/orders">Mes commandes</a>

@@ -62,9 +62,10 @@
             // One checkout can span several workshops; the desk collects from
             // each of them, so the totals are summed across all of its orders.
             $grandTotal = $orders->sum(fn ($o) => (float) $o->total_amount);
-            $deliveryTotal = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $deliveryTotal = $orders->sum(fn ($o) => (float) $o->delivery_fee);
             $itemCount = $orders->sum(fn ($o) => $o->items->sum('quantity'));
             $first = $orders->first();
+            $carrier = $first?->delivery_service_name ?? 'Amana';
         @endphp
 
         <p class="body-text">
@@ -147,7 +148,7 @@
                 <span>{{ number_format($grandTotal, 2) }} MAD TTC</span>
             </div>
             <div class="total-row">
-                <span>Livraison Amana</span>
+                <span>Livraison {{ $carrier }}</span>
                 <span>{{ number_format($deliveryTotal, 2) }} MAD TTC</span>
             </div>
             <div class="total-row final">

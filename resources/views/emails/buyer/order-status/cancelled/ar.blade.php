@@ -21,6 +21,9 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-direction: row-reverse; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .reason-box { border: 1px solid rgba(153,27,27,0.2); background: rgba(153,27,27,0.05); padding: 16px; margin: 24px 0; }
         .reason-box .label { font-size: 10px; color: #991B1B; margin-bottom: 8px; }
         .reason-box p { font-size: 13px; line-height: 1.8; color: rgba(28,25,23,0.75); }
@@ -48,25 +51,41 @@
         </h1>
 
         <p class="body-text">
-            مرحباً {{ $user->first_name }}، قام {{ $order->store->store_name }} بإلغاء
-            طلبك {{ $order->reference }}. إذا كنت قد دفعت بالفعل، سيتم استرداد المبلغ.
+            {{-- لا نذكر من قام بالإلغاء عمداً: نفس هذا البريد يُرسل أيضاً حين
+                 يلغي المشتري طلبه بنفسه من صفحة طلباته
+                 (Buyer\OrderController::cancel). --}}
+            @if($orders->count() > 1)
+                مرحباً {{ $user->first_name }}، تم إلغاء طلبك {{ $reference }} الذي يشمل
+                {{ $orders->count() }} ورشات. لم يُخصم منك أي مبلغ — الدفع يتم عند الاستلام فقط.
+            @else
+                مرحباً {{ $user->first_name }}، تم إلغاء طلبك {{ $reference }} من
+                {{ $orders->first()->store->store_name }}. لم يُخصم منك أي مبلغ — الدفع يتم
+                عند الاستلام فقط.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->reference }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
                 <span class="order-meta-label">رقم الطلب</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
-                <span class="order-meta-label">المتجر</span>
             </div>
         </div>
 
-        @if($order->cancellation_reason)
+        @if($orders->count() > 1)
+        {{-- كتلة لكل ورشة معنية، ليبقى الإلغاء الذي يمس عدة بائعين مقروءاً
+             كعملية شراء واحدة. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-ref">{{ $order->reference }}</span>
+            <span class="store-name">{{ $order->store->store_name }}</span>
+        </div>
+        @endforeach
+        @endif
+
+        @if($orders->first()->cancellation_reason)
         <div class="reason-box">
-            <p class="label">السبب المذكور من طرف البائع</p>
-            <p>{{ $order->cancellation_reason }}</p>
+            <p class="label">السبب المذكور</p>
+            <p>{{ $orders->first()->cancellation_reason }}</p>
         </div>
         @endif
 
@@ -79,7 +98,7 @@
         <hr class="divider" />
 
         <div class="footer">
-            <p>لديك سؤال حول هذا الإلغاء؟ تواصل مع البائع من صفحة طلباتك.</p>
+            <p>لديك سؤال حول هذا الإلغاء؟ تواصل معنا من صفحة طلباتك.</p>
             <p>
                 © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
                 <a href="{{ config('app.url') }}/orders">طلباتي</a>

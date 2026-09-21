@@ -73,6 +73,8 @@ return [
     // welcome.tsx.
     'categories_grid.eyebrow' => 'Parcourir le souk',
     'categories_grid.heading' => 'Explorer par catégorie',
+    'categories_grid.prev' => 'Catégorie précédente',
+    'categories_grid.next' => 'Catégorie suivante',
     'categories_grid.pottery' => 'Poterie & Céramique',
     'categories_grid.textile' => 'Art de la table & célébrations',
     'categories_grid.art' => 'Peinture & Art',

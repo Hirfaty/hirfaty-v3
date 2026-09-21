@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Order confirmed by the seller — Hirfaty</title>
+    <title>Order confirmed — Hirfaty</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background-color: #F5F0E8; font-family: 'Georgia', serif; color: #1C1917; -webkit-font-smoothing: antialiased; }
@@ -21,13 +21,15 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; }
+        .store-head { background: rgba(28,25,23,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; text-align: left; padding: 10px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); }
+        .items-table td { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; }
+        .items-table tr:last-child td { border-bottom: none; }
         .items-table .amount { text-align: right; }
-        .shipping-box { background: rgba(28,25,23,0.04); padding: 16px; margin: 24px 0; }
-        .shipping-box p { font-size: 13px; line-height: 1.7; color: rgba(28,25,23,0.7); }
-        .shipping-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; margin-bottom: 8px; }
         .cta-wrap { margin: 32px 0; }
         .cta-btn { display: inline-block; background-color: #C1522A; color: #FAF7F2 !important; text-decoration: none; font-size: 14px; font-family: 'Georgia', serif; letter-spacing: 0.04em; padding: 14px 32px; }
         .steps { margin: 0; padding: 0; list-style: none; }
@@ -52,53 +54,75 @@
 
         <p class="eyebrow">Progress on your order</p>
 
+        @if($orders->count() > 1)
         <h1 class="headline">
-            {{ $order->store->store_name }} is preparing<br>
+            Your artisans are preparing<br>
             <em>your order</em>.
         </h1>
 
         <p class="body-text">
-            Hello {{ $user->first_name }}, good news: the seller has confirmed
-            your order {{ $order->reference }} and is getting it ready.
-            You'll get another email as soon as it ships.
+            Hello {{ $user->first_name }}, good news: all {{ $orders->count() }}
+            workshops in your order {{ $reference }} have confirmed it and are
+            getting it ready. You'll get another email, with a tracking number,
+            as soon as it leaves for delivery.
         </p>
+        @else
+        <h1 class="headline">
+            {{ $orders->first()->store->store_name }} is preparing<br>
+            <em>your order</em>.
+        </h1>
+
+        <p class="body-text">
+            Hello {{ $user->first_name }}, good news: the workshop has confirmed
+            your order {{ $reference }} and is getting it ready.
+            You'll get another email, with a tracking number, as soon as it
+            leaves for delivery.
+        </p>
+        @endif
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Order number</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Store</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Delivery to</span>
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $orders->first()->shipping_address }}</span>
             </div>
         </div>
 
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th style="text-align:center">Qty</th>
-                    <th style="text-align:right">Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td>{{ $item->product->name }}</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td class="amount">{{ number_format($item->subtotal, 2) }} MAD TTC</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        {{-- One block per workshop, so an order confirmed across several
+             sellers still reads as one purchase — not just whichever
+             workshop was handled last. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <div class="store-head">
+                <span class="store-name">{{ $order->store->store_name }}</span>
+                <span class="store-ref">{{ $order->reference }}</span>
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th style="text-align:center">Qty</th>
+                        <th style="text-align:right">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->items as $item)
+                    <tr>
+                        <td>{{ $item->product->name }}</td>
+                        <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
+                        <td class="amount">{{ number_format($item->subtotal, 2) }} MAD TTC</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endforeach
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
                 Track my order →
             </a>
         </div>
@@ -109,20 +133,20 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Confirmed</strong> by the seller.</p>
+                <p class="step-text"><strong>Confirmed</strong> by {{ $orders->count() > 1 ? 'the workshops' : 'the workshop' }}.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>You'll get an email</strong> with your Amana tracking number once it ships.</p>
+                <p class="step-text"><strong>You'll get an email</strong> with your tracking number once it's out for delivery.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>Amana delivers</strong> your order to the address provided.</p>
+                <p class="step-text"><strong>Your order is delivered</strong> to the address provided.</p>
             </li>
         </ul>
 
         <div class="footer">
-            <p>Have a question? Contact the seller from your orders page.</p>
+            <p>Have a question? Contact us from your orders page.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
                 <a href="{{ config('app.url') }}/orders">My orders</a>

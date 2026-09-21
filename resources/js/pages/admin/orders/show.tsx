@@ -268,7 +268,8 @@ const Show = ({ group }: { group: OrderGroup }) => {
                             </div>
                             <div className="flex justify-between">
                                 <dt className="text-ink-soft">
-                                    Livraison Amana
+                                    Livraison{' '}
+                                    {group.delivery_service_name ?? 'Amana'}
                                 </dt>
                                 <dd className="text-ink tabular-nums">
                                     {currency(group.delivery_total)}
@@ -294,7 +295,8 @@ const Show = ({ group }: { group: OrderGroup }) => {
 
                         <label className="mt-3 block">
                             <span className="mb-1.5 block text-xs text-ink-soft">
-                                Numéro de suivi Amana
+                                Numéro de suivi{' '}
+                                {group.delivery_service_name ?? 'Amana'}
                             </span>
                             <div className="relative">
                                 <Truck className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />

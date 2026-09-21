@@ -9,6 +9,8 @@ return [
     'view' => 'عرض',
     'search' => 'بحث',
     'filter' => 'تصفية',
+    'expand' => 'توسيع',
+    'collapse' => 'طي',
     'loading' => 'جار التحميل...',
     'confirm' => 'هل أنت متأكد؟',
     'back' => 'رجوع',

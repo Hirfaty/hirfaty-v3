@@ -86,7 +86,7 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
+        <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
             {/* ── 1. Title ── */}
             <Section title="Titre" step={1}>
                 <input

@@ -24,8 +24,10 @@ class DatabaseSeeder extends Seeder
             CitySeeder::class,
             CategorySeeder::class,
             SuperAdminSeeder::class,
-            // After CitySeeder: the Moroccan rates hang off city rows.
-            AmanaDeliveryRateSeeder::class,
+            // After SuperAdminSeeder / CitySeeder: the rate card hangs off the
+            // Amana service row, and the Moroccan rates hang off city rows.
+            DeliveryServiceSeeder::class,
+            DeliveryRateSeeder::class,
         ]);
     }
 }

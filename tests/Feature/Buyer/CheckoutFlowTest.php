@@ -367,7 +367,7 @@ test('a buyer cannot check out against another buyer\'s saved address', function
     expect(Order::count())->toBe(0);
 });
 
-test('checkout store applies 20% commission and leaves seller pending payout at 180 for a 200 product with 20 shipping', function () {
+test('checkout store applies 20% commission and passes 40 delivery through to the seller for a 200 product', function () {
     Notification::fake();
 
     $buyer = createBuyer();
@@ -397,13 +397,15 @@ test('checkout store applies 20% commission and leaves seller pending payout at 
     $order = Order::first();
     $earning = Earning::first();
 
+    // The platform keeps its 20% (40) and the COD delivery fee is passed back to
+    // the seller, who fronts the courier cost: 200 - 40 + 40 = 200.
     expect((float) $order->platform_fee)->toBe(40.0);
-    expect((float) $order->amana_fee)->toBe(20.0);
-    expect((float) $order->seller_earnings)->toBe(180.0);
+    expect((float) $order->delivery_fee)->toBe(40.0);
+    expect((float) $order->seller_earnings)->toBe(200.0);
 
     expect((float) $earning->platform_fee)->toBe(40.0);
-    expect((float) $earning->amana_fee)->toBe(20.0);
-    expect((float) $earning->net_amount)->toBe(180.0);
+    expect((float) $earning->delivery_fee)->toBe(40.0);
+    expect((float) $earning->net_amount)->toBe(200.0);
 });
 
 // ── What the redesigned checkout added ──────────────────────────────────

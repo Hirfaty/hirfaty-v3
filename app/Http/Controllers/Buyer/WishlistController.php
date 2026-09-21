@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Services\BuyerAccountService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,8 +11,10 @@ use Inertia\Inertia;
 /**
  * The buyer's saved pieces, at /wishlists.
  *
- * The listing itself is a placeholder for now; the `products` prop is already
- * the audience-aware, storefront-filtered set the cards will need.
+ * `products` is the audience-aware, storefront-filtered set the cards render
+ * (see BuyerAccountService::wishlist()); the route sits behind `role:buyer`,
+ * so `canWishlist` is always true and every row starts wishlisted by
+ * definition.
  */
 class WishlistController extends Controller
 {
@@ -21,6 +24,8 @@ class WishlistController extends Controller
     {
         return Inertia::render('buyer/wishlists/index', [
             'products' => $this->account->wishlist($request->user(), $request),
+            'audience' => Product::audienceFor($request->user()),
+            'canWishlist' => true,
         ]);
     }
 }

@@ -74,11 +74,11 @@ class CheckoutRequest extends FormRequest
             ],
             'postal_code' => ['required_without:address_id', 'nullable', 'string', 'max:20'],
             /*
-             * Whitelisted against Amana's own rate card rather than being free
-             * text or a hardcoded constant: a destination with no rate on file
-             * is one we have no price for and therefore do not ship to, so
-             * opening a new country is a data change (see
-             * AmanaDeliveryRateSeeder) rather than a code change.
+             * Whitelisted against the rate card's own countries rather than
+             * being free text or a hardcoded constant: a destination with no
+             * rate on file is one we have no price for and therefore do not
+             * ship to, so opening a new country is a data change (see
+             * DeliveryRateSeeder) rather than a code change.
              */
             'country' => [
                 'required_without:address_id',
@@ -87,6 +87,19 @@ class CheckoutRequest extends FormRequest
             ],
 
             'payment_method' => ['required', Rule::in(self::PAYMENT_METHODS)],
+
+            /*
+             * Which carrier ships the basket. Optional and defaulted to Amana
+             * server-side (CheckoutService): older clients that never sent the
+             * field must keep billing the historical way. When it is present
+             * it must name one of the services the page actually offers —
+             * otherwise a crafted id could pick a deactivated carrier.
+             */
+            'delivery_service_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('delivery_services', 'id')->where('is_active', true),
+            ],
 
             // Offered only on the "new address" branch; ignored otherwise.
             'save_address' => ['nullable', 'boolean'],

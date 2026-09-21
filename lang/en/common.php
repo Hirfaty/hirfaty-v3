@@ -9,6 +9,8 @@ return [
     'view' => 'View',
     'search' => 'Search',
     'filter' => 'Filter',
+    'expand' => 'Expand',
+    'collapse' => 'Collapse',
     'loading' => 'Loading...',
     'confirm' => 'Are you sure?',
     'back' => 'Back',

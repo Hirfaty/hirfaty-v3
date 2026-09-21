@@ -30,44 +30,62 @@ Route::get('/preview/email/seller/new-order/{locale}', function (string $locale)
 })->middleware('auth');
 
 Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) {
-    $order = Order::with(['store', 'buyer', 'items.product'])->first();
-    $order->cancellation_reason = 'Product is no longer available in stock.';
-    $user = $order->buyer;
+    $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
+    $orders = Order::where('group_reference', $first->group_reference)
+        ->with(['store', 'items.product'])
+        ->get()
+        ->each(fn (Order $order) => $order->cancellation_reason = 'Product is no longer available in stock.');
+    $reference = $first->group_reference ?? $first->reference;
+    $user = $first->buyer;
     $user->locale = $locale;
 
-    return view("emails.buyer.order-status.cancelled.{$locale}", compact('order', 'user'));
+    return view("emails.buyer.order-status.cancelled.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware('auth');
 
 /*
  * The rest of the order-status lifecycle: confirmed, shipped, delivered.
- * Same shape as /preview/email/buyer/cancelled above, one route per event
- * since each needs slightly different mock state on the order (a tracking
- * number for shipped, a delivered_at for delivered).
+ * Same grouped shape as /preview/email/order-placed above — every order
+ * sharing the first one's group_reference, since a purchase spanning several
+ * workshops is one email, not one per store (see OrderConfirmed's docblock).
+ * One route per event since each needs slightly different mock state on the
+ * orders (a tracking number for shipped, a delivered_at for delivered).
  */
 Route::get('/preview/email/buyer/confirmed/{locale}', function (string $locale) {
-    $order = Order::with(['store', 'buyer', 'items.product'])->first();
-    $user = $order->buyer;
+    $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
+    $orders = Order::where('group_reference', $first->group_reference)
+        ->with(['store', 'items.product'])
+        ->get();
+    $reference = $first->group_reference ?? $first->reference;
+    $user = $first->buyer;
     $user->locale = $locale;
 
-    return view("emails.buyer.order-status.confirmed.{$locale}", compact('order', 'user'));
+    return view("emails.buyer.order-status.confirmed.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware('auth');
 
 Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
-    $order = Order::with(['store', 'buyer', 'items.product'])->first();
-    $order->tracking_number = 'AMN-2K8F4M9Q';
-    $user = $order->buyer;
+    $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
+    $orders = Order::where('group_reference', $first->group_reference)
+        ->with(['store', 'items.product'])
+        ->get()
+        ->each(fn (Order $order) => $order->tracking_number = 'AMN-2K8F4M9Q');
+    $reference = $first->group_reference ?? $first->reference;
+    $user = $first->buyer;
     $user->locale = $locale;
 
-    return view("emails.buyer.order-status.shipped.{$locale}", compact('order', 'user'));
+    return view("emails.buyer.order-status.shipped.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware('auth');
 
 Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) {
-    $order = Order::with(['store', 'buyer', 'items.product'])->first();
-    $order->delivered_at = now();
-    $user = $order->buyer;
+    $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
+    $orders = Order::where('group_reference', $first->group_reference)
+        ->with(['store', 'items.product'])
+        ->get()
+        ->each(fn (Order $order) => $order->delivered_at = now());
+    $reference = $first->group_reference ?? $first->reference;
+    $user = $first->buyer;
     $user->locale = $locale;
 
-    return view("emails.buyer.order-status.delivered.{$locale}", compact('order', 'user'));
+    return view("emails.buyer.order-status.delivered.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware('auth');
 
 /*

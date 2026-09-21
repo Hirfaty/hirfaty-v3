@@ -1,6 +1,13 @@
 import { router } from '@inertiajs/react';
-import { Loader2, PackageSearch, Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
+    PackageSearch,
+    Search,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
@@ -14,14 +21,23 @@ type Filters = {
 };
 
 /**
- * Trimmed server-side to just what the tab row renders, rather than the whole
- * Category model — `name` is a per-locale object that must never reach the
- * page raw, so only the resolved `translated_name` is sent.
+ * A leaf in the filter rail — a subcategory. Trimmed server-side to just the
+ * fields the rail renders, rather than the whole Category model: `name` is a
+ * per-locale object that must never reach the page raw, so only the resolved
+ * `translated_name` is sent.
  */
-type TabCategory = {
+type SubCategory = {
     id: number;
     slug: string;
     translated_name: string;
+};
+
+/** A parent craft in the filter rail, with the subcategories nested below it. */
+type FilterCategory = {
+    id: number;
+    slug: string;
+    translated_name: string;
+    children: SubCategory[];
 };
 
 type Props = {
@@ -32,7 +48,7 @@ type Props = {
         total: number;
         has_more: boolean;
     };
-    categories: TabCategory[];
+    categories: FilterCategory[];
     filters: Filters;
     audience: 'individual' | 'professional';
     /** Product ids the signed-in buyer has already wishlisted. */
@@ -40,9 +56,6 @@ type Props = {
     /** False for guests and non-buyers, whom the wishlist route rejects. */
     canWishlist: boolean;
 };
-
-/** Museum-caption label, shared with the cards below. */
-const EYEBROW = 'text-[10px] font-semibold uppercase tracking-[0.16em]';
 
 /**
  * The nested arch outlines drawn behind the hero copy — a riad doorway seen in
@@ -78,10 +91,77 @@ export default function ProductsIndex({
     wishlisted,
     canWishlist,
 }: Props) {
-    const { t, locale } = useTranslation();
+    const { t, locale, isRTL } = useTranslation();
     const [search, setSearch] = useState(filters.search);
     const [busy, setBusy] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
+
+    /**
+     * Which parent crafts have their subcategory rows unfolded in the filter
+     * rail. Seeded from the server's current filter so the active branch is
+     * already open on first paint; afterwards the rail owns the state, because
+     * applyFilters() preserves component state across visits.
+     */
+    const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
+        if (!filters.category_id) {
+            return {};
+        }
+
+        const activeId = Number(filters.category_id);
+        const parent = categories.find(
+            (category) =>
+                category.id === activeId ||
+                category.children.some((child) => child.id === activeId),
+        );
+
+        return parent ? { [parent.id]: true } : {};
+    });
+
+    const toggleExpanded = (id: number) =>
+        setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
+    const heroRaf = useRef<number | null>(null);
+
+    /**
+     * A touch of parallax on the hero title: as the page scrolls the words
+     * drift up faster than the section, leading the scroll out of frame.
+     *
+     * Written straight onto the node from a rAF-coalesced scroll listener
+     * rather than a React state value — a per-frame setState would re-render
+     * the whole listing (grid and all) just to move one transform.
+     */
+    useEffect(() => {
+        const onScroll = () => {
+            if (heroRaf.current !== null) {
+                return;
+            }
+
+            heroRaf.current = requestAnimationFrame(() => {
+                heroRaf.current = null;
+
+                const node = heroTitleRef.current;
+
+                if (!node) {
+                    return;
+                }
+
+                const shift = Math.min(window.scrollY, 400) * 0.3;
+                node.style.transform = `translate3d(0, ${-shift}px, 0)`;
+            });
+        };
+
+        onScroll();
+        window.addEventListener('scroll', onScroll, { passive: true });
+
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+
+            if (heroRaf.current !== null) {
+                cancelAnimationFrame(heroRaf.current);
+            }
+        };
+    }, []);
 
     const wished = new Set(wishlisted);
 
@@ -225,7 +305,10 @@ export default function ProductsIndex({
                 </div>
 
                 <div className="mx-auto max-w-4xl text-center">
-                    <h1 className="font-display text-5xl leading-[0.98] text-balance text-souk-brown sm:text-7xl lg:text-[5.4rem]">
+                    <h1
+                        ref={heroTitleRef}
+                        className="font-display text-5xl leading-[0.98] text-balance text-souk-brown will-change-transform sm:text-7xl lg:text-[5.4rem]"
+                    >
                         {t('buyer.products.hero_title')}
                     </h1>
 
@@ -248,149 +331,254 @@ export default function ProductsIndex({
 
             {/* ── The full collection ──────────────────────────────── */}
             <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-8 lg:px-12">
-                {/* Heading and search share a baseline: the search field is
-                    an underlined line of display type, not a boxed input, so
-                    it sits in the masthead as a second title rather than as a
-                    widget bolted beneath one. */}
-                <div className="mb-10 grid gap-7 border-b border-souk-brown/15 pb-9 lg:grid-cols-[minmax(0,0.75fr)_minmax(380px,1fr)] lg:items-end">
-                    <div>
-                        <h2 className="font-display text-4xl text-souk-title sm:text-5xl">
-                            {t('buyer.products.collection_title')}
-                        </h2>
-                    </div>
-
-                    <label className="flex items-center gap-3 border-b border-souk-brown pb-3">
-                        {busy ? (
-                            <Loader2 className="h-5 w-5 shrink-0 animate-spin text-souk-brown/60" />
-                        ) : (
-                            <Search
-                                className="h-5 w-5 shrink-0 text-souk-brown/60"
-                                strokeWidth={1.5}
-                            />
-                        )}
-                        <input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder={t('buyer.products.search_placeholder')}
-                            aria-label={t('buyer.products.search_label')}
-                            className="min-w-0 flex-1 bg-transparent font-display text-xl text-souk-title outline-none placeholder:text-souk-brown-deep/45"
-                        />
-                    </label>
+                <div className="mb-10 border-b border-souk-brown/15 pb-9">
+                    <h2 className="font-display text-4xl text-souk-title sm:text-5xl">
+                        {t('buyer.products.collection_title')}
+                    </h2>
                 </div>
 
-                {/* ── Category tabs ────────────────────────────────
-                    Text tabs rather than the old glyph strip: eight drawings
-                    competed with the eight photographs directly below them.
-                    Scrolls sideways below lg, where the row cannot fit. */}
-                <div className="mb-10 overflow-x-auto border-b border-souk-brown/15 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <div className="flex min-w-max gap-7">
-                        <button
-                            type="button"
-                            onClick={() => applyFilters({ category_id: '' })}
-                            aria-pressed={!filters.category_id}
-                            className={`relative cursor-pointer pb-4 text-sm transition-colors ${
-                                filters.category_id
-                                    ? 'text-souk-brown-deep/70 hover:text-souk-brown'
-                                    : "font-semibold text-souk-brown after:absolute after:start-0 after:bottom-0 after:h-0.5 after:w-full after:bg-souk-brown after:content-['']"
-                            }`}
-                        >
-                            {t('buyer.products.category_all')}
-                        </button>
+                {/* ── Content: filter rail + grid ──────────────────
+                    The filter lives in a rail pinned to the start of the
+                    grid — parent crafts with their subcategories nested
+                    beneath them, unfolded by chevron. It sticks while the
+                    tiles scroll on lg; below that it is a plain section
+                    stacked above the grid. */}
+                <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
+                    <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
+                        {/* Compact search, above the tree: the rail is the
+                            page's whole filter column, so the query and the
+                            taxonomy sit together instead of the search riding
+                            the section title. */}
+                        <label className="mb-6 flex items-center gap-2 border border-souk-brown/25 bg-souk-cream/40 px-3 py-2 transition-colors focus-within:border-souk-brown">
+                            {busy ? (
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-souk-brown/60" />
+                            ) : (
+                                <Search
+                                    className="h-4 w-4 shrink-0 text-souk-brown/60"
+                                    strokeWidth={1.5}
+                                />
+                            )}
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder={t(
+                                    'buyer.products.search_placeholder',
+                                )}
+                                aria-label={t('buyer.products.search_label')}
+                                className="min-w-0 flex-1 bg-transparent text-sm text-souk-title outline-none placeholder:text-souk-brown-deep/45"
+                            />
+                        </label>
 
-                        {categories.map((category) => {
-                            const value = String(category.id);
-                            const active = filters.category_id === value;
+                        <h3 className="mb-4 text-[10px] font-semibold tracking-[0.16em] text-souk-brown-deep/50 uppercase">
+                            {t('buyer.products.categories')}
+                        </h3>
 
-                            return (
+                        <ul className="space-y-1">
+                            <li>
                                 <button
-                                    key={category.id}
                                     type="button"
                                     onClick={() =>
-                                        applyFilters({ category_id: value })
+                                        applyFilters({ category_id: '' })
                                     }
-                                    aria-pressed={active}
-                                    className={`relative cursor-pointer pb-4 text-sm transition-colors ${
-                                        active
-                                            ? "font-semibold text-souk-brown after:absolute after:start-0 after:bottom-0 after:h-0.5 after:w-full after:bg-souk-brown after:content-['']"
-                                            : 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                    aria-pressed={!filters.category_id}
+                                    className={`w-full cursor-pointer rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+                                        filters.category_id
+                                            ? 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                            : 'font-semibold text-souk-brown'
                                     }`}
                                 >
-                                    {category.translated_name}
+                                    {t('buyer.products.category_all')}
                                 </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                            </li>
 
-                <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
-                    <span>
-                        {pagination.total} {t('buyer.products.count_pieces')}
-                    </span>
-                    <span className="hidden sm:inline">
-                        {t('buyer.products.made_in_morocco')}
-                    </span>
-                </div>
+                            {categories.map((category) => {
+                                const categoryId = String(category.id);
+                                const hasChildren =
+                                    category.children.length > 0;
+                                const isOpen = Boolean(expanded[category.id]);
+                                const isActive =
+                                    filters.category_id === categoryId;
+                                const containsActive =
+                                    isActive ||
+                                    category.children.some(
+                                        (child) =>
+                                            filters.category_id ===
+                                            String(child.id),
+                                    );
 
-                {products.length === 0 ? (
-                    <div className="flex flex-col items-center gap-4 border border-dashed border-souk-brown/20 py-24 text-center">
-                        <PackageSearch
-                            className="h-9 w-9 text-souk-brown/25"
-                            strokeWidth={1.5}
-                        />
-                        <p className="text-souk-brown-deep/70">
-                            {filters.search
-                                ? t('buyer.products.empty_with_search')
-                                : t('buyer.products.empty')}
-                        </p>
-                        {hasActiveFilters && (
-                            <button
-                                onClick={() => {
-                                    setSearch('');
-                                    applyFilters({
-                                        search: '',
-                                        category_id: '',
-                                    });
-                                }}
-                                className="border border-souk-brown px-6 py-2.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream"
+                                return (
+                                    <li key={category.id}>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    applyFilters({
+                                                        category_id: categoryId,
+                                                    });
+                                                    setExpanded((prev) => ({
+                                                        ...prev,
+                                                        [category.id]: true,
+                                                    }));
+                                                }}
+                                                aria-pressed={isActive}
+                                                className={`min-w-0 flex-1 cursor-pointer truncate rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+                                                    containsActive
+                                                        ? 'font-semibold text-souk-brown'
+                                                        : 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                                }`}
+                                            >
+                                                {category.translated_name}
+                                            </button>
+
+                                            {hasChildren && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        toggleExpanded(
+                                                            category.id,
+                                                        )
+                                                    }
+                                                    aria-expanded={isOpen}
+                                                    aria-label={
+                                                        isOpen
+                                                            ? t(
+                                                                  'common.collapse',
+                                                              )
+                                                            : t('common.expand')
+                                                    }
+                                                    className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-t-full rounded-b-md text-souk-brown-deep/45 transition-colors hover:text-souk-brown"
+                                                >
+                                                    {isOpen ? (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    ) : isRTL ? (
+                                                        <ChevronLeft className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {hasChildren && isOpen && (
+                                            <ul className="ms-3 mt-1 space-y-1 border-s border-souk-brown/10 ps-3">
+                                                {category.children.map(
+                                                    (child) => {
+                                                        const childActive =
+                                                            filters.category_id ===
+                                                            String(child.id);
+
+                                                        return (
+                                                            <li key={child.id}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        applyFilters(
+                                                                            {
+                                                                                category_id:
+                                                                                    String(
+                                                                                        child.id,
+                                                                                    ),
+                                                                            },
+                                                                        )
+                                                                    }
+                                                                    aria-pressed={
+                                                                        childActive
+                                                                    }
+                                                                    className={`w-full cursor-pointer truncate rounded-sm px-3 py-1.5 text-start text-sm transition-colors ${
+                                                                        childActive
+                                                                            ? 'font-semibold text-souk-brown'
+                                                                            : 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                                                    }`}
+                                                                >
+                                                                    {
+                                                                        child.translated_name
+                                                                    }
+                                                                </button>
+                                                            </li>
+                                                        );
+                                                    },
+                                                )}
+                                            </ul>
+                                        )}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </aside>
+
+                    <div className="min-w-0">
+                        <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
+                            <span>
+                                {pagination.total}{' '}
+                                {t('buyer.products.count_pieces')}
+                            </span>
+                            <span className="hidden sm:inline">
+                                {t('buyer.products.made_in_morocco')}
+                            </span>
+                        </div>
+
+                        {products.length === 0 ? (
+                            <div className="flex flex-col items-center gap-4 border border-dashed border-souk-brown/20 py-24 text-center">
+                                <PackageSearch
+                                    className="h-9 w-9 text-souk-brown/25"
+                                    strokeWidth={1.5}
+                                />
+                                <p className="text-souk-brown-deep/70">
+                                    {filters.search
+                                        ? t('buyer.products.empty_with_search')
+                                        : t('buyer.products.empty')}
+                                </p>
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={() => {
+                                            setSearch('');
+                                            applyFilters({
+                                                search: '',
+                                                category_id: '',
+                                            });
+                                        }}
+                                        className="border border-souk-brown px-6 py-2.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream"
+                                    >
+                                        {t('buyer.products.reset_all')}
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div
+                                className={`grid grid-cols-2 gap-x-3 gap-y-10 transition-opacity duration-300 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:gap-x-7 xl:grid-cols-4 ${busy ? 'opacity-50' : ''}`}
                             >
-                                {t('buyer.products.reset_all')}
-                            </button>
+                                {products.map((p) => (
+                                    <CollectionCard
+                                        key={p.id}
+                                        product={p}
+                                        audience={audience}
+                                        money={money}
+                                        t={t}
+                                        wishlisted={wished.has(p.id)}
+                                        canWishlist={canWishlist}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {pagination.has_more && (
+                            <div className="mt-16 flex justify-center">
+                                <button
+                                    onClick={loadMore}
+                                    disabled={loadingMore}
+                                    className="inline-flex items-center gap-2 rounded-md border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
+                                >
+                                    {loadingMore && (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    )}
+                                    {loadingMore
+                                        ? t('buyer.products.loading')
+                                        : t('buyer.products.load_more')}
+                                </button>
+                            </div>
                         )}
                     </div>
-                ) : (
-                    <div
-                        className={`grid grid-cols-2 gap-x-3 gap-y-10 transition-opacity duration-300 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-7 ${busy ? 'opacity-50' : ''}`}
-                    >
-                        {products.map((p) => (
-                            <CollectionCard
-                                key={p.id}
-                                product={p}
-                                audience={audience}
-                                money={money}
-                                t={t}
-                                wishlisted={wished.has(p.id)}
-                                canWishlist={canWishlist}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {pagination.has_more && (
-                    <div className="mt-16 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            disabled={loadingMore}
-                            className="inline-flex items-center gap-2 rounded-md border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
-                        >
-                            {loadingMore && (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            )}
-                            {loadingMore
-                                ? t('buyer.products.loading')
-                                : t('buyer.products.load_more')}
-                        </button>
-                    </div>
-                )}
+                </div>
             </section>
 
             {/* ── Closing band ─────────────────────────────────────

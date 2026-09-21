@@ -53,7 +53,7 @@ const Index = ({
                         <th className="pr-4 pb-3">Buyer</th>
                         <th className="pr-4 pb-3">Gross</th>
                         <th className="pr-4 pb-3">Platform fee</th>
-                        <th className="pr-4 pb-3">Amana fee</th>
+                        <th className="pr-4 pb-3">Delivery fee</th>
                         <th className="pr-4 pb-3">Net</th>
                         <th className="pr-4 pb-3">Status</th>
                         <th className="pb-3">Date</th>
@@ -74,7 +74,7 @@ const Index = ({
                                 -{earning.platform_fee} MAD
                             </td>
                             <td className="py-3 pr-4 text-red-500">
-                                -{earning.amana_fee} MAD
+                                -{earning.delivery_fee} MAD
                             </td>
                             <td className="py-3 pr-4 font-medium">
                                 {earning.net_amount} MAD

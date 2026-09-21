@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { useRef } from 'react';
 import Reveal from '@/components/home/Reveal';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -23,14 +24,18 @@ const IMPACT_POINTS = ['support', 'knowledge', 'community'] as const;
 export default function About() {
     const { t } = useTranslation();
 
+    /* The hero keeps the overlay bar transparent until its photograph has
+       scrolled out of the viewport. */
+    const heroRef = useRef<HTMLElement>(null);
+
     return (
         <>
             <Head title="Hirfaty — Our story" />
 
             <div className="min-h-screen bg-souk-paper">
-                <SiteHeader />
+                <SiteHeader variant="overlay" overlayAnchor={heroRef} />
 
-                <section className="relative isolate overflow-hidden">
+                <section ref={heroRef} className="relative isolate overflow-hidden">
                     <img
                         src={riadBackground}
                         alt="A traditional Moroccan riad courtyard"

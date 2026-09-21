@@ -55,7 +55,8 @@
 
         <p class="body-text">
             Bonjour {{ $user->first_name }}, vous venez de recevoir une nouvelle commande.
-            Confirmez-la rapidement pour assurer une bonne expérience à l'acheteur.
+            Préparez les pièces et confirmez-la — nous nous chargeons ensuite
+            de la livraison à l'acheteur.
         </p>
 
         {{-- Order meta --}}
@@ -98,23 +99,38 @@
             </tbody>
         </table>
 
-        {{-- Totals --}}
+        {{-- Le détail que porte réellement la commande, plutôt qu'un seul
+             montant net à prendre au mot. La livraison n'apparaît que si
+             c'est cette commande qui porte les frais du panier (voir
+             CheckoutService : un panier réparti entre plusieurs ateliers les
+             rattache à une seule commande, les autres restant à 0). --}}
         <div class="total-row">
             <span>Total commande</span>
             <span>{{ number_format($order->total_amount, 2) }} MAD</span>
         </div>
+        <div class="total-row">
+            <span>Commission Hirfaty (20%)</span>
+            <span>− {{ number_format($order->platform_fee, 2) }} MAD</span>
+        </div>
+        @if((float) $order->delivery_fee > 0)
+        <div class="total-row">
+            <span>Livraison</span>
+            <span>+ {{ number_format($order->delivery_fee, 2) }} MAD</span>
+        </div>
+        @endif
 
         {{-- Earnings --}}
         <div class="earnings-box">
-            <p>Vos gains sur cette commande (après commission 20% + Amana)</p>
+            <p>Vos gains sur cette commande</p>
             <p class="amount">{{ number_format($order->seller_earnings, 2) }} MAD</p>
         </div>
 
         {{-- Urgency --}}
         <div class="urgent-note">
             <p>
-                ⏱ Confirmez cette commande dès que possible. Les acheteurs apprécient
-                une réponse rapide et cela améliore votre classement sur Hirfaty.
+                ⏱ Confirmez cette commande dès que possible pour que nous
+                puissions la récupérer à l'atelier. Vos gains deviennent
+                disponibles une fois la commande livrée.
             </p>
         </div>
 

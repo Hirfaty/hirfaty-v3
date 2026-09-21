@@ -21,9 +21,14 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; color: #78716C; text-align: right; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; text-align: right; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; }
+        .store-head { background: rgba(28,25,23,0.04); padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-direction: row-reverse; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { font-size: 10px; color: #78716C; text-align: right; padding: 10px 16px; border-bottom: 1px solid rgba(28,25,23,0.1); }
+        .items-table td { font-size: 13px; padding: 12px 16px; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; vertical-align: top; text-align: right; }
+        .items-table tr:last-child td { border-bottom: none; }
         .items-table .amount { text-align: left; }
         .cta-wrap { margin: 32px 0; }
         .cta-btn { display: inline-block; background-color: #C1522A; color: #FAF7F2 !important; text-decoration: none; font-size: 14px; padding: 14px 32px; }
@@ -55,47 +60,62 @@
         </h1>
 
         <p class="body-text">
-            مرحباً {{ $user->first_name }}، تم توصيل طلبك {{ $order->reference }} من
-            {{ $order->store->store_name }}. نتمنى أن ينال إعجابك بقدر ما استمتعنا
-            بإيصاله إليك.
+            @if($orders->count() > 1)
+                مرحباً {{ $user->first_name }}، تم توصيل طلبك {{ $reference }} الذي جمع
+                {{ $orders->count() }} ورشات. نتمنى أن ينال إعجابك بقدر ما استمتعنا
+                بإيصاله إليك.
+            @else
+                مرحباً {{ $user->first_name }}، تم توصيل طلبك {{ $reference }} من
+                {{ $orders->first()->store->store_name }}. نتمنى أن ينال إعجابك بقدر ما استمتعنا
+                بإيصاله إليك.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->reference }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
                 <span class="order-meta-label">رقم الطلب</span>
             </div>
             <div class="order-meta-row">
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
-                <span class="order-meta-label">المتجر</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-value">{{ optional($order->delivered_at)->format('d/m/Y') }}</span>
+                <span class="order-meta-value">{{ optional($orders->first()->delivered_at)->format('d/m/Y') }}</span>
                 <span class="order-meta-label">تاريخ التوصيل</span>
             </div>
         </div>
 
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th style="text-align:left">السعر</th>
-                    <th style="text-align:center">الكمية</th>
-                    <th>المنتج</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td class="amount" style="text-align:left">{{ number_format($item->subtotal, 2) }} د.م TTC</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td>{{ $item->product->name }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        {{-- كتلة لكل ورشة، لتبقى الطلبية المُسلَّمة من عدة بائعين مقروءة
+             كعملية شراء واحدة. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <div class="store-head">
+                <span class="store-ref">{{ $order->reference }}</span>
+                <span class="store-name">{{ $order->store->store_name }}</span>
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left">السعر</th>
+                        <th style="text-align:center">الكمية</th>
+                        <th>المنتج</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->items as $item)
+                    <tr>
+                        <td class="amount" style="text-align:left">{{ number_format($item->subtotal, 2) }} د.م TTC</td>
+                        <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
+                        <td>{{ $item->product->name }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endforeach
 
+        {{-- تُضاف التقييمات من صفحة الطلب نفسه
+             (buyer.orders.reviews.store): الطلب من ورشة واحدة يحيل مباشرة
+             إليها، أما الطلب المجمّع فيحيل إلى قائمة الطلبات. --}}
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders{{ $orders->count() === 1 ? '/'.$orders->first()->reference : '' }}" class="cta-btn">
                 ← أضف تقييمك
             </a>
         </div>
@@ -106,11 +126,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>تم التأكيد</strong> من طرف البائع.</p>
+                <p class="step-text"><strong>تم التأكيد</strong> من طرف {{ $orders->count() > 1 ? 'الورشات' : 'الورشة' }}.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>تم الشحن</strong> عبر أمانة.</p>
+                <p class="step-text"><strong>خرج للتوصيل</strong>.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
@@ -119,7 +139,7 @@
         </ul>
 
         <div class="footer">
-            <p>هل واجهت مشكلة في هذا الطلب؟ تواصل مع البائع من صفحة طلباتك.</p>
+            <p>هل واجهت مشكلة في هذا الطلب؟ تواصل معنا من صفحة طلباتك.</p>
             <p>
                 © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
                 <a href="{{ config('app.url') }}/orders">طلباتي</a>

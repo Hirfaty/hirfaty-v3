@@ -8,6 +8,7 @@ import {
     User,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
@@ -51,18 +52,30 @@ const iconButton = (light: boolean) =>
 
 type SiteHeaderProps = {
     /**
-     * `solid` (the default) is the in-flow cream bar every page has always
-     * had. `overlay` pins the bar over the top of the page and starts it
-     * transparent, so a full-bleed hero runs underneath it, then fades it to
-     * cream once the page scrolls.
+     * `solid` (the default) is the in-flow bar whose background matches the
+     * page it sits on. `overlay` pins the bar over the top of the page and
+     * starts it transparent, so a full-bleed hero runs underneath it, then
+     * fades it to cream once the page scrolls.
      *
      * Opt-in rather than automatic: transparent white-on-nothing is only
      * legible over a dark hero, and most pages open on a light section.
      */
     variant?: 'solid' | 'overlay';
+    /**
+     * `overlay` only: the element the bar stays transparent for. The bar
+     * turns cream only once this element's bottom edge has scrolled past the
+     * top of the viewport — how the `/about` hero keeps the header
+     * transparent over its pinned photograph for a whole window instead of
+     * giving way after a bare 24px of scroll (the fallback when no anchor is
+     * given).
+     */
+    overlayAnchor?: RefObject<HTMLElement | null>;
 };
 
-export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
+export const SiteHeader = ({
+    variant = 'solid',
+    overlayAnchor,
+}: SiteHeaderProps) => {
     const { t, locale, isRTL } = useTranslation();
     const { auth, navCategories } = usePage<{
         auth: {
@@ -170,8 +183,12 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
 
     /*
      * Only meaningful in `overlay`: whether the page has moved far enough for
-     * the bar to take its cream fill. 24px rather than 0 so a one-pixel
-     * rubber-band scroll on a trackpad does not flicker the background.
+     * the bar to take its cream fill. With an anchor the bar holds out until
+     * the anchored element's bottom clears the top of the viewport — the
+     * `/about` hero stays transparent over its pinned photograph for its
+     * whole window. Without one it falls back to 24px of scroll rather than
+     * 0, so a one-pixel rubber-band scroll on a trackpad does not flicker the
+     * background.
      */
     const [scrolled, setScrolled] = useState(false);
 
@@ -180,7 +197,15 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
             return;
         }
 
-        const onScroll = () => setScrolled(window.scrollY > 24);
+        const onScroll = () => {
+            if (overlayAnchor?.current) {
+                setScrolled(
+                    overlayAnchor.current.getBoundingClientRect().bottom <= 0,
+                );
+            } else {
+                setScrolled(window.scrollY > 24);
+            }
+        };
 
         // Run once up front: a reload part-way down the page (or a restored
         // scroll position) must not start the bar transparent over content.
@@ -188,7 +213,7 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
         window.addEventListener('scroll', onScroll, { passive: true });
 
         return () => window.removeEventListener('scroll', onScroll);
-    }, [variant]);
+    }, [variant, overlayAnchor]);
 
     /*
      * Transparent bar over a dark hero — flip the type and icons to white.
@@ -199,16 +224,15 @@ export const SiteHeader = ({ variant = 'solid' }: SiteHeaderProps) => {
 
     return (
         <header
-            // className={`z-50 transition-colors duration-300 ${
-            //     variant === 'overlay'
-            //         ? `fixed inset-x-0 top-0 ${
-            //               scrolled || searchOpen
-            //                   ? 'bg-cream shadow-sm shadow-ink/5'
-            //                   : 'bg-transparent'
-            //           }`
-            //         : 'relative bg-cream'
-            // }`}
-            className="bg-transparent"
+            className={`z-50 transition-colors duration-300 ${
+                variant === 'overlay'
+                    ? `fixed inset-x-0 top-0 ${
+                          scrolled || searchOpen
+                              ? 'bg-cream shadow-sm shadow-ink/5'
+                              : 'bg-transparent'
+                      }`
+                    : 'relative bg-transparent'
+            }`}
         >
             <CartSync />
 

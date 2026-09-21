@@ -103,7 +103,7 @@ test('admin cannot delete a product that has order history', function () {
         'status' => 'delivered',
         'total_amount' => 200,
         'platform_fee' => 0,
-        'amana_fee' => 0,
+        'delivery_fee' => 0,
         'seller_earnings' => 200,
         'shipping_address' => 'Test Address',
     ]);
@@ -147,7 +147,7 @@ test('bulk delete removes deletable products and skips ones with order history',
         'status' => 'delivered',
         'total_amount' => 200,
         'platform_fee' => 0,
-        'amana_fee' => 0,
+        'delivery_fee' => 0,
         'seller_earnings' => 200,
         'shipping_address' => 'Test Address',
     ]);

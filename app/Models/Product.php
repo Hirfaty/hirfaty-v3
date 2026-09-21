@@ -223,10 +223,4 @@ class Product extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
-
-    // public function deliveryOptions()
-    // {
-    //     return $this->belongsToMany(DeliveryOption::class, 'product_delivery_option')
-    //             ->withPivot('custom_price');
-    // }
 }

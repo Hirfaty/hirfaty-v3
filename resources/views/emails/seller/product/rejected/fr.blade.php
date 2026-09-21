@@ -48,8 +48,12 @@
         </h1>
 
         <p class="body-text">
+            {{-- Les artisans ne déposent ni ne modifient leurs fiches — c'est
+                 l'équipe Hirfaty qui s'en charge — d'où l'invitation à nous
+                 écrire plutôt qu'à modifier une fiche inaccessible. --}}
             Bonjour {{ $user->first_name }}, votre produit a été examiné par notre équipe.
-            Il ne peut pas être publié en l'état, mais vous pouvez le modifier et le soumettre à nouveau.
+            Il ne peut pas être publié en l'état. Envoyez-nous les éléments
+            manquants et nous corrigeons la fiche pour vous.
         </p>
 
         <div class="product-card">
@@ -90,7 +94,7 @@
             <p>Vous recevez cet email car vous êtes vendeur sur Hirfaty.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
-                <a href="{{ config('app.url') }}/seller/products">Gérer mes produits</a>
+                <a href="{{ config('app.url') }}/seller/products">Mes produits</a>
                 &nbsp;·&nbsp;
                 <a href="{{ config('app.url') }}/seller/dashboard">Mon tableau de bord</a>
             </p>

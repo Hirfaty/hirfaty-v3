@@ -48,7 +48,7 @@
 
         <p class="body-text">
             مرحباً {{ $user->first_name }}، تلقيت طلباً جديداً.
-            أكّده في أقرب وقت لضمان تجربة جيدة للمشتري.
+            حضّر القطع وأكّد الطلب — ونحن نتكفّل بعد ذلك بتوصيله إلى المشتري.
         </p>
 
         <div class="order-meta">
@@ -71,15 +71,22 @@
             </tbody>
         </table>
 
+        {{-- تفصيل ما يحمله الطلب فعلاً بدل رقم صافٍ واحد. لا يظهر سطر
+             التوصيل إلا إذا كان هذا الطلب هو الذي حمل رسوم توصيل السلة
+             (انظر CheckoutService). --}}
         <div class="total-row"><span>{{ number_format($order->total_amount, 2) }} د.م</span><span>إجمالي الطلب</span></div>
+        <div class="total-row"><span>− {{ number_format($order->platform_fee, 2) }} د.م</span><span>عمولة حرفتي (20%)</span></div>
+        @if((float) $order->delivery_fee > 0)
+        <div class="total-row"><span>+ {{ number_format($order->delivery_fee, 2) }} د.م</span><span>التوصيل</span></div>
+        @endif
 
         <div class="earnings-box">
-            <p>أرباحك من هذا الطلب (بعد عمولة 20% + أمانة)</p>
+            <p>أرباحك من هذا الطلب</p>
             <p class="amount">{{ number_format($order->seller_earnings, 2) }} د.م</p>
         </div>
 
         <div class="urgent-note">
-            <p>⏱ أكّد هذا الطلب في أقرب وقت. يقدّر المشترون الردود السريعة وهذا يحسّن ترتيبك على حرفتي.</p>
+            <p>⏱ أكّد هذا الطلب في أقرب وقت حتى نتمكّن من استلامه من الورشة. تصبح أرباحك متاحة بمجرد توصيل الطلب.</p>
         </div>
 
         <a href="{{ config('app.url') }}/seller/orders/{{ $order->reference }}" class="cta-btn">← عرض وتأكيد الطلب</a>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\DeliveryService;
 use App\Models\Earning;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -136,13 +137,25 @@ class CheckoutService
             $groupReference = 'HRFG-'.strtoupper(Str::random(10));
 
             /*
-             * What Amana charges for *this* destination, resolved once for the
-             * whole basket. Quoted to the buyer by the same service on the
-             * checkout page, so the summary and the bill agree.
+             * Which carrier bills this basket, resolved once for the whole
+             * checkout: whatever the buyer picked on the page, or Amana when
+             * the field was never sent (the historical carrier — see
+             * DeliveryFeeService::defaultService).
+             */
+            $service = isset($checkoutData['delivery_service_id'])
+                ? DeliveryService::find((int) $checkoutData['delivery_service_id'])
+                : null;
+            $service ??= $this->deliveryFees->defaultService();
+
+            /*
+             * What that service charges for *this* destination, resolved once
+             * for the whole basket. Quoted to the buyer by the same service on
+             * the checkout page, so the summary and the bill agree.
              */
             $deliveryFee = $this->deliveryFees->resolve(
                 $checkoutData['country'] ?? null,
                 $checkoutData['city_id'] ?? null,
+                $service,
             );
 
             /*
@@ -156,7 +169,7 @@ class CheckoutService
              * their own shipment, so there is no per-seller reimbursement to
              * split fairly here yet.
              */
-            $amanaFeeRemaining = $deliveryFee;
+            $deliveryFeeRemaining = $deliveryFee;
 
             foreach ($grouped as $storeId => $items) {
                 $store = $items->first()->product->store;
@@ -164,9 +177,9 @@ class CheckoutService
                 // Calculate amounts
                 $grossAmount = $items->sum(fn ($item) => $unitPrice($item) * $item->quantity);
                 $platformFee = round($grossAmount * self::PLATFORM_FEE_PERCENT, 2);
-                $amanaFee = $amanaFeeRemaining;
-                $amanaFeeRemaining = 0.0;
-                $sellerEarnings = $grossAmount - $platformFee + $amanaFee;
+                $orderDeliveryFee = $deliveryFeeRemaining;
+                $deliveryFeeRemaining = 0.0;
+                $sellerEarnings = $grossAmount - $platformFee + $orderDeliveryFee;
 
                 // Create order
                 $order = Order::create([
@@ -177,7 +190,11 @@ class CheckoutService
                     'status' => 'pending',
                     'total_amount' => $grossAmount,
                     'platform_fee' => $platformFee,
-                    'amana_fee' => $amanaFee,
+                    'delivery_fee' => $orderDeliveryFee,
+                    // Which carrier shipped the basket and what it was called
+                    // then — the id is a reference, the name a snapshot.
+                    'delivery_service_id' => $service?->id,
+                    'delivery_service_name' => $service?->name,
                     'seller_earnings' => $sellerEarnings,
                     'shipping_address' => $checkoutData['shipping_address'],
                     // Every order a split basket produces ships to the same
@@ -216,7 +233,7 @@ class CheckoutService
                     'order_id' => $order->id,
                     'gross_amount' => $grossAmount,
                     'platform_fee' => $platformFee,
-                    'amana_fee' => $amanaFee,
+                    'delivery_fee' => $orderDeliveryFee,
                     'net_amount' => $sellerEarnings,
                     'status' => 'pending',
                 ]);

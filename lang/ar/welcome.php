@@ -68,6 +68,8 @@ return [
     // ── استكشف حسب الفئة ──────────────────────────────────────────────────
     'categories_grid.eyebrow' => 'تجوّل في السوق',
     'categories_grid.heading' => 'استكشف حسب الفئة',
+    'categories_grid.prev' => 'الفئة السابقة',
+    'categories_grid.next' => 'الفئة التالية',
     'categories_grid.pottery' => 'الفخار والخزف',
     'categories_grid.textile' => 'فن المائدة والاحتفالات',
     'categories_grid.art' => 'الرسم والفن',

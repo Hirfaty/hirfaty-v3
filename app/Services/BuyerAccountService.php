@@ -112,14 +112,39 @@ class BuyerAccountService
     }
 
     /**
-     * The buyer's order history, flattened for the orders page.
+     * How far along a status is, for rolling several orders into one.
      *
-     * Unpaginated on purpose: checkout splits a basket into one order per
-     * store, so even an active buyer's list stays short.
+     * `cancelled` is deliberately absent: it is not a point on this line but a
+     * dead end, and mixing it in would make one cancelled shop drag a whole
+     * purchase backwards. It is handled separately in statusFor().
+     */
+    private const STATUS_RANK = [
+        'pending' => 0,
+        'confirmed' => 1,
+        'shipped' => 2,
+        'delivered' => 3,
+    ];
+
+    /**
+     * The buyer's order history, grouped back into purchases.
+     *
+     * Checkout splits one basket into an Order per store, because that is who
+     * gets paid and who gets notified — but the buyer made a single purchase
+     * and should see a single entry for it. `group_reference` is what every
+     * order from one checkout shares (see CheckoutService), so it is what the
+     * grouping is keyed on; orders placed before it existed have none and fall
+     * back to standing alone, which is how they already read.
+     *
+     * Each purchase keeps its per-store orders intact underneath: the status,
+     * the tracking number and the rating form are all genuinely per shop, and
+     * flattening them away would leave the page unable to say which of three
+     * workshops has actually shipped.
+     *
+     * Unpaginated on purpose: grouping only makes the list shorter.
      *
      * @return array<int, array<string, mixed>>
      */
-    public function orders(User $user): array
+    public function purchases(User $user): array
     {
         $orders = Order::where('buyer_id', $user->id)
             ->with(['store', 'city', 'items.product.images'])
@@ -144,67 +169,152 @@ class BuyerAccountService
             ->keyBy('order_id');
 
         return $orders
-            ->map(function (Order $order) use ($productReviews, $storeReviews) {
-                $storeReview = $storeReviews->get($order->id);
+            /*
+             * Legacy orders carry no group reference, and grouping them all
+             * under `null` would collapse a buyer's entire pre-grouping
+             * history into one card. Keying those on their own id instead
+             * leaves each standing alone.
+             */
+            ->groupBy(fn (Order $order) => $order->group_reference ?: 'single:'.$order->id)
+            ->map(fn (Collection $group) => $this->shapePurchase($group, $productReviews, $storeReviews))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * One checkout — however many workshops it reached — as one card.
+     *
+     * @param  Collection<int, Order>  $group
+     * @return array<string, mixed>
+     */
+    private function shapePurchase(Collection $group, Collection $productReviews, Collection $storeReviews): array
+    {
+        $first = $group->first();
+
+        /*
+         * The delivery fee belongs to the basket, not to a shop, and
+         * CheckoutService parks the whole of it on whichever order it wrote
+         * first. Summing across the group is what puts it back — and is why
+         * the buyer's total here can exceed any single order's total_amount.
+         */
+        $itemsTotal = (float) $group->sum(fn (Order $order) => (float) $order->total_amount);
+        $deliveryFee = (float) $group->sum(fn (Order $order) => (float) $order->delivery_fee);
+
+        return [
+            /*
+             * The group reference when there is one, so the buyer quotes the
+             * same string the admin desk sees for the whole purchase. A lone
+             * legacy order still quotes its own.
+             */
+            'reference' => $first->group_reference ?: $first->reference,
+            'status' => $this->statusFor($group),
+            'created_at' => $first->created_at,
+            'items_total' => $itemsTotal,
+            'delivery_fee' => $deliveryFee,
+            'total_amount' => $itemsTotal + $deliveryFee,
+            'shipping_address' => $first->shipping_address,
+            'city' => $first->city?->name,
+
+            // Rated per shop, so the card offers the form once per shop that
+            // has actually arrived rather than once for the purchase.
+            'can_review' => $group->contains(fn (Order $order) => $order->status === 'delivered'),
+
+            'orders' => $group
+                ->map(fn (Order $order) => $this->shapeOrder($order, $productReviews, $storeReviews))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * Where a whole purchase has got to, from its per-shop orders.
+     *
+     * The least advanced shop sets the pace: with one parcel delivered and one
+     * still pending, the purchase is pending — claiming "delivered" while
+     * something is still coming is the reading that would mislead. A purchase
+     * only reads as cancelled when every shop in it was.
+     *
+     * @param  Collection<int, Order>  $group
+     */
+    private function statusFor(Collection $group): string
+    {
+        $live = $group->reject(fn (Order $order) => $order->status === 'cancelled');
+
+        if ($live->isEmpty()) {
+            return 'cancelled';
+        }
+
+        return $live
+            ->sortBy(fn (Order $order) => self::STATUS_RANK[$order->status] ?? 0)
+            ->first()
+            ->status;
+    }
+
+    /**
+     * One shop's share of a purchase.
+     *
+     * @return array<string, mixed>
+     */
+    private function shapeOrder(Order $order, Collection $productReviews, Collection $storeReviews): array
+    {
+        $storeReview = $storeReviews->get($order->id);
+
+        return [
+            'id' => $order->id,
+            'reference' => $order->reference,
+            'status' => $order->status,
+            'total_amount' => $order->total_amount,
+            'tracking_number' => $order->tracking_number,
+            'created_at' => $order->created_at,
+            'delivered_at' => $order->delivered_at,
+            'shipping_address' => $order->shipping_address,
+            'city' => $order->city?->name,
+            'store' => [
+                'store_name' => $order->store?->store_name,
+            ],
+
+            /*
+             * Whether the rating panel is offered at all. Mirrors
+             * ReviewService::canReview — the buyer check is implicit here
+             * since the query is already scoped to them, so this is only the
+             * delivered half. The server re-checks both on submit; this just
+             * decides what to draw.
+             */
+            'can_review' => $order->status === 'delivered',
+
+            // Pre-fills the form so an existing rating shows as already given
+            // rather than as an empty row the buyer is being asked for a
+            // second time.
+            'store_review' => $storeReview ? [
+                'rating' => $storeReview->rating,
+                'comment' => $storeReview->comment,
+            ] : null,
+
+            'items' => $order->items->map(function ($item) use ($productReviews) {
+                $review = $item->product_id
+                    ? $productReviews->get($item->product_id)
+                    : null;
 
                 return [
-                    'id' => $order->id,
-                    'reference' => $order->reference,
-                    'status' => $order->status,
-                    'total_amount' => $order->total_amount,
-                    'tracking_number' => $order->tracking_number,
-                    'created_at' => $order->created_at,
-                    'delivered_at' => $order->delivered_at,
-                    'shipping_address' => $order->shipping_address,
-                    'city' => $order->city?->name,
-                    'store' => [
-                        'store_name' => $order->store?->store_name,
+                    'id' => $item->id,
+                    // The form posts ratings keyed by product, so the page
+                    // needs the id rather than just the label.
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'subtotal' => $item->subtotal,
+                    'product' => [
+                        'name' => $item->product?->name,
+                        'slug' => $item->product?->slug,
+                        'image' => $item->product?->images->first()?->url,
                     ],
-
-                    /*
-                     * Whether the rating panel is offered at all. Mirrors
-                     * ReviewService::canReview — the buyer check is implicit
-                     * here since the query is already scoped to them, so this
-                     * is only the delivered half. The server re-checks both on
-                     * submit; this just decides what to draw.
-                     */
-                    'can_review' => $order->status === 'delivered',
-
-                    // Pre-fills the form so an existing rating shows as
-                    // already given rather than as an empty row the buyer is
-                    // being asked for a second time.
-                    'store_review' => $storeReview ? [
-                        'rating' => $storeReview->rating,
-                        'comment' => $storeReview->comment,
+                    'review' => $review ? [
+                        'rating' => $review->rating,
+                        'comment' => $review->comment,
                     ] : null,
-
-                    'items' => $order->items->map(function ($item) use ($productReviews) {
-                        $review = $item->product_id
-                            ? $productReviews->get($item->product_id)
-                            : null;
-
-                        return [
-                            'id' => $item->id,
-                            // The form posts ratings keyed by product, so the
-                            // page needs the id rather than just the label.
-                            'product_id' => $item->product_id,
-                            'quantity' => $item->quantity,
-                            'unit_price' => $item->unit_price,
-                            'subtotal' => $item->subtotal,
-                            'product' => [
-                                'name' => $item->product?->name,
-                                'slug' => $item->product?->slug,
-                                'image' => $item->product?->images->first()?->url,
-                            ],
-                            'review' => $review ? [
-                                'rating' => $review->rating,
-                                'comment' => $review->comment,
-                            ] : null,
-                        ];
-                    })->all(),
                 ];
-            })
-            ->all();
+            })->all(),
+        ];
     }
 
     /**

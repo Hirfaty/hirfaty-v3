@@ -89,7 +89,7 @@
             <p>You're receiving this because you're a seller on Hirfaty.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
-                <a href="{{ config('app.url') }}/seller/products">Manage my products</a>
+                <a href="{{ config('app.url') }}/seller/products">My products</a>
                 &nbsp;·&nbsp;
                 <a href="{{ config('app.url') }}/seller/dashboard">My dashboard</a>
             </p>

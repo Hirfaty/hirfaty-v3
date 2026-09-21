@@ -47,7 +47,7 @@ test('the show page renders order history with the order relation resolved', fun
         'status' => 'delivered',
         'total_amount' => 400,
         'platform_fee' => 0,
-        'amana_fee' => 0,
+        'delivery_fee' => 0,
         'seller_earnings' => 380,
         'shipping_address' => 'Test Address',
     ]);

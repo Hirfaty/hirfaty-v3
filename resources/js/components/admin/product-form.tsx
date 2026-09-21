@@ -90,7 +90,6 @@ interface ProductFormState {
     name: string;
     sku: string;
     description: string;
-    category_id: number | string;
     base_price: string;
     sale_price: string;
     professional_price: string;
@@ -98,6 +97,34 @@ interface ProductFormState {
     min_order_qty_professional: number;
     visibility: ProductVisibility;
     stock: number;
+}
+
+/**
+ * Where a (possibly already-saved) category id sits in the tree, so the two
+ * selects below can be preset without the caller needing to know whether the
+ * id is a root or one of its children.
+ */
+function locateCategory(
+    categories: Category[],
+    categoryId: number | string | null | undefined,
+): { mainId: number | string; subId: number | string } {
+    const id = categoryId === null || categoryId === undefined || categoryId === ''
+        ? null
+        : Number(categoryId);
+
+    if (id !== null) {
+        for (const root of categories) {
+            if (root.id === id) {
+                return { mainId: root.id, subId: '' };
+            }
+            const child = (root.children ?? []).find((c) => c.id === id);
+            if (child) {
+                return { mainId: root.id, subId: child.id };
+            }
+        }
+    }
+
+    return { mainId: categories[0]?.id ?? '', subId: '' };
 }
 
 /** Map a saved product's variants back into editable drafts. */
@@ -141,7 +168,6 @@ export default function ProductForm({
         name: product?.name ?? '',
         sku: product?.sku ?? '',
         description: product?.description ?? '',
-        category_id: product?.category_id ?? categories[0]?.id ?? '',
         base_price: product?.base_price ?? '',
         sale_price: product?.sale_price ?? '',
         professional_price: product?.professional_price ?? '',
@@ -150,6 +176,21 @@ export default function ProductForm({
         visibility: product?.visibility ?? 'both',
         stock: product?.stock ?? 1,
     });
+
+    // Two selects standing in for one `category_id` column: a required main
+    // category, and — only when that category actually has subcategories —
+    // an optional, more specific one. Whichever is more specific is what
+    // gets submitted.
+    const initialCategory = locateCategory(categories, product?.category_id);
+    const [categoryMainId, setCategoryMainId] = useState<number | string>(
+        initialCategory.mainId,
+    );
+    const [categorySubId, setCategorySubId] = useState<number | string>(
+        initialCategory.subId,
+    );
+    const subCategories =
+        categories.find((c) => c.id === Number(categoryMainId))?.children ??
+        [];
 
     const [media, setMedia] = useState<MediaItem[]>(
         buildExistingItems((product?.media ?? []) as ExistingMedia[]),
@@ -190,6 +231,7 @@ export default function ProductForm({
 
         const payload = {
             ...data,
+            category_id: categorySubId || categoryMainId,
             status,
             // Order the gallery exactly as shown; new files upload in sequence
             // and existing ids carry their new positions.
@@ -342,12 +384,16 @@ export default function ProductForm({
                                 </Field>
                             </div>
 
-                            <Field label="Catégorie" error={errors.category_id}>
+                            <Field
+                                label="Catégorie principale"
+                                error={errors.category_id}
+                            >
                                 <select
-                                    value={data.category_id}
-                                    onChange={(e) =>
-                                        set('category_id', e.target.value)
-                                    }
+                                    value={categoryMainId}
+                                    onChange={(e) => {
+                                        setCategoryMainId(e.target.value);
+                                        setCategorySubId('');
+                                    }}
                                     className={INPUT}
                                 >
                                     {categories.map((c) => (
@@ -357,6 +403,28 @@ export default function ProductForm({
                                     ))}
                                 </select>
                             </Field>
+
+                            {subCategories.length > 0 && (
+                                <Field
+                                    label="Sous-catégorie"
+                                    hint="Optionnel — laissez sur « Aucune » pour classer directement dans la catégorie principale."
+                                >
+                                    <select
+                                        value={categorySubId}
+                                        onChange={(e) =>
+                                            setCategorySubId(e.target.value)
+                                        }
+                                        className={INPUT}
+                                    >
+                                        <option value="">— Aucune —</option>
+                                        {subCategories.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.translated_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </Field>
+                            )}
 
                             <Field
                                 label="Référence (SKU)"

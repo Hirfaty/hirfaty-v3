@@ -69,7 +69,7 @@
             // المجاميع المعروضة هي مجموع كل الطلبات التي قسّمتها
             // CheckoutService.
             $subtotal = $orders->sum(fn ($o) => (float) $o->total_amount);
-            $delivery = $orders->sum(fn ($o) => (float) $o->amana_fee);
+            $delivery = $orders->sum(fn ($o) => (float) $o->delivery_fee);
             $first = $orders->first();
         @endphp
 
@@ -77,9 +77,11 @@
             مرحباً {{ $user->first_name }}، تلقينا طلبك بنجاح.
             @if($orders->count() > 1)
                 يشمل طلبك {{ $orders->count() }} ورشات مختلفة، لذا تجده أدناه
-                مفصّلاً متجراً بمتجر — سيقوم كل واحد بتحضير وشحن نصيبه.
+                مفصّلاً ورشةً بورشة — تحضّر كل ورشة نصيبها ونجمع الطلب كاملاً
+                قبل إرساله.
             @else
-                سيقوم البائع بتحضيره وستصلك رسالة بريد إلكتروني فور شحنه.
+                ستقوم الورشة بتحضيره وستصلك رسالة بريد إلكتروني فور انطلاقه
+                إليك.
             @endif
         </p>
 
@@ -95,6 +97,13 @@
             <div class="order-meta-row">
                 <span class="order-meta-value">{{ $first->shipping_address }}</span>
                 <span class="order-meta-label">عنوان التوصيل</span>
+            </div>
+            {{-- الدفع عند الاستلام هو الوسيلة الوحيدة المقبولة عند إتمام
+                 الطلب (CheckoutRequest::PAYMENT_METHODS)، لذا نوضّح للمشتري
+                 أنه لم يُخصم منه أي مبلغ بعد. --}}
+            <div class="order-meta-row">
+                <span class="order-meta-value">الدفع عند الاستلام</span>
+                <span class="order-meta-label">طريقة الدفع</span>
             </div>
         </div>
 
@@ -134,19 +143,20 @@
             </div>
             <div class="total-row">
                 <span>{{ number_format($delivery, 2) }} د.م TTC</span>
-                <span>توصيل أمانة</span>
+                <span>التوصيل</span>
             </div>
             <div class="total-row final">
                 <span>{{ number_format($subtotal + $delivery, 2) }} د.م TTC</span>
-                <span>الإجمالي</span>
+                <span>الإجمالي المستحق عند الاستلام</span>
             </div>
         </div>
 
         <div class="shipping-box">
-            <p class="label">التوصيل عبر أمانة</p>
+            <p class="label">التوصيل</p>
             <p>
-                سيتم شحن طلبك عبر أمانة. ستتلقى رقم التتبع بالبريد الإلكتروني
-                بمجرد تسليم البائع للطرد.
+                سيتم توصيل طلبك إلى العنوان المذكور أعلاه، عادةً خلال 3 إلى 7
+                أيام في جميع أنحاء المغرب. ستتلقى رقم التتبع بالبريد الإلكتروني
+                بمجرد انطلاق الطرد.
             </p>
         </div>
 
@@ -162,20 +172,20 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number">1</div>
-                <p class="step-text"><strong>يحضر كل بائع</strong> نصيبه من طلبك ويسلمه لأمانة.</p>
+                <p class="step-text"><strong>{{ $orders->count() > 1 ? 'تحضّر كل ورشة' : 'تحضّر الورشة' }}</strong> طلبك وتسلّمه إلينا.</p>
             </li>
             <li class="step">
                 <div class="step-number">2</div>
-                <p class="step-text"><strong>ستتلقى بريداً إلكترونياً</strong> برقم تتبع أمانة لكل نصيب.</p>
+                <p class="step-text"><strong>ستتلقى بريداً إلكترونياً</strong> برقم التتبع بمجرد خروج الطلب للتوصيل.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
-                <p class="step-text"><strong>أمانة توصل</strong> طلبك إلى العنوان المحدد.</p>
+                <p class="step-text"><strong>يُسلَّم طلبك</strong> إلى العنوان المحدد.</p>
             </li>
         </ul>
 
         <div class="footer">
-            <p>هل لديك سؤال؟ تواصل مع البائع من صفحة طلباتك.</p>
+            <p>هل لديك سؤال؟ تواصل معنا وسنتابع الأمر مع الورشة.</p>
             <p>
                 © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
                 <a href="{{ config('app.url') }}/orders">طلباتي</a>

@@ -21,6 +21,9 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .reason-box { border: 1px solid rgba(153,27,27,0.2); background: rgba(153,27,27,0.05); padding: 16px; margin: 24px 0; }
         .reason-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #991B1B; margin-bottom: 8px; }
         .reason-box p { font-size: 13px; line-height: 1.7; color: rgba(28,25,23,0.75); }
@@ -48,26 +51,43 @@
         </h1>
 
         <p class="body-text">
-            Bonjour {{ $user->first_name }}, {{ $order->store->store_name }} a annulé
-            votre commande {{ $order->reference }}. Si vous avez déjà payé, elle vous
-            sera remboursée.
+            {{-- Volontairement sans nommer l'auteur de l'annulation : ce même
+                 email part aussi quand c'est l'acheteur qui annule depuis son
+                 espace commandes (Buyer\OrderController::cancel), où « l'atelier
+                 a annulé votre commande » serait tout simplement faux. --}}
+            @if($orders->count() > 1)
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }}, concernant
+                {{ $orders->count() }} ateliers, a été annulée. Rien ne vous a été
+                débité — le paiement se fait uniquement à la livraison.
+            @else
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }} de
+                {{ $orders->first()->store->store_name }} a été annulée. Rien ne vous a
+                été débité — le paiement se fait uniquement à la livraison.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Numéro de commande</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Boutique</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
         </div>
 
-        @if($order->cancellation_reason)
+        @if($orders->count() > 1)
+        {{-- Un bloc par atelier concerné, pour qu'une annulation touchant
+             plusieurs vendeurs reste lisible comme un seul et même achat. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-name">{{ $order->store->store_name }}</span>
+            <span class="store-ref">{{ $order->reference }}</span>
+        </div>
+        @endforeach
+        @endif
+
+        @if($orders->first()->cancellation_reason)
         <div class="reason-box">
-            <p class="label">Raison indiquée par le vendeur</p>
-            <p>{{ $order->cancellation_reason }}</p>
+            <p class="label">Raison indiquée</p>
+            <p>{{ $orders->first()->cancellation_reason }}</p>
         </div>
         @endif
 
@@ -80,7 +100,7 @@
         <hr class="divider" />
 
         <div class="footer">
-            <p>Une question sur cette annulation ? Contactez le vendeur depuis votre espace commandes.</p>
+            <p>Une question sur cette annulation ? Contactez-nous depuis votre espace commandes.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
                 <a href="{{ config('app.url') }}/orders">Mes commandes</a>

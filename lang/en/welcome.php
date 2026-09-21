@@ -71,6 +71,8 @@ return [
     // `navCategories` — see `EXPLORE_CATEGORIES` in welcome.tsx.
     'categories_grid.eyebrow' => 'Browse the souk',
     'categories_grid.heading' => 'Explore by category',
+    'categories_grid.prev' => 'Previous category',
+    'categories_grid.next' => 'Next category',
     'categories_grid.pottery' => 'Pottery & Ceramics',
     'categories_grid.textile' => 'Tableware & Celebrations',
     'categories_grid.art' => 'Painting & Art',

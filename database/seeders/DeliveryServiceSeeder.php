@@ -2,23 +2,23 @@
 
 namespace Database\Seeders;
 
-use App\Models\DeliveryOption;
+use App\Models\DeliveryService;
 use Illuminate\Database\Seeder;
 
-class DeliveryOptionSeeder extends Seeder
+class DeliveryServiceSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        DeliveryOption::firstOrCreate(
+        DeliveryService::updateOrCreate(
             ['slug' => 'amana'],
             [
                 'name' => 'Amana',
                 'description' => 'Livraison partout au Maroc via Amana.',
-                'price' => 20.00,
                 'is_active' => true,
+                'sort_order' => 1,
             ]
         );
     }

@@ -21,6 +21,9 @@
         .order-meta-row:last-child { border-bottom: none; }
         .order-meta-label { color: #78716C; }
         .order-meta-value { color: #1C1917; font-weight: 500; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .reason-box { border: 1px solid rgba(153,27,27,0.2); background: rgba(153,27,27,0.05); padding: 16px; margin: 24px 0; }
         .reason-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #991B1B; margin-bottom: 8px; }
         .reason-box p { font-size: 13px; line-height: 1.7; color: rgba(28,25,23,0.75); }
@@ -48,25 +51,43 @@
         </h1>
 
         <p class="body-text">
-            Hello {{ $user->first_name }}, {{ $order->store->store_name }} has cancelled
-            your order {{ $order->reference }}. If you already paid, you'll be refunded.
+            {{-- Deliberately does not name who cancelled: this same email
+                 goes out when the buyer cancels from their own orders page
+                 (Buyer\OrderController::cancel), where "the workshop has
+                 cancelled your order" would be plainly wrong. --}}
+            @if($orders->count() > 1)
+                Hello {{ $user->first_name }}, your order {{ $reference }}, covering
+                {{ $orders->count() }} workshops, has been cancelled. Nothing has
+                been charged — you only ever pay on delivery.
+            @else
+                Hello {{ $user->first_name }}, your order {{ $reference }} from
+                {{ $orders->first()->store->store_name }} has been cancelled. Nothing
+                has been charged — you only ever pay on delivery.
+            @endif
         </p>
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Order number</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Store</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
         </div>
 
-        @if($order->cancellation_reason)
+        @if($orders->count() > 1)
+        {{-- One block per workshop involved, so a cancellation touching
+             several sellers still reads as one purchase. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-name">{{ $order->store->store_name }}</span>
+            <span class="store-ref">{{ $order->reference }}</span>
+        </div>
+        @endforeach
+        @endif
+
+        @if($orders->first()->cancellation_reason)
         <div class="reason-box">
-            <p class="label">Reason given by the seller</p>
-            <p>{{ $order->cancellation_reason }}</p>
+            <p class="label">Reason given</p>
+            <p>{{ $orders->first()->cancellation_reason }}</p>
         </div>
         @endif
 
@@ -79,7 +100,7 @@
         <hr class="divider" />
 
         <div class="footer">
-            <p>Questions about this cancellation? Contact the seller from your orders page.</p>
+            <p>Questions about this cancellation? Contact us from your orders page.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
                 <a href="{{ config('app.url') }}/orders">My orders</a>

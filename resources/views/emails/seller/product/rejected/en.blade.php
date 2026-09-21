@@ -48,8 +48,12 @@
         </h1>
 
         <p class="body-text">
+            {{-- Sellers neither file nor edit their own listings — the Hirfaty
+                 team does it for them — so this asks them to get in touch
+                 rather than to go and edit something they cannot edit. --}}
             Hello {{ $user->first_name }}, your product has been reviewed by our team.
-            It cannot be published as-is, but you can edit it and resubmit.
+            It cannot be published as it stands. Send us what's missing and
+            we'll correct the listing for you.
         </p>
 
         <div class="product-card">
@@ -90,7 +94,7 @@
             <p>You're receiving this because you're a seller on Hirfaty.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — The Moroccan artisan platform.<br>
-                <a href="{{ config('app.url') }}/seller/products">Manage my products</a>
+                <a href="{{ config('app.url') }}/seller/products">My products</a>
                 &nbsp;·&nbsp;
                 <a href="{{ config('app.url') }}/seller/dashboard">My dashboard</a>
             </p>

@@ -9,6 +9,8 @@ return [
     'view' => 'Voir',
     'search' => 'Rechercher',
     'filter' => 'Filtrer',
+    'expand' => 'Développer',
+    'collapse' => 'Réduire',
     'loading' => 'Chargement...',
     'confirm' => 'Êtes-vous sûr ?',
     'back' => 'Retour',

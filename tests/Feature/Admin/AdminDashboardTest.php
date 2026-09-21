@@ -88,7 +88,7 @@ test('the sales trend totals orders placed this month and excludes cancelled one
         'status' => 'delivered',
         'total_amount' => 200,
         'platform_fee' => 40,
-        'amana_fee' => 20,
+        'delivery_fee' => 20,
         'seller_earnings' => 140,
         'shipping_address' => 'Test Address',
     ]);
@@ -99,7 +99,7 @@ test('the sales trend totals orders placed this month and excludes cancelled one
         'status' => 'cancelled',
         'total_amount' => 500,
         'platform_fee' => 100,
-        'amana_fee' => 20,
+        'delivery_fee' => 20,
         'seller_earnings' => 380,
         'shipping_address' => 'Test Address',
     ]);

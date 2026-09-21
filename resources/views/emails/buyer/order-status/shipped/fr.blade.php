@@ -24,6 +24,9 @@
         .tracking-box { border: 1px solid rgba(193,82,42,0.3); background: rgba(193,82,42,0.06); padding: 20px; margin: 24px 0; text-align: center; }
         .tracking-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; margin-bottom: 8px; }
         .tracking-box .number { font-size: 22px; font-weight: 700; color: #C1522A; letter-spacing: 0.06em; }
+        .store-block { border: 1px solid rgba(28,25,23,0.12); margin: 24px 0; padding: 14px 16px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .store-name { font-size: 14px; font-weight: 600; color: #1C1917; }
+        .store-ref { font-size: 11px; color: #78716C; }
         .shipping-box { background: rgba(28,25,23,0.04); padding: 16px; margin: 24px 0; }
         .shipping-box p { font-size: 13px; line-height: 1.7; color: rgba(28,25,23,0.7); }
         .shipping-box .label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: #78716C; margin-bottom: 8px; }
@@ -47,6 +50,15 @@
             <a href="{{ config('app.url') }}" class="logo">Hirfaty<span>.</span></a>
         </div>
 
+        @php
+            // D'une seule expédition groupée à un colis par atelier, un
+            // numéro de suivi partagé signifie un seul colis en réalité — le
+            // bureau de Hirfaty collecte puis expédie la commande comme un
+            // seul job (voir Admin\OrderController). Listés au cas où
+            // l'historique du groupe en porte plusieurs.
+            $trackingNumbers = $orders->pluck('tracking_number')->filter()->unique()->values();
+        @endphp
+
         <span class="badge">🚚 Commande expédiée</span>
 
         <p class="eyebrow">En chemin vers vous</p>
@@ -57,40 +69,56 @@
         </h1>
 
         <p class="body-text">
-            Bonjour {{ $user->first_name }}, {{ $order->store->store_name }} vient de
-            remettre votre commande {{ $order->reference }} à Amana.
+            @if($orders->count() > 1)
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }} est
+                partie en livraison — les {{ $orders->count() }} ateliers
+                qu'elle concerne ont chacun préparé leur part.
+            @else
+                Bonjour {{ $user->first_name }}, votre commande {{ $reference }} de
+                {{ $orders->first()->store->store_name }} est partie en livraison.
+            @endif
         </p>
 
+        @if($trackingNumbers->count() === 1)
         <div class="tracking-box">
-            <p class="label">Numéro de suivi Amana</p>
-            <p class="number">{{ $order->tracking_number }}</p>
+            <p class="label">Numéro de suivi</p>
+            <p class="number">{{ $trackingNumbers->first() }}</p>
         </div>
+        @endif
 
         <div class="order-meta">
             <div class="order-meta-row">
                 <span class="order-meta-label">Numéro de commande</span>
-                <span class="order-meta-value">{{ $order->reference }}</span>
-            </div>
-            <div class="order-meta-row">
-                <span class="order-meta-label">Boutique</span>
-                <span class="order-meta-value">{{ $order->store->store_name }}</span>
+                <span class="order-meta-value">{{ $reference }}</span>
             </div>
             <div class="order-meta-row">
                 <span class="order-meta-label">Livraison à</span>
-                <span class="order-meta-value">{{ $order->shipping_address }}</span>
+                <span class="order-meta-value">{{ $orders->first()->shipping_address }}</span>
             </div>
         </div>
 
+        @if($orders->count() > 1)
+        {{-- Un bloc par atelier, pour que le colis groupé reste lisible
+             comme un seul et même achat. --}}
+        @foreach($orders as $order)
+        <div class="store-block">
+            <span class="store-name">{{ $order->store->store_name }}</span>
+            <span class="store-ref">{{ $order->reference }}{{ $order->tracking_number && $trackingNumbers->count() > 1 ? ' · '.$order->tracking_number : '' }}</span>
+        </div>
+        @endforeach
+        @endif
+
         <div class="shipping-box">
-            <p class="label">Livraison via Amana</p>
+            <p class="label">Livraison</p>
             <p>
-                Amana livre en général sous 3 à 7 jours partout au Maroc. Gardez
-                votre numéro de suivi à portée de main si le livreur vous appelle.
+                La livraison prend en général 3 à 7 jours partout au Maroc.
+                Gardez votre téléphone à portée de main : le livreur vous
+                appelle avant de déposer le colis.
             </p>
         </div>
 
         <div class="cta-wrap">
-            <a href="{{ config('app.url') }}/orders/{{ $order->reference }}" class="cta-btn">
+            <a href="{{ config('app.url') }}/orders" class="cta-btn">
                 Suivre ma commande →
             </a>
         </div>
@@ -101,11 +129,11 @@
         <ul class="steps">
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Confirmée</strong> par le vendeur.</p>
+                <p class="step-text"><strong>Confirmée</strong> par {{ $orders->count() > 1 ? 'les ateliers' : "l'atelier" }}.</p>
             </li>
             <li class="step">
                 <div class="step-number done">✓</div>
-                <p class="step-text"><strong>Expédiée</strong> via Amana.</p>
+                <p class="step-text"><strong>Partie en livraison</strong>.</p>
             </li>
             <li class="step">
                 <div class="step-number">3</div>
@@ -114,7 +142,7 @@
         </ul>
 
         <div class="footer">
-            <p>Vous avez une question ? Contactez le vendeur depuis votre espace commandes.</p>
+            <p>Vous avez une question ? Contactez-nous depuis votre espace commandes.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
                 <a href="{{ config('app.url') }}/orders">Mes commandes</a>

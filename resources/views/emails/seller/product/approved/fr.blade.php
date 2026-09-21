@@ -90,7 +90,7 @@
             <p>Vous recevez cet email car vous êtes vendeur sur Hirfaty.</p>
             <p>
                 © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
-                <a href="{{ config('app.url') }}/seller/products">Gérer mes produits</a>
+                <a href="{{ config('app.url') }}/seller/products">Mes produits</a>
                 &nbsp;·&nbsp;
                 <a href="{{ config('app.url') }}/seller/dashboard">Mon tableau de bord</a>
             </p>

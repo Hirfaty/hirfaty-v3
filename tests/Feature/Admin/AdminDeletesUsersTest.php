@@ -22,7 +22,7 @@ function makeOrderForTest(User $buyer, Store $store, City $city): Order
         'status' => 'pending',
         'total_amount' => 100,
         'platform_fee' => 5,
-        'amana_fee' => 15,
+        'delivery_fee' => 15,
         'seller_earnings' => 80,
         'shipping_address' => 'Test Address',
     ]);

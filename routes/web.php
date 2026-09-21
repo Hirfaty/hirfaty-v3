@@ -170,9 +170,9 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/cities/{city}', [Admin\CityController::class, 'destroy'])->name('cities.destroy');
 
         /*
-         * Amana's rate card. Index only — these are Amana's figures, loaded by
-         * AmanaDeliveryRateSeeder, so there is deliberately no route here that
-         * could edit or delete one. See Admin\DeliveryRateController.
+         * Delivery rate cards. Index only — these are the carriers' figures,
+         * loaded by DeliveryRateSeeder, so there is deliberately no route here
+         * that could edit or delete one. See Admin\DeliveryRateController.
          */
         Route::get('/delivery-rates', [Admin\DeliveryRateController::class, 'index'])->name('delivery-rates.index');
     });
