@@ -55,6 +55,21 @@ Route::inertia('/how-it-works', 'how-it-works')->name('how-it-works');
 Route::inertia('/contact', 'contact')->name('contact');
 
 /*
+ * The rest of the footer's pages, same deal — copy lives in `pages.php`.
+ *
+ * `affiliate` and `rewards` describe programmes that do not exist in the
+ * backend yet: there is no partner record, no referral attribution and no
+ * points ledger. Both pages say so rather than implying otherwise.
+ *
+ * `/privacy` closes a long-standing dead link: every transactional email
+ * footer has pointed at it since they were written, and until now it 404'd.
+ */
+Route::inertia('/affiliate', 'affiliate')->name('affiliate');
+Route::inertia('/rewards', 'rewards')->name('rewards');
+Route::inertia('/privacy', 'privacy')->name('privacy');
+Route::inertia('/shipping-policy', 'shipping-policy')->name('shipping-policy');
+
+/*
  * No app-level `verification.verify` route here on purpose — Fortify already
  * registers one at the same URI (`/email/verify/{id}/{hash}`) bound to
  * VerifyEmailController, which delegates the redirect to the

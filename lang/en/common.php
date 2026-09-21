@@ -200,6 +200,19 @@ return [
 
     'footer.company.title' => 'Company',
     'footer.company.contact' => 'Contact',
+    // ── Footer columns (Explore / About us / Customer care) ──────────────
+    'footer.explore.title' => 'Explore',
+    'footer.explore.affiliate' => 'Affiliate program',
+    'footer.explore.blog' => 'Blog',
+    'footer.explore.rewards' => 'Rewards',
+
+    'footer.about.title' => 'About us',
+    'footer.about.about' => 'About us',
+
+    'footer.care.title' => 'Customer care',
+    'footer.care.privacy' => 'Privacy policy',
+    'footer.care.shipping' => 'Shipping policy',
+    'footer.care.bulk' => 'Buy in bulk',
 
     'footer.follow.title' => 'Follow',
 

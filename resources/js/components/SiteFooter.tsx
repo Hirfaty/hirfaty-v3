@@ -86,31 +86,50 @@ function NewsletterForm() {
  * Every entry points somewhere real. The previous version listed twelve links
  * that all pointed at `#` — pricing, a seller help centre, press, terms — for
  * pages that do not exist; a dead link in a footer is worse than no link, so
- * only the four that have a destination are left.
+ * nothing goes in here without a route behind it.
+ *
+ * "Return and refunds" is deliberately absent: the policy has not been
+ * decided, so there is no page to link to yet. Add the route, the page and
+ * the entry together when it is.
  */
 const NAV_COLUMNS = [
     {
-        titleKey: 'common.footer.buyers.title',
+        titleKey: 'common.footer.explore.title',
         links: [
             { labelKey: 'common.footer.buyers.explore', href: '/products' },
-            { labelKey: 'common.footer.buyers.how', href: '/how-it-works' },
-        ],
-    },
-    {
-        titleKey: 'common.footer.artisans.title',
-        // The artisan form, not the buyer flow: /register is now email-only
-        // signup for shoppers.
-        links: [
+            { labelKey: 'common.footer.explore.blog', href: '/blog' },
+            { labelKey: 'common.footer.explore.rewards', href: '/rewards' },
             {
-                labelKey: 'common.footer.artisans.sell',
-                href: sell.url(),
+                labelKey: 'common.footer.explore.affiliate',
+                href: '/affiliate',
             },
         ],
     },
     {
-        titleKey: 'common.footer.company.title',
+        titleKey: 'common.footer.about.title',
         links: [
+            { labelKey: 'common.footer.about.about', href: '/about' },
             { labelKey: 'common.footer.company.contact', href: '/contact' },
+            { labelKey: 'common.footer.buyers.how', href: '/how-it-works' },
+            // The artisan signup, not the buyer one: /register is email-only
+            // shopper signup.
+            { labelKey: 'common.footer.artisans.sell', href: sell.url() },
+        ],
+    },
+    {
+        titleKey: 'common.footer.care.title',
+        links: [
+            {
+                labelKey: 'common.footer.care.shipping',
+                href: '/shipping-policy',
+            },
+            { labelKey: 'common.footer.care.privacy', href: '/privacy' },
+            // Trade buying already has a page that explains wholesale rates
+            // and takes the request — no second one to keep in sync.
+            {
+                labelKey: 'common.footer.care.bulk',
+                href: '/professional-account',
+            },
         ],
     },
 ] as const;

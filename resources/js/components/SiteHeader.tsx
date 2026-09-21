@@ -501,11 +501,16 @@ export const SiteHeader = ({
                                 className="w-64 rounded-none rounded-xl border-ink/15 bg-paper p-0"
                             >
                                 <div className="border-b border-ink/10 px-5 py-4">
-                                    <p className="eyebrow">Mon compte</p>
+                                    <p className="eyebrow">
+                                        {t('header.account_heading')}
+                                    </p>
                                     <p className="mt-1 text-xs text-ink-soft">
-                                        {user.first_name
-                                            ? `Bonjour, ${user.first_name}`
-                                            : `Bonjour, ${user.email}`}
+                                        {t(
+                                            'header.account_greeting',
+                                        ).replace(
+                                            ':name',
+                                            user.first_name ?? user.email,
+                                        )}
                                     </p>
                                 </div>
                                 <div className="p-2">
@@ -524,7 +529,7 @@ export const SiteHeader = ({
                                                 href={route('buyer.dashboard')}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Mon compte
+                                                {t('header.account_my_account')}
                                             </Link>
                                             <Link
                                                 href={route(
@@ -532,13 +537,13 @@ export const SiteHeader = ({
                                                 )}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Mes commandes
+                                                {t('header.account_orders')}
                                             </Link>
                                             <Link
                                                 href={route('buyer.wishlist')}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Mes coups de cœur
+                                                {t('header.account_wishlist')}
                                             </Link>
                                             <Link
                                                 href={route(
@@ -546,7 +551,7 @@ export const SiteHeader = ({
                                                 )}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Paiement
+                                                {t('header.account_payment')}
                                             </Link>
                                             <button
                                                 onClick={() =>
@@ -554,7 +559,7 @@ export const SiteHeader = ({
                                                 }
                                                 className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Déconnexion
+                                                {t('header.account_logout')}
                                             </button>
                                         </>
                                     ) : user.role === 'seller' ? (
@@ -563,7 +568,7 @@ export const SiteHeader = ({
                                                 href={route('seller.dashboard')}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Dashboard
+                                                {t('header.account_dashboard')}
                                             </Link>
                                             <button
                                                 onClick={() =>
@@ -571,7 +576,7 @@ export const SiteHeader = ({
                                                 }
                                                 className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Déconnexion
+                                                {t('header.account_logout')}
                                             </button>
                                         </>
                                     ) : user.role === 'super_admin' ? (
@@ -580,7 +585,9 @@ export const SiteHeader = ({
                                                 href={route('admin.dashboard')}
                                                 className="block px-3 py-2 text-sm text-ink transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Hirfaty Dashboard
+                                                {t(
+                                                    'header.account_admin_dashboard',
+                                                )}
                                             </Link>
                                             <button
                                                 onClick={() =>
@@ -588,7 +595,7 @@ export const SiteHeader = ({
                                                 }
                                                 className="block w-full px-3 py-2 text-left text-sm text-terracotta transition-colors hover:bg-cream-deep/60"
                                             >
-                                                Déconnexion
+                                                {t('header.account_logout')}
                                             </button>
                                         </>
                                     ) : null}
@@ -597,7 +604,7 @@ export const SiteHeader = ({
                                         href="/seller/dashboard"
                                         className="block px-3 py-2 text-sm text-ink-soft transition-colors hover:bg-cream-deep/60 hover:text-ink"
                                     >
-                                        Espace vendeur
+                                        {t('header.account_seller_space')}
                                     </Link>
                                 </div>
                             </PopoverContent>
@@ -611,7 +618,7 @@ export const SiteHeader = ({
                                     : 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
                             }`}
                         >
-                            Se connecter
+                            {t('header.account_login')}
                         </Link>
                     )}
 

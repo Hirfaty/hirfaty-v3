@@ -130,14 +130,14 @@ export default function RegionMenu({ light = false }: { light?: boolean }) {
                  * Says plainly that a converted price is a guide, not the
                  * bill. Dropped for the home market, where it is noise.
                  */}
-                {!currency.is_base && (
+                {/* {!currency.is_base && (
                     <p className="mt-2 border-t border-souk-brown/10 px-2.5 pt-2 text-[11px] leading-relaxed text-ink-soft">
                         {t('common.currency_note').replace(
                             ':currency',
                             currency.code,
                         )}
                     </p>
-                )}
+                )} */}
             </PopoverContent>
         </Popover>
     );

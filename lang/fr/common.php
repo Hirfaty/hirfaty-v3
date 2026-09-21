@@ -202,6 +202,19 @@ return [
 
     'footer.company.title' => 'Société',
     'footer.company.contact' => 'Contact',
+    // ── Colonnes du pied de page (Explorer / À propos / Service client) ──
+    'footer.explore.title' => 'Explorer',
+    'footer.explore.affiliate' => 'Programme d’affiliation',
+    'footer.explore.blog' => 'Journal',
+    'footer.explore.rewards' => 'Récompenses',
+
+    'footer.about.title' => 'À propos',
+    'footer.about.about' => 'Qui sommes-nous',
+
+    'footer.care.title' => 'Service client',
+    'footer.care.privacy' => 'Politique de confidentialité',
+    'footer.care.shipping' => 'Politique de livraison',
+    'footer.care.bulk' => 'Acheter en gros',
 
     'footer.follow.title' => 'Suivre',
 

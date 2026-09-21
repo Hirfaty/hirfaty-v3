@@ -1,10 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
-import Reveal from '@/components/home/Reveal';
 import { WarmFill } from '@/components/WarmFill';
-import useSnapCarousel from '@/hooks/use-snap-carousel';
-import { useTranslation } from '@/hooks/use-translation';
 
 type CategoryTile = {
     key: number;
@@ -14,12 +12,48 @@ type CategoryTile = {
     label: string;
 };
 
-/** One tile: photograph (or placeholder), scrim, and label. */
-function CategoryTileCard({ tile }: { tile: CategoryTile }) {
+/**
+ * How many tiles the strip should hold before it is duplicated.
+ *
+ * The marquee works by rendering the set twice and sliding the track by half
+ * its width (see the `marquee` keyframes in app.css), so the seam lands
+ * exactly where the second copy begins. That only reads as continuous if one
+ * copy is already wider than the viewport — with three categories it would
+ * slide a short row into empty space and snap back. Repeating the set up to
+ * this many tiles first guarantees enough width at any screen size.
+ */
+const MIN_TILES_PER_LAP = 8;
+
+/**
+ * One tile: photograph (or placeholder), scrim, and label.
+ *
+ * `decorative` marks a tile in the duplicated half of the marquee. Those are
+ * there to make the wrap seamless and nothing else, so they are taken out of
+ * the tab order — `aria-hidden` on the wrapper hides them from a screen
+ * reader but leaves them perfectly tabbable, which would mean tabbing through
+ * every category twice.
+ */
+function CategoryTileCard({
+    tile,
+    decorative = false,
+}: {
+    tile: CategoryTile;
+    decorative?: boolean;
+}) {
     return (
         <Link
             href={tile.href}
-            className="group relative block aspect-[5/4] overflow-hidden rounded-md bg-souk-brown/5 lg:aspect-[16/11]"
+            tabIndex={decorative ? -1 : undefined}
+            aria-hidden={decorative || undefined}
+            /*
+             * The spacing is a margin on the tile, not a `gap` on the track.
+             * The marquee slides by exactly -50% of the track, so the two
+             * halves must be the same width *including* the space between
+             * them — with a container `gap` the seam lands half a gap out and
+             * the loop visibly stutters once per lap. `me-` so it mirrors
+             * under RTL.
+             */
+            className="group relative me-4 block aspect-[5/4] w-[68vw] shrink-0 overflow-hidden rounded-md bg-souk-brown/5 sm:w-[40vw] lg:aspect-[16/11] lg:w-[22vw] xl:w-[18vw]"
         >
             {tile.image ? (
                 <img
@@ -39,11 +73,9 @@ function CategoryTileCard({ tile }: { tile: CategoryTile }) {
                     />
                 </WarmFill>
             )}
-            {/* Scrim only at the foot, where the
-                        label sits — the rest of the
-                        photograph stays true, since
-                        nothing else on the tile needs to
-                        read over it. */}
+            {/* Scrim only at the foot, where the label sits — the rest of the
+                photograph stays true, since nothing else needs to read over
+                it. */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
@@ -65,6 +97,28 @@ function CategoryTileCard({ tile }: { tile: CategoryTile }) {
     );
 }
 
+/**
+ * The category strip, as a marquee.
+ *
+ * Replaced a swipable rail below `sm` and a six-column grid above it. One
+ * continuously drifting strip now serves both, which is why the carousel hook
+ * and its arrows are gone: there is nothing to page through when the row
+ * never stops.
+ *
+ * Full-bleed rather than inside the container — a marquee that starts and
+ * ends at the text column reads as a row that happens to move, not as
+ * something passing through.
+ *
+ * Three things keep it usable rather than merely decorative:
+ *
+ *   - it pauses on hover and on keyboard focus, because every tile is a link
+ *     and a moving target is a hard one to click;
+ *   - `prefers-reduced-motion` stops it outright, leaving a strip that can
+ *     still be scrolled by hand — the same call `useSlideshow` makes for the
+ *     hero;
+ *   - the duplicate half is `aria-hidden`, so a screen reader hears each
+ *     category once rather than twice.
+ */
 export default function ExploreByCategories() {
     // The same top-level categories the header menu lists, shared from
     // HandleInertiaRequests — subcategories are not tiles.
@@ -76,101 +130,97 @@ export default function ExploreByCategories() {
         }>;
     }>().props;
 
-    const { t, isRTL } = useTranslation();
-
-    const categoryTiles: CategoryTile[] = (navCategories ?? []).map(
-        (category) => ({
-            key: category.id,
-            image: category.image_url,
-            href: `/products?category_id=${category.id}`,
-            label: category.translated_name,
-        }),
+    // Resolved at first render rather than in an effect: starting the
+    // animation and then stopping it would already have moved the strip for
+    // someone who asked for no motion.
+    const [reduced] = useState(
+        () =>
+            typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
 
-    /*
-     * Behind the wheel on narrow screens, where the categories become a
-     * one-per-swipe carousel rather than a grid. Reuses the hero's rail logic
-     * (paging tween, wrap-around, reduced-motion, display:none reset), and —
-     * unlike the hero — never advances on its own, because these are
-     * destinations, not something to watch. Hooks must run before the empty
-     * check below, so this is called even when there are no tiles to show.
-     */
-    const { track, step, order, pauseProps } =
-        useSnapCarousel<HTMLUListElement>(
-            categoryTiles.length,
-            Number.POSITIVE_INFINITY,
-            isRTL,
-        );
+    const categories: CategoryTile[] = (navCategories ?? []).map((category) => ({
+        key: category.id,
+        image: category.image_url,
+        href: `/products?category_id=${category.id}`,
+        label: category.translated_name,
+    }));
 
-    if (categoryTiles.length === 0) {
+    if (categories.length === 0) {
         return null;
     }
 
-    const arrow = `absolute top-1/2 z-10 grid h-10 w-10 -translate-y-1/2 rotate-45 place-items-center rounded-sm bg-souk-paper/95 text-souk-brown shadow-lg transition-colors duration-300 hover:bg-souk-brown hover:text-souk-cream`;
-    const chevron = `h-4.5 w-4.5 -rotate-45 rtl:rotate-[135deg]`;
+    // One lap of the marquee — the set repeated until it is wide enough to
+    // cover the screen on its own. See MIN_TILES_PER_LAP.
+    const lap: CategoryTile[] = [];
+
+    while (lap.length < MIN_TILES_PER_LAP) {
+        lap.push(...categories);
+    }
 
     return (
-        <section className="bg-souk-paper py-5 lg:py-4">
-            <div className="container">
-                {/* The grid these tiles form is only comfortable four-or-more
-                    columns across. Below `sm` there is no room for it, so the
-                    same links become a swipable rail — one category per
-                    screen, arrows to page, a swipe to browse (see the hook
-                    above). `sm:hidden` hides it where the grid takes over. */}
-                <div {...pauseProps} className="relative sm:hidden">
-                    <ul
-                        ref={track}
-                        className="flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    >
-                        {order.map((tileIndex, position) => (
-                            // Positional, because `order` repeats the first
-                            // tile at the end — see `useSnapCarousel`.
-                            <li
-                                key={position}
-                                className="relative w-full shrink-0 grow-0 basis-full snap-start snap-always"
-                            >
-                                <CategoryTileCard
-                                    tile={categoryTiles[tileIndex]}
-                                />
-                            </li>
-                        ))}
-                    </ul>
+        <section className="overflow-hidden bg-souk-paper py-5 lg:py-4">
+            {/*
+             * `group` so hover anywhere on the strip pauses it, not just over
+             * the one tile the cursor is on — otherwise the row slides out
+             * from under a cursor that is clearly aiming at something.
+             */}
+            <div className="group relative">
+                <div
+                    className={`flex w-max ${
+                        reduced
+                            ? // Nothing moves, but the strip is still a strip:
+                              // it stays scrollable by hand rather than
+                              // clipping the categories that fall off-screen.
+                              'max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+                            : 'animate-gallery group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]'
+                    }`}
+                >
+                    {lap.map((tile, i) => (
+                        <CategoryTileCard key={`a-${i}`} tile={tile} />
+                    ))}
 
-                    {categoryTiles.length > 1 && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={() => step(-1)}
-                                aria-label={t('welcome.categories_grid.prev')}
-                                className={`${arrow} start-2`}
-                            >
-                                <ChevronLeft
-                                    className={chevron}
-                                    strokeWidth={1.5}
+                    {/*
+                     * The second copy exists only so the slide can wrap
+                     * seamlessly; it carries no information a reader has not
+                     * already had, and is skipped for screen readers and for
+                     * tabbing. Dropped entirely under reduced motion, where
+                     * there is no wrap to hide and it would just be a
+                     * duplicated row to scroll past.
+                     */}
+                    {!reduced && (
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none flex"
+                        >
+                            {lap.map((tile, i) => (
+                                <CategoryTileCard
+                                    key={`b-${i}`}
+                                    tile={tile}
+                                    decorative
                                 />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => step(1)}
-                                aria-label={t('welcome.categories_grid.next')}
-                                className={`${arrow} end-2`}
-                            >
-                                <ChevronRight
-                                    className={chevron}
-                                    strokeWidth={1.5}
-                                />
-                            </button>
-                        </>
+                            ))}
+                        </div>
                     )}
                 </div>
 
-                <div className="hidden gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                    {categoryTiles.map((tile, i) => (
-                        <Reveal key={tile.key} delay={200 + i * 100}>
-                            <CategoryTileCard tile={tile} />
-                        </Reveal>
-                    ))}
-                </div>
+                {/*
+                 * Soft edges, so tiles arrive and leave rather than being cut
+                 * off at the viewport. Non-interactive, and keyed to the page
+                 * colour so it works on either side under RTL.
+                 */}
+                {!reduced && (
+                    <>
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-souk-paper to-transparent lg:w-24"
+                        />
+                        <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-souk-paper to-transparent lg:w-24"
+                        />
+                    </>
+                )}
             </div>
         </section>
     );

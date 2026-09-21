@@ -213,4 +213,18 @@ return [
     'region_label' => 'اللغة والعملة',
     'currency_note' => 'الأسعار معروضة بـ:currency للاسترشاد فقط. تُحتسب الطلبات بالدرهم المغربي (MAD).',
     'currency_charged' => 'المبلغ المحتسب: :amount',
+
+    // ── أعمدة تذييل الصفحة (استكشف / من نحن / خدمة العملاء) ──────────────
+    'footer.explore.title' => 'استكشف',
+    'footer.explore.affiliate' => 'برنامج الإحالة',
+    'footer.explore.blog' => 'المدوّنة',
+    'footer.explore.rewards' => 'المكافآت',
+
+    'footer.about.title' => 'من نحن',
+    'footer.about.about' => 'من نحن',
+
+    'footer.care.title' => 'خدمة العملاء',
+    'footer.care.privacy' => 'سياسة الخصوصية',
+    'footer.care.shipping' => 'سياسة التوصيل',
+    'footer.care.bulk' => 'الشراء بالجملة',
 ];
