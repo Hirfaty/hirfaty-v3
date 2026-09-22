@@ -545,7 +545,18 @@ Route::post('/currency/{currency}', function (string $currency, CurrencyService 
 })->name('currency.switch');
 
 require __DIR__.'/settings.php';
-require __DIR__.'/email-previews.php';
+
+/*
+ * Email previews are a development aid, and they render *live* rows — the
+ * first order in the database, with the buyer's name, address and phone on it.
+ * They are gated on `role:super_admin` inside that file, but they are not
+ * registered at all in production: the surest way to stop a preview route
+ * leaking a real customer's details is for the router never to have heard of
+ * it on the public storefront.
+ */
+if (! app()->isProduction()) {
+    require __DIR__.'/email-previews.php';
+}
 
 /*
  * Catch-all for URLs that match nothing above. Must stay last — a fallback

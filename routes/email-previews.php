@@ -1,7 +1,21 @@
 <?php
 
-use App\Concerns\GeneratesEmailCodes;
+/*
+ * Rendered previews of every transactional email, for checking copy and layout
+ * across the three locales without having to trigger the real flow.
+ *
+ * Two things gate these, because they render *live* rows rather than fixtures
+ * — the order routes below pull the first order in the database and print the
+ * buyer's name, address and phone onto the page:
+ *
+ *  1. This file is only `require`d outside production (see routes/web.php).
+ *  2. Every route here is `role:super_admin`, not merely `auth`. They used to
+ *     be the latter, which meant any signed-up shopper could read a stranger's
+ *     delivery details by guessing a preview URL.
+ */
+
 use App\Models\Order;
+use App\Services\LoginCodeService;
 
 Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
     // A single checkout can span several stores (CheckoutService splits one
@@ -19,7 +33,7 @@ Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
         'reference' => $first->group_reference,
         'user' => $user,
     ]);
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 Route::get('/preview/email/seller/new-order/{locale}', function (string $locale) {
     $order = Order::with(['store.user', 'buyer', 'items.product'])->first();
@@ -27,7 +41,7 @@ Route::get('/preview/email/seller/new-order/{locale}', function (string $locale)
     $user->locale = $locale;
 
     return view("emails.seller.order.new.{$locale}", compact('order', 'user'));
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
@@ -40,7 +54,7 @@ Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) 
     $user->locale = $locale;
 
     return view("emails.buyer.order-status.cancelled.{$locale}", compact('orders', 'reference', 'user'));
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 /*
  * The rest of the order-status lifecycle: confirmed, shipped, delivered.
@@ -60,7 +74,7 @@ Route::get('/preview/email/buyer/confirmed/{locale}', function (string $locale) 
     $user->locale = $locale;
 
     return view("emails.buyer.order-status.confirmed.{$locale}", compact('orders', 'reference', 'user'));
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
@@ -73,7 +87,7 @@ Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
     $user->locale = $locale;
 
     return view("emails.buyer.order-status.shipped.{$locale}", compact('orders', 'reference', 'user'));
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
@@ -86,7 +100,7 @@ Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) 
     $user->locale = $locale;
 
     return view("emails.buyer.order-status.delivered.{$locale}", compact('orders', 'reference', 'user'));
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 /*
  * Trade-request verdicts, both outcomes and all three locales:
@@ -100,7 +114,7 @@ Route::get('/preview/email/professional/{outcome}/{locale}', function (string $o
         'user' => auth()->user(),
         'reason' => 'Nous n’avons pas pu confirmer l’existence de l’établissement.',
     ]);
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 /*
  * Verification email, both audiences and all three locales:
@@ -117,7 +131,7 @@ Route::get('/preview/email/verify/{audience}/{locale}', function (string $audien
         'audience' => $audience,
         'expiresInMinutes' => config('auth.verification.expire', 60),
     ]);
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);
 
 /*
  * The 6-digit code email, both purposes and all three locales:
@@ -133,7 +147,15 @@ Route::get('/preview/email/code/{copy}/{locale}', function (string $copy, string
     return view('emails.auth-code', [
         'code' => '480913',
         'locale' => $locale,
-        'expiresInMinutes' => GeneratesEmailCodes::CODE_TTL_MINUTES,
+        /*
+         * Read off a class that *uses* the trait, not off the trait itself:
+         * PHP 8.4 fatals on `GeneratesEmailCodes::CODE_TTL_MINUTES`
+         * ("Cannot access trait constant directly"), which 500'd this preview
+         * for its whole life. Either consumer would do — RegistrationCodeService
+         * and LoginCodeService share the constant precisely so the signup and
+         * sign-in codes cannot expire on different schedules.
+         */
+        'expiresInMinutes' => LoginCodeService::CODE_TTL_MINUTES,
         'copy' => $copy,
     ]);
-})->middleware('auth');
+})->middleware(['auth', 'role:super_admin']);

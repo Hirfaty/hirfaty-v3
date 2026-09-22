@@ -62,7 +62,7 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 ## Conventions to follow
 
 - **API responses:** shape data for the frontend with `App\Http\Resources\*` (`BuyerProductResource`, etc.) rather than passing raw models into Inertia props.
-- **Notifications & emails:** user-facing mail is queued `Notification` classes in `app/Notifications/`; Blade email templates live under `resources/views/emails/`. `routes/email-previews.php` exposes preview routes for them. Because mail is queued, the queue listener (part of `composer dev`) must run to actually send.
+- **Notifications & emails:** user-facing mail is queued `Notification` classes in `app/Notifications/`; Blade email templates live under `resources/views/emails/`. `routes/email-previews.php` exposes preview routes for them — `role:super_admin` only, and `require`d only outside production, because they render live rows (the order previews print a real buyer's name, address and phone). Because mail is queued, the queue listener (part of `composer dev`) must run to actually send.
 - **Business logic** that spans models goes in `app/Services/` (`CheckoutService`, `ProductScoringService`), not controllers.
 - **UI primitives** are shadcn/ui in `resources/js/components/ui/`; compose these rather than adding new component libraries.
 - React Compiler is enabled (`babel-plugin-react-compiler` in `vite.config.ts`) — avoid manual `useMemo`/`useCallback` micro-optimizations that fight it.

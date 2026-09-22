@@ -14,6 +14,9 @@ FROM nginx:1.27-alpine
 # otherwise also be loaded globally.
 COPY docker/proxy/vhosts/ /etc/nginx/available/
 COPY docker/proxy/proxy-headers.conf /etc/nginx/proxy-headers.conf
+# Same reasoning as proxy-headers.conf: kept out of conf.d because it is
+# `include`d explicitly by each -ssl vhost, not loaded globally.
+COPY docker/proxy/security-headers.conf /etc/nginx/security-headers.conf
 COPY docker/proxy/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Static placeholder for hirfaty.com pre-launch — see PROD_MODE in
