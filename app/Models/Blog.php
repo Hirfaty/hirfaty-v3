@@ -71,16 +71,13 @@ class Blog extends Model
     public function scopePublished(Builder $query): void
     {
         $query->where('status', self::STATUS_PUBLISHED)
-            ->whereNotNull('published_at')
-            // Lets an admin schedule a post by dating it forward.
-            ->where('published_at', '<=', now());
+            ->whereNotNull('published_at');
     }
 
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED
-            && $this->published_at !== null
-            && $this->published_at->isPast();
+            && $this->published_at !== null;
     }
 
     public function isDraft(): bool
@@ -91,19 +88,6 @@ class Blog extends Model
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
-    }
-
-    /**
-     * Marked published but dated forward — queued, not readable yet.
-     *
-     * The complement of isPublished() within the `published` status, which is
-     * what makes "publier maintenant" a meaningful action on such a row.
-     */
-    public function isScheduled(): bool
-    {
-        return $this->status === self::STATUS_PUBLISHED
-            && $this->published_at !== null
-            && $this->published_at->isFuture();
     }
 
     public function coverUrl(): ?string

@@ -4,7 +4,6 @@ import {
     ArchiveRestore,
     ChevronLeft,
     ChevronRight,
-    Clock,
     EllipsisVertical,
     Eye,
     FileText,
@@ -13,7 +12,6 @@ import {
     Pencil,
     Plus,
     Search,
-    Send,
     Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -134,16 +132,6 @@ const Index = ({
             undefined,
             rowAction,
         );
-    };
-
-    const handlePublishNow = (blog: Blog) => {
-        if (confirm(`Publier « ${blog.title} » maintenant ?`)) {
-            router.patch(
-                route('admin.blogs.publish', blog.id),
-                undefined,
-                rowAction,
-            );
-        }
     };
 
     const handleDelete = (blog: Blog) => {
@@ -304,23 +292,11 @@ const Index = ({
                                     </TableCell>
 
                                     <TableCell>
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <span
-                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[blog.status]}`}
-                                            >
-                                                {
-                                                    STATUS_PILL_LABELS[
-                                                        blog.status
-                                                    ]
-                                                }
-                                            </span>
-                                            {blog.is_scheduled && (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                                                    <Clock className="h-3 w-3" />
-                                                    Programmé
-                                                </span>
-                                            )}
-                                        </div>
+                                        <span
+                                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE[blog.status]}`}
+                                        >
+                                            {STATUS_PILL_LABELS[blog.status]}
+                                        </span>
                                     </TableCell>
 
                                     <TableCell className="text-sm text-ink-soft">
@@ -369,22 +345,6 @@ const Index = ({
                                                         Modifier
                                                     </Link>
                                                 </DropdownMenuItem>
-
-                                                {/* Only a queued post can be
-                                                    released early. */}
-                                                {blog.is_scheduled && (
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handlePublishNow(
-                                                                blog,
-                                                            )
-                                                        }
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        <Send className="h-4 w-4" />
-                                                        Publier maintenant
-                                                    </DropdownMenuItem>
-                                                )}
 
                                                 <DropdownMenuItem
                                                     onClick={() =>

@@ -189,10 +189,8 @@ export const SiteFooter = () => {
                                 href="https://www.instagram.com/hirfaty.com_/"
                                 target="_blank"
                                 className="hover:text-ink"
-                            >
-                                Instagram
-                            </a>
-                            {t('footer.follow_tiktok')}
+                            ></a>
+                            {t('footer.follow_instagram')}
                         </li>
                         <li>
                             <a
@@ -200,7 +198,7 @@ export const SiteFooter = () => {
                                 target="_blank"
                                 className="hover:text-ink"
                             >
-                                Facebook
+                                {t('footer.follow_facebook')}
                             </a>
                         </li>
                         <li>
@@ -209,7 +207,7 @@ export const SiteFooter = () => {
                                 target="_blank"
                                 className="hover:text-ink"
                             >
-                                Linkedin
+                                {t('footer.follow_linkedin')}
                             </a>
                         </li>
                         <li>
@@ -218,7 +216,7 @@ export const SiteFooter = () => {
                                 target="_blank"
                                 className="hover:text-ink"
                             >
-                                Youtube
+                                {t('footer.follow_youtube')}
                             </a>
                         </li>
                     </ul>

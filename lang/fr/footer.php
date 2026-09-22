@@ -28,7 +28,8 @@ return [
     // ── Colonne Suivre ───────────────────────────────────────────────
     'follow_title' => 'Suivre',
     'follow_instagram' => 'Instagram',
-    'follow_tiktok' => 'TikTok',
+    'follow_facebook' => 'Facebook',
+    'follow_linkedin' => 'Linkedin',
     'follow_youtube' => 'YouTube',
 
     // ── Bas de page ──────────────────────────────────────────────────

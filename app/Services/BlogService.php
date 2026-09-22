@@ -22,7 +22,7 @@ class BlogService
     public function __construct(private HtmlSanitizer $sanitizer) {}
 
     /**
-     * @param  array{title: string, excerpt?: ?string, content?: ?string, status: string, published_at?: ?string}  $data
+     * @param  array{title: string, excerpt?: ?string, content?: ?string, status: string}  $data
      */
     public function create(array $data, User $author, ?UploadedFile $cover = null): Blog
     {
@@ -46,7 +46,7 @@ class BlogService
     }
 
     /**
-     * @param  array{title: string, excerpt?: ?string, content?: ?string, status: string, published_at?: ?string}  $data
+     * @param  array{title: string, excerpt?: ?string, content?: ?string, status: string}  $data
      */
     public function update(Blog $blog, array $data, ?UploadedFile $cover = null, bool $removeCover = false): Blog
     {
@@ -114,25 +114,6 @@ class BlogService
     }
 
     /**
-     * Release a scheduled article immediately, by pulling its parution date
-     * back to now.
-     *
-     * Only the date moves when the post is already `published` — that is the
-     * whole scheduled case. A draft or archived post handed to this method is
-     * also flipped to `published`, so the action means the same thing wherever
-     * it is offered.
-     */
-    public function publishNow(Blog $blog): Blog
-    {
-        $blog->update([
-            'status' => Blog::STATUS_PUBLISHED,
-            'published_at' => now(),
-        ]);
-
-        return $blog->refresh();
-    }
-
-    /**
      * Store an image dropped into the editor body and hand back its public URL.
      *
      * These are deliberately not Media rows: the editor uploads them while the
@@ -154,17 +135,13 @@ class BlogService
     /**
      * A post is stamped the moment it first goes public and keeps that date
      * afterwards, so un-publishing and re-publishing does not reshuffle the
-     * listing. An explicit date from the form always wins — that is how an
-     * admin schedules a post or backdates an import.
+     * listing. There is no way to date a post forward — publishing is always
+     * immediate.
      *
-     * @param  array{published_at?: ?string, status: string}  $data
+     * @param  array{status: string}  $data
      */
     private function resolvePublishedAt(array $data, ?Blog $blog): ?string
     {
-        if (! empty($data['published_at'])) {
-            return $data['published_at'];
-        }
-
         if ($blog?->published_at !== null) {
             return $blog->published_at->toDateTimeString();
         }

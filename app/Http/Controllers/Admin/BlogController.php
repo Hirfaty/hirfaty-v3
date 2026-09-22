@@ -151,14 +151,6 @@ class BlogController extends Controller
         return back()->with('success', "Article « {$blog->title} » archivé.");
     }
 
-    /** Release a scheduled article ahead of its own parution date. */
-    public function publishNow(Blog $blog)
-    {
-        $this->blogs->publishNow($blog);
-
-        return back()->with('success', "Article « {$blog->title} » publié.");
-    }
-
     public function destroy(Blog $blog)
     {
         $title = $blog->title;
@@ -197,7 +189,6 @@ class BlogController extends Controller
             'excerpt' => ['nullable', 'string', 'max:500'],
             'content' => ['nullable', 'string', 'max:200000'],
             'status' => ['required', Rule::in(Blog::STATUSES)],
-            'published_at' => ['nullable', 'date'],
             'cover' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
             'remove_cover' => ['nullable', 'boolean'],
         ];

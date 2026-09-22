@@ -169,7 +169,6 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // browsers can only send on a POST — see BlogForm's own comment.
         Route::post('/blogs/{blog}', [Admin\BlogController::class, 'update'])->name('blogs.update');
         Route::patch('/blogs/{blog}/archive', [Admin\BlogController::class, 'archive'])->name('blogs.archive');
-        Route::patch('/blogs/{blog}/publish', [Admin\BlogController::class, 'publishNow'])->name('blogs.publish');
         Route::delete('/blogs/{blog}', [Admin\BlogController::class, 'destroy'])->name('blogs.destroy');
 
         // Stores — the review queue a shop sits in before it may sell.

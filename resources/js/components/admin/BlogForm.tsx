@@ -13,7 +13,7 @@ const STATUS_LABELS: Record<BlogStatus, string> = {
 
 const STATUS_HINTS: Record<BlogStatus, string> = {
     draft: 'Visible seulement ici. Personne d’autre ne peut le lire.',
-    published: 'En ligne sur le journal public.',
+    published: 'Publié immédiatement sur le journal public.',
     archived: 'Retiré du journal, mais conservé.',
 };
 
@@ -53,8 +53,6 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
         excerpt: blog?.excerpt ?? '',
         content: blog?.content ?? '',
         status: blog?.status ?? ('draft' as BlogStatus),
-        // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm", not ISO 8601.
-        published_at: blog?.published_at ? blog.published_at.slice(0, 16) : '',
         cover: null as File | null,
         remove_cover: false as boolean,
     });
@@ -198,61 +196,29 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
 
             {/* ── 5. Publication ── */}
             <Section title="Publication" step={5}>
-                <div className="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label
-                            htmlFor="status"
-                            className="mb-1.5 block text-sm font-medium text-ink"
-                        >
-                            Statut
-                        </label>
-                        <select
-                            id="status"
-                            value={form.data.status}
-                            onChange={(e) =>
-                                form.setData(
-                                    'status',
-                                    e.target.value as BlogStatus,
-                                )
-                            }
-                            className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
-                        >
-                            {statuses.map((status) => (
-                                <option key={status} value={status}>
-                                    {STATUS_LABELS[status]}
-                                </option>
-                            ))}
-                        </select>
-                        <p className="mt-2 text-xs text-ink-soft">
-                            {STATUS_HINTS[form.data.status]}
-                        </p>
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="published_at"
-                            className="mb-1.5 block text-sm font-medium text-ink"
-                        >
-                            Date de parution
-                        </label>
-                        <input
-                            id="published_at"
-                            type="datetime-local"
-                            value={form.data.published_at}
-                            onChange={(e) =>
-                                form.setData('published_at', e.target.value)
-                            }
-                            className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
-                        />
-                        <p className="mt-2 text-xs text-ink-soft">
-                            Laissez vide pour dater à la publication. Une date
-                            future programme l’article.
-                        </p>
-                        {form.errors.published_at && (
-                            <FieldError>{form.errors.published_at}</FieldError>
-                        )}
-                    </div>
-                </div>
+                <label
+                    htmlFor="status"
+                    className="mb-1.5 block text-sm font-medium text-ink"
+                >
+                    Statut
+                </label>
+                <select
+                    id="status"
+                    value={form.data.status}
+                    onChange={(e) =>
+                        form.setData('status', e.target.value as BlogStatus)
+                    }
+                    className="w-full max-w-xs rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                >
+                    {statuses.map((status) => (
+                        <option key={status} value={status}>
+                            {STATUS_LABELS[status]}
+                        </option>
+                    ))}
+                </select>
+                <p className="mt-2 text-xs text-ink-soft">
+                    {STATUS_HINTS[form.data.status]}
+                </p>
             </Section>
 
             {/* ── 6. Actions ── */}

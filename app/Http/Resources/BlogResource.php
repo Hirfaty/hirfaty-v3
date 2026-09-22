@@ -46,10 +46,6 @@ class BlogResource extends JsonResource
 
             'status' => $this->status,
             'is_published' => $this->isPublished(),
-            // Drives the row's "Publier maintenant" action: true only while the
-            // post is published-but-future, which is the one case where an
-            // admin may want to release it ahead of its own date.
-            'is_scheduled' => $this->isScheduled(),
             'published_at' => $this->published_at?->toIso8601String(),
             'cover_url' => $this->coverUrl(),
             'reading_minutes' => $this->readingMinutes(),
