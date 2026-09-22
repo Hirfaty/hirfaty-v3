@@ -169,16 +169,62 @@ export const SiteHeader = ({
     const navLinks = [
         { href: '/products', label: t('header.marketplace') },
         { href: '/new-arrivals', label: t('header.new_products') },
-        { href: '/blog', label: t('header.journal') },
         // { href: '/sellers', label: t('header.sellers') },
-        { href: '/about', label: t('header.about') },
     ];
+
+    const aboutLink = { href: '/about', label: t('header.about') };
 
     const categories = navCategories ?? [];
 
     // Marks the current section so its nav link can carry the zellij star.
     const isActive = (href: string) =>
         currentUrl === href || currentUrl.startsWith(`${href}/`);
+
+    /*
+     * "Home" only makes sense as a way back — it's absent on the home page
+     * itself and sits first, to the left of Marketplace, everywhere else.
+     */
+    const displayedNavLinks =
+        currentUrl === '/'
+            ? navLinks
+            : [{ href: '/', label: t('header.home') }, ...navLinks];
+
+    /** Shared by every top-level bar link — Home/Marketplace/… and About. */
+    const renderNavLink = (l: { href: string; label: string }) => (
+        <Link
+            key={l.href}
+            href={l.href}
+            aria-current={isActive(l.href) ? 'page' : undefined}
+            className={`group relative py-1 transition-colors ${
+                light
+                    ? 'text-white/85 hover:text-white'
+                    : 'text-ink/80 hover:text-ink'
+            }`}
+        >
+            {l.label}
+            {/*
+             * Underline grows from the centre on hover; the current
+             * section keeps it, with a zellij star set into the middle
+             * of the rule.
+             */}
+            <span
+                aria-hidden
+                className={`pointer-events-none absolute -bottom-1 left-1/2 h-px -translate-x-1/2 ${light ? 'bg-white/60' : 'bg-terracotta/45'} transition-all duration-300 ${
+                    isActive(l.href) ? 'w-full' : 'w-0 group-hover:w-full'
+                }`}
+            />
+            {isActive(l.href) && (
+                <ZellijStarIcon
+                    aria-hidden
+                    className={`absolute -bottom-[7px] left-1/2 h-[7px] w-[7px] -translate-x-1/2 ${
+                        light
+                            ? 'bg-transparent text-white'
+                            : 'bg-cream text-terracotta'
+                    }`}
+                />
+            )}
+        </Link>
+    );
 
     /*
      * The categories menu lights up on the listing whenever a category is
@@ -289,43 +335,7 @@ export const SiteHeader = ({
                 </Link>
 
                 <nav className="hidden items-center gap-9 text-sm md:flex">
-                    {navLinks.map((l) => (
-                        <Link
-                            key={l.href}
-                            href={l.href}
-                            aria-current={isActive(l.href) ? 'page' : undefined}
-                            className={`group relative py-1 transition-colors ${
-                                light
-                                    ? 'text-white/85 hover:text-white'
-                                    : 'text-ink/80 hover:text-ink'
-                            }`}
-                        >
-                            {l.label}
-                            {/*
-                             * Underline grows from the centre on hover; the
-                             * current section keeps it, with a zellij star
-                             * set into the middle of the rule.
-                             */}
-                            <span
-                                aria-hidden
-                                className={`pointer-events-none absolute -bottom-1 left-1/2 h-px -translate-x-1/2 ${light ? 'bg-white/60' : 'bg-terracotta/45'} transition-all duration-300 ${
-                                    isActive(l.href)
-                                        ? 'w-full'
-                                        : 'w-0 group-hover:w-full'
-                                }`}
-                            />
-                            {isActive(l.href) && (
-                                <ZellijStarIcon
-                                    aria-hidden
-                                    className={`absolute -bottom-[7px] left-1/2 h-[7px] w-[7px] -translate-x-1/2 ${
-                                        light
-                                            ? 'bg-transparent text-white'
-                                            : 'bg-cream text-terracotta'
-                                    }`}
-                                />
-                            )}
-                        </Link>
-                    ))}
+                    {displayedNavLinks.map(renderNavLink)}
 
                     {/*
                      * Categories as a grouped mega-menu, the way large
@@ -453,6 +463,8 @@ export const SiteHeader = ({
                             </PopoverContent>
                         </Popover>
                     )}
+
+                    {renderNavLink(aboutLink)}
                 </nav>
 
                 <div className="flex items-center gap-2 md:gap-4">
@@ -692,7 +704,7 @@ export const SiteHeader = ({
                                 {/* Scrolls: with the crafts listed out, the
                                     panel is taller than a phone. */}
                                 <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
-                                    {navLinks.map((l) => (
+                                    {displayedNavLinks.map((l) => (
                                         <Link
                                             key={l.href}
                                             href={l.href}
@@ -803,6 +815,23 @@ export const SiteHeader = ({
                                             ))}
                                         </>
                                     )}
+
+                                    <Link
+                                        href={aboutLink.href}
+                                        onClick={() => setMenuOpen(false)}
+                                        aria-current={
+                                            isActive(aboutLink.href)
+                                                ? 'page'
+                                                : undefined
+                                        }
+                                        className={`mt-5 rounded-md px-3 py-3 text-base transition-colors ${
+                                            isActive(aboutLink.href)
+                                                ? 'bg-sand/40 text-ink'
+                                                : 'text-ink/80 hover:bg-sand/30 hover:text-ink'
+                                        }`}
+                                    >
+                                        {aboutLink.label}
+                                    </Link>
                                 </nav>
 
                                 {/* Pushed to the foot of the panel: language

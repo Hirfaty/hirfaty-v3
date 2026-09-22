@@ -1,7 +1,8 @@
 <?php
 
 return [
-    'marketplace' => 'السوق',
+    'home' => 'الرئيسية',
+    'marketplace' => 'الكتالوج',
     'new_products' => 'الجديد',
     'journal' => 'المجلة',
     'categories' => 'الفئات',

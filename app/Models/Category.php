@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -14,7 +16,6 @@ use Illuminate\Support\Facades\Storage;
  * @property array<string, string> $name Per-locale names, keyed by locale code.
  * @property-read string $translated_name
  * @property string $slug
- * @property int|null $parent_id
  * @property string|null $image Storage path on the default disk; top-level categories only.
  * @property-read string|null $image_url
  * @property CarbonImmutable|null $created_at
@@ -23,16 +24,16 @@ use Illuminate\Support\Facades\Storage;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Category roots()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereParentId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereSlug($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereUpdatedAt($value)
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name', 'slug', 'parent_id', 'image'])]
+#[Fillable(['name', 'slug', 'image'])]
 class Category extends Model
 {
     /**
@@ -40,7 +41,7 @@ class Category extends Model
      * shape has changed over time and a stale entry of the old shape crashes
      * the header — bump the version whenever the payload changes.
      */
-    public const NAV_CACHE_KEY = 'nav_categories_v3_';
+    public const NAV_CACHE_KEY = 'nav_categories_v4_';
 
     /**
      * Locales a category name must be available in.
@@ -65,14 +66,22 @@ class Category extends Model
      */
     protected static function booted(): void
     {
-        $forget = function (): void {
-            foreach (self::LOCALES as $locale) {
-                Cache::forget(self::NAV_CACHE_KEY.$locale);
-            }
-        };
+        static::saved(fn () => self::forgetNavCache());
+        static::deleted(fn () => self::forgetNavCache());
+    }
 
-        static::saved($forget);
-        static::deleted($forget);
+    /**
+     * Drop the header menu for every locale.
+     *
+     * Public because parentage now lives in a pivot, and attaching or
+     * detaching one fires no model event — `CategoryService` has to say so
+     * itself after syncing, or the nav keeps the old tree for up to an hour.
+     */
+    public static function forgetNavCache(): void
+    {
+        foreach (self::LOCALES as $locale) {
+            Cache::forget(self::NAV_CACHE_KEY.$locale);
+        }
     }
 
     protected function casts(): array
@@ -121,13 +130,34 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
-    public function parent()
+    /**
+     * The crafts this category sits under. Plural because one subcategory can
+     * belong to several at once — "Art de la table" is filed under both
+     * Poterie and Dinanderie — which is what the `category_parent` pivot
+     * exists for.
+     */
+    public function parents(): BelongsToMany
     {
-        return $this->belongsTo(Category::class, 'parent_id');
+        return $this->belongsToMany(self::class, 'category_parent', 'category_id', 'parent_id');
     }
 
-    public function children()
+    /**
+     * The other side of the same pivot. A child listed here may well be listed
+     * under another root too, so treat this as "what to show beneath me", not
+     * as an exclusive set.
+     */
+    public function children(): BelongsToMany
     {
-        return $this->hasMany(Category::class, 'parent_id');
+        return $this->belongsToMany(self::class, 'category_parent', 'parent_id', 'category_id');
+    }
+
+    /**
+     * Top-level crafts: the ones no other category claims as a child. This is
+     * what `parent_id IS NULL` used to say, and the only place the rule is
+     * spelled out now.
+     */
+    public function scopeRoots(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('parents');
     }
 }

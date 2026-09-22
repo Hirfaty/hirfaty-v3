@@ -53,12 +53,23 @@ class ProductController extends Controller
         }
 
         if ($catId = $request->input('category_id')) {
-            // Selecting a root category should also surface its children,
-            // otherwise the top-level pills match almost nothing.
-            $query->where(function ($q) use ($catId) {
-                $q->where('category_id', $catId)
-                    ->orWhereHas('category', fn ($c) => $c->where('parent_id', $catId));
-            });
+            /*
+             * Selecting a root category should also surface its children,
+             * otherwise the top-level pills match almost nothing — and a
+             * subcategory filed under several crafts is reachable from each
+             * of them.
+             *
+             * Resolved to a plain id list rather than a nested `whereHas` on
+             * `category.parents`: that relation is self-referencing, so an
+             * existence subquery aliases the related `categories` table and a
+             * `categories.id` condition inside it silently binds to the wrong
+             * end of the join. The taxonomy is a handful of rows, so the extra
+             * lookup costs nothing.
+             */
+            $query->whereIn('category_id', [
+                (int) $catId,
+                ...Category::find($catId)?->children->pluck('id')->all() ?? [],
+            ]);
         }
 
         $paginator = $this->scoring->apply($query)->paginate(12)->withQueryString();
@@ -87,9 +98,9 @@ class ProductController extends Controller
             // accessor, since `name` is a per-locale object that must never
             // be rendered raw; the same shape (minus `image_url`) as the
             // header's `navCategories`.
-            'categories' => Category::whereNull('parent_id')
+            'categories' => Category::roots()
                 ->orderBy('id')
-                ->with(['children' => fn ($query) => $query->orderBy('id')])
+                ->with(['children' => fn ($query) => $query->orderBy('categories.id')])
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,

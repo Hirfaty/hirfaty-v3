@@ -29,7 +29,7 @@ class UserController extends Controller
     {
         return Inertia::render('admin/users/create', [
             'cities' => City::orderBy('name', 'asc')->get(),
-            'categories' => Category::whereNull('parent_id')->get(),
+            'categories' => Category::roots()->get(),
         ]);
     }
 
@@ -145,7 +145,7 @@ class UserController extends Controller
         return Inertia::render('admin/users/edit', [
             'user' => $user,
             'cities' => City::orderBy('name', 'asc')->get(),
-            'categories' => Category::whereNull('parent_id')->get(),
+            'categories' => Category::roots()->get(),
             /*
              * Whether this account may still leave the seller role. Computed
              * here rather than in the form so the UI and the server agree on

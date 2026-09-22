@@ -34,7 +34,7 @@ class OnboardingController extends Controller
         return Inertia::render('buyer/onboarding', [
             // Top-level crafts only: the tour offers a handful of broad
             // choices, not the full taxonomy.
-            'categories' => Category::whereNull('parent_id')
+            'categories' => Category::roots()
                 ->orderBy('id')
                 ->get()
                 ->map(fn (Category $c) => [

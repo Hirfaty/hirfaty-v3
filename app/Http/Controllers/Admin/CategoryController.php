@@ -15,14 +15,11 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $categories = Category::withCount(['products', 'stores'])
-            ->with('parent')
-            ->latest()
-            ->get();
-
         return Inertia::render('admin/categories/index', [
-            'categories' => $categories,
-            'parents' => Category::whereNull('parent_id')->get(),
+            'categories' => $this->categories->listForAdmin(),
+            // Only roots are offered as parents: the storefront renders the
+            // tree two levels deep, so a third would never be shown.
+            'parents' => Category::roots()->get(),
             'locales' => Category::LOCALES,
         ]);
     }
@@ -38,11 +35,7 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
-        $data = $request->validate($this->rules());
-
-        if (isset($data['parent_id']) && $data['parent_id'] == $category->id) {
-            return back()->withErrors(['parent_id' => 'A category cannot be its own parent.']);
-        }
+        $data = $request->validate($this->rules($category));
 
         $this->categories->update(
             $category,
@@ -69,12 +62,22 @@ class CategoryController extends Controller
      * Every locale is required so the storefront never falls back to another
      * language mid-page.
      *
+     * `$category` is the row being edited, if any — it is excluded from its
+     * own parent list, since a category cannot sit under itself.
+     *
      * @return array<string, array<int, mixed>>
      */
-    private function rules(): array
+    private function rules(?Category $category = null): array
     {
         $rules = [
-            'parent_id' => ['nullable', 'exists:categories,id'],
+            // A subcategory can be filed under several crafts at once, so this
+            // is a list rather than a single id. An empty one means "root".
+            'parent_ids' => ['nullable', 'array'],
+            'parent_ids.*' => [
+                'integer',
+                'exists:categories,id',
+                Rule::notIn(array_filter([$category?->id])),
+            ],
             'image' => [
                 'nullable',
                 'image',

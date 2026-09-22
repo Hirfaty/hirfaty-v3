@@ -247,86 +247,6 @@ export default function ProductsIndex({
         <div className="min-h-screen bg-souk-paper">
             <SiteHeader />
 
-            {/* ── Hero ──────────────────────────────────────────────
-                No photograph: the listing's own grid supplies the colour a
-                few screens down, and a picture here only competed with it.
-                What is left is type, centred inside a traced arcade. */}
-            <section className="relative isolate overflow-hidden border-b border-souk-brown/15 px-5 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
-                <div
-                    aria-hidden="true"
-                    className={`${HERO_ARCH} top-7 h-[115%] ${ARCH_OUTER_W}`}
-                />
-                <div
-                    aria-hidden="true"
-                    className={`${HERO_ARCH} top-11 h-[115%] ${ARCH_INNER_W}`}
-                />
-
-                {/* ── The doorway's ornament ────────────────────────────
-                    Three touches, one at each point a real riad doorway is
-                    actually decorated — the crown, the jambs and the
-                    threshold — rather than pattern laid over the whole
-                    opening. All of it stays line-weight and `-z-10`, behind
-                    the type: the hero earns its restraint from being type on
-                    paper, and a filled motif here would take that away.
-
-                    Every piece is centred (`left-1/2 -translate-x-1/2`) or
-                    pinned to a wrapper of the arch's own width, so the
-                    ornament needs no RTL handling and tracks the arch as it
-                    scales. */}
-
-                {/* Keystone at the crown, hung just under the inner arch's
-                    apex. A star rather than the line–lozenge–line rule used
-                    between title and subtitle below: repeating that ornament
-                    here would read as a duplicate rather than as a second,
-                    distinct point of decoration. */}
-                <ZellijStarIcon className="pointer-events-none absolute top-12 left-1/2 -z-10 size-6 -translate-x-1/2 text-souk-brown/25" />
-
-                {/* Studs on the jambs, down in the clear space below the
-                    subtitle — the pair of small glazed tiles set into a door
-                    frame. Each is pulled out by half its own width so it
-                    straddles the arch line and reads as set *into* the jamb
-                    rather than parked beside it.
-
-                    `left`/`right` deliberately, not `start`/`end`: the offset
-                    has to be a *physical* translate (`translate-x` has no
-                    logical form), so a logical edge would flip under
-                    `dir="rtl"` while the translate stayed put — which parked
-                    both studs 8px inboard of the jambs instead of on them.
-                    The pair is identical and the wrapper is centred, so there
-                    is no start/end meaning here to preserve anyway. */}
-                <div
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute bottom-14 left-1/2 -z-10 -translate-x-1/2 ${ARCH_OUTER_W}`}
-                >
-                    <span className="absolute left-0 size-2 -translate-x-1/2 rotate-45 border border-souk-brown/30" />
-                    <span className="absolute right-0 size-2 translate-x-1/2 rotate-45 border border-souk-brown/30" />
-                </div>
-
-                <div className="mx-auto max-w-4xl text-center">
-                    <h1
-                        ref={heroTitleRef}
-                        className="font-display text-5xl leading-[0.98] text-balance text-souk-brown will-change-transform sm:text-7xl lg:text-[5.4rem]"
-                    >
-                        {t('buyer.products.hero_title')}
-                    </h1>
-
-                    {/* Line — lozenge — line: the same ornament that separates
-                        stanzas of tilework, standing in for a rule. */}
-                    <div
-                        aria-hidden="true"
-                        className="mx-auto my-5 flex w-40 items-center gap-3"
-                    >
-                        <span className="h-px flex-1 bg-souk-brown/25" />
-                        <span className="size-2 rotate-45 border border-souk-brown/50" />
-                        <span className="h-px flex-1 bg-souk-brown/25" />
-                    </div>
-
-                    <p className="mx-auto max-w-2xl text-sm leading-7 text-balance text-souk-brown-deep/80 sm:text-base">
-                        {t('buyer.products.hero_subtitle')}
-                    </p>
-                </div>
-            </section>
-
             {/* ── The full collection ──────────────────────────────── */}
             <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-8 lg:px-12">
                 <div className="mb-10 border-b border-souk-brown/15 pb-9">
@@ -335,18 +255,8 @@ export default function ProductsIndex({
                     </h2>
                 </div>
 
-                {/* ── Content: filter rail + grid ──────────────────
-                    The filter lives in a rail pinned to the start of the
-                    grid — parent crafts with their subcategories nested
-                    beneath them, unfolded by chevron. It sticks while the
-                    tiles scroll on lg; below that it is a plain section
-                    stacked above the grid. */}
                 <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
                     <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
-                        {/* Compact search, above the tree: the rail is the
-                            page's whole filter column, so the query and the
-                            taxonomy sit together instead of the search riding
-                            the section title. */}
                         <label className="mb-6 flex items-center gap-2 border border-souk-brown/25 bg-souk-cream/40 px-3 py-2 transition-colors focus-within:border-souk-brown">
                             {busy ? (
                                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-souk-brown/60" />

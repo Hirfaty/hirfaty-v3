@@ -6,6 +6,7 @@ import {
     Layers,
     Plus,
     Search,
+    Share2,
     Trash2,
     TriangleAlert,
 } from 'lucide-react';
@@ -37,7 +38,8 @@ import type { Category, CategoryLocale, PageProps } from '@/types';
 interface CategoryWithCounts extends Category {
     products_count: number;
     stores_count: number;
-    parent?: Category | null;
+    /** Always sent by CategoryService::listForAdmin; empty means a root. */
+    parent_ids: number[];
 }
 
 /** Labels for the per-locale name inputs. */
@@ -85,6 +87,57 @@ function Field({
 
 const isComplete = (cat: Category, locales: CategoryLocale[]) =>
     locales.every((loc) => cat.name?.[loc]?.trim());
+
+/**
+ * The parent picker. A checkbox list rather than a `<select multiple>`: a
+ * subcategory can be filed under several crafts at once, and a native
+ * multi-select hides that behind a ctrl-click nobody discovers.
+ *
+ * Nothing ticked means the category is itself a main category — that is the
+ * same statement as the old "Racine (aucun parent)" option, just made by
+ * leaving the list alone.
+ */
+function ParentPicker({
+    options,
+    selected,
+    onChange,
+}: {
+    options: Category[];
+    selected: number[];
+    onChange: (next: number[]) => void;
+}) {
+    const toggle = (id: number) =>
+        onChange(
+            selected.includes(id)
+                ? selected.filter((v) => v !== id)
+                : [...selected, id],
+        );
+
+    return (
+        <div className="max-h-56 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-sm">
+            {options.length === 0 ? (
+                <p className="px-2.5 py-2 text-sm text-ink-soft">
+                    Aucune autre catégorie principale.
+                </p>
+            ) : (
+                options.map((p) => (
+                    <label
+                        key={p.id}
+                        className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-ink transition hover:bg-muted/50"
+                    >
+                        <input
+                            type="checkbox"
+                            checked={selected.includes(p.id)}
+                            onChange={() => toggle(p.id)}
+                            className="h-4 w-4 shrink-0 rounded border-border accent-ink"
+                        />
+                        {p.translated_name}
+                    </label>
+                ))
+            )}
+        </div>
+    );
+}
 
 // ── One row in the tree ──────────────────────────────────────────────
 interface RowProps {
@@ -165,6 +218,15 @@ const CategoryRow = ({
                                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
                                     {childCount} sous-catégorie
                                     {childCount > 1 ? 's' : ''}
+                                </span>
+                            )}
+                            {/* This row is repeated under each of its parents,
+                                so say so — otherwise the same name showing up
+                                twice in the tree reads as a duplicate. */}
+                            {depth > 0 && cat.parent_ids.length > 1 && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                                    <Share2 className="h-3 w-3" />
+                                    {cat.parent_ids.length} parents
                                 </span>
                             )}
                             {incomplete && (
@@ -267,7 +329,7 @@ const Index = ({
     const [createOpen, setCreateOpen] = useState(false);
     const createForm = useForm({
         name: { ...EMPTY_NAME },
-        parent_id: '' as string | number,
+        parent_ids: [] as number[],
         image: null as File | null,
     });
 
@@ -297,7 +359,7 @@ const Index = ({
     const editForm = useForm({
         _method: 'patch',
         name: { ...EMPTY_NAME },
-        parent_id: '' as string | number,
+        parent_ids: [] as number[],
         image: null as File | null,
         remove_image: false,
     });
@@ -311,7 +373,7 @@ const Index = ({
             // rows still renders a (blank) input instead of an uncontrolled
             // one.
             name: { ...EMPTY_NAME, ...cat.name },
-            parent_id: cat.parent_id ?? '',
+            parent_ids: cat.parent_ids,
             image: null,
             remove_image: false,
         });
@@ -367,15 +429,11 @@ const Index = ({
         });
 
     // ── Tree assembly ─────────────────────────────────────────
-    const roots = categories.filter((c) => !c.parent_id);
+    // A subcategory filed under several crafts is listed under each of them,
+    // so one row here can produce several rows in the table.
+    const roots = categories.filter((c) => c.parent_ids.length === 0);
     const childrenOf = (id: number) =>
-        categories.filter((c) => c.parent_id === id);
-
-    // A child whose parent was deleted would otherwise vanish from the page
-    // entirely, so it gets surfaced in its own group rather than dropped.
-    const orphans = categories.filter(
-        (c) => c.parent_id && !categories.some((p) => p.id === c.parent_id),
-    );
+        categories.filter((c) => c.parent_ids.includes(id));
 
     const incompleteCount = categories.filter(
         (c) => !isComplete(c, locales),
@@ -403,8 +461,7 @@ const Index = ({
         })
         .filter(({ kids, rootHit }) => rootHit || kids.length > 0);
 
-    const visibleOrphans = orphans.filter(matches);
-    const isEmpty = visibleRoots.length === 0 && visibleOrphans.length === 0;
+    const isEmpty = visibleRoots.length === 0;
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -532,7 +589,12 @@ const Index = ({
                                         {!collapsed.has(root.id) &&
                                             kids.map((kid) => (
                                                 <CategoryRow
-                                                    key={kid.id}
+                                                    // Keyed by the pair: a
+                                                    // shared subcategory is
+                                                    // rendered once under each
+                                                    // parent, so its own id is
+                                                    // not unique in the table.
+                                                    key={`${root.id}-${kid.id}`}
                                                     cat={kid}
                                                     locales={locales}
                                                     depth={1}
@@ -547,32 +609,6 @@ const Index = ({
                                             ))}
                                     </Fragment>
                                 ))}
-
-                                {visibleOrphans.length > 0 && (
-                                    <>
-                                        <tr>
-                                            <td
-                                                colSpan={4}
-                                                className="bg-amber-50 px-5 py-2 text-xs font-semibold text-amber-700"
-                                            >
-                                                Sans parent (parent supprimé)
-                                            </td>
-                                        </tr>
-                                        {visibleOrphans.map((o) => (
-                                            <CategoryRow
-                                                key={o.id}
-                                                cat={o}
-                                                locales={locales}
-                                                depth={1}
-                                                childCount={0}
-                                                collapsed={false}
-                                                onToggle={() => {}}
-                                                onEdit={() => openEdit(o)}
-                                                onDelete={() => askDelete(o)}
-                                            />
-                                        ))}
-                                    </>
-                                )}
                             </tbody>
                         </table>
                     </div>
@@ -620,29 +656,24 @@ const Index = ({
                         ))}
 
                         <Field
-                            label="Catégorie parente"
-                            error={createForm.errors.parent_id}
+                            label="Catégories parentes"
+                            error={createForm.errors.parent_ids}
                         >
-                            <select
-                                value={createForm.data.parent_id}
-                                onChange={(e) =>
-                                    createForm.setData(
-                                        'parent_id',
-                                        e.target.value,
-                                    )
+                            <p className="mb-2 text-xs text-ink-soft">
+                                Cochez chaque catégorie principale sous laquelle
+                                elle doit apparaître. Laissez vide pour en faire
+                                une catégorie principale.
+                            </p>
+                            <ParentPicker
+                                options={parents}
+                                selected={createForm.data.parent_ids}
+                                onChange={(next) =>
+                                    createForm.setData('parent_ids', next)
                                 }
-                                className={INPUT}
-                            >
-                                <option value="">Racine (aucun parent)</option>
-                                {parents.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.translated_name}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </Field>
 
-                        {createForm.data.parent_id === '' && (
+                        {createForm.data.parent_ids.length === 0 && (
                             <SingleImageInput
                                 label="Image (optionnel)"
                                 hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
@@ -722,31 +753,28 @@ const Index = ({
                         ))}
 
                         <Field
-                            label="Catégorie parente"
-                            error={editForm.errors.parent_id}
+                            label="Catégories parentes"
+                            error={editForm.errors.parent_ids}
                         >
-                            <select
-                                value={editForm.data.parent_id}
-                                onChange={(e) =>
-                                    editForm.setData(
-                                        'parent_id',
-                                        e.target.value,
-                                    )
+                            <p className="mb-2 text-xs text-ink-soft">
+                                Cochez chaque catégorie principale sous laquelle
+                                elle doit apparaître. Laissez vide pour en faire
+                                une catégorie principale.
+                            </p>
+                            <ParentPicker
+                                // A category cannot sit under itself; the
+                                // server rejects it too.
+                                options={parents.filter(
+                                    (p) => p.id !== editTarget?.id,
+                                )}
+                                selected={editForm.data.parent_ids}
+                                onChange={(next) =>
+                                    editForm.setData('parent_ids', next)
                                 }
-                                className={INPUT}
-                            >
-                                <option value="">Racine (aucun parent)</option>
-                                {parents
-                                    .filter((p) => p.id !== editTarget?.id)
-                                    .map((p) => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.translated_name}
-                                        </option>
-                                    ))}
-                            </select>
+                            />
                         </Field>
 
-                        {editForm.data.parent_id === '' ? (
+                        {editForm.data.parent_ids.length === 0 ? (
                             <SingleImageInput
                                 label="Image (optionnel)"
                                 hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
@@ -810,12 +838,13 @@ const Index = ({
                                 childrenOf(deleteTarget.id).length > 0 && (
                                     <>
                                         {' '}
-                                        Cette catégorie a{' '}
                                         {
                                             childrenOf(deleteTarget.id).length
                                         }{' '}
-                                        sous-catégorie(s) qui se retrouveront
-                                        sans parent.
+                                        sous-catégorie(s) n’y seront plus
+                                        rattachées. Celles qui n’ont pas d’autre
+                                        parent deviendront des catégories
+                                        principales.
                                     </>
                                 )}
                         </AlertDialogDescription>

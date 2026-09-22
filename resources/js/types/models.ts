@@ -32,10 +32,18 @@ export interface Category {
     /** Name resolved for the active locale; appended server-side. */
     translated_name: string;
     slug: string;
-    parent_id: number | null;
+    /**
+     * The main categories this one is filed under — several are allowed, and
+     * an empty list means it is itself a root. Only sent where the tree is
+     * edited (the admin page); pickers that just list roots omit it.
+     */
+    parent_ids?: number[];
     /** Public URL of the picture; only top-level categories have one. */
     image_url: string | null;
-    /** Subcategories, when eager-loaded on a top-level category. */
+    /**
+     * Subcategories, when eager-loaded on a top-level category. The same
+     * subcategory can appear under more than one parent.
+     */
     children?: Category[];
 }
 

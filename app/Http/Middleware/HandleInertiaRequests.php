@@ -136,10 +136,12 @@ class HandleInertiaRequests extends Middleware
             now()->addHour(),
             // Every top-level craft is listed; a parent's `children` array is
             // simply empty when it has no subcategories, and the header
-            // decides what to do with that (no flyout to show).
-            fn () => Category::whereNull('parent_id')
+            // decides what to do with that (no flyout to show). A subcategory
+            // filed under several crafts is listed under each of them, so the
+            // same id can legitimately appear more than once here.
+            fn () => Category::roots()
                 ->orderBy('id')
-                ->with(['children' => fn ($query) => $query->orderBy('id')])
+                ->with(['children' => fn ($query) => $query->orderBy('categories.id')])
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,

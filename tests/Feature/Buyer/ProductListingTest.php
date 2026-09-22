@@ -200,15 +200,35 @@ test('a buyer sees their own wishlisted pieces on this page marked', function ()
 test('choosing a root category also matches its child categories', function () {
     $child = Category::create([
         'slug' => 'tajines',
-        'parent_id' => $this->category->id,
         'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'],
     ]);
+    $child->parents()->attach($this->category);
 
     listed(['name' => 'Dans la racine']);
     listed(['name' => 'Dans l enfant', 'category_id' => $child->id]);
 
     $this->get(route('products.index', ['category_id' => $this->category->id]))
         ->assertInertia(fn (Assert $page) => $page->has('products', 2));
+});
+
+test('a subcategory shared by two crafts is reachable from either of them', function () {
+    $other = Category::create([
+        'slug' => 'dinanderie',
+        'name' => ['fr' => 'Dinanderie', 'ar' => 'نحاسيات', 'en' => 'Metalwork'],
+    ]);
+    $child = Category::create([
+        'slug' => 'art-de-la-table',
+        'name' => ['fr' => 'Art de la table', 'ar' => 'فن المائدة', 'en' => 'Tableware'],
+    ]);
+    $child->parents()->attach([$this->category->id, $other->id]);
+
+    listed(['name' => 'Partagé', 'category_id' => $child->id]);
+
+    $this->get(route('products.index', ['category_id' => $other->id]))
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
+
+    $this->get(route('products.index', ['category_id' => $this->category->id]))
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
 });
 
 test('only published products are listed', function () {

@@ -69,40 +69,6 @@ export default function NewArrivals({
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />
 
-                {/* Same traced arcade as the marketplace hero, at half the
-                    height — this is a section of the catalogue, so it should
-                    read as belonging to it rather than as a second front
-                    door. */}
-                <section className="relative isolate overflow-hidden border-b border-souk-brown/15 px-5 py-14 sm:px-8 sm:py-16 lg:px-12">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute top-6 left-1/2 -z-10 h-[115%] w-[min(60vw,620px)] -translate-x-1/2 [border-radius:50%_50%_0_0/28%_28%_0_0] border border-souk-brown/12"
-                    />
-
-                    <div className="mx-auto max-w-3xl text-center">
-                        <p className={`mb-4 text-terracotta-deep ${EYEBROW}`}>
-                            {t('buyer.new.eyebrow')}
-                        </p>
-
-                        <h1 className="font-display text-4xl leading-[1.02] text-balance text-souk-brown sm:text-6xl">
-                            {t('buyer.new.heading')}
-                        </h1>
-
-                        <div
-                            aria-hidden="true"
-                            className="mx-auto my-6 flex w-32 items-center gap-3"
-                        >
-                            <span className="h-px flex-1 bg-souk-brown/25" />
-                            <span className="size-2 rotate-45 border border-souk-brown/50" />
-                            <span className="h-px flex-1 bg-souk-brown/25" />
-                        </div>
-
-                        <p className="mx-auto max-w-xl text-sm leading-7 text-balance text-souk-brown-deep/80">
-                            {t('buyer.new.lead')}
-                        </p>
-                    </div>
-                </section>
-
                 <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
                     <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
                         <span>

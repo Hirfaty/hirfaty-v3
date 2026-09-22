@@ -23,7 +23,7 @@ class SettingsController extends Controller
 
         return Inertia::render('seller/settings/index', [
             'user' => $user,
-            'categories' => Category::whereNull('parent_id')->get(),
+            'categories' => Category::roots()->get(),
             'cities' => City::orderBy('name')->get(),
         ]);
     }
