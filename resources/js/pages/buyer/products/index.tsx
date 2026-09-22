@@ -244,266 +244,284 @@ export default function ProductsIndex({
         Boolean(filters.search) || Boolean(filters.category_id);
 
     return (
-        <div className="min-h-screen bg-souk-paper">
-            <SiteHeader />
+        <>
+            <Head title="Hirfaty - Catalogue" />
+            <div className="min-h-screen bg-souk-paper">
+                <SiteHeader />
 
-            {/* ── The full collection ──────────────────────────────── */}
-            <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-8 lg:px-12">
-                <div className="mb-10 border-b border-souk-brown/15 pb-9">
-                    <h2 className="font-display text-4xl text-souk-title sm:text-5xl">
-                        {t('buyer.products.collection_title')}
-                    </h2>
-                </div>
+                {/* ── The full collection ──────────────────────────────── */}
+                <section className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-8 lg:px-12">
+                    <div className="mb-10 border-b border-souk-brown/15 pb-9">
+                        <h2 className="font-display text-4xl text-souk-title sm:text-5xl">
+                            {t('buyer.products.collection_title')}
+                        </h2>
+                    </div>
 
-                <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
-                    <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
-                        <label className="mb-6 flex items-center gap-2 border border-souk-brown/25 bg-souk-cream/40 px-3 py-2 transition-colors focus-within:border-souk-brown">
-                            {busy ? (
-                                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-souk-brown/60" />
-                            ) : (
-                                <Search
-                                    className="h-4 w-4 shrink-0 text-souk-brown/60"
-                                    strokeWidth={1.5}
-                                />
-                            )}
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder={t(
-                                    'buyer.products.search_placeholder',
+                    <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
+                        <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
+                            <label className="mb-6 flex items-center gap-2 border border-souk-brown/25 bg-souk-cream/40 px-3 py-2 transition-colors focus-within:border-souk-brown">
+                                {busy ? (
+                                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-souk-brown/60" />
+                                ) : (
+                                    <Search
+                                        className="h-4 w-4 shrink-0 text-souk-brown/60"
+                                        strokeWidth={1.5}
+                                    />
                                 )}
-                                aria-label={t('buyer.products.search_label')}
-                                className="min-w-0 flex-1 bg-transparent text-sm text-souk-title outline-none placeholder:text-souk-brown-deep/45"
-                            />
-                        </label>
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder={t(
+                                        'buyer.products.search_placeholder',
+                                    )}
+                                    aria-label={t(
+                                        'buyer.products.search_label',
+                                    )}
+                                    className="min-w-0 flex-1 bg-transparent text-sm text-souk-title outline-none placeholder:text-souk-brown-deep/45"
+                                />
+                            </label>
 
-                        <h3 className="mb-4 text-[10px] font-semibold tracking-[0.16em] text-souk-brown-deep/50 uppercase">
-                            {t('buyer.products.categories')}
-                        </h3>
+                            <h3 className="mb-4 text-[10px] font-semibold tracking-[0.16em] text-souk-brown-deep/50 uppercase">
+                                {t('buyer.products.categories')}
+                            </h3>
 
-                        <ul className="space-y-1">
-                            <li>
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        applyFilters({ category_id: '' })
-                                    }
-                                    aria-pressed={!filters.category_id}
-                                    className={`w-full cursor-pointer rounded-sm px-3 py-2 text-start text-sm transition-colors ${
-                                        filters.category_id
-                                            ? 'text-souk-brown-deep/70 hover:text-souk-brown'
-                                            : 'font-semibold text-souk-brown'
-                                    }`}
-                                >
-                                    {t('buyer.products.category_all')}
-                                </button>
-                            </li>
+                            <ul className="space-y-1">
+                                <li>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            applyFilters({ category_id: '' })
+                                        }
+                                        aria-pressed={!filters.category_id}
+                                        className={`w-full cursor-pointer rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+                                            filters.category_id
+                                                ? 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                                : 'font-semibold text-souk-brown'
+                                        }`}
+                                    >
+                                        {t('buyer.products.category_all')}
+                                    </button>
+                                </li>
 
-                            {categories.map((category) => {
-                                const categoryId = String(category.id);
-                                const hasChildren =
-                                    category.children.length > 0;
-                                const isOpen = Boolean(expanded[category.id]);
-                                const isActive =
-                                    filters.category_id === categoryId;
-                                const containsActive =
-                                    isActive ||
-                                    category.children.some(
-                                        (child) =>
-                                            filters.category_id ===
-                                            String(child.id),
+                                {categories.map((category) => {
+                                    const categoryId = String(category.id);
+                                    const hasChildren =
+                                        category.children.length > 0;
+                                    const isOpen = Boolean(
+                                        expanded[category.id],
                                     );
+                                    const isActive =
+                                        filters.category_id === categoryId;
+                                    const containsActive =
+                                        isActive ||
+                                        category.children.some(
+                                            (child) =>
+                                                filters.category_id ===
+                                                String(child.id),
+                                        );
 
-                                return (
-                                    <li key={category.id}>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    applyFilters({
-                                                        category_id: categoryId,
-                                                    });
-                                                    setExpanded((prev) => ({
-                                                        ...prev,
-                                                        [category.id]: true,
-                                                    }));
-                                                }}
-                                                aria-pressed={isActive}
-                                                className={`min-w-0 flex-1 cursor-pointer truncate rounded-sm px-3 py-2 text-start text-sm transition-colors ${
-                                                    containsActive
-                                                        ? 'font-semibold text-souk-brown'
-                                                        : 'text-souk-brown-deep/70 hover:text-souk-brown'
-                                                }`}
-                                            >
-                                                {category.translated_name}
-                                            </button>
-
-                                            {hasChildren && (
+                                    return (
+                                        <li key={category.id}>
+                                            <div className="flex items-center gap-1">
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        toggleExpanded(
-                                                            category.id,
-                                                        )
-                                                    }
-                                                    aria-expanded={isOpen}
-                                                    aria-label={
-                                                        isOpen
-                                                            ? t(
-                                                                  'common.collapse',
-                                                              )
-                                                            : t('common.expand')
-                                                    }
-                                                    className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-t-full rounded-b-md text-souk-brown-deep/45 transition-colors hover:text-souk-brown"
+                                                    onClick={() => {
+                                                        applyFilters({
+                                                            category_id:
+                                                                categoryId,
+                                                        });
+                                                        setExpanded((prev) => ({
+                                                            ...prev,
+                                                            [category.id]: true,
+                                                        }));
+                                                    }}
+                                                    aria-pressed={isActive}
+                                                    className={`min-w-0 flex-1 cursor-pointer truncate rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+                                                        containsActive
+                                                            ? 'font-semibold text-souk-brown'
+                                                            : 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                                    }`}
                                                 >
-                                                    {isOpen ? (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    ) : isRTL ? (
-                                                        <ChevronLeft className="h-4 w-4" />
-                                                    ) : (
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    )}
+                                                    {category.translated_name}
                                                 </button>
-                                            )}
-                                        </div>
 
-                                        {hasChildren && isOpen && (
-                                            <ul className="ms-3 mt-1 space-y-1 border-s border-souk-brown/10 ps-3">
-                                                {category.children.map(
-                                                    (child) => {
-                                                        const childActive =
-                                                            filters.category_id ===
-                                                            String(child.id);
-
-                                                        return (
-                                                            <li key={child.id}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        applyFilters(
-                                                                            {
-                                                                                category_id:
-                                                                                    String(
-                                                                                        child.id,
-                                                                                    ),
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    aria-pressed={
-                                                                        childActive
-                                                                    }
-                                                                    className={`w-full cursor-pointer truncate rounded-sm px-3 py-1.5 text-start text-sm transition-colors ${
-                                                                        childActive
-                                                                            ? 'font-semibold text-souk-brown'
-                                                                            : 'text-souk-brown-deep/70 hover:text-souk-brown'
-                                                                    }`}
-                                                                >
-                                                                    {
-                                                                        child.translated_name
-                                                                    }
-                                                                </button>
-                                                            </li>
-                                                        );
-                                                    },
+                                                {hasChildren && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleExpanded(
+                                                                category.id,
+                                                            )
+                                                        }
+                                                        aria-expanded={isOpen}
+                                                        aria-label={
+                                                            isOpen
+                                                                ? t(
+                                                                      'common.collapse',
+                                                                  )
+                                                                : t(
+                                                                      'common.expand',
+                                                                  )
+                                                        }
+                                                        className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-t-full rounded-b-md text-souk-brown-deep/45 transition-colors hover:text-souk-brown"
+                                                    >
+                                                        {isOpen ? (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        ) : isRTL ? (
+                                                            <ChevronLeft className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        )}
+                                                    </button>
                                                 )}
-                                            </ul>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </aside>
+                                            </div>
 
-                    <div className="min-w-0">
-                        <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
-                            <span>
-                                {pagination.total}{' '}
-                                {t('buyer.products.count_pieces')}
-                            </span>
-                            <span className="hidden sm:inline">
-                                {t('buyer.products.made_in_morocco')}
-                            </span>
-                        </div>
+                                            {hasChildren && isOpen && (
+                                                <ul className="ms-3 mt-1 space-y-1 border-s border-souk-brown/10 ps-3">
+                                                    {category.children.map(
+                                                        (child) => {
+                                                            const childActive =
+                                                                filters.category_id ===
+                                                                String(
+                                                                    child.id,
+                                                                );
 
-                        {products.length === 0 ? (
-                            <div className="flex flex-col items-center gap-4 border border-dashed border-souk-brown/20 py-24 text-center">
-                                <PackageSearch
-                                    className="h-9 w-9 text-souk-brown/25"
-                                    strokeWidth={1.5}
-                                />
-                                <p className="text-souk-brown-deep/70">
-                                    {filters.search
-                                        ? t('buyer.products.empty_with_search')
-                                        : t('buyer.products.empty')}
-                                </p>
-                                {hasActiveFilters && (
-                                    <button
-                                        onClick={() => {
-                                            setSearch('');
-                                            applyFilters({
-                                                search: '',
-                                                category_id: '',
-                                            });
-                                        }}
-                                        className="border border-souk-brown px-6 py-2.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream"
-                                    >
-                                        {t('buyer.products.reset_all')}
-                                    </button>
-                                )}
+                                                            return (
+                                                                <li
+                                                                    key={
+                                                                        child.id
+                                                                    }
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            applyFilters(
+                                                                                {
+                                                                                    category_id:
+                                                                                        String(
+                                                                                            child.id,
+                                                                                        ),
+                                                                                },
+                                                                            )
+                                                                        }
+                                                                        aria-pressed={
+                                                                            childActive
+                                                                        }
+                                                                        className={`w-full cursor-pointer truncate rounded-sm px-3 py-1.5 text-start text-sm transition-colors ${
+                                                                            childActive
+                                                                                ? 'font-semibold text-souk-brown'
+                                                                                : 'text-souk-brown-deep/70 hover:text-souk-brown'
+                                                                        }`}
+                                                                    >
+                                                                        {
+                                                                            child.translated_name
+                                                                        }
+                                                                    </button>
+                                                                </li>
+                                                            );
+                                                        },
+                                                    )}
+                                                </ul>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </aside>
+
+                        <div className="min-w-0">
+                            <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
+                                <span>
+                                    {pagination.total}{' '}
+                                    {t('buyer.products.count_pieces')}
+                                </span>
+                                <span className="hidden sm:inline">
+                                    {t('buyer.products.made_in_morocco')}
+                                </span>
                             </div>
-                        ) : (
-                            <div
-                                className={`grid grid-cols-2 gap-x-3 gap-y-10 transition-opacity duration-300 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:gap-x-7 xl:grid-cols-4 ${busy ? 'opacity-50' : ''}`}
-                            >
-                                {products.map((p) => (
-                                    <CollectionCard
-                                        key={p.id}
-                                        product={p}
-                                        audience={audience}
-                                        money={money}
-                                        t={t}
-                                        wishlisted={wished.has(p.id)}
-                                        canWishlist={canWishlist}
+
+                            {products.length === 0 ? (
+                                <div className="flex flex-col items-center gap-4 border border-dashed border-souk-brown/20 py-24 text-center">
+                                    <PackageSearch
+                                        className="h-9 w-9 text-souk-brown/25"
+                                        strokeWidth={1.5}
                                     />
-                                ))}
-                            </div>
-                        )}
-
-                        {pagination.has_more && (
-                            <div className="mt-16 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    disabled={loadingMore}
-                                    className="inline-flex items-center gap-2 rounded-md border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
-                                >
-                                    {loadingMore && (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    <p className="text-souk-brown-deep/70">
+                                        {filters.search
+                                            ? t(
+                                                  'buyer.products.empty_with_search',
+                                              )
+                                            : t('buyer.products.empty')}
+                                    </p>
+                                    {hasActiveFilters && (
+                                        <button
+                                            onClick={() => {
+                                                setSearch('');
+                                                applyFilters({
+                                                    search: '',
+                                                    category_id: '',
+                                                });
+                                            }}
+                                            className="border border-souk-brown px-6 py-2.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream"
+                                        >
+                                            {t('buyer.products.reset_all')}
+                                        </button>
                                     )}
-                                    {loadingMore
-                                        ? t('buyer.products.loading')
-                                        : t('buyer.products.load_more')}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </section>
+                                </div>
+                            ) : (
+                                <div
+                                    className={`grid grid-cols-2 gap-x-3 gap-y-10 transition-opacity duration-300 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3 lg:gap-x-7 xl:grid-cols-4 ${busy ? 'opacity-50' : ''}`}
+                                >
+                                    {products.map((p) => (
+                                        <CollectionCard
+                                            key={p.id}
+                                            product={p}
+                                            audience={audience}
+                                            money={money}
+                                            t={t}
+                                            wishlisted={wished.has(p.id)}
+                                            canWishlist={canWishlist}
+                                        />
+                                    ))}
+                                </div>
+                            )}
 
-            {/* ── Closing band ─────────────────────────────────────
+                            {pagination.has_more && (
+                                <div className="mt-16 flex justify-center">
+                                    <button
+                                        onClick={loadMore}
+                                        disabled={loadingMore}
+                                        className="inline-flex items-center gap-2 rounded-md border border-souk-brown px-8 py-3.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream disabled:opacity-50"
+                                    >
+                                        {loadingMore && (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        )}
+                                        {loadingMore
+                                            ? t('buyer.products.loading')
+                                            : t('buyer.products.load_more')}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── Closing band ─────────────────────────────────────
                 One dark full-bleed rule between the last row of tiles and the
                 footer, so the grid ends rather than simply stopping. */}
-            <section className="border-t border-souk-brown bg-souk-brown px-5 py-16 text-souk-cream sm:px-8 lg:px-12">
-                <div className="mx-auto max-w-[1440px] text-center md:text-end">
-                    <p className="font-display text-3xl text-souk-cream sm:text-4xl">
-                        {t('buyer.products.closing_title')}
-                    </p>
-                    <p className="mt-3 text-sm text-souk-cream/75">
-                        {t('buyer.products.closing_subtitle')}
-                    </p>
-                </div>
-            </section>
+                <section className="border-t border-souk-brown bg-souk-brown px-5 py-16 text-souk-cream sm:px-8 lg:px-12">
+                    <div className="mx-auto max-w-[1440px] text-center md:text-end">
+                        <p className="font-display text-3xl text-souk-cream sm:text-4xl">
+                            {t('buyer.products.closing_title')}
+                        </p>
+                        <p className="mt-3 text-sm text-souk-cream/75">
+                            {t('buyer.products.closing_subtitle')}
+                        </p>
+                    </div>
+                </section>
 
-            <SiteFooter />
-        </div>
+                <SiteFooter />
+            </div>
+        </>
     );
 }
