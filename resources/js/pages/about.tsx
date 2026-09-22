@@ -85,7 +85,7 @@ export default function About() {
                 </section>
 
                 {/* ───────────────────── Story ───────────────────── */}
-                <section className="bg-souk-paper py-24 lg:py-32">
+                <section className="bg-souk-paper py-8 lg:py-16">
                     <div className="container">
                         <Reveal>
                             <p className="mx-auto max-w-3xl text-center text-xl leading-relaxed text-souk-brown-deep sm:text-2xl">
@@ -111,7 +111,7 @@ export default function About() {
                 </section>
 
                 {/* ───────────────────── Impact ───────────────────── */}
-                <section className="bg-souk-peach py-24 lg:py-32">
+                <section className="bg-souk-peach py-8 lg:py-16">
                     <div className="container">
                         <div className="mx-auto max-w-2xl text-center">
                             <Reveal>

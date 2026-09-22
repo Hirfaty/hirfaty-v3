@@ -1,42 +1,35 @@
-@component('emails.layout', ['title' => 'Your professional account request — Hirfaty', 'lang' => 'en', 'dir' => 'ltr'])
-    <span class="badge badge-info">Request reviewed</span>
+{{-- $user, $reason --}}
+<x-mail.layout
+    locale="en"
+    title="Your professional account request — Hirfaty"
+    preheader="Your request has been reviewed by our team.">
 
-    <p class="eyebrow">Your professional account request</p>
+    <x-mail.eyebrow tone="danger">Request reviewed</x-mail.eyebrow>
 
-    <h1 class="headline">
-        We can't approve it<br>
-        <em>just yet</em>.
-    </h1>
+    <x-mail.heading>We can't approve it just yet.</x-mail.heading>
 
-    <p class="body-text">
+    <x-mail.text>
         Hello {{ $user->first_name }}, our team has reviewed your professional account
         request. We weren't able to approve it as it stands.
-    </p>
+    </x-mail.text>
 
-    <div class="tip-box">
-        <p>
-            <strong>Reason:</strong> {{ $reason }}
-        </p>
-    </div>
+    <x-mail.note tone="danger" title="Reason">
+        {{ $reason }}
+    </x-mail.note>
 
-    <p class="body-text">
+    <x-mail.text>
         Your account stays fully active and you can carry on ordering as normal. You're
         welcome to submit a new request once things change.
-    </p>
+    </x-mail.text>
 
-    <div class="cta-wrap">
-        <a href="{{ config('app.url') }}/products" class="cta-btn">
-            Back to the market →
-        </a>
-    </div>
+    <x-mail.button :url="config('app.url').'/products'">
+        Back to the market
+    </x-mail.button>
 
-    @slot('footer')
-        <p>You're receiving this email because you requested a professional account on Hirfaty.</p>
-        <p>
-            © {{ date('Y') }} Hirfaty — The home of Moroccan artisans.<br>
-            <a href="{{ config('app.url') }}/products">The market</a>
-            &nbsp;·&nbsp;
-            <a href="{{ config('app.url') }}/orders">My orders</a>
-        </p>
-    @endslot
-@endcomponent
+    <x-slot:footer>
+        You're receiving this email because you requested a professional account on Hirfaty.<br>
+        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">The market</a>
+        &nbsp;·&nbsp;
+        <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">My orders</a>
+    </x-slot:footer>
+</x-mail.layout>

@@ -1,42 +1,35 @@
-@component('emails.layout', ['title' => 'Votre demande de compte professionnel — Hirfaty', 'lang' => 'fr', 'dir' => 'ltr'])
-    <span class="badge badge-info">Demande examinée</span>
+{{-- $user, $reason --}}
+<x-mail.layout
+    locale="fr"
+    title="Votre demande de compte professionnel — Hirfaty"
+    preheader="Votre demande a été examinée par notre équipe.">
 
-    <p class="eyebrow">Votre demande de compte professionnel</p>
+    <x-mail.eyebrow tone="danger">Demande examinée</x-mail.eyebrow>
 
-    <h1 class="headline">
-        Nous ne pouvons pas<br>
-        <em>l’accepter</em> pour l’instant.
-    </h1>
+    <x-mail.heading>Nous ne pouvons pas l’accepter pour l’instant.</x-mail.heading>
 
-    <p class="body-text">
+    <x-mail.text>
         Bonjour {{ $user->first_name }}, notre équipe a examiné votre demande de compte
         professionnel. Elle n’a pas pu être acceptée en l’état.
-    </p>
+    </x-mail.text>
 
-    <div class="tip-box">
-        <p>
-            <strong>Motif :</strong> {{ $reason }}
-        </p>
-    </div>
+    <x-mail.note tone="danger" title="Motif">
+        {{ $reason }}
+    </x-mail.note>
 
-    <p class="body-text">
+    <x-mail.text>
         Votre compte reste pleinement actif et vous pouvez continuer à commander normalement.
         Vous pouvez soumettre une nouvelle demande dès que la situation évolue.
-    </p>
+    </x-mail.text>
 
-    <div class="cta-wrap">
-        <a href="{{ config('app.url') }}/products" class="cta-btn">
-            Retour au marché →
-        </a>
-    </div>
+    <x-mail.button :url="config('app.url').'/products'">
+        Retour au marché
+    </x-mail.button>
 
-    @slot('footer')
-        <p>Vous recevez cet email suite à votre demande de compte professionnel sur Hirfaty.</p>
-        <p>
-            © {{ date('Y') }} Hirfaty — La plateforme des artisans marocains.<br>
-            <a href="{{ config('app.url') }}/products">Le marché</a>
-            &nbsp;·&nbsp;
-            <a href="{{ config('app.url') }}/orders">Mes commandes</a>
-        </p>
-    @endslot
-@endcomponent
+    <x-slot:footer>
+        Vous recevez cet email suite à votre demande de compte professionnel sur Hirfaty.<br>
+        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">Le marché</a>
+        &nbsp;·&nbsp;
+        <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">Mes commandes</a>
+    </x-slot:footer>
+</x-mail.layout>

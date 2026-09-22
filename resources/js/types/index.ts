@@ -40,6 +40,10 @@ export interface ResetLinkPayload {
  */
 export interface SellerStoreStatus {
     store_name: string;
+    /** For linking to the public shop page — `route('stores.show', slug)`. */
+    slug: string;
+    /** False once an admin has switched the shop off (Store::status). */
+    is_public: boolean;
     verification_status: 'pending' | 'approved' | 'rejected';
     rejection_reason: string | null;
     /** Names from Store::REQUIRED_PROFILE_FIELDS that are still blank. */

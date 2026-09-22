@@ -106,6 +106,13 @@ class HandleInertiaRequests extends Middleware
 
         return [
             'store_name' => $store->store_name,
+            // Lets the sidebar link straight to the public shop page
+            // (stores.show) without a round trip to look it up.
+            'slug' => $store->slug,
+            // Buyer\StoreController::show 404s a shop an admin has switched
+            // off (status 'inactive') rather than rendering it empty — the
+            // sidebar link needs this to know when *not* to offer itself.
+            'is_public' => $store->status === 'active',
             'verification_status' => $store->verification_status,
             'rejection_reason' => $store->rejection_reason,
             'missing_fields' => $store->missingProfileFields(),

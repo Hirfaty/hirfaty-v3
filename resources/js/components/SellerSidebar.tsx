@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Coins,
+    ExternalLink,
     LayoutDashboard,
     LogOut,
     Package,
@@ -192,6 +193,39 @@ export function SellerSidebar() {
             </SidebarContent>
 
             <SidebarFooter className="border-t border-sidebar-border">
+                {/*
+                 * The public shop page, not the seller's own back office —
+                 * same distinction and same `stores.show` route the admin
+                 * panel's "Voir en ligne" link uses (see
+                 * admin/users/showSeller.tsx). Opens in a new tab so leaving
+                 * to look does not lose the dashboard underneath.
+                 *
+                 * Gated on `is_public` rather than `can_sell`: a shop still
+                 * pending review already has a live page (StoreController
+                 * shows it with an empty product grid), and only an admin
+                 * switching the shop off — Store::status — actually 404s it.
+                 */}
+                {sellerStore?.is_public && (
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild className="rounded-lg">
+                                <Link
+                                    href={route(
+                                        'stores.show',
+                                        sellerStore.slug,
+                                    )}
+                                    target="_blank"
+                                    className="flex items-center gap-2.5"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                    {!collapsed && (
+                                        <span>Voir ma boutique</span>
+                                    )}
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                )}
                 {!collapsed && auth?.user && (
                     <div className="flex items-center gap-2.5 px-2 py-1.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">

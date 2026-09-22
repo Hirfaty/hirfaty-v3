@@ -1,100 +1,61 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8" />
-    <title>طلب جديد — حرفتي</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #F5F0E8; font-family: 'Georgia', serif; color: #1C1917; direction: rtl; text-align: right; }
-        .wrapper { max-width: 580px; margin: 40px auto; padding: 0 16px 60px; }
-        .header { padding: 32px 0 28px; border-bottom: 1px solid rgba(28,25,23,0.12); margin-bottom: 40px; }
-        .logo { font-size: 22px; font-weight: 700; color: #1C1917; text-decoration: none; }
-        .logo span { color: #C1522A; }
-        .eyebrow { font-size: 10px; color: #78716C; margin-bottom: 16px; }
-        .headline { font-size: 32px; line-height: 1.4; color: #1C1917; margin-bottom: 20px; }
-        .headline em { color: #C1522A; font-style: normal; }
-        .body-text { font-size: 15px; line-height: 1.9; color: rgba(28,25,23,0.75); margin-bottom: 16px; }
-        .badge { display: inline-block; background: #DBEAFE; color: #1E40AF; font-size: 10px; padding: 4px 10px; margin-bottom: 24px; }
-        .order-meta { border: 1px solid rgba(28,25,23,0.12); padding: 20px; margin: 24px 0; background: #FAF7F2; }
-        .order-meta-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.08); font-size: 13px; flex-direction: row-reverse; }
-        .order-meta-row:last-child { border-bottom: none; }
-        .order-meta-label { color: #78716C; }
-        .order-meta-value { color: #1C1917; font-weight: 500; }
-        .items-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-        .items-table th { font-size: 10px; color: #78716C; text-align: right; padding: 8px 0; border-bottom: 1px solid rgba(28,25,23,0.15); }
-        .items-table td { font-size: 13px; padding: 12px 0; border-bottom: 1px solid rgba(28,25,23,0.08); color: #1C1917; text-align: right; }
-        .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; color: rgba(28,25,23,0.65); flex-direction: row-reverse; }
-        .earnings-box { background: rgba(193,82,42,0.08); border-right: 3px solid #C1522A; padding: 16px; margin: 24px 0; }
-        .earnings-box p { font-size: 13px; line-height: 1.8; color: #1C1917; }
-        .earnings-box .amount { font-size: 22px; font-weight: 700; color: #C1522A; margin-top: 4px; }
-        .urgent-note { background: #FEF3C7; border-right: 3px solid #F59E0B; padding: 14px 16px; margin: 24px 0; }
-        .urgent-note p { font-size: 13px; line-height: 1.8; color: #92400E; }
-        .cta-btn { display: inline-block; background-color: #C1522A; color: #FAF7F2 !important; text-decoration: none; font-size: 14px; padding: 14px 32px; margin: 28px 0; }
-        .footer { border-top: 1px solid rgba(28,25,23,0.12); padding-top: 28px; margin-top: 40px; }
-        .footer p { font-size: 11px; color: #A8A29E; line-height: 1.7; margin-bottom: 6px; }
-        .footer a { color: #78716C; text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <div class="wrapper">
-        <div class="header">
-            <a href="{{ config('app.url') }}" class="logo">حرفتي<span>.</span></a>
-        </div>
+{{-- $order, $user --}}
+@php
+    /*
+     * تفصيل ما يحمله الطلب فعلاً بدل رقم صافٍ واحد. لا يظهر سطر التوصيل إلا
+     * إذا كان هذا الطلب هو الذي حمل رسوم توصيل السلة (انظر CheckoutService).
+     */
+    $lines = [
+        ['label' => 'إجمالي الطلب', 'amount' => (float) $order->total_amount],
+        ['label' => 'عمولة حرفتي (20%)', 'amount' => -(float) $order->platform_fee],
+    ];
 
-        <span class="badge">🛍 طلب جديد</span>
-        <p class="eyebrow">{{ $order->store->store_name }}</p>
+    if ((float) $order->delivery_fee > 0) {
+        $lines[] = ['label' => 'التوصيل', 'amount' => (float) $order->delivery_fee];
+    }
+@endphp
 
-        <h1 class="headline">لديك <em>طلب جديد</em>!</h1>
+<x-mail.layout
+    locale="ar"
+    title="طلب جديد — حرفتي"
+    preheader="الطلب {{ $order->reference }} في انتظار التحضير.">
 
-        <p class="body-text">
-            مرحباً {{ $user->first_name }}، تلقيت طلباً جديداً.
-            حضّر القطع وأكّد الطلب — ونحن نتكفّل بعد ذلك بتوصيله إلى المشتري.
-        </p>
+    <x-mail.eyebrow>طلب جديد · {{ $order->store->store_name }}</x-mail.eyebrow>
 
-        <div class="order-meta">
-            <div class="order-meta-row"><span class="order-meta-value">{{ $order->reference }}</span><span class="order-meta-label">رقم الطلب</span></div>
-            <div class="order-meta-row"><span class="order-meta-value">{{ $order->buyer->first_name }} {{ $order->buyer->last_name }}</span><span class="order-meta-label">المشتري</span></div>
-            <div class="order-meta-row"><span class="order-meta-value">{{ $order->created_at->format('d/m/Y') }}</span><span class="order-meta-label">التاريخ</span></div>
-            <div class="order-meta-row"><span class="order-meta-value">{{ $order->shipping_address }}</span><span class="order-meta-label">عنوان التوصيل</span></div>
-        </div>
+    <x-mail.heading>لديك طلب جديد.</x-mail.heading>
 
-        <table class="items-table">
-            <thead><tr><th style="text-align:left">السعر</th><th style="text-align:center">الكمية</th><th>المنتج</th></tr></thead>
-            <tbody>
-                @foreach($order->items as $item)
-                <tr>
-                    <td style="text-align:left">{{ number_format($item->subtotal, 2) }} د.م</td>
-                    <td style="text-align:center;color:#78716C">× {{ $item->quantity }}</td>
-                    <td>{{ $item->product->name }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+    <x-mail.text>
+        مرحباً {{ $user->first_name }}، تلقيت طلباً جديداً.
+        حضّر القطع وأكّد الطلب — ونحن نتكفّل بعد ذلك بتوصيله إلى المشتري.
+    </x-mail.text>
 
-        {{-- تفصيل ما يحمله الطلب فعلاً بدل رقم صافٍ واحد. لا يظهر سطر
-             التوصيل إلا إذا كان هذا الطلب هو الذي حمل رسوم توصيل السلة
-             (انظر CheckoutService). --}}
-        <div class="total-row"><span>{{ number_format($order->total_amount, 2) }} د.م</span><span>إجمالي الطلب</span></div>
-        <div class="total-row"><span>− {{ number_format($order->platform_fee, 2) }} د.م</span><span>عمولة حرفتي (20%)</span></div>
-        @if((float) $order->delivery_fee > 0)
-        <div class="total-row"><span>+ {{ number_format($order->delivery_fee, 2) }} د.م</span><span>التوصيل</span></div>
-        @endif
+    <x-mail.panel>
+        <x-mail.row label="الطلب" :value="$order->reference" />
+        <x-mail.row label="المشتري" :value="$order->buyer->first_name.' '.$order->buyer->last_name" />
+        <x-mail.row label="التاريخ" :value="$order->created_at->format('d/m/Y H:i')" />
+        <x-mail.row label="التوصيل إلى" :value="$order->shipping_address" />
+    </x-mail.panel>
 
-        <div class="earnings-box">
-            <p>أرباحك من هذا الطلب</p>
-            <p class="amount">{{ number_format($order->seller_earnings, 2) }} د.م</p>
-        </div>
+    <x-mail.items
+        :items="$order->items"
+        :labels="['product' => 'المنتج', 'qty' => 'الكمية', 'price' => 'السعر']" />
 
-        <div class="urgent-note">
-            <p>⏱ أكّد هذا الطلب في أقرب وقت حتى نتمكّن من استلامه من الورشة. تصبح أرباحك متاحة بمجرد توصيل الطلب.</p>
-        </div>
+    <x-mail.totals
+        :lines="$lines"
+        :total="['label' => 'أرباحك من هذا الطلب', 'amount' => (float) $order->seller_earnings]" />
 
-        <a href="{{ config('app.url') }}/seller/orders/{{ $order->reference }}" class="cta-btn">← عرض وتأكيد الطلب</a>
+    <x-mail.note>
+        أكّد هذا الطلب في أقرب وقت حتى نتمكّن من استلامه من الورشة.
+        تصبح أرباحك متاحة بمجرد توصيل الطلب.
+    </x-mail.note>
 
-        <div class="footer">
-            <p>تلقيت هذا البريد لأنك بائع على حرفتي.</p>
-            <p>© {{ date('Y') }} حرفتي · <a href="{{ config('app.url') }}/seller/orders">طلباتي</a></p>
-        </div>
-    </div>
-</body>
-</html>
+    <x-mail.button :url="config('app.url').'/seller/orders/'.$order->reference">
+        عرض وتأكيد الطلب
+    </x-mail.button>
+
+    <x-slot:footer>
+        تلقيت هذا البريد لأنك بائع على حرفتي.<br>
+        <a href="{{ config('app.url') }}/seller/orders" style="color:{{ config('mail_theme.soft') }};">طلباتي</a>
+        &nbsp;·&nbsp;
+        <a href="{{ config('app.url') }}/seller/dashboard" style="color:{{ config('mail_theme.soft') }};">لوحة التحكم</a>
+    </x-slot:footer>
+</x-mail.layout>

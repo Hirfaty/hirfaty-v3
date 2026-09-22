@@ -1,42 +1,35 @@
-@component('emails.layout', ['title' => 'طلب حسابك المهني — حرفتي', 'lang' => 'ar', 'dir' => 'rtl'])
-    <span class="badge badge-info">تمت مراجعة الطلب</span>
+{{-- $user, $reason --}}
+<x-mail.layout
+    locale="ar"
+    title="طلب حسابك المهني — حرفتي"
+    preheader="راجع فريقنا طلبك للحصول على حساب مهني.">
 
-    <p class="eyebrow">طلب الحساب المهني</p>
+    <x-mail.eyebrow tone="danger">تمت مراجعة الطلب</x-mail.eyebrow>
 
-    <h1 class="headline">
-        لم نتمكن من قبوله<br>
-        <em>في الوقت الحالي</em>.
-    </h1>
+    <x-mail.heading>لم نتمكن من قبوله في الوقت الحالي.</x-mail.heading>
 
-    <p class="body-text">
+    <x-mail.text>
         مرحباً {{ $user->first_name }}، راجع فريقنا طلبك للحصول على حساب مهني،
         ولم نتمكن من قبوله بصيغته الحالية.
-    </p>
+    </x-mail.text>
 
-    <div class="tip-box">
-        <p>
-            <strong>السبب:</strong> {{ $reason }}
-        </p>
-    </div>
+    <x-mail.note tone="danger" title="السبب">
+        {{ $reason }}
+    </x-mail.note>
 
-    <p class="body-text">
+    <x-mail.text>
         يبقى حسابك نشطاً بالكامل ويمكنك مواصلة الطلب كالمعتاد.
         ويمكنك تقديم طلب جديد بمجرد تغير الوضع.
-    </p>
+    </x-mail.text>
 
-    <div class="cta-wrap">
-        <a href="{{ config('app.url') }}/products" class="cta-btn">
-            العودة إلى السوق ←
-        </a>
-    </div>
+    <x-mail.button :url="config('app.url').'/products'">
+        العودة إلى السوق
+    </x-mail.button>
 
-    @slot('footer')
-        <p>تصلك هذه الرسالة بعد طلبك حساباً مهنياً على حرفتي.</p>
-        <p>
-            © {{ date('Y') }} حرفتي — منصة الحرفيين المغاربة.<br>
-            <a href="{{ config('app.url') }}/products">السوق</a>
-            &nbsp;·&nbsp;
-            <a href="{{ config('app.url') }}/orders">طلباتي</a>
-        </p>
-    @endslot
-@endcomponent
+    <x-slot:footer>
+        تصلك هذه الرسالة بعد طلبك حساباً مهنياً على حرفتي.<br>
+        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">السوق</a>
+        &nbsp;·&nbsp;
+        <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">طلباتي</a>
+    </x-slot:footer>
+</x-mail.layout>
