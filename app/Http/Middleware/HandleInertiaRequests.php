@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\CurrencyService;
+use App\Services\ReviewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -77,7 +78,36 @@ class HandleInertiaRequests extends Middleware
             // Drives the seller status bar. Lazy, so the query only runs on
             // responses that actually read it.
             'sellerStore' => fn () => $this->getSellerStoreStatus($request),
+            /*
+             * How many delivered orders are still waiting to be rated. Drives
+             * the prompt a buyer meets on arrival (ReviewPrompt), which is
+             * mounted above the page tree and so has nowhere else to read it
+             * from.
+             *
+             * One indexed count, and it short-circuits to null for anyone who
+             * is not a signed-in buyer — which is every guest, seller and
+             * admin response.
+             */
+            'pendingReviews' => fn () => $this->getPendingReviewCount($request),
         ];
+    }
+
+    /**
+     * Deliveries this buyer still owes a rating on.
+     *
+     * 0 rather than null for a buyer with nothing pending, and null for
+     * everyone who cannot rate anything at all — the prompt keys off the
+     * number, and the distinction keeps a guest from ever being counted.
+     */
+    private function getPendingReviewCount(Request $request): ?int
+    {
+        $user = $request->user();
+
+        if (! $user || $user->role !== 'buyer') {
+            return null;
+        }
+
+        return app(ReviewService::class)->pendingOrderCount($user);
     }
 
     /**

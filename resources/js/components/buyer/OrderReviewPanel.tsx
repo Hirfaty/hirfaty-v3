@@ -8,56 +8,40 @@ import type { BuyerOrder } from '@/types/orders';
 /**
  * "How did this go?" — the rating form on a delivered order.
  *
- * One form for the whole order: every piece in it, then the shop, submitted
- * together. A per-product form would mean several round trips for what is a
- * single moment of feedback, and the shop rating has no natural home if the
- * pieces are each their own submission.
+ * Two rules shape it:
  *
- * Everything is optional. A buyer who only wants to rate one of three pieces
- * can, and the payload simply carries fewer entries — `ReviewService` treats
- * an absent product as "no opinion", not as a zero.
+ *  - It rates the *pieces*, not the artisan. A shop rating used to sit at the
+ *    bottom; it was asking the buyer to judge a person for a parcel, and it is
+ *    gone.
+ *  - A rating is final. Once sent, that piece's stars turn into a statement of
+ *    what was said and the comment box closes with them — so the form only
+ *    ever shows an input for something genuinely still open. The server
+ *    refuses a second rating regardless (ReviewService), which is what makes
+ *    this safe to be a display decision.
+ *
+ * Everything is optional and submitted together: a buyer who wants to rate one
+ * of three pieces can, and the payload simply carries fewer entries. The rest
+ * stay open for a later visit.
  */
 export default function OrderReviewPanel({ order }: { order: BuyerOrder }) {
     const { t } = useTranslation();
 
-    // Seeded from what the buyer already said, so re-opening a rated order
-    // shows their own answers rather than a blank form implying it was never
-    // submitted.
-    const [productRatings, setProductRatings] = useState<
-        Record<number, number>
-    >(() =>
-        Object.fromEntries(
-            order.items
-                .filter((item) => item.product_id && item.review)
-                .map((item) => [
-                    item.product_id as number,
-                    item.review!.rating,
-                ]),
-        ),
-    );
+    const items = order.items.filter((item) => item.product_id);
+    const open = items.filter((item) => !item.review);
+    const rated = items.filter((item) => item.review);
 
-    const [storeRating, setStoreRating] = useState<number>(
-        order.store_review?.rating ?? 0,
-    );
-
-    const [comment, setComment] = useState<string>(
-        order.store_review?.comment ?? '',
-    );
-
+    const [ratings, setRatings] = useState<Record<number, number>>({});
+    const [comments, setComments] = useState<Record<number, string>>({});
     const [saving, setSaving] = useState(false);
 
     // Reflects the last successful submit rather than the presence of saved
     // data, so the confirmation is feedback on *this* action.
     const [saved, setSaved] = useState(false);
 
-    const alreadyRated =
-        order.items.some((item) => item.review) || order.store_review !== null;
-
-    const hasAnything =
-        Object.keys(productRatings).length > 0 || storeRating > 0;
+    const chosen = Object.entries(ratings).filter(([, rating]) => rating > 0);
 
     const submit = () => {
-        if (!hasAnything) {
+        if (chosen.length === 0) {
             return;
         }
 
@@ -65,18 +49,14 @@ export default function OrderReviewPanel({ order }: { order: BuyerOrder }) {
             route('buyer.orders.reviews.store', order.reference),
             {
                 products: Object.fromEntries(
-                    Object.entries(productRatings).map(([id, rating]) => [
+                    chosen.map(([id, rating]) => [
                         id,
-                        { rating },
+                        {
+                            rating,
+                            comment: comments[Number(id)] || null,
+                        },
                     ]),
                 ),
-                // Only sent when a shop rating was actually given: the server
-                // treats `store: null` as "skipped", and posting a 0 would
-                // fail validation rather than being read as no answer.
-                store:
-                    storeRating > 0
-                        ? { rating: storeRating, comment: comment || null }
-                        : null,
             },
             {
                 preserveScroll: true,
@@ -84,114 +64,139 @@ export default function OrderReviewPanel({ order }: { order: BuyerOrder }) {
                     setSaving(true);
                     setSaved(false);
                 },
+                // No local "now it's rated" bookkeeping: the reload brings
+                // back items carrying their new `review`, which is what closes
+                // the stars. One source of truth for whether a piece is done.
                 onSuccess: () => setSaved(true),
                 onFinish: () => setSaving(false),
             },
         );
     };
 
+    const starLabel = (n: number) =>
+        t('buyer.reviews.star_label').replace(':count', String(n));
+
     return (
         <div className="mt-5 border-t border-souk-brown/12 pt-5">
             <p className="font-display text-sm text-souk-title">
-                {alreadyRated
-                    ? t('buyer.reviews.edit_heading')
+                {open.length === 0
+                    ? t('buyer.reviews.all_rated_heading')
                     : t('buyer.reviews.heading')}
             </p>
 
-            <div className="mt-4 space-y-3">
-                {order.items
-                    .filter((item) => item.product_id)
-                    .map((item) => (
-                        <div
-                            key={item.id}
-                            className="flex items-center justify-between gap-4"
-                        >
+            <div className="mt-4 space-y-4">
+                {/* Still open, in the order's own order — so a part-rated
+                    delivery doesn't reshuffle its pieces under the buyer. */}
+                {open.map((item) => {
+                    const productId = item.product_id as number;
+                    const rating = ratings[productId] ?? 0;
+
+                    return (
+                        <div key={item.id}>
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="min-w-0 flex-1 truncate text-sm text-souk-brown-deep/85">
+                                    {item.product.name}
+                                </span>
+                                <StarRating
+                                    name={`order-${order.id}-product-${productId}`}
+                                    label={`${t('buyer.reviews.rate_product')} — ${item.product.name}`}
+                                    starLabel={starLabel}
+                                    value={rating}
+                                    onChange={(next) =>
+                                        setRatings((prev) => ({
+                                            ...prev,
+                                            [productId]: next,
+                                        }))
+                                    }
+                                />
+                            </div>
+
+                            {/* Only once this piece has stars — an empty
+                                comment box under an untouched row is a
+                                question nobody asked yet. */}
+                            {rating > 0 && (
+                                <textarea
+                                    value={comments[productId] ?? ''}
+                                    onChange={(e) =>
+                                        setComments((prev) => ({
+                                            ...prev,
+                                            [productId]: e.target.value,
+                                        }))
+                                    }
+                                    rows={2}
+                                    maxLength={1000}
+                                    placeholder={t(
+                                        'buyer.reviews.comment_placeholder',
+                                    )}
+                                    aria-label={`${t('buyer.reviews.comment_placeholder')} — ${item.product.name}`}
+                                    className="mt-2 w-full resize-none border border-souk-brown/20 bg-souk-paper px-3 py-2 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/40 focus:border-souk-brown/50 focus:outline-none"
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Closed for good. Shown rather than dropped: the buyer
+                    should be able to see what they said about a piece, and a
+                    row vanishing after submitting reads as the rating having
+                    been lost. */}
+                {rated.map((item) => (
+                    <div key={item.id} className="opacity-70">
+                        <div className="flex items-center justify-between gap-4">
                             <span className="min-w-0 flex-1 truncate text-sm text-souk-brown-deep/85">
                                 {item.product.name}
                             </span>
                             <StarRating
-                                name={`order-${order.id}-product-${item.product_id}`}
-                                label={`${t('buyer.reviews.rate_product')} — ${item.product.name}`}
-                                starLabel={(n) =>
-                                    t('buyer.reviews.star_label').replace(
-                                        ':count',
-                                        String(n),
-                                    )
-                                }
-                                value={
-                                    productRatings[item.product_id as number] ??
-                                    0
-                                }
-                                onChange={(rating) =>
-                                    setProductRatings((prev) => ({
-                                        ...prev,
-                                        [item.product_id as number]: rating,
-                                    }))
-                                }
+                                readOnly
+                                name={`order-${order.id}-product-${item.product_id}-rated`}
+                                label={`${t('buyer.reviews.rated')} — ${item.product.name}`}
+                                starLabel={starLabel}
+                                value={item.review!.rating}
+                                onChange={() => {}}
                             />
                         </div>
-                    ))}
 
-                {order.store.store_name && (
-                    <div className="flex items-center justify-between gap-4 border-t border-souk-brown/10 pt-3">
-                        <span className="min-w-0 flex-1 truncate text-sm text-souk-brown-deep/85">
-                            {t('buyer.reviews.rate_shop')} ·{' '}
-                            {order.store.store_name}
-                        </span>
-                        <StarRating
-                            name={`order-${order.id}-store`}
-                            label={t('buyer.reviews.rate_shop')}
-                            starLabel={(n) =>
-                                t('buyer.reviews.star_label').replace(
-                                    ':count',
-                                    String(n),
-                                )
-                            }
-                            value={storeRating}
-                            onChange={setStoreRating}
-                        />
+                        {item.review!.comment && (
+                            <p className="mt-1 text-sm text-souk-brown-deep/60 italic">
+                                {item.review!.comment}
+                            </p>
+                        )}
                     </div>
-                )}
+                ))}
             </div>
 
-            {/* Only once something has been rated — an empty comment box above
-                an untouched form is a question nobody asked yet. */}
-            {hasAnything && (
-                <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={2}
-                    maxLength={1000}
-                    placeholder={t('buyer.reviews.comment_placeholder')}
-                    aria-label={t('buyer.reviews.comment_placeholder')}
-                    className="mt-4 w-full resize-none border border-souk-brown/20 bg-souk-paper px-3 py-2 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/40 focus:border-souk-brown/50 focus:outline-none"
-                />
+            {open.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={submit}
+                        disabled={chosen.length === 0 || saving}
+                        className="inline-flex items-center gap-2 border border-souk-brown bg-souk-brown px-5 py-2 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {t('buyer.reviews.submit')}
+                    </button>
+
+                    {/* Said before the fact, not after: it is the one thing
+                        the buyer needs to know while the stars are still
+                        changeable. */}
+                    <span className="text-xs text-souk-brown-deep/55">
+                        {t('buyer.reviews.final_notice')}
+                    </span>
+                </div>
             )}
 
-            <div className="mt-4 flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={submit}
-                    disabled={!hasAnything || saving}
-                    className="inline-flex items-center gap-2 border border-souk-brown bg-souk-brown px-5 py-2 text-sm text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40"
+            {saved && (
+                <p
+                    // Announced rather than only shown: the rows re-render in
+                    // place, so nothing else signals that the submit worked.
+                    role="status"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-olive"
                 >
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {t('buyer.reviews.submit')}
-                </button>
-
-                {saved && (
-                    <span
-                        // Announced rather than only shown: the button stays
-                        // put and the only change is this line appearing, so
-                        // nothing else signals that the submit worked.
-                        role="status"
-                        className="inline-flex items-center gap-1.5 text-xs text-olive"
-                    >
-                        <Check className="h-3.5 w-3.5" />
-                        {t('buyer.reviews.thanks')}
-                    </span>
-                )}
-            </div>
+                    <Check className="h-3.5 w-3.5" />
+                    {t('buyer.reviews.thanks')}
+                </p>
+            )}
         </div>
     );
 }

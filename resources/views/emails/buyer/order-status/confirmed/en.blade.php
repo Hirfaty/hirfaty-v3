@@ -17,9 +17,11 @@
 
     <x-mail.eyebrow>Progress on your order</x-mail.eyebrow>
 
-    @if ($many)
-        <x-mail.heading>Your artisans are preparing your order.</x-mail.heading>
+    {{-- Generic rather than opening on the workshop's name: this email is
+         about the order, not the seller's identity. --}}
+    <x-mail.heading>Your order is being prepared.</x-mail.heading>
 
+    @if ($many)
         <x-mail.text>
             Hello {{ $user->first_name }}, good news: all {{ $orders->count() }}
             workshops in your order {{ $reference }} have confirmed it and are
@@ -27,8 +29,6 @@
             as soon as it leaves for delivery.
         </x-mail.text>
     @else
-        <x-mail.heading>{{ $first->store->store_name }} is preparing your order.</x-mail.heading>
-
         <x-mail.text>
             Hello {{ $user->first_name }}, good news: the workshop has confirmed
             your order {{ $reference }} and is getting it ready.

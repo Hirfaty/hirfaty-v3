@@ -86,10 +86,13 @@ class Store extends Model
     /**
      * Ratings left by buyers for delivered orders from this shop.
      *
+     * Historical: shops are no longer rated, so no new rows arrive here and
+     * `average_rating` no longer moves. See StoreReview for why both were
+     * kept rather than dropped.
+     *
      * `average_rating` is deliberately absent from `$fillable`: it is derived
-     * from these rows and is only ever written by `ReviewService`, so allowing
-     * a mass assignment to set it would let the cached figure disagree with
-     * the reviews it summarises.
+     * from these rows, so allowing a mass assignment to set it would let the
+     * cached figure disagree with the reviews it summarises.
      */
     public function reviews()
     {

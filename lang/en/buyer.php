@@ -75,15 +75,24 @@ return [
     'orders.empty_cta' => 'Shop now',
 
     // ── Ratings ───────────────────────────────────────────────────
-    // Only offered on a delivered order — see ReviewService.
+    // Only offered on a delivered order, and only once per piece — see
+    // ReviewService. The workshop itself is no longer rated.
     'reviews.heading' => 'How did it go?',
-    'reviews.edit_heading' => 'Your rating',
+    'reviews.all_rated_heading' => 'Your rating',
     'reviews.rate_product' => 'Rate this piece',
-    'reviews.rate_shop' => 'The workshop',
+    'reviews.rated' => 'Rated',
     'reviews.star_label' => ':count out of 5',
     'reviews.comment_placeholder' => 'Anything to add? (optional)',
+    'reviews.final_notice' => 'A rating cannot be changed once sent.',
     'reviews.submit' => 'Send',
     'reviews.thanks' => 'Thank you.',
+
+    // The dialog a buyer meets on arrival when a delivery is still unrated.
+    'reviews.prompt_title' => 'Your order has arrived',
+    'reviews.prompt_body' => 'Tell us what you think of the pieces you received. It takes a moment, and it helps the artisan.',
+    'reviews.prompt_body_plural' => 'You have :count deliveries waiting to be rated. It takes a moment, and it helps the artisans.',
+    'reviews.prompt_cta' => 'Rate my order',
+    'reviews.prompt_later' => 'Later',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'The market',

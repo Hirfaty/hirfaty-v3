@@ -17,17 +17,17 @@
 
     <x-mail.eyebrow>طلبك يتقدّم</x-mail.eyebrow>
 
-    @if ($many)
-        <x-mail.heading>حرفيّوك بصدد تحضير طلبك.</x-mail.heading>
+    {{-- صيغة عامة بدل فتح الرسالة باسم الورشة: موضوع هذه الرسالة هو الطلب،
+         لا هوية البائع. --}}
+    <x-mail.heading>طلبك قيد التحضير.</x-mail.heading>
 
+    @if ($many)
         <x-mail.text>
             مرحباً {{ $user->first_name }}، خبر سار: أكّدت الورشات الـ{{ $orders->count() }}
             المعنية بطلبك {{ $reference }} وبدأت في تحضيره.
             ستصلك رسالة بريد إلكتروني برقم التتبع بمجرد خروجه للتوصيل.
         </x-mail.text>
     @else
-        <x-mail.heading>{{ $first->store->store_name }} بصدد تحضير طلبك.</x-mail.heading>
-
         <x-mail.text>
             مرحباً {{ $user->first_name }}، خبر سار: أكّدت الورشة طلبك
             {{ $reference }} وبدأت في تحضيره.

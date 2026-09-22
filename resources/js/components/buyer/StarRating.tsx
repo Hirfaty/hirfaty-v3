@@ -19,6 +19,7 @@ export default function StarRating({
     name,
     label,
     starLabel,
+    readOnly = false,
 }: {
     value: number;
     onChange: (rating: number) => void;
@@ -28,10 +29,20 @@ export default function StarRating({
     label: string;
     /** Builds each star's label, e.g. (3) => "3 stars". */
     starLabel: (rating: number) => string;
+    /**
+     * A rating already given. Ratings are one-shot (see ReviewService), so
+     * this is the resting state of every star the buyer has used — it renders
+     * the answer rather than re-asking the question.
+     *
+     * `disabled` on the inputs, not merely unhandled clicks: a disabled radio
+     * is skipped by the keyboard and announced as unavailable, so the closed
+     * form reads as closed to someone who never sees the hover state.
+     */
+    readOnly?: boolean;
 }) {
     // Preview on hover, without committing until the click actually lands.
     const [preview, setPreview] = useState<number | null>(null);
-    const shown = preview ?? value;
+    const shown = readOnly ? value : (preview ?? value);
 
     return (
         <fieldset
@@ -43,14 +54,15 @@ export default function StarRating({
             {[1, 2, 3, 4, 5].map((rating) => (
                 <label
                     key={rating}
-                    onMouseEnter={() => setPreview(rating)}
-                    className="cursor-pointer p-0.5"
+                    onMouseEnter={() => !readOnly && setPreview(rating)}
+                    className={readOnly ? 'p-0.5' : 'cursor-pointer p-0.5'}
                 >
                     <input
                         type="radio"
                         name={name}
                         value={rating}
                         checked={value === rating}
+                        disabled={readOnly}
                         onChange={() => onChange(rating)}
                         className="peer sr-only"
                     />

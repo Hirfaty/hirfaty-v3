@@ -76,15 +76,24 @@ return [
     'orders.empty_cta' => 'Découvrir la boutique',
 
     // ── Évaluations ───────────────────────────────────────────────
-    // Proposées uniquement sur une commande livrée — voir ReviewService.
+    // Proposées uniquement sur une commande livrée, et une seule fois par
+    // pièce — voir ReviewService. L’atelier lui-même n’est plus noté.
     'reviews.heading' => 'Comment cela s’est-il passé ?',
-    'reviews.edit_heading' => 'Votre évaluation',
+    'reviews.all_rated_heading' => 'Votre évaluation',
     'reviews.rate_product' => 'Noter cette pièce',
-    'reviews.rate_shop' => 'L’atelier',
+    'reviews.rated' => 'Notée',
     'reviews.star_label' => ':count sur 5',
     'reviews.comment_placeholder' => 'Quelque chose à ajouter ? (facultatif)',
+    'reviews.final_notice' => 'Une note ne peut plus être modifiée une fois envoyée.',
     'reviews.submit' => 'Envoyer',
     'reviews.thanks' => 'Merci.',
+
+    // La fenêtre proposée à l’arrivée quand une livraison reste à noter.
+    'reviews.prompt_title' => 'Votre commande est arrivée',
+    'reviews.prompt_body' => 'Dites-nous ce que vous pensez des pièces reçues. C’est l’affaire d’un instant, et cela aide l’artisan.',
+    'reviews.prompt_body_plural' => 'Vous avez :count livraisons à noter. C’est l’affaire d’un instant, et cela aide les artisans.',
+    'reviews.prompt_cta' => 'Noter ma commande',
+    'reviews.prompt_later' => 'Plus tard',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'Le marché',

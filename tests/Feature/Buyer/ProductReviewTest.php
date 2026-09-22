@@ -7,9 +7,9 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\Store;
-use App\Models\StoreReview;
 use App\Models\User;
 use App\Services\BuyerAccountService;
+use App\Services\ReviewService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
@@ -182,12 +182,39 @@ test('a rating outside 1 to 5 is rejected', function (int $rating) {
     $this->assertDatabaseCount('product_reviews', 0);
 })->with([0, 6, -1]);
 
+// ── One shot ─────────────────────────────────────────────────────────
+
 /**
- * A repeat customer is still one opinion. Without the unique index they could
- * weight a product's average once per purchase, which is the cheapest way to
- * game a rating.
+ * The rule the form is built around: once sent, a rating is final. The UI
+ * closes the stars, but that is a display decision — this is what makes it
+ * true.
  */
-test('rating the same product twice edits the existing review', function () {
+test('a second rating of the same product is ignored', function () {
+    $product = reviewProduct($this->store);
+    $order = orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.orders.reviews.store', $order->reference), [
+            'products' => [$product->id => ['rating' => 2, 'comment' => 'Bof.']],
+        ]);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.orders.reviews.store', $order->reference), [
+            'products' => [$product->id => ['rating' => 5, 'comment' => 'Finalement superbe.']],
+        ]);
+
+    $review = ProductReview::where('product_id', $product->id)->sole();
+
+    expect($review->rating)->toBe(2);
+    expect($review->comment)->toBe('Bof.');
+});
+
+/**
+ * A repeat customer is still one opinion. Buying the same piece again must not
+ * reopen the form for it — that would be the cheapest way to weight a
+ * product's average once per purchase.
+ */
+test('a later purchase of an already-rated product does not reopen it', function () {
     $product = reviewProduct($this->store);
     $first = orderFor($this->buyer, $this->store, $product);
     $second = orderFor($this->buyer, $this->store, $product);
@@ -203,7 +230,43 @@ test('rating the same product twice edits the existing review', function () {
         ]);
 
     expect(ProductReview::where('product_id', $product->id)->count())->toBe(1);
-    expect(ProductReview::where('product_id', $product->id)->first()->rating)->toBe(5);
+    expect(ProductReview::where('product_id', $product->id)->first()->rating)->toBe(2);
+});
+
+/**
+ * Partly rating a delivery leaves the rest open — the pieces close one at a
+ * time, not the order as a whole.
+ */
+test('rating one piece leaves the others open', function () {
+    $rated = reviewProduct($this->store, ['name' => 'Noté']);
+    $untouched = reviewProduct($this->store, ['name' => 'Pas encore']);
+
+    $order = orderFor($this->buyer, $this->store, $rated);
+    OrderItem::create([
+        'order_id' => $order->id,
+        'product_id' => $untouched->id,
+        'quantity' => 1,
+        'unit_price' => 120,
+        'subtotal' => 120,
+    ]);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.orders.reviews.store', $order->reference), [
+            'products' => [$rated->id => ['rating' => 4]],
+        ]);
+
+    expect(app(ReviewService::class)->openProductIds($this->buyer, $order->fresh()))
+        ->toBe([$untouched->id]);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.orders.reviews.store', $order->reference), [
+            'products' => [$untouched->id => ['rating' => 2]],
+        ]);
+
+    $this->assertDatabaseHas('product_reviews', [
+        'product_id' => $untouched->id,
+        'rating' => 2,
+    ]);
 });
 
 // ── The cached average ───────────────────────────────────────────────
@@ -224,84 +287,70 @@ test('a product\'s average rating is recomputed on every review', function () {
     expect((float) $product->fresh()->average_rating)->toBe(4.5);
 });
 
-/**
- * Editing changes a row rather than adding one, so an average folded in
- * incrementally would drift. This is the case that catches that.
- */
-test('editing a review recomputes the average rather than compounding it', function () {
-    $product = reviewProduct($this->store);
-    $order = orderFor($this->buyer, $this->store, $product);
-
-    $this->actingAs($this->buyer)
-        ->post(route('buyer.orders.reviews.store', $order->reference), [
-            'products' => [$product->id => ['rating' => 1]],
-        ]);
-
-    expect((float) $product->fresh()->average_rating)->toBe(1.0);
-
-    $this->actingAs($this->buyer)
-        ->post(route('buyer.orders.reviews.store', $order->reference), [
-            'products' => [$product->id => ['rating' => 5]],
-        ]);
-
-    expect((float) $product->fresh()->average_rating)->toBe(5.0);
-});
-
-// ── The shop rating ──────────────────────────────────────────────────
-
-test('a buyer can rate the shop for a delivered order', function () {
-    $product = reviewProduct($this->store);
-    $order = orderFor($this->buyer, $this->store, $product);
-
-    $this->actingAs($this->buyer)
-        ->post(route('buyer.orders.reviews.store', $order->reference), [
-            'store' => ['rating' => 4, 'comment' => 'Bien emballé.'],
-        ]);
-
-    $this->assertDatabaseHas('store_reviews', [
-        'user_id' => $this->buyer->id,
-        'store_id' => $this->store->id,
-        'order_id' => $order->id,
-        'rating' => 4,
-    ]);
-
-    expect((float) $this->store->fresh()->average_rating)->toBe(4.0);
-});
+// ── The shop rating, now gone ────────────────────────────────────────
 
 /**
- * Scoped per order rather than per shop, so a returning customer rates each
- * delivery — three orders from the same artisan is three service experiences.
+ * Buyers rate the pieces, not the artisan. The table still exists (see
+ * StoreReview), so the thing worth pinning down is that a payload shaped like
+ * the old form cannot write to it.
  */
-test('the same shop can be rated once per delivered order', function () {
-    $product = reviewProduct($this->store);
-    $first = orderFor($this->buyer, $this->store, $product);
-    $second = orderFor($this->buyer, $this->store, $product);
-
-    $this->actingAs($this->buyer)
-        ->post(route('buyer.orders.reviews.store', $first->reference), [
-            'store' => ['rating' => 5],
-        ]);
-
-    $this->actingAs($this->buyer)
-        ->post(route('buyer.orders.reviews.store', $second->reference), [
-            'store' => ['rating' => 3],
-        ]);
-
-    expect(StoreReview::where('store_id', $this->store->id)->count())->toBe(2);
-    expect((float) $this->store->fresh()->average_rating)->toBe(4.0);
-});
-
-test('the shop rating is optional', function () {
+test('a shop rating in the payload is ignored', function () {
     $product = reviewProduct($this->store);
     $order = orderFor($this->buyer, $this->store, $product);
 
     $this->actingAs($this->buyer)
         ->post(route('buyer.orders.reviews.store', $order->reference), [
             'products' => [$product->id => ['rating' => 5]],
-        ]);
+            'store' => ['rating' => 1, 'comment' => 'Mal emballé.'],
+        ])
+        ->assertRedirect();
 
     $this->assertDatabaseCount('store_reviews', 0);
     $this->assertDatabaseCount('product_reviews', 1);
+    expect((float) $this->store->fresh()->average_rating)->toBe(0.0);
+});
+
+// ── The arrival prompt ───────────────────────────────────────────────
+
+/**
+ * What decides whether the dialog opens. Counting *orders* rather than pieces
+ * is deliberate — the prompt sends the buyer to the order list, so the number
+ * it quotes has to be a number of orders.
+ */
+test('a delivered order with an unrated piece is counted as pending', function () {
+    $product = reviewProduct($this->store);
+    $order = orderFor($this->buyer, $this->store, $product);
+    orderFor($this->buyer, $this->store, reviewProduct($this->store, ['name' => 'En route']), 'shipped');
+
+    $reviews = app(ReviewService::class);
+
+    expect($reviews->pendingOrderCount($this->buyer))->toBe(1);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.orders.reviews.store', $order->reference), [
+            'products' => [$product->id => ['rating' => 5]],
+        ]);
+
+    expect($reviews->pendingOrderCount($this->buyer))->toBe(0);
+});
+
+test('another buyer\'s deliveries are never counted as pending', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product);
+
+    $stranger = User::factory()->create(['role' => 'buyer']);
+
+    expect(app(ReviewService::class)->pendingOrderCount($stranger))->toBe(0);
+});
+
+test('the prompt count is shared with the page', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('pendingReviews', 1));
 });
 
 // ── What the orders page is told ─────────────────────────────────────

@@ -77,14 +77,24 @@ return [
     'orders.empty_cta' => 'تسوّق الآن',
 
     // ── التقييمات ─────────────────────────────────────────────────
+    // تُعرض فقط على طلب تم تسليمه، ومرّة واحدة لكل قطعة — انظر ReviewService.
+    // لم تعد الورشة نفسها تُقيَّم.
     'reviews.heading' => 'كيف كانت التجربة؟',
-    'reviews.edit_heading' => 'تقييمك',
+    'reviews.all_rated_heading' => 'تقييمك',
     'reviews.rate_product' => 'قيّم هذه القطعة',
-    'reviews.rate_shop' => 'الورشة',
+    'reviews.rated' => 'تم التقييم',
     'reviews.star_label' => ':count من 5',
     'reviews.comment_placeholder' => 'هل تودّ إضافة شيء؟ (اختياري)',
+    'reviews.final_notice' => 'لا يمكن تعديل التقييم بعد إرساله.',
     'reviews.submit' => 'إرسال',
     'reviews.thanks' => 'شكراً لك.',
+
+    // النافذة التي تظهر عند الدخول إذا بقي طلب مُسلَّم بلا تقييم.
+    'reviews.prompt_title' => 'وصل طلبك',
+    'reviews.prompt_body' => 'أخبرنا برأيك في القطع التي استلمتها. لن يستغرق الأمر سوى لحظة، وهو يساعد الحرفي.',
+    'reviews.prompt_body_plural' => 'لديك :count طلبات مُسلَّمة بانتظار التقييم. لن يستغرق الأمر سوى لحظة، وهو يساعد الحرفيين.',
+    'reviews.prompt_cta' => 'تقييم طلبي',
+    'reviews.prompt_later' => 'لاحقاً',
 
     // ── Product detail ────────────────────────────────────────────
     'detail.back_to_market' => 'السوق',

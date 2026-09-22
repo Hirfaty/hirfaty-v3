@@ -8,7 +8,6 @@ use App\Models\City;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
-use App\Models\StoreReview;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -156,17 +155,13 @@ class BuyerAccountService
          * history rather than per order — the page renders every order at
          * once, so a per-order lookup would be a query per card.
          *
-         * Keyed for O(1) lookup below: product reviews by product id (the
-         * unique index is per buyer *per product*, so it spans orders), shop
-         * reviews by order id (scoped per delivery).
+         * Keyed by product id, which is also the grain of the unique index:
+         * one opinion per buyer per piece, spanning every order it appeared
+         * in. A row here is what closes the form — see ReviewService.
          */
         $productReviews = ProductReview::where('user_id', $user->id)
             ->get()
             ->keyBy('product_id');
-
-        $storeReviews = StoreReview::where('user_id', $user->id)
-            ->get()
-            ->keyBy('order_id');
 
         return $orders
             /*
@@ -176,7 +171,7 @@ class BuyerAccountService
              * leaves each standing alone.
              */
             ->groupBy(fn (Order $order) => $order->group_reference ?: 'single:'.$order->id)
-            ->map(fn (Collection $group) => $this->shapePurchase($group, $productReviews, $storeReviews))
+            ->map(fn (Collection $group) => $this->shapePurchase($group, $productReviews))
             ->values()
             ->all();
     }
@@ -187,7 +182,7 @@ class BuyerAccountService
      * @param  Collection<int, Order>  $group
      * @return array<string, mixed>
      */
-    private function shapePurchase(Collection $group, Collection $productReviews, Collection $storeReviews): array
+    private function shapePurchase(Collection $group, Collection $productReviews): array
     {
         $first = $group->first();
 
@@ -220,7 +215,7 @@ class BuyerAccountService
             'can_review' => $group->contains(fn (Order $order) => $order->status === 'delivered'),
 
             'orders' => $group
-                ->map(fn (Order $order) => $this->shapeOrder($order, $productReviews, $storeReviews))
+                ->map(fn (Order $order) => $this->shapeOrder($order, $productReviews))
                 ->values()
                 ->all(),
         ];
@@ -255,10 +250,8 @@ class BuyerAccountService
      *
      * @return array<string, mixed>
      */
-    private function shapeOrder(Order $order, Collection $productReviews, Collection $storeReviews): array
+    private function shapeOrder(Order $order, Collection $productReviews): array
     {
-        $storeReview = $storeReviews->get($order->id);
-
         return [
             'id' => $order->id,
             'reference' => $order->reference,
@@ -282,14 +275,6 @@ class BuyerAccountService
              */
             'can_review' => $order->status === 'delivered',
 
-            // Pre-fills the form so an existing rating shows as already given
-            // rather than as an empty row the buyer is being asked for a
-            // second time.
-            'store_review' => $storeReview ? [
-                'rating' => $storeReview->rating,
-                'comment' => $storeReview->comment,
-            ] : null,
-
             'items' => $order->items->map(function ($item) use ($productReviews) {
                 $review = $item->product_id
                     ? $productReviews->get($item->product_id)
@@ -308,6 +293,12 @@ class BuyerAccountService
                         'slug' => $item->product?->slug,
                         'image' => $item->product?->images->first()?->url,
                     ],
+                    /*
+                     * Non-null closes this piece's stars for good — ratings
+                     * are one-shot, so the panel renders what was said rather
+                     * than an input. `can_review` above is still the order's
+                     * gate; this is the per-piece one.
+                     */
                     'review' => $review ? [
                         'rating' => $review->rating,
                         'comment' => $review->comment,

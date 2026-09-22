@@ -6,6 +6,7 @@ import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import CategoriesMegaMenu from '@/components/CategoriesMegaMenu';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import ReviewPrompt from '@/components/buyer/ReviewPrompt';
 import RegionMenu from '@/components/RegionMenu';
 import SearchPanel from '@/components/SearchPanel';
 import {
@@ -289,6 +290,14 @@ export const SiteHeader = ({
             }`}
         >
             <CartSync />
+
+            {/*
+             * Renders nothing unless the signed-in buyer has a delivery they
+             * haven't rated. Mounted here, next to CartSync, because it has to
+             * catch them on whatever page they arrive at — and the header is
+             * the only thing every one of those pages has in common.
+             */}
+            <ReviewPrompt />
 
             <div className="relative container flex items-center justify-between gap-6 py-5">
                 <Link

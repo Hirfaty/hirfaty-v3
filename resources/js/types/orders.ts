@@ -38,7 +38,13 @@ export type BuyerOrderItem = {
         slug: string | null;
         image: string | null;
     };
-    /** This buyer's existing rating of the piece, if they left one. */
+    /**
+     * This buyer's rating of the piece, once they have left one.
+     *
+     * Non-null means the stars are closed: a rating is one-shot, so the panel
+     * renders it read-only rather than offering an input that would be
+     * rejected server-side anyway.
+     */
     review: BuyerOrderReview | null;
 };
 
@@ -56,13 +62,12 @@ export type BuyerOrder = {
         store_name: string | null;
     };
     /**
-     * Whether the rating form is offered. Server-decided (delivered orders
+     * Whether the rating panel is offered. Server-decided (delivered orders
      * only) — the panel never infers it from `status` itself, so the rule
-     * lives in one place.
+     * lives in one place. Which *pieces* inside it are still open is a
+     * separate question, answered by each item's `review`.
      */
     can_review: boolean;
-    /** This buyer's existing rating of the shop for this delivery. */
-    store_review: BuyerOrderReview | null;
     items: BuyerOrderItem[];
 };
 
