@@ -64,9 +64,7 @@ class NewArrivalsService
         $audience = Product::audienceFor($viewer);
 
         return Product::query()
-            // storefront(false): temporarily includes unpriced products for
-            // an internal demo — see Product::scopeStorefront()'s docblock.
-            ->storefront(false)
+            ->storefront()
             ->whereIn('visibility', ['both', $audience])
             // BuyerProductResource reaches through to `store->city->name`;
             // without the eager load every card fires two extra queries.

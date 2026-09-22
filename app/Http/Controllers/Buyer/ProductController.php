@@ -31,10 +31,7 @@ class ProductController extends Controller
         $audience = Product::audienceFor($request->user());
 
         $query = Product::query()
-            // storefront(false): temporarily includes unpriced products for
-            // an internal demo — see the scope's docblock. Revert to
-            // storefront() once the catalogue is fully priced.
-            ->storefront(false)
+            ->storefront()
             // A product may be listed for consumers, for the trade, or both.
             // Without this the storefront showed wholesale-only items to
             // guests — `visibility` existed but was never enforced.
@@ -170,7 +167,7 @@ class ProductController extends Controller
     {
         $audience = Product::audienceFor($request->user());
 
-        $product = Product::storefront(false)
+        $product = Product::storefront()
             ->where('slug', $slug)
             // The same gate the listing applies. Without it `visibility` was
             // only enforced on the grid: a trade-only piece stayed reachable
@@ -217,7 +214,7 @@ class ProductController extends Controller
      */
     private function moreFromStore(Product $product)
     {
-        return Product::storefront(false)
+        return Product::storefront()
             ->where('store_id', $product->store_id)
             ->where('id', '!=', $product->id)
             ->with(['images', 'variants.media'])
@@ -235,7 +232,7 @@ class ProductController extends Controller
      */
     private function relatedProducts(Product $product)
     {
-        return Product::storefront(false)
+        return Product::storefront()
             ->where('id', '!=', $product->id)
             ->where('store_id', '!=', $product->store_id)
             ->when(

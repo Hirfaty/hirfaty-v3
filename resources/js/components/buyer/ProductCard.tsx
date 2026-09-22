@@ -18,11 +18,10 @@ export type ListingProduct = {
     slug: string;
     description: string | null;
     /**
-     * Null while an admin has catalogued the piece but not yet agreed its
-     * price. Normally kept off every buyer-facing query by
-     * `Product::scopeStorefront()` — currently relaxed there
-     * (`storefront(false)`) as a temporary, demo-only carve-out, so this has
-     * to be handled here rather than assumed present.
+     * Always present in practice: `Product::scopeStorefront()` excludes an
+     * unpriced product from every buyer-facing query, so a card is never
+     * handed one. Typed nullable anyway — `ListingProduct` mirrors the raw
+     * resource shape, and `base_price` is a genuinely optional column there.
      */
     base_price: string | null;
     sale_price: string | null;
@@ -80,7 +79,7 @@ function PriceBlock({
     money: (value: number | string) => string;
     t: (key: string) => string;
 }) {
-    // Demo-only state: see the `base_price` field comment above. Nothing
+    // Defensive only — see the `base_price` field comment above. Nothing
     // downstream (a discount, a trade rate) means anything without a retail
     // figure to apply it to, so this short-circuits before any of that.
     if (product.base_price === null) {

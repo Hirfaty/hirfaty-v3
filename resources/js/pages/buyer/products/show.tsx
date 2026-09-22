@@ -145,11 +145,11 @@ function PriceBlock({
     t: (k: string) => string;
 }) {
     /*
-     * Demo-only state: an admin can catalogue a piece before its price is
-     * agreed, temporarily reachable here via `storefront(false)` — see
-     * `Product::scopeStorefront()`. A selected variant with no override
-     * inherits this same null from the product, which is why the check reads
-     * the variant's own resolved price rather than the product's directly.
+     * Defensive only: `Product::scopeStorefront()` keeps an unpriced product
+     * off this page entirely, so `product.base_price` is never actually null
+     * here. A selected variant with no override inherits this same null from
+     * the product, which is why the check reads the variant's own resolved
+     * price rather than the product's directly.
      */
     const unpriced =
         variant !== null ? variant.price == null : product.base_price === null;

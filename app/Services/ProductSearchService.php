@@ -61,9 +61,7 @@ class ProductSearchService
         $audience = Product::audienceFor($viewer);
 
         $query = Product::query()
-            // storefront(false): temporarily includes unpriced products for
-            // an internal demo — see Product::scopeStorefront()'s docblock.
-            ->storefront(false)
+            ->storefront()
             ->whereIn('visibility', ['both', $audience])
             ->with(['store', 'category', 'images']);
 
@@ -110,7 +108,7 @@ class ProductSearchService
 
         return $this->applyTerm(
             Product::query()
-                ->storefront(false)
+                ->storefront()
                 ->whereIn('visibility', ['both', $audience]),
             $term
         )->count();

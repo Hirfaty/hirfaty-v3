@@ -115,21 +115,11 @@ class Product extends Model
      * Every public query goes through here rather than repeating the pair of
      * conditions, so "priced" can never be remembered in one listing and
      * forgotten in another.
-     *
-     * `$requirePrice = false` is a deliberate, temporary carve-out for the
-     * buyer-facing browsing surfaces (listing, home strip, product detail)
-     * while the catalogue is still being priced up for an internal demo —
-     * grep for `storefront(false)` to find every call site that opted in, and
-     * flip them back once real pricing is in place. Nothing that moves money
-     * opts in: CartService/CheckoutService still refuse an unpriced line
-     * outright regardless of this flag, so an unpriced product can be looked
-     * at but never bought.
      */
-    public function scopeStorefront($query, bool $requirePrice = true)
+    public function scopeStorefront($query)
     {
-        $query->where('status', 'published');
-
-        return $requirePrice ? $query->whereNotNull('base_price') : $query;
+        return $query->where('status', 'published')
+            ->whereNotNull('base_price');
     }
 
     /**
