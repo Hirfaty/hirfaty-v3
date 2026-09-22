@@ -7,6 +7,7 @@ return [
     'journal' => 'المجلة',
     'categories' => 'الفئات',
     'all_categories' => 'تصفّح كل الحرف',
+    'view_all_in' => 'عرض الكل في :category',
     'sellers' => 'البائعون',
     'about' => 'من نحن',
     'search' => 'بحث',

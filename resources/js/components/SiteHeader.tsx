@@ -1,16 +1,10 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import {
-    ChevronDown,
-    ChevronRight,
-    Menu,
-    Search,
-    ShoppingBag,
-    User,
-} from 'lucide-react';
+import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
+import CategoriesMegaMenu from '@/components/CategoriesMegaMenu';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import RegionMenu from '@/components/RegionMenu';
 import SearchPanel from '@/components/SearchPanel';
@@ -105,6 +99,8 @@ export const SiteHeader = ({
             id: number;
             slug: string;
             translated_name: string;
+            /** Public URL of the craft's picture; null shows a placeholder. */
+            image_url: string | null;
             children: Array<{
                 id: number;
                 slug: string;
@@ -384,82 +380,14 @@ export const SiteHeader = ({
                                 collisionPadding={16}
                                 onMouseEnter={openCategories}
                                 onMouseLeave={closeCategoriesSoon}
-                                className="w-[min(92vw,60rem)] rounded-xl border-ink/15 bg-paper p-6"
+                                className="w-[min(94vw,50rem)] overflow-hidden rounded-xl border-ink/15 bg-paper p-0"
                             >
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-6 md:grid-cols-3 lg:grid-cols-4">
-                                    {categories.map((category) => (
-                                        <div key={category.id}>
-                                            <Link
-                                                href={categoryHref(category.id)}
-                                                onClick={() =>
-                                                    setCategoriesOpen(false)
-                                                }
-                                                aria-current={
-                                                    activeCategoryId ===
-                                                    String(category.id)
-                                                        ? 'page'
-                                                        : undefined
-                                                }
-                                                className="flex items-center gap-2 border-b border-ink/10 pb-2 text-sm font-semibold text-ink transition-colors hover:text-terracotta aria-[current=page]:text-terracotta"
-                                            >
-                                                <ZellijStarIcon
-                                                    aria-hidden
-                                                    className="h-2.5 w-2.5 shrink-0 text-terracotta/70"
-                                                />
-                                                {category.translated_name}
-                                            </Link>
-
-                                            {(category.children ?? []).length >
-                                                0 && (
-                                                <ul className="mt-2 space-y-1">
-                                                    {category.children.map(
-                                                        (child) => (
-                                                            <li key={child.id}>
-                                                                <Link
-                                                                    href={categoryHref(
-                                                                        child.id,
-                                                                    )}
-                                                                    onClick={() =>
-                                                                        setCategoriesOpen(
-                                                                            false,
-                                                                        )
-                                                                    }
-                                                                    aria-current={
-                                                                        activeCategoryId ===
-                                                                        String(
-                                                                            child.id,
-                                                                        )
-                                                                            ? 'page'
-                                                                            : undefined
-                                                                    }
-                                                                    className="block py-1 text-sm text-ink/70 transition-colors hover:text-terracotta aria-[current=page]:font-medium aria-[current=page]:text-terracotta"
-                                                                >
-                                                                    {
-                                                                        child.translated_name
-                                                                    }
-                                                                </Link>
-                                                            </li>
-                                                        ),
-                                                    )}
-                                                </ul>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <Separator className="my-5 bg-ink/10" />
-
-                                <Link
-                                    href="/products"
-                                    onClick={() => setCategoriesOpen(false)}
-                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-soft transition-colors hover:text-ink"
-                                >
-                                    {t('header.all_categories')}
-                                    <ChevronRight
-                                        aria-hidden
-                                        className="h-3.5 w-3.5 rtl:rotate-180"
-                                    />
-                                </Link>
+                                <CategoriesMegaMenu
+                                    categories={categories}
+                                    activeCategoryId={activeCategoryId}
+                                    categoryHref={categoryHref}
+                                    onNavigate={() => setCategoriesOpen(false)}
+                                />
                             </PopoverContent>
                         </Popover>
                     )}
@@ -517,9 +445,7 @@ export const SiteHeader = ({
                                         {t('header.account_heading')}
                                     </p>
                                     <p className="mt-1 text-xs text-ink-soft">
-                                        {t(
-                                            'header.account_greeting',
-                                        ).replace(
+                                        {t('header.account_greeting').replace(
                                             ':name',
                                             user.first_name ?? user.email,
                                         )}

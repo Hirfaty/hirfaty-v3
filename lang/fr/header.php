@@ -7,6 +7,7 @@ return [
     'journal' => 'Journal',
     'categories' => 'Catégories',
     'all_categories' => 'Parcourir tous les métiers',
+    'view_all_in' => 'Voir tout : :category',
     'sellers' => 'Vendeurs',
     'about' => 'À propos',
     'search' => 'Rechercher',

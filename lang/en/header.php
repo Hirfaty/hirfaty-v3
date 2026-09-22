@@ -7,6 +7,7 @@ return [
     'journal' => 'Journal',
     'categories' => 'Categories',
     'all_categories' => 'Browse every craft',
+    'view_all_in' => 'View all in :category',
     'sellers' => 'Sellers',
     'about' => 'About',
     'search' => 'Search',
