@@ -51,7 +51,6 @@
         </x-inertia::head>
 
         @routes
-        @vite(['resources/js/app.tsx'])
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />

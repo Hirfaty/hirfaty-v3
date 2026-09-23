@@ -68,7 +68,13 @@ export default function HeroSlider({
                             alt={position === index ? slides[slide].alt : ''}
                             // The first is the LCP candidate; the rest, the
                             // clone included, are offscreen until paged to.
+                            // fetchPriority tells the browser to fetch it
+                            // ahead of same-priority resources discovered
+                            // later in the document (e.g. below-the-fold
+                            // category photos), rather than queuing on
+                            // discovery order alone.
                             loading={position === 0 ? 'eager' : 'lazy'}
+                            fetchPriority={position === 0 ? 'high' : 'auto'}
                             className="h-full w-full object-cover"
                             draggable={false}
                         />

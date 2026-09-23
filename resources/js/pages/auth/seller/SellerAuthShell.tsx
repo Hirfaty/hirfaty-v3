@@ -3,7 +3,6 @@ import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
-import zellij from '@/images/zellij-pattern.png';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -160,14 +159,14 @@ export default function SellerAuthShell({
                         className="h-full w-full object-cover"
                     />
 
-                    <div
+                    {/* <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 opacity-[0.10] mix-blend-screen"
                         style={{
                             backgroundImage: `url(${zellij})`,
                             backgroundSize: '320px',
                         }}
-                    />
+                    /> */}
 
                     {/* Bottom-weighted scrim so the quote stays legible over
                         whatever the photograph happens to be doing there. */}

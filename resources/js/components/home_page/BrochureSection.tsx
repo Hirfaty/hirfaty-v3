@@ -1,6 +1,6 @@
 import { Download } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
-import brochureImage from '@/images/brochure/brochure.jpeg';
+import brochureImage from '@/images/brochure/brochure.jpg';
 import Reveal from '../home/Reveal';
 import BrochureDialog from './BrochureDialog';
 
