@@ -1,5 +1,6 @@
 import { GripVertical, ImagePlus, Star, Trash2, Video } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useCropQueue } from '@/hooks/use-crop-queue';
 import { validateMediaFile } from '@/lib/media-limits';
 
 /** Media already stored on the product (edit screen only). */
@@ -73,6 +74,25 @@ export default function ProductMediaInput({
         return () => urls.forEach((u) => URL.revokeObjectURL(u));
     }, []);
 
+    const toItem = (file: File): MediaItem => {
+        const url = URL.createObjectURL(file);
+        createdUrls.current.push(url);
+
+        return {
+            kind: 'new',
+            key: nextKey(),
+            file,
+            url,
+            isVideo: file.type.startsWith('video'),
+        };
+    };
+
+    // Photos are framed and compressed under 1 MB before they join the
+    // gallery; videos skip the crop and are added straight away below.
+    const { enqueue: enqueueCrop, dialog: cropDialog } = useCropQueue(
+        (cropped) => onChange([...items, ...cropped.map(toItem)]),
+    );
+
     const addFiles = async (fileList: FileList | null) => {
         if (!fileList) {
             return;
@@ -84,7 +104,7 @@ export default function ProductMediaInput({
         const results = await Promise.all(
             picked.map(async (file) => ({
                 file,
-                rejection: await validateMediaFile(file),
+                rejection: await validateMediaFile(file, { willCrop: true }),
             })),
         );
 
@@ -92,24 +112,14 @@ export default function ProductMediaInput({
             results.filter((r) => r.rejection).map((r) => r.rejection!),
         );
 
-        const added: MediaItem[] = results
-            .filter((r) => !r.rejection)
-            .map(({ file }) => {
-                const url = URL.createObjectURL(file);
-                createdUrls.current.push(url);
+        const accepted = results.filter((r) => !r.rejection).map((r) => r.file);
+        const videos = accepted.filter((f) => f.type.startsWith('video'));
 
-                return {
-                    kind: 'new',
-                    key: nextKey(),
-                    file,
-                    url,
-                    isVideo: file.type.startsWith('video'),
-                };
-            });
-
-        if (added.length > 0) {
-            onChange([...items, ...added]);
+        if (videos.length > 0) {
+            onChange([...items, ...videos.map(toItem)]);
         }
+
+        enqueueCrop(accepted.filter((f) => !f.type.startsWith('video')));
     };
 
     const remove = (key: string) => {
@@ -166,8 +176,8 @@ export default function ProductMediaInput({
                     </p>
                     <p className="mt-0.5 text-xs text-ink-soft">
                         Glissez pour réordonner — la première image est le
-                        visuel principal. Images 5 Mo max (4096x4096px), vidéos
-                        50 Mo max.
+                        visuel principal. Images recadrées et compressées sous 1
+                        Mo, vidéos 50 Mo max.
                     </p>
                 </div>
                 <span className="text-xs text-ink-soft">
@@ -275,6 +285,8 @@ export default function ProductMediaInput({
             )}
 
             {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+            {cropDialog}
         </div>
     );
 }

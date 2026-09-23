@@ -12,6 +12,14 @@ export const MEDIA_LIMITS = {
         maxWidth: 4096,
         maxHeight: 4096,
     },
+    // Product photos are cropped in the browser and re-encoded under this
+    // ceiling before upload — see lib/crop-image.ts.
+    productImage: {
+        maxBytes: 1024 * 1024, // 1 MB
+        // What may be *picked*: the crop shrinks it to maxBytes and 2048px
+        // anyway, so only a sanity cap on the original is needed.
+        maxSourceBytes: 20 * 1024 * 1024, // 20 MB
+    },
     video: {
         maxBytes: 50 * 1024 * 1024, // 50 MB
     },
@@ -68,8 +76,23 @@ function readImageDimensions(
  * Validates one picked file against the size/dimension limits, mirroring
  * App\Rules\ValidProductMedia. Returns null when the file is fine, or a
  * French error message ready to show the admin.
+ *
+ * With `willCrop`, an image is only sanity-checked (type, 20 MB): the crop
+ * dialog shrinks it to the product-photo standard, so the resolution and size
+ * limits apply to its output, not to the original the admin picked.
  */
-export async function validateMediaFile(file: File): Promise<string | null> {
+export async function validateMediaFile(
+    file: File,
+    { willCrop = false }: { willCrop?: boolean } = {},
+): Promise<string | null> {
+    if (isImageFile(file) && willCrop) {
+        if (file.size > MEDIA_LIMITS.productImage.maxSourceBytes) {
+            return `« ${file.name} » dépasse ${formatMb(MEDIA_LIMITS.productImage.maxSourceBytes)}.`;
+        }
+
+        return null;
+    }
+
     if (isImageFile(file)) {
         if (file.size > MEDIA_LIMITS.image.maxBytes) {
             return `« ${file.name} » dépasse ${formatMb(MEDIA_LIMITS.image.maxBytes)}.`;

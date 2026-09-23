@@ -23,10 +23,13 @@ use Illuminate\Database\Seeder;
  * DHL takes the countries over). Replace `INTERNATIONAL_PLACEHOLDER_FEE` — or
  * the individual rows — with real figures once known.
  *
- * Idempotent: re-running updates the fee on an existing destination rather
- * than inserting a duplicate, which also covers the migration's note that a
- * unique index cannot stop two country-level rows on its own (NULL city_id
- * compares as distinct on both Postgres and SQLite).
+ * Idempotent, and additive only: re-running inserts destinations that are
+ * missing and leaves existing rows alone. Fees are editable from the admin
+ * delivery-rates page now, so overwriting them here would silently undo the
+ * desk's changes on the next seed. Matching on the destination also covers
+ * the migration's note that a unique index cannot stop two country-level
+ * rows on its own (NULL city_id compares as distinct on both Postgres and
+ * SQLite).
  */
 class DeliveryRateSeeder extends Seeder
 {
@@ -74,7 +77,7 @@ class DeliveryRateSeeder extends Seeder
         // Morocco: one rate per city, because that is how Amana prices
         // domestic delivery.
         foreach (City::all() as $city) {
-            DeliveryRate::updateOrCreate(
+            DeliveryRate::firstOrCreate(
                 [
                     'delivery_service_id' => $amana->id,
                     'country_code' => 'MA',
@@ -87,7 +90,7 @@ class DeliveryRateSeeder extends Seeder
         // Everywhere else: one rate for the whole country. Placeholder fee —
         // see the class docblock.
         foreach (self::COUNTRIES as $code => $name) {
-            DeliveryRate::updateOrCreate(
+            DeliveryRate::firstOrCreate(
                 [
                     'delivery_service_id' => $amana->id,
                     'country_code' => $code,

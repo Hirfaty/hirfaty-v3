@@ -1,7 +1,8 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { Globe, Info, MapPin, Search } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { PageProps } from '@/types';
@@ -23,26 +24,195 @@ type Rate = {
     fee: number;
 };
 
-const money = (value: number) =>
-    `${new Intl.NumberFormat('fr-MA', { maximumFractionDigits: 2 }).format(value)} MAD`;
+type DeliverySettings = {
+    show_destinations: boolean;
+    flat_fee: number;
+};
+
+const INPUT =
+    'rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none';
+
+const SAVE_BUTTON =
+    'rounded-lg bg-ink px-4 py-2 text-sm font-medium text-card shadow-sm transition hover:bg-ink/90 disabled:opacity-50';
+
+/** Every save on this page flashes; surface it the way the other admin pages do. */
+const flashToast = {
+    preserveScroll: true,
+    onSuccess: (page: { props: object }) => {
+        const flash = (page.props as unknown as PageProps).flash;
+
+        if (flash?.error) {
+            toast.error(flash.error);
+        } else if (flash?.success) {
+            toast.success(flash.success);
+        }
+    },
+    onError: () => toast.error('Une erreur est survenue.'),
+};
 
 /**
- * The delivery service rate cards, read-only.
+ * The flat fee and the show-cities-and-countries switch — see
+ * DeliverySettingsService. Off, checkout ships to Morocco only, asks for no
+ * city, and charges the flat fee to every basket; the rate table below is
+ * then kept but not used.
+ */
+function SettingsCard({ settings }: { settings: DeliverySettings }) {
+    const form = useForm({
+        flat_fee: String(settings.flat_fee),
+        show_destinations: settings.show_destinations,
+    });
+
+    const submit = (e: FormEvent) => {
+        e.preventDefault();
+        form.patch(route('admin.delivery-rates.settings'), flashToast);
+    };
+
+    return (
+        <form
+            onSubmit={submit}
+            className="flex flex-col gap-5 rounded-xl border border-border bg-card p-5 shadow-sm"
+        >
+            <div>
+                <h2 className="text-base font-semibold text-ink">
+                    Paramètres de livraison
+                </h2>
+                <p className="mt-1 text-sm text-ink-soft">
+                    Appliqués immédiatement au paiement.
+                </p>
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3">
+                <input
+                    type="checkbox"
+                    checked={form.data.show_destinations}
+                    onChange={(e) =>
+                        form.setData('show_destinations', e.target.checked)
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-ink"
+                />
+                <span>
+                    <span className="block text-sm font-medium text-ink">
+                        Afficher les villes et les pays au paiement
+                    </span>
+                    <span className="mt-0.5 block text-sm text-ink-soft">
+                        Décoché : livraison au Maroc uniquement, sans choix de
+                        ville, au tarif unique ci-dessous. Coché : le tarif
+                        dépend de la ville ou du pays, selon la grille.
+                    </span>
+                </span>
+            </label>
+
+            <div className="flex flex-wrap items-end gap-3">
+                <div>
+                    <label
+                        htmlFor="flat_fee"
+                        className="mb-1.5 block text-sm font-medium text-ink"
+                    >
+                        Tarif unique (MAD)
+                    </label>
+                    <input
+                        id="flat_fee"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={form.data.flat_fee}
+                        onChange={(e) =>
+                            form.setData('flat_fee', e.target.value)
+                        }
+                        className={`${INPUT} w-40 tabular-nums`}
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={form.processing || !form.isDirty}
+                    className={SAVE_BUTTON}
+                >
+                    {form.processing ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+            </div>
+
+            {(form.errors.flat_fee || form.errors.show_destinations) && (
+                <p className="text-sm text-destructive">
+                    {form.errors.flat_fee ?? form.errors.show_destinations}
+                </p>
+            )}
+        </form>
+    );
+}
+
+/**
+ * One rate line's fee, editable in place. The save button only appears once
+ * the value differs from what is stored, so an untouched table stays quiet.
+ */
+function FeeCell({ rate }: { rate: Rate }) {
+    const [value, setValue] = useState(String(rate.fee));
+    const [saving, setSaving] = useState(false);
+
+    const dirty = value.trim() !== '' && Number(value) !== rate.fee;
+
+    const save = (e: FormEvent) => {
+        e.preventDefault();
+
+        if (!dirty) {
+            return;
+        }
+
+        router.patch(
+            route('admin.delivery-rates.update', rate.id),
+            { fee: value },
+            {
+                ...flashToast,
+                onStart: () => setSaving(true),
+                onFinish: () => setSaving(false),
+            },
+        );
+    };
+
+    return (
+        <form onSubmit={save} className="flex items-center justify-end gap-2">
+            {dirty && (
+                <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-md bg-ink px-2.5 py-1 text-xs font-medium text-card transition hover:bg-ink/90 disabled:opacity-50"
+                >
+                    {saving ? '…' : 'OK'}
+                </button>
+            )}
+            <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                aria-label={`Frais — ${rate.city_name ?? rate.country_name}`}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                className={`${INPUT} w-24 py-1.5 text-right font-medium tabular-nums`}
+            />
+            <span className="text-xs text-ink-soft">MAD</span>
+        </form>
+    );
+}
+
+/**
+ * The delivery service rate cards, and the delivery settings above them.
  *
- * No add / edit / delete anywhere on this page, and no route behind one
- * either — see Admin\DeliveryRateController for why. This is a lookup table
- * the fulfilment desk consults, not settings it owns. Each carrier's card is
- * loaded by its seeder; the selector above narrows to one card once a second
- * carrier (DHL, say) makes the page need one.
+ * Rows come from DeliveryRateSeeder (which only adds missing destinations,
+ * so it never overwrites a fee edited here); the desk can correct any line's
+ * fee but not add or delete lines. See Admin\DeliveryRateController.
  */
 const Index = ({
     services,
     selectedService,
     rates,
+    settings,
 }: PageProps & {
     services: DeliveryService[];
     selectedService: number | null;
     rates: Rate[];
+    settings: DeliverySettings;
 }) => {
     const { t } = useTranslation();
     const [search, setSearch] = useState('');
@@ -131,15 +301,24 @@ const Index = ({
                 )}
             </header>
 
-            {/* Says plainly why there is nothing to click, so the absence of
-                an "add" button reads as deliberate rather than missing. */}
+            {/*
+             * Keyed on the stored values so a save (which reloads the props)
+             * resets the form's dirty state to the new baseline.
+             */}
+            <SettingsCard
+                key={`${settings.flat_fee}-${settings.show_destinations}`}
+                settings={settings}
+            />
+
+            {/* Says which of the two pricing modes checkout is actually in,
+                so an edit to the table below never looks like it did
+                nothing. */}
             <div className="flex items-start gap-3 rounded-xl border border-border bg-card px-5 py-3.5 shadow-sm">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
                 <p className="text-sm text-ink-soft">
-                    Grille tarifaire fournie par {selected?.name}, en lecture
-                    seule. Les frais sont appliqués une seule fois par commande,
-                    selon la ville marocaine ou le pays de destination choisi au
-                    paiement.
+                    {settings.show_destinations
+                        ? `Grille ${selected?.name ?? ''} utilisée au paiement : les frais sont appliqués une seule fois par commande, selon la ville marocaine ou le pays de destination.`
+                        : 'Villes et pays masqués : chaque commande paie actuellement le tarif unique ci-dessus. La grille reste modifiable et reprendra effet dès que l’affichage sera réactivé.'}
                 </p>
             </div>
 
@@ -155,7 +334,7 @@ const Index = ({
                 </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-border text-left">
@@ -189,7 +368,7 @@ const Index = ({
                                     key={rate.id}
                                     className="border-b border-border/60 last:border-0 hover:bg-muted/40"
                                 >
-                                    <td className="px-5 py-3.5">
+                                    <td className="px-5 py-3">
                                         <div className="flex items-center gap-2.5">
                                             {rate.city_name ? (
                                                 <MapPin className="h-4 w-4 shrink-0 text-ink-soft/60" />
@@ -207,17 +386,22 @@ const Index = ({
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3.5 text-ink-soft">
+                                    <td className="px-5 py-3 text-ink-soft">
                                         {rate.country_name}{' '}
                                         <span className="text-ink-soft/60">
                                             ({rate.country_code})
                                         </span>
                                     </td>
-                                    <td className="px-5 py-3.5 text-ink-soft">
+                                    <td className="px-5 py-3 text-ink-soft">
                                         {rate.region ?? '—'}
                                     </td>
-                                    <td className="px-5 py-3.5 text-right font-medium text-ink tabular-nums">
-                                        {money(rate.fee)}
+                                    <td className="px-5 py-3">
+                                        {/* Keyed on the stored fee so a
+                                            save resets the cell to it. */}
+                                        <FeeCell
+                                            key={`${rate.id}-${rate.fee}`}
+                                            rate={rate}
+                                        />
                                     </td>
                                 </tr>
                             ))

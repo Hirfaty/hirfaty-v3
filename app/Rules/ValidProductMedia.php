@@ -39,7 +39,7 @@ class ValidProductMedia implements ValidationRule
         $sizeKb = $value->getSize() / 1024;
 
         if (in_array($extension, self::IMAGE_EXTENSIONS, true)) {
-            $maxKb = config('media.image.max_kb');
+            $maxKb = config('media.product_image.max_kb');
 
             if ($sizeKb > $maxKb) {
                 $fail('L\'image "'.$value->getClientOriginalName().'" dépasse '.$this->formatMb($maxKb).'.');

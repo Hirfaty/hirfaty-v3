@@ -1,5 +1,6 @@
 import { ImagePlus, Plus, Trash2, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCropQueue } from '@/hooks/use-crop-queue';
 import { validateMediaFile } from '@/lib/media-limits';
 
 export type OptionType =
@@ -194,6 +195,9 @@ function VariantMediaPicker({
     const total = existingMedia.length + media.length;
     const full = total >= 5;
 
+    const { enqueue: enqueueCrop, dialog: cropDialog } =
+        useCropQueue(onAddFiles);
+
     const pick = async (files: FileList | null) => {
         if (!files) {
             return;
@@ -203,7 +207,7 @@ function VariantMediaPicker({
         const results = await Promise.all(
             picked.map(async (file) => ({
                 file,
-                rejection: await validateMediaFile(file),
+                rejection: await validateMediaFile(file, { willCrop: true }),
             })),
         );
 
@@ -213,9 +217,7 @@ function VariantMediaPicker({
 
         const accepted = results.filter((r) => !r.rejection).map((r) => r.file);
 
-        if (accepted.length > 0) {
-            onAddFiles(accepted);
-        }
+        enqueueCrop(accepted);
     };
 
     return (
@@ -298,6 +300,8 @@ function VariantMediaPicker({
                     ))}
                 </ul>
             )}
+
+            {cropDialog}
         </div>
     );
 }

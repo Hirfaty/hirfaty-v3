@@ -44,11 +44,34 @@ class DeliveryFeeService
      */
     public const FALLBACK_FEE = 40.00;
 
+    public function __construct(private DeliverySettingsService $settings) {}
+
+    /**
+     * Whether checkout offers a country and a Moroccan city — the admin
+     * toggle on the delivery-rates page. Off, every basket ships to Morocco at
+     * the flat fee (see DeliverySettingsService).
+     */
+    public function showsDestinations(): bool
+    {
+        return $this->settings->showsDestinations();
+    }
+
+    public function flatFee(): float
+    {
+        return $this->settings->flatFee();
+    }
+
     /**
      * @param  int|null  $cityId  Only meaningful for Morocco, which is priced per city.
      */
     public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null): float
     {
+        // Destinations hidden: there is no city or country to price by, so
+        // every basket pays the one fee the admin set.
+        if (! $this->settings->showsDestinations()) {
+            return $this->settings->flatFee();
+        }
+
         if (! $countryCode) {
             return self::FALLBACK_FEE;
         }
@@ -193,6 +216,11 @@ class DeliveryFeeService
      */
     public function shippableCountryCodes(?DeliveryService $service = null): array
     {
+        // Destinations hidden means Morocco only, whatever the rate card holds.
+        if (! $this->settings->showsDestinations()) {
+            return [Address::DEFAULT_COUNTRY];
+        }
+
         $serviceId = ($service ?? $this->defaultService())?->id;
 
         if ($serviceId === null) {
@@ -206,6 +234,14 @@ class DeliveryFeeService
             ->all();
 
         return $codes !== [] ? $codes : [Address::DEFAULT_COUNTRY];
+    }
+
+    /**
+     * The admin desk correcting one line of a rate card.
+     */
+    public function updateRateFee(DeliveryRate $rate, float $fee): void
+    {
+        $rate->update(['fee' => $fee]);
     }
 
     /**

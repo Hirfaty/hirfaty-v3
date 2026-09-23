@@ -75,8 +75,8 @@ test('an oversized variant photo is rejected', function () {
             'variants' => [
                 variantPayload([
                     'media' => [
-                        // Over config('media.image.max_kb') (5 MB).
-                        UploadedFile::fake()->create('huge.jpg', 6000, 'image/jpeg'),
+                        // Over config('media.product_image.max_kb') (1 MB).
+                        UploadedFile::fake()->create('huge.jpg', 1100, 'image/jpeg'),
                     ],
                 ]),
             ],

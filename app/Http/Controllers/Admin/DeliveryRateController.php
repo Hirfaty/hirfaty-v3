@@ -5,23 +5,23 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
+use App\Services\DeliveryFeeService;
+use App\Services\DeliverySettingsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 /**
- * The delivery rate cards, as a reference.
+ * The delivery rate cards, and the switches over them.
  *
- * Read-only on purpose — there is no store/update/destroy here and no route
- * for one. These figures belong to the carriers (Amana's card today, DHL's
- * tomorrow): they arrive as a rate card and are loaded by
- * `DeliveryRateSeeder`, so letting the admin desk edit them in the app would
- * only create a second, quietly diverging copy of someone else's pricing.
- * What the desk needs is to *look one up* — optionally narrowing to a single
- * carrier once there is more than one.
+ * The cards are loaded by `DeliveryRateSeeder` (which only ever adds missing
+ * destinations, so it never overwrites a fee set here), and the desk can
+ * correct any single line of them. On top sit two settings: whether checkout
+ * offers cities and countries at all, and the flat fee every basket pays when
+ * it does not — see DeliverySettingsService.
  */
 class DeliveryRateController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, DeliverySettingsService $settings)
     {
         $services = DeliveryService::query()
             ->orderBy('sort_order')
@@ -64,6 +64,35 @@ class DeliveryRateController extends Controller
             ])->values()->all(),
             'selectedService' => $selected,
             'rates' => $rates,
+            'settings' => [
+                'show_destinations' => $settings->showsDestinations(),
+                'flat_fee' => $settings->flatFee(),
+            ],
         ]);
+    }
+
+    /** One rate line's fee. */
+    public function update(Request $request, DeliveryRate $rate, DeliveryFeeService $deliveryFees)
+    {
+        $validated = $request->validate([
+            'fee' => ['required', 'numeric', 'min:0', 'max:100000'],
+        ]);
+
+        $deliveryFees->updateRateFee($rate, (float) $validated['fee']);
+
+        return back()->with('success', 'Tarif mis à jour.');
+    }
+
+    /** The flat fee and the show-cities-and-countries toggle. */
+    public function updateSettings(Request $request, DeliverySettingsService $settings)
+    {
+        $validated = $request->validate([
+            'flat_fee' => ['required', 'numeric', 'min:0', 'max:100000'],
+            'show_destinations' => ['required', 'boolean'],
+        ]);
+
+        $settings->update((float) $validated['flat_fee'], (bool) $validated['show_destinations']);
+
+        return back()->with('success', 'Paramètres de livraison enregistrés.');
     }
 }

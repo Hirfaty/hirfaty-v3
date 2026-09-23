@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
+import { ChevronDown, Menu, Search, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import ReviewPrompt from '@/components/buyer/ReviewPrompt';
@@ -422,7 +422,7 @@ export const SiteHeader = ({
                         aria-label={t('header.cart_aria')}
                         className={`relative cursor-pointer ${iconButton(light)}`}
                     >
-                        <ShoppingBag
+                        <ShoppingCart
                             className="h-[18px] w-[18px]"
                             strokeWidth={1.5}
                         />
@@ -559,7 +559,7 @@ export const SiteHeader = ({
                     ) : (
                         <Link
                             href="/login"
-                            className={`hidden items-center rounded-md border bg-souk-paper px-4 py-2 text-sm font-medium transition-colors sm:inline-flex ${
+                            className={`inline-flex items-center rounded-md border bg-souk-paper px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                                 light
                                     ? 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
                                     : 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'

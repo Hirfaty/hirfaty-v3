@@ -60,7 +60,13 @@ class CheckoutController extends Controller
 
             // The buyer's address book, default first (User::addresses orders
             // on is_default), so the page can pre-select without re-sorting.
-            'addresses' => $user->addresses()->with('city:id,name')->get()
+            // Morocco-only while destinations are hidden, matching
+            // CheckoutRequest — a saved address abroad could not be used.
+            'addresses' => $user->addresses()->with('city:id,name')
+                ->when(! $deliveryFees->showsDestinations(), fn ($query) => $query->where(
+                    fn ($query) => $query->where('country', Address::DEFAULT_COUNTRY)->orWhereNull('country'),
+                ))
+                ->get()
                 ->map(fn ($address) => [
                     'id' => $address->id,
                     'label' => $address->label,
@@ -109,6 +115,14 @@ class CheckoutController extends Controller
              */
             'deliveryServices' => $delivery['services'],
             'deliveryRates' => $delivery['rates'],
+
+            /*
+             * The admin toggle. Off, the page shows no country or city picker
+             * and quotes `deliveryFlatFee` for every basket — the same figure
+             * DeliveryFeeService bills.
+             */
+            'deliveryShowDestinations' => $deliveryFees->showsDestinations(),
+            'deliveryFlatFee' => $deliveryFees->flatFee(),
         ]);
     }
 

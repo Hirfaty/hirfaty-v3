@@ -334,6 +334,7 @@ return [
     'checkout.city' => 'المدينة',
     'checkout.address_line' => 'العنوان الكامل',
     'checkout.address_placeholder' => 'الشارع، الحي، رقم المنزل…',
+    'checkout.address_placeholder_with_city' => 'الشارع، الحي، رقم المنزل، المدينة…',
     'checkout.phone' => 'الهاتف',
     'checkout.phone_hint' => 'سيتصل بك موصّل أمانة على هذا الرقم.',
     'checkout.phone_placeholder' => '06 12 34 56 78',

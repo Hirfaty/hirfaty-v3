@@ -335,6 +335,7 @@ return [
     'checkout.city' => 'Ville',
     'checkout.address_line' => 'Adresse complète',
     'checkout.address_placeholder' => 'Rue, quartier, numéro de maison…',
+    'checkout.address_placeholder_with_city' => 'Rue, quartier, numéro de maison, ville…',
     'checkout.phone' => 'Téléphone',
     'checkout.phone_hint' => 'Le livreur Amana vous appellera à ce numéro.',
     'checkout.phone_placeholder' => '06 12 34 56 78',

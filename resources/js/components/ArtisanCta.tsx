@@ -14,10 +14,10 @@ export default function ArtisanCta() {
     const { t } = useTranslation();
 
     return (
-        <section className="bg-souk-paper py-12 lg:py-4 lg:pb-0">
+        <section className="mb-10 bg-souk-paper py-12 lg:py-4 lg:pb-0">
             <div className="container px-2!">
                 <Reveal from="scale">
-                    <div className="relative overflow-hidden rounded-[2rem] bg-souk-brown px-8 py-16 text-center sm:px-16">
+                    <div className="relative overflow-hidden rounded-md bg-souk-brown px-8 py-16 text-center sm:px-16">
                         {/* The same zellij photograph the other dark panels
                             (the about page's hero, the auth screens) tile
                             behind their copy — `mix-blend-screen` at a low

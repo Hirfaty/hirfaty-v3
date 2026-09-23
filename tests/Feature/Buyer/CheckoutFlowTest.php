@@ -3,6 +3,8 @@
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\City;
+use App\Models\DeliveryRate;
+use App\Models\DeliveryService;
 use App\Models\Earning;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -13,6 +15,7 @@ use App\Notifications\NewOrderReceived;
 use App\Notifications\NewPurchaseForAdmin;
 use App\Notifications\OrderPlaced;
 use App\Services\CurrencyService;
+use App\Services\DeliverySettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -685,4 +688,96 @@ test('a dirham buyer records dirhams, not a null currency', function () {
         // displayTotal() is null-ish only in the sense that MAD needs no
         // second figure; it still reproduces the same amount.
         ->and($order->displayTotal())->toBe(80.0);
+});
+
+// ── Cities and countries hidden by the admin ────────────────────────────
+
+/*
+ * The admin toggle on the delivery-rates page (DeliverySettingsService). Off,
+ * checkout ships to Morocco only, asks for no city, and every basket pays the
+ * flat fee set next to it.
+ */
+function hideDeliveryDestinations(float $flatFee): void
+{
+    app(DeliverySettingsService::class)->update($flatFee, false);
+}
+
+function cartWithOneLine(User $buyer): void
+{
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create([
+        'cart_id' => $cart->id,
+        'product_id' => createProductForStore(createStoreWithSeller('Alpha'), 'Bowl', 100.00, 5)->id,
+        'quantity' => 1,
+    ]);
+}
+
+test('with destinations hidden, checkout needs no city and charges the flat fee', function () {
+    hideDeliveryDestinations(55.00);
+    $buyer = createBuyer();
+    cartWithOneLine($buyer);
+
+    $this->actingAs($buyer)->post(route('checkout.store'), checkoutPayload([
+        'shipping_address' => '12 Rue Ibn Khaldoun, Safi',
+    ]))->assertSessionHasNoErrors();
+
+    $order = Order::firstOrFail();
+
+    expect((float) $order->delivery_fee)->toBe(55.0)
+        ->and($order->city_id)->toBeNull();
+});
+
+test('with destinations hidden, checkout refuses a country even when the rate card ships there', function () {
+    $service = DeliveryService::firstOrCreate(['slug' => 'amana'], ['name' => 'Amana', 'sort_order' => 1]);
+    DeliveryRate::create([
+        'delivery_service_id' => $service->id,
+        'country_code' => 'FR',
+        'country_name' => 'France',
+        'city_id' => null,
+        'fee' => 20,
+    ]);
+    hideDeliveryDestinations(40.00);
+    $buyer = createBuyer();
+    cartWithOneLine($buyer);
+
+    $this->actingAs($buyer)->from(route('checkout.show'))->post(route('checkout.store'), checkoutPayload([
+        'shipping_address' => '3 Rue de Rivoli, Paris',
+        'country' => 'FR',
+    ]))->assertSessionHasErrors('country');
+
+    expect(Order::count())->toBe(0);
+});
+
+test('with destinations hidden, a saved address abroad is neither offered nor accepted', function () {
+    hideDeliveryDestinations(40.00);
+    $buyer = createBuyer();
+    cartWithOneLine($buyer);
+
+    $abroad = $buyer->addresses()->create([
+        'recipient_name' => 'Yasmine',
+        'address_line' => '3 Rue de Rivoli, Paris',
+        'country' => 'FR',
+        'is_default' => true,
+    ]);
+    $home = $buyer->addresses()->create([
+        'recipient_name' => 'Yasmine',
+        'address_line' => '12 Derb El Hara, Safi',
+        'country' => 'MA',
+    ]);
+
+    $this->actingAs($buyer)->get(route('checkout.show'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('deliveryShowDestinations', false)
+            ->where('deliveryFlatFee', 40)
+            ->has('addresses', 1)
+            ->where('addresses.0.id', $home->id)
+        );
+
+    $this->actingAs($buyer)->from(route('checkout.show'))->post(route('checkout.store'), checkoutPayload([
+        'address_id' => $abroad->id,
+        'postal_code' => null,
+        'country' => null,
+    ]))->assertSessionHasErrors('address_id');
+
+    expect(Order::count())->toBe(0);
 });

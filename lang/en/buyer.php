@@ -333,6 +333,7 @@ return [
     'checkout.city' => 'City',
     'checkout.address_line' => 'Full address',
     'checkout.address_placeholder' => 'Street, neighbourhood, house number…',
+    'checkout.address_placeholder_with_city' => 'Street, neighbourhood, house number, city…',
     'checkout.phone' => 'Phone',
     'checkout.phone_hint' => 'The Amana courier will call you on this number.',
     'checkout.phone_placeholder' => '06 12 34 56 78',

@@ -27,6 +27,14 @@ return [
         'max_height' => 4096,
     ],
 
+    // Product photos (gallery and variants) are stricter than the other image
+    // uploads: the admin UI crops and compresses them under this ceiling
+    // before upload (resources/js/lib/crop-image.ts), and the server enforces
+    // it for anything that bypasses the UI.
+    'product_image' => [
+        'max_kb' => 1024, // 1 MB
+    ],
+
     'video' => [
         'max_kb' => 51200, // 50 MB — video naturally needs more headroom
     ],

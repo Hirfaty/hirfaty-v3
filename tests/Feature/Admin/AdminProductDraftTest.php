@@ -227,14 +227,34 @@ test('an oversized product photo is rejected', function () {
             'stock' => 2,
             'status' => 'published',
             'media' => [
-                // Over config('media.image.max_kb') (5 MB) — a video is
-                // allowed to be this big, an image is not.
-                UploadedFile::fake()->create('huge.jpg', 6000, 'image/jpeg'),
+                // Over config('media.product_image.max_kb') (1 MB) — a video
+                // is allowed to be this big, an image is not.
+                UploadedFile::fake()->create('huge.jpg', 1100, 'image/jpeg'),
             ],
         ])
         ->assertSessionHasErrors('media.0');
 
     expect(Product::firstWhere('name', 'Photo trop lourde'))->toBeNull();
+});
+
+test('a product photo just under 1 MB is accepted', function () {
+    Storage::fake('public');
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.store'), [
+            'store_id' => $this->store->id,
+            'category_id' => $this->category->id,
+            'name' => 'Photo légère',
+            'base_price' => 200,
+            'stock' => 2,
+            'status' => 'published',
+            'media' => [
+                UploadedFile::fake()->create('ok.jpg', 1000, 'image/jpeg'),
+            ],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Product::firstWhere('name', 'Photo légère'))->not->toBeNull();
 });
 
 test('a video under the video limit but over the image limit is still accepted', function () {
@@ -249,7 +269,7 @@ test('a video under the video limit but over the image limit is still accepted',
             'stock' => 2,
             'status' => 'published',
             'media' => [
-                // Bigger than the 5 MB image cap but under the 50 MB video
+                // Bigger than the 1 MB image cap but under the 50 MB video
                 // cap — proves the two media types aren't held to the same
                 // flat size limit.
                 UploadedFile::fake()->create('demo.mp4', 20000, 'video/mp4'),
