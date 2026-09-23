@@ -53,7 +53,7 @@ function CategoryTileCard({
              * the loop visibly stutters once per lap. `me-` so it mirrors
              * under RTL.
              */
-            className="group relative me-4 block aspect-[5/4] w-[68vw] shrink-0 overflow-hidden rounded-md bg-souk-brown/5 sm:w-[40vw] lg:aspect-[16/11] lg:w-[22vw] xl:w-[18vw]"
+            className="group relative me-3 block aspect-[4/3] w-[56vw] shrink-0 overflow-hidden rounded-md bg-souk-brown/5 sm:me-4 sm:aspect-[5/4] sm:w-[40vw] lg:aspect-[16/11] lg:w-[22vw] xl:w-[18vw]"
         >
             {tile.image ? (
                 <img
@@ -80,8 +80,8 @@ function CategoryTileCard({
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-souk-title/85 via-souk-title/25 to-transparent"
             />
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-5">
-                <span className="font-display text-lg text-souk-cream">
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-3.5 sm:p-5">
+                <span className="font-display text-base text-souk-cream sm:text-lg">
                     {tile.label}
                 </span>
                 <ArrowRight
@@ -139,12 +139,14 @@ export default function ExploreByCategories() {
             window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     );
 
-    const categories: CategoryTile[] = (navCategories ?? []).map((category) => ({
-        key: category.id,
-        image: category.image_url,
-        href: `/products?category_id=${category.id}`,
-        label: category.translated_name,
-    }));
+    const categories: CategoryTile[] = (navCategories ?? []).map(
+        (category) => ({
+            key: category.id,
+            image: category.image_url,
+            href: `/products?category_id=${category.id}`,
+            label: category.translated_name,
+        }),
+    );
 
     if (categories.length === 0) {
         return null;
@@ -159,7 +161,7 @@ export default function ExploreByCategories() {
     }
 
     return (
-        <section className="overflow-hidden bg-souk-paper py-5 lg:py-4">
+        <section className="overflow-hidden bg-souk-paper py-4 sm:py-5 lg:py-4">
             {/*
              * `group` so hover anywhere on the strip pauses it, not just over
              * the one tile the cursor is on — otherwise the row slides out
@@ -173,7 +175,7 @@ export default function ExploreByCategories() {
                               // it stays scrollable by hand rather than
                               // clipping the categories that fall off-screen.
                               'max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-                            : 'animate-gallery group-hover:[animation-play-state:paused] group-focus-within:[animation-play-state:paused]'
+                            : 'animate-gallery group-focus-within:[animation-play-state:paused] group-hover:[animation-play-state:paused] rtl:animate-gallery-rtl'
                     }`}
                 >
                     {lap.map((tile, i) => (

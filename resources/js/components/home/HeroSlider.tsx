@@ -40,14 +40,16 @@ export default function HeroSlider({
         return null;
     }
 
+    // Hidden below `sm`: on a phone the diamonds would sit over the claim,
+    // and the track already pages by swipe, with the dots as a fallback.
     const arrow =
-        'group absolute cursor-pointer top-1/2 z-30 grid h-11 w-11 -translate-y-1/2 rotate-45 place-items-center bg-souk-paper text-souk-brown sm:h-14 sm:w-14';
+        'group absolute cursor-pointer top-1/2 z-30 hidden h-11 w-11 -translate-y-1/2 rotate-45 place-items-center bg-souk-paper text-souk-brown sm:grid sm:h-14 sm:w-14';
 
     return (
         <div {...pauseProps} className="relative mx-auto max-w-384">
             <ul
                 ref={track}
-                className="flex h-[clamp(18rem,50svh,30rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex h-[clamp(25rem,58svh,30rem)] snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] sm:h-[clamp(18rem,50svh,30rem)] [&::-webkit-scrollbar]:hidden"
             >
                 {order.map((slide, position) => (
                     <li
@@ -83,7 +85,8 @@ export default function HeroSlider({
                 className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-souk-title/70 via-transparent to-souk-title/45"
             />
 
-            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8 sm:px-14">
+            {/* Bottom padding below `sm` keeps the claim clear of the dots. */}
+            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-5 pb-8 sm:px-14 sm:pb-0">
                 <div className="w-full max-w-6xl text-center">{children}</div>
             </div>
 
@@ -115,7 +118,7 @@ export default function HeroSlider({
                     <div
                         role="group"
                         aria-label={label}
-                        className="absolute inset-x-0 bottom-6 z-30 flex items-center justify-center gap-2.5 lg:bottom-8"
+                        className="absolute inset-x-0 bottom-4 z-30 flex items-center justify-center gap-2.5 sm:bottom-6 lg:bottom-8"
                     >
                         {slides.map((slide, i) => (
                             <button

@@ -48,7 +48,7 @@ EDGE_NETWORK = hirfaty-edge
 .PHONY: reset edge-network \
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
-	prod-deploy prod-backup prod-backup-media \
+	prod-pull prod-release prod-deploy prod-backup prod-backup-media \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
 	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup stage-backup-media \
 	stage-pull stage-release stage-deploy \
@@ -173,14 +173,21 @@ prod-artisan:
 prod-key-generate:
 	docker run --rm --entrypoint php hirfaty-app:latest artisan key:generate --show
 
-# Full redeploy after a `git pull`: rebuild the image, run migrations, then
-# recreate app/queue/scheduler with the new image (db/seaweedfs untouched).
-prod-deploy: edge-network
-	git pull
+# Rebuild, migrate and restart from whatever is already checked out: rebuild
+# the image, run migrations, then recreate app/queue/scheduler with the new
+# image (db/seaweedfs untouched). No git step, for the same reason as
+# stage-release — CI hard-resets to origin/main itself, then calls this.
+prod-release: edge-network
 	$(COMPOSE) build app
 	$(COMPOSE) up -d db seaweedfs
 	$(COMPOSE) run --rm app php artisan migrate --force
 	$(COMPOSE) up -d app queue scheduler
+
+prod-pull:
+	git pull
+
+# What you run by hand on the box: pull, then release.
+prod-deploy: prod-pull prod-release
 
 # Dumps the prod `db` container to /var/backups/hirfaty and prunes dumps older
 # than 14 days. Scheduled by hirfaty-backup.timer; run by hand to test or to
