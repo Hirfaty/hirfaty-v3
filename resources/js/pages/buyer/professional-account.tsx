@@ -145,9 +145,7 @@ function DemoCard({
                             <div className="motion-safe:animate-lift-in">
                                 <p className="mt-1.5 font-display text-3xl leading-none text-olive">
                                     {money(DEMO.trade)}
-                                    <span className="ms-1.5 text-sm">
-                                        TTC
-                                    </span>
+                                    <span className="ms-1.5 text-sm">TTC</span>
                                 </p>
                                 <div className="mt-2.5 flex flex-wrap items-center gap-2">
                                     <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">

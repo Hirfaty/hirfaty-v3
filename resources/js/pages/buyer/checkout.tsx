@@ -8,7 +8,6 @@ import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 
-
 /**
  * Charged when the chosen destination somehow has no rate on file — mirrors
  * `DeliveryFeeService::FALLBACK_FEE` so the quote and the bill agree even in

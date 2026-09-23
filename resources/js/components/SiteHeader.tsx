@@ -2,11 +2,11 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { ChevronDown, Menu, Search, ShoppingBag, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import ReviewPrompt from '@/components/buyer/ReviewPrompt';
 import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import CategoriesMegaMenu from '@/components/CategoriesMegaMenu';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
-import ReviewPrompt from '@/components/buyer/ReviewPrompt';
 import RegionMenu from '@/components/RegionMenu';
 import SearchPanel from '@/components/SearchPanel';
 import {

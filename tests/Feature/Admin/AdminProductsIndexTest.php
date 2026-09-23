@@ -119,6 +119,6 @@ test('non admins cannot list products', function () {
 
         $this->actingAs($user)
             ->get(route('admin.products.index'))
-            ->assertForbidden();
+            ->assertRoleDenied();
     }
 });

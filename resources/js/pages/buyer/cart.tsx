@@ -23,7 +23,6 @@ import { useTranslation } from '@/hooks/use-translation';
 /** Museum-caption label, matching the listing and detail pages. */
 const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
-
 /** One basket line, already priced for this viewer by CartLineResource. */
 type CartLine = {
     id: number;
@@ -460,9 +459,7 @@ const CartPage = ({
                                 </span>
                                 <span className="font-display text-2xl leading-none text-souk-title">
                                     {money(total)}
-                                    <span className="ms-1.5 text-sm">
-                                        TTC
-                                    </span>
+                                    <span className="ms-1.5 text-sm">TTC</span>
                                 </span>
                             </div>
 

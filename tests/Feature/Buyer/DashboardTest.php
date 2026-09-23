@@ -118,7 +118,7 @@ test('the wishlist keeps its old singular URL as a redirect', function () {
 test('a seller cannot reach any page of the buyer account area', function (string $name) {
     $seller = User::factory()->create(['role' => 'seller']);
 
-    $this->actingAs($seller)->get(route($name))->assertForbidden();
+    $this->actingAs($seller)->get(route($name))->assertRoleDenied();
 })->with([
     'buyer.dashboard',
     'buyer.account.orders.index',

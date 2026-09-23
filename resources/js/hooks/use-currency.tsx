@@ -48,7 +48,12 @@ export function useCurrency() {
     const currency = page.currency ?? BASE;
     const options = page.currencyOptions ?? [];
 
-    const format = (value: number, code: string, decimals: number, locale: string) => {
+    const format = (
+        value: number,
+        code: string,
+        decimals: number,
+        locale: string,
+    ) => {
         const meta = code === currency.code ? currency : null;
         const symbol = meta?.symbol ?? code;
 
@@ -77,7 +82,12 @@ export function useCurrency() {
         const mad = Number(value ?? 0);
 
         if (!convert || currency.is_base) {
-            return format(Math.round(mad), BASE.code, BASE.decimals, BASE.locale);
+            return format(
+                Math.round(mad),
+                BASE.code,
+                BASE.decimals,
+                BASE.locale,
+            );
         }
 
         return format(

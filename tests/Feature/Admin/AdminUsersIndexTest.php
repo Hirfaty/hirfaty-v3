@@ -245,6 +245,6 @@ test('non admins cannot list users', function () {
 
         $this->actingAs($user)
             ->get(route('admin.users.index'))
-            ->assertForbidden();
+            ->assertRoleDenied();
     }
 });

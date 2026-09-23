@@ -130,7 +130,7 @@ test('a non-admin cannot delete a user', function () {
 
     $this->actingAs($buyer)
         ->delete(route('admin.users.destroy', $otherBuyer))
-        ->assertForbidden();
+        ->assertRoleDenied();
 
     expect(User::find($otherBuyer->id))->not->toBeNull();
 });

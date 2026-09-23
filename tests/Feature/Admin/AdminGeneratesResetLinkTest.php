@@ -123,7 +123,7 @@ test('a non-admin cannot generate a reset link', function () {
 
     $this->actingAs($buyer)
         ->post(route('admin.users.reset-link', $otherBuyer))
-        ->assertForbidden();
+        ->assertRoleDenied();
 
     expect(DB::table('password_reset_tokens')->where('email', $otherBuyer->email)->count())
         ->toBe(0);

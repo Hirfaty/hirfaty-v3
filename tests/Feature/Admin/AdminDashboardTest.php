@@ -211,6 +211,6 @@ test('non admins cannot view the dashboard', function () {
 
         $this->actingAs($user)
             ->get(route('admin.dashboard'))
-            ->assertForbidden();
+            ->assertRoleDenied();
     }
 });

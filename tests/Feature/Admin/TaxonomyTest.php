@@ -120,5 +120,5 @@ test('buyers cannot access taxonomy management', function () {
     $response = $this->actingAs($buyer)
         ->get(route('admin.categories.index'));
 
-    $response->assertForbidden();
+    $response->assertRoleDenied();
 });

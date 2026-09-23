@@ -129,7 +129,7 @@ test('sellers cannot delete products via the admin route', function () {
 
     $this->actingAs($seller)
         ->delete(route('admin.products.destroy', $product))
-        ->assertForbidden();
+        ->assertRoleDenied();
 
     expect(Product::find($product->id))->not->toBeNull();
 });

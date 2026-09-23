@@ -23,9 +23,6 @@ type Props = {
     canWishlist: boolean;
 };
 
-/** Museum-caption label, shared with the cards below. */
-const EYEBROW = 'text-[10px] font-semibold uppercase tracking-[0.16em]';
-
 /**
  * The newest pieces in the catalogue.
  *

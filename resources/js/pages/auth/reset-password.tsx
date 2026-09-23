@@ -5,7 +5,6 @@ import PasswordInput from '@/components/password-input';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Input } from '@/components/ui/input';
-import WarmFill from '@/components/WarmFill';
 import { update } from '@/routes/password';
 
 type Props = {

@@ -98,5 +98,5 @@ test('sellers cannot view orders via admin route', function () {
     $response = $this->actingAs($seller)
         ->get(route('admin.orders.show', $order));
 
-    $response->assertForbidden();
+    $response->assertRoleDenied();
 });

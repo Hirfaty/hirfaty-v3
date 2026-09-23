@@ -181,5 +181,5 @@ test('non admins cannot create products', function () {
             'base_price' => 10,
             'stock' => 1,
         ])
-        ->assertForbidden();
+        ->assertRoleDenied();
 });

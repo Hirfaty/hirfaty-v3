@@ -70,6 +70,9 @@ export default function ReviewPrompt() {
             return;
         }
 
+        // Deliberate — see the comment above: sessionStorage is only readable
+        // after mount, so this cannot be derived during render.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setOpen(true);
     }, [pending, page.url]);
 

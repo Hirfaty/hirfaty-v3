@@ -102,6 +102,6 @@ test('non admins cannot reach the admin panel', function () {
 
         $this->actingAs($user)
             ->get(route('admin.users.index'))
-            ->assertForbidden();
+            ->assertRoleDenied();
     }
 });

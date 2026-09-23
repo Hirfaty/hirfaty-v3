@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -31,6 +32,17 @@ pest()->extend(TestCase::class)
 
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
+});
+
+/*
+ * A signed-in user on a route their role does not allow. RoleMiddleware
+ * sends them to the catalogue with an error flash rather than a bare 403,
+ * so they land somewhere useful and see why.
+ */
+TestResponse::macro('assertRoleDenied', function () {
+    /** @var TestResponse $this */
+    return $this->assertRedirect(route('products.index'))
+        ->assertSessionHas('error');
 });
 
 /*

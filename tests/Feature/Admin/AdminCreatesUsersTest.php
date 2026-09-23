@@ -307,7 +307,7 @@ test('sellers are still blocked from buyer routes', function () {
         'email_verified_at' => now(),
     ]);
 
-    $this->actingAs($seller)->get(route('cart.show'))->assertForbidden();
+    $this->actingAs($seller)->get(route('cart.show'))->assertRoleDenied();
 });
 
 /**

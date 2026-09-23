@@ -286,12 +286,12 @@ test('a non-admin cannot reach the edit screen', function () {
     $buyer = User::factory()->create(['role' => 'buyer']);
     $target = User::factory()->create(['role' => 'buyer']);
 
-    $this->actingAs($buyer)->get(route('admin.users.edit', $target))->assertForbidden();
+    $this->actingAs($buyer)->get(route('admin.users.edit', $target))->assertRoleDenied();
     $this->actingAs($buyer)
         ->post(route('admin.users.update', $target), editPayload($target, [
             'first_name' => 'Piraté',
         ]))
-        ->assertForbidden();
+        ->assertRoleDenied();
 
     expect($target->fresh()->first_name)->not->toBe('Piraté');
 });

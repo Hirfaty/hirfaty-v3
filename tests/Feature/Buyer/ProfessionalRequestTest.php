@@ -171,7 +171,7 @@ test('an ordinary buyer cannot approve their own request', function () {
 
     $this->actingAs($this->buyer)
         ->patch(route('admin.users.professional.approve', $this->buyer))
-        ->assertForbidden();
+        ->assertRoleDenied();
 
     expect($this->buyer->fresh()->role)->toBe('buyer');
 });

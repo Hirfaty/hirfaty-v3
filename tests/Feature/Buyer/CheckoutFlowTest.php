@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use App\Notifications\NewOrderReceived;
+use App\Notifications\NewPurchaseForAdmin;
 use App\Notifications\OrderPlaced;
 use App\Services\CurrencyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -182,6 +183,7 @@ test('checkout store rejects empty cart', function () {
 
 test('checkout store creates grouped orders and clears cart', function () {
     Notification::fake();
+    config(['hirfaty.admin_email' => 'desk@hirfaty.test']);
 
     $buyer = createBuyer();
     $city = City::create(['name' => 'Tangier', 'region' => 'Tangier-Tetouan-Al Hoceima']);
@@ -222,8 +224,15 @@ test('checkout store creates grouped orders and clears cart', function () {
     expect((int) $productA->fresh()->stock)->toBe(13);
     expect((int) $productB->fresh()->stock)->toBe(6);
 
-    Notification::assertSentTo($storeA->user, NewOrderReceived::class);
-    Notification::assertSentTo($storeB->user, NewOrderReceived::class);
+    // Hirfaty's desk fulfils every purchase, so it gets one email for the
+    // whole basket and the workshops are not mailed directly.
+    Notification::assertSentOnDemandTimes(NewPurchaseForAdmin::class, 1);
+    Notification::assertSentOnDemand(
+        NewPurchaseForAdmin::class,
+        fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'desk@hirfaty.test',
+    );
+    Notification::assertNotSentTo($storeA->user, NewOrderReceived::class);
+    Notification::assertNotSentTo($storeB->user, NewOrderReceived::class);
 });
 
 test('a split basket sends the buyer one confirmation carrying every order and item', function () {

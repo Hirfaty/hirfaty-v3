@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\BuyerVerifyEmail;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 
@@ -18,7 +18,9 @@ test('sends verification notification', function () {
         ->post(route('verification.send'))
         ->assertRedirect(route('home'));
 
-    Notification::assertSentTo($user, VerifyEmail::class);
+    // User::sendEmailVerificationNotification() sends the role-specific
+    // mail, and a factory user is a buyer.
+    Notification::assertSentTo($user, BuyerVerifyEmail::class);
 });
 
 test('does not send verification notification if email is verified', function () {

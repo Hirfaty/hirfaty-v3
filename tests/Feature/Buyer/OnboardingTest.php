@@ -118,7 +118,7 @@ test('a professional_message on the tour is ignored, not filed as a request', fu
 test('the tour is closed to sellers', function () {
     $seller = User::factory()->notOnboarded()->create(['role' => 'seller']);
 
-    $this->actingAs($seller)->get(route('onboarding.show'))->assertForbidden();
+    $this->actingAs($seller)->get(route('onboarding.show'))->assertRoleDenied();
 });
 
 test('a guest cannot reach the tour', function () {

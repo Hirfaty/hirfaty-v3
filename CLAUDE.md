@@ -30,7 +30,7 @@ Route helpers and controller actions under `resources/js/routes/` and `resources
     - `role:seller` → `/seller/*`, `Seller\*` controllers, `pages/seller/*`
     - `role:buyer` → cart/checkout/orders/wishlist, `Buyer\*` controllers, `pages/buyer/*`
     - Public: product listing/detail (`/products`, `/products/{slug}`) work unauthenticated.
-2. `RoleMiddleware` (alias `role`) hard-checks `$user->role` against a single string and 403s otherwise. Every seller is guaranteed to *have* a `Store`: signup creates the account and the shop in one transaction, and admin promotion creates one too.
+2. `RoleMiddleware` (alias `role:a,b`) checks `$user->role` against one or more roles. A signed-in user with the wrong role is redirected to `products.index` with an `error` flash, not 403'd (tests assert this with the `assertRoleDenied()` response macro in `tests/Pest.php`); only a missing user gets a 403. Every seller is guaranteed to *have* a `Store`: signup creates the account and the shop in one transaction, and admin promotion creates one too.
 
    **Sellers never create products.** Hirfaty's team contacts an artisan after signup and files every listing on their behalf through `Admin\ProductController`; `Seller\ProductController` is read-only (`index` + `show` only). The `EnsureStoreCanSell` middleware (alias `store.sellable`) that used to gate seller writes is still registered in `bootstrap/app.php` but no longer guards any route — `Store::canSell()` itself stays in use for the seller status bar.
 3. Controllers return `Inertia::render('page/path', [...])`, resolving to `resources/js/pages/<page/path>.tsx`.
@@ -52,7 +52,7 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 ## Cart & checkout
 
 - **Guest cart** lives in `localStorage` under `hirfaty_guest_cart`, managed by `CartContext`/`useGuestCart` (`resources/js/contexts/CartContext.tsx`), wrapping the whole app in `app.tsx`. On login it is merged into the DB cart via `POST /cart/merge` (see `CartSync`/`CartContext` usage).
-- **Server cart** is a `Cart` hasMany `CartItem`; `CheckoutService::process()` is the money path. It: locks product rows (`lockForUpdate`) to validate stock, **splits one cart into multiple `Order`s grouped by store**, computes `platform_fee` (20%, `PLATFORM_FEE_PERCENT`) plus a flat `AMANA_FEE` (20) per order, writes an `Earning` per store, decrements stock, notifies seller + buyer, and clears the cart — all in one DB transaction. Change fee logic only in this service.
+- **Server cart** is a `Cart` hasMany `CartItem`; `CheckoutService::process()` is the money path. It: locks product rows (`lockForUpdate`) to validate stock, **splits one cart into multiple `Order`s grouped by store**, computes `platform_fee` (20%, `PLATFORM_FEE_PERCENT`) plus a flat `AMANA_FEE` (20) per order, writes an `Earning` per store, decrements stock, and clears the cart. After the transaction it emails the buyer one `OrderPlaced` and Hirfaty's desk (`config('hirfaty.admin_email')`) one `NewPurchaseForAdmin`; sellers are deliberately not emailed, since the desk fulfils every purchase — all in one DB transaction. Change fee logic only in this service.
 
 ## Products, media, moderation
 

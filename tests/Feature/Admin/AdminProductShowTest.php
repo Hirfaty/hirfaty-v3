@@ -148,10 +148,10 @@ test('non admins cannot view or moderate a product', function () {
 
         $this->actingAs($user)
             ->get(route('admin.products.show', $this->product))
-            ->assertForbidden();
+            ->assertRoleDenied();
 
         $this->actingAs($user)
             ->patch(route('admin.products.approve', $this->product))
-            ->assertForbidden();
+            ->assertRoleDenied();
     }
 });

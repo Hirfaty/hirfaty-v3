@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
     ChevronDown,
     ChevronLeft,
@@ -10,7 +11,6 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
-import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
@@ -57,24 +57,6 @@ type Props = {
     /** False for guests and non-buyers, whom the wishlist route rejects. */
     canWishlist: boolean;
 };
-
-/**
- * The nested arch outlines drawn behind the hero copy — a riad doorway seen in
- * elevation. Two of them, offset, so the line reads as a receding arcade
- * rather than a single traced shape.
- */
-const HERO_ARCH =
-    'pointer-events-none absolute left-1/2 -z-10 -translate-x-1/2 border border-souk-brown/12 [border-radius:50%_50%_0_0/28%_28%_0_0]';
-
-/**
- * Widths of the two arches, kept here rather than inline so the ornaments
- * hung on the doorway below can be sized from the same expressions. A
- * lozenge pinned at a *fixed* x would drift off the jamb the moment the
- * viewport crossed out of the `min()` clamp — pinning the ornaments to a
- * wrapper of the same width instead makes them track the arch at every size.
- */
-const ARCH_OUTER_W = 'w-[min(72vw,760px)]';
-const ARCH_INNER_W = 'w-[min(66vw,700px)]';
 
 /** Maps the app locale onto a BCP-47 tag for Intl number formatting. */
 

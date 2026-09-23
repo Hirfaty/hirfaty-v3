@@ -34,6 +34,8 @@ export type User = {
     professional_requested_at?: string | null;
     professional_decline_reason?: string | null;
     two_factor_enabled?: boolean;
+    /** 'fr' | 'ar' | 'en'; drives which language their emails go out in. */
+    locale?: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;

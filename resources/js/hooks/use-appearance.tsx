@@ -25,7 +25,7 @@ const getStoredAppearance = (): Appearance => {
     return 'light';
 };
 
-const applyTheme = (appearance: Appearance): void => {
+const applyTheme = (): void => {
     if (typeof document === 'undefined') {
         return;
     }
@@ -48,7 +48,7 @@ export function initializeTheme(): void {
     }
 
     currentAppearance = getStoredAppearance();
-    applyTheme(currentAppearance);
+    applyTheme();
 }
 
 export function useAppearance(): UseAppearanceReturn {
@@ -67,7 +67,7 @@ export function useAppearance(): UseAppearanceReturn {
 
         setCookie('appearance', 'light');
 
-        applyTheme('light');
+        applyTheme();
         notify();
     };
 

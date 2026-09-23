@@ -39,7 +39,6 @@ import type {
 /** Museum-caption label, matching the listing page. */
 const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
-
 type DetailProduct = BuyerProductResource & {
     wishlists_count?: number;
     professional_effective_price?: number | null;

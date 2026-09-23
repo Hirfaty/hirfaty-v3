@@ -46,9 +46,7 @@ export default function Affiliate() {
                                         />
                                     </span>
                                     <h3 className="mt-4 font-display text-xl text-souk-title">
-                                        {t(
-                                            `pages.affiliate.how.${key}.title`,
-                                        )}
+                                        {t(`pages.affiliate.how.${key}.title`)}
                                     </h3>
                                     <p className="mt-2 text-[15px] leading-relaxed text-souk-brown-deep/75">
                                         {t(`pages.affiliate.how.${key}.body`)}
