@@ -11,6 +11,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { City, PageProps } from '@/types';
 
@@ -24,6 +25,7 @@ const Index = ({
 }: PageProps & {
     cities: CityWithCounts[];
 }) => {
+    const { t } = useTranslation();
     const [editingId, setEditingId] = useState<number | null>(null);
 
     // ── Create form ───────────────────────────────────────────
@@ -78,7 +80,7 @@ const Index = ({
 
     return (
         <div className="min-h-screen bg-cream/30 p-6 md:p-10">
-            <Head title="Manage Cities" />
+            <Head title={t('titles.admin.cities')} />
 
             <div className="mx-auto max-w-7xl">
                 <header className="mb-12">

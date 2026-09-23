@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import ProductForm from '@/components/admin/product-form';
 import type { StoreOption } from '@/components/admin/product-form';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, PageProps } from '@/types';
 
@@ -13,23 +14,27 @@ interface Props extends PageProps {
     stores?: StoreOption[] | null;
 }
 
-const AdminProductCreate = ({ categories, store, stores }: Props) => (
-    <>
-        <Head title="Nouveau produit" />
-        <ProductForm
-            mode="create"
-            categories={categories}
-            store={store}
-            stores={stores}
-            submitUrl={route('admin.products.store')}
-            backUrl={
-                store?.user
-                    ? route('admin.users.show', store.user.id)
-                    : route('admin.products.index')
-            }
-        />
-    </>
-);
+const AdminProductCreate = ({ categories, store, stores }: Props) => {
+    const { t } = useTranslation();
+
+    return (
+        <>
+            <Head title={t('titles.admin.product_create')} />
+            <ProductForm
+                mode="create"
+                categories={categories}
+                store={store}
+                stores={stores}
+                submitUrl={route('admin.products.store')}
+                backUrl={
+                    store?.user
+                        ? route('admin.users.show', store.user.id)
+                        : route('admin.products.index')
+                }
+            />
+        </>
+    );
+};
 
 AdminProductCreate.layout = (page: ReactNode) => (
     <AdminLayout children={page} />

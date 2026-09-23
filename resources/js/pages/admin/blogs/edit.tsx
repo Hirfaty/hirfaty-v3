@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import BlogForm from '@/components/admin/BlogForm';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { Blog, BlogStatus, PageProps } from '@/types';
@@ -10,6 +11,7 @@ const Edit = ({
     blog,
     statuses,
 }: PageProps & { blog: Blog; statuses: BlogStatus[] }) => {
+    const { t } = useTranslation();
     const handleDelete = () => {
         if (
             confirm(
@@ -22,7 +24,7 @@ const Edit = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title={`Modifier — ${blog.title}`} />
+            <Head title={`${t('titles.admin.blog_edit')} — ${blog.title}`} />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>

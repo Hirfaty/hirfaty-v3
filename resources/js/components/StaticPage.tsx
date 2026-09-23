@@ -29,7 +29,7 @@ export default function StaticPage({
 }) {
     return (
         <>
-            <Head title={`Hirfaty — ${title}`} />
+            <Head title={title} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />

@@ -23,6 +23,7 @@ import {
 } from 'recharts';
 import HealthPanel from '@/components/admin/health-panel';
 import type { HealthReport } from '@/components/admin/health-panel';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { PageProps, Product, User, UserRole } from '@/types';
@@ -144,6 +145,7 @@ const AdminDashboard = ({
     salesTrend: SalesTrend[];
     health: HealthReport;
 }) => {
+    const { t } = useTranslation();
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('fr-MA', {
             style: 'currency',
@@ -152,7 +154,7 @@ const AdminDashboard = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Tableau de bord" />
+            <Head title={t('titles.admin.dashboard')} />
 
             {/* ── Header ───────────────────────────────────── */}
             <header>

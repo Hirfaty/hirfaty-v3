@@ -30,7 +30,7 @@ export default function About() {
 
     return (
         <>
-            <Head title="Hirfaty — Our story" />
+            <Head title={t('titles.about')} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader variant="overlay" overlayAnchor={heroRef} />

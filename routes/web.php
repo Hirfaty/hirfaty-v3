@@ -61,13 +61,15 @@ Route::inertia('/contact', 'contact')->name('contact');
  * backend yet: there is no partner record, no referral attribution and no
  * points ledger. Both pages say so rather than implying otherwise.
  *
- * `/privacy` closes a long-standing dead link: every transactional email
- * footer has pointed at it since they were written, and until now it 404'd.
+ * `/privacy` and `/terms` close long-standing dead links: transactional
+ * email footers and the registration checkbox have pointed at them since
+ * they were written, and until now both 404'd.
  */
 Route::inertia('/affiliate', 'affiliate')->name('affiliate');
 Route::inertia('/rewards', 'rewards')->name('rewards');
 Route::inertia('/privacy', 'privacy')->name('privacy');
 Route::inertia('/shipping-policy', 'shipping-policy')->name('shipping-policy');
+Route::inertia('/terms', 'terms')->name('terms');
 
 /*
  * No app-level `verification.verify` route here on purpose — Fortify already

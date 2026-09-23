@@ -48,7 +48,7 @@ return [
     'products.pro_price_hint' => 'Your trade rate — this is what the checkout charges.',
 
     // ── New arrivals ──────────────────────────────────────────────
-    'new.title' => 'New in — Hirfaty',
+    'new.title' => 'New in',
     'new.eyebrow' => 'Just listed',
     'new.heading' => 'Fresh from the workshops',
     'new.lead' => 'The most recent pieces our artisans have put up, newest first.',
@@ -161,7 +161,7 @@ return [
     'detail.trust_packaging_body' => 'Carefully packed for a safe delivery.',
 
     // ── Onboarding (a buyer's first visit) ───────────────────────────────
-    'onboarding.title' => 'Welcome to Hirfaty',
+    'onboarding.title' => 'Welcome',
     'onboarding.skip' => 'Skip',
     'onboarding.back' => 'Back',
     'onboarding.next' => 'Continue',

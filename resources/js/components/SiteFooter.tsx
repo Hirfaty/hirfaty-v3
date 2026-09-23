@@ -124,6 +124,7 @@ const NAV_COLUMNS = [
                 href: '/shipping-policy',
             },
             { labelKey: 'common.footer.care.privacy', href: '/privacy' },
+            { labelKey: 'common.footer.care.terms', href: '/terms' },
             // Trade buying already has a page that explains wholesale rates
             // and takes the request — no second one to keep in sync.
             {

@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { OrderStatus } from '@/types';
@@ -56,6 +57,7 @@ const currency = (value: number) =>
  * exception where one artisan's piece has to travel on its own.
  */
 const Show = ({ group }: { group: OrderGroup }) => {
+    const { t } = useTranslation();
     const [tracking, setTracking] = useState(
         group.orders[0]?.tracking_number ?? '',
     );
@@ -106,7 +108,7 @@ const Show = ({ group }: { group: OrderGroup }) => {
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title={`Achat ${group.reference}`} />
+            <Head title={`${t('titles.admin.order')} ${group.reference}`} />
 
             <header className="flex flex-wrap items-start justify-between gap-4">
                 <div>

@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import BlogForm from '@/components/admin/BlogForm';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { BlogStatus, PageProps } from '@/types';
 
@@ -22,6 +23,7 @@ const Create = ({
     statuses: BlogStatus[];
     justCreated?: JustCreated | null;
 }) => {
+    const { t } = useTranslation();
     useEffect(() => {
         if (!justCreated) {
             return;
@@ -39,7 +41,7 @@ const Create = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Nouvel article" />
+            <Head title={t('titles.admin.blog_create')} />
 
             <header>
                 <Link

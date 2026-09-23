@@ -155,4 +155,49 @@ return [
 
     'shipping.handmade.heading' => 'Une note sur le fait main',
     'shipping.handmade.body' => 'Chaque pièce est faite à la main, et certaines ne sont façonnées qu’une fois commandées. Si une pièce demande plus de temps que d’habitude à l’atelier, nous vous le disons plutôt que de laisser la date glisser en silence.',
+
+    // ── Conditions d'utilisation ──────────────────────────────────────────
+    // Comme pour la confidentialité : décrit ce que l'application fait
+    // réellement plutôt qu'un texte juridique générique. Le paiement à la
+    // livraison, l'annulation limitée aux commandes encore « en attente », la
+    // modération des fiches produit et la suspension de compte sont toutes
+    // des règles déjà appliquées par le code, pas des promesses en plus.
+    'terms.title' => 'Conditions d’utilisation',
+    'terms.eyebrow' => 'À lire avant de commander',
+    'terms.heading' => 'Les règles du jeu, en clair.',
+    'terms.lead' => 'En utilisant Hirfaty, que ce soit pour acheter ou pour vendre, vous acceptez ce qui suit. C’est écrit pour être lu, pas pour être ignoré.',
+    'terms.updated' => 'Dernière mise à jour : septembre 2026',
+
+    'terms.marketplace.heading' => 'Ce qu’est Hirfaty',
+    'terms.marketplace.body' => 'Hirfaty est une place de marché : chaque pièce que vous voyez est fabriquée et proposée à la vente par l’atelier dont le nom figure sur sa page. Nous exploitons le site, traitons les commandes et organisons la livraison, mais l’atelier reste responsable de ce qu’il fabrique.',
+
+    'terms.accounts.heading' => 'Votre compte',
+    'terms.accounts.body' => 'Un compte peut être particulier, professionnel (achat en gros) ou artisan. Les informations que vous donnez doivent être exactes, et vous êtes responsable de ce qui se passe sur votre compte. Vous pouvez le fermer à tout moment depuis vos paramètres.',
+
+    'terms.orders.heading' => 'Commandes et paiement',
+    'terms.orders.body' => 'Les commandes se paient à la livraison, en dirhams (MAD), directement au livreur. Si le site affiche un prix dans une autre devise, c’est à titre indicatif — le montant réellement dû est celui affiché en dirhams au moment de payer.',
+
+    'terms.cancellation.heading' => 'Annuler une commande',
+    'terms.cancellation.body' => 'Vous pouvez annuler une commande tant qu’elle est encore « en attente », c’est-à-dire avant que l’atelier ne l’ait confirmée. Une fois confirmée, écrivez-nous : nous voyons avec l’atelier ce qui est possible.',
+
+    'terms.listings.heading' => 'Les fiches produit',
+    'terms.listings.body' => 'Chaque fiche est vérifiée avant sa mise en ligne, mais la description et les photographies restent celles fournies par l’atelier. Si une pièce reçue ne correspond pas à sa fiche, contactez-nous.',
+
+    'terms.reviews.heading' => 'Avis',
+    'terms.reviews.body' => 'Après réception d’une commande, nous pouvons vous inviter à laisser un avis. Un avis doit porter sur votre propre expérience et rester honnête — nous nous réservons le droit de retirer un avis qui ne l’est manifestement pas.',
+
+    'terms.sellers.heading' => 'Vendre sur Hirfaty',
+    'terms.sellers.body' => 'Ouvrir une boutique passe par une vérification avant validation. Une boutique ou une fiche produit qui enfreint ces conditions peut être suspendue ou retirée.',
+
+    'terms.suspension.heading' => 'Suspension de compte',
+    'terms.suspension.body' => 'Un compte utilisé pour frauder ou enfreindre ces conditions peut être suspendu. Nous vous en informons et vous laissons l’occasion de vous expliquer, sauf en cas d’urgence manifeste.',
+
+    'terms.changes.heading' => 'Modifications',
+    'terms.changes.body' => 'Nous pouvons mettre à jour ces conditions ; la date en haut de page indique la dernière modification. Continuer à utiliser Hirfaty après un changement vaut acceptation de la nouvelle version.',
+
+    'terms.law.heading' => 'Droit applicable',
+    'terms.law.body' => 'Ces conditions sont régies par le droit marocain. En cas de désaccord, écrivez-nous d’abord — la plupart des situations se règlent sans qu’il soit besoin d’aller plus loin.',
+
+    'terms.contact.heading' => 'Nous contacter',
+    'terms.contact.body' => 'Une question sur ces conditions passe par la même adresse :',
 ];

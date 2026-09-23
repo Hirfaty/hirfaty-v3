@@ -1,4 +1,4 @@
-﻿import { Link } from '@inertiajs/react';
+﻿import { Head, Link } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +56,7 @@ function SellerProductPreview({
 
     return (
         <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 lg:px-8">
+            <Head title={product.name} />
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                     <Link

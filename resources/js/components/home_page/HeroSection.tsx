@@ -50,7 +50,7 @@ export default function HeroSection() {
                             {t('welcome.hero.cta_primary')}
                         </Link>
                         <Link
-                            href="/seller/onboarding"
+                            href="/sell"
                             className="pointer-events-auto inline-flex items-center justify-center gap-2.5 rounded-md border-[1.5px] border-souk-cream/40 bg-souk-cream/15 px-5 py-2.5 text-sm font-semibold text-souk-cream backdrop-blur transition-colors duration-300 hover:bg-souk-cream/25 sm:px-7 sm:py-3.5 sm:text-base"
                         >
                             <AtelierArchIcon className="h-5 w-5 shrink-0" />

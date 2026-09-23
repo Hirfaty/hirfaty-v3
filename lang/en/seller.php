@@ -63,7 +63,7 @@ return [
     'setup.terms_conditions' => 'terms of use',
 
     // ── Artisan signup (/sell) ───────────────────────────────────────
-    'join.page_title' => 'Sell on Hirfaty',
+    'join.page_title' => 'Sell your work',
     'join.quote' => 'Your craft deserves better than a shelf in the souk.',
     'join.quote_verify' => 'One more moment, and your workshop opens its doors.',
     'join.quote_details' => 'Buyers come for the object and return for the artisan.',

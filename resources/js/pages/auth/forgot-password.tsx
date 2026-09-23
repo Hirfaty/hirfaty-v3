@@ -3,13 +3,16 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useTranslation } from '@/hooks/use-translation';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
 
 export default function ForgotPassword({ status }: { status?: string }) {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Forgot password" />
+            <Head title={t('titles.auth.forgot_password')} />
             <div className="min-h-screen bg-cream paper-grain">
                 <SiteHeader />
 

@@ -10,6 +10,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
 
@@ -95,13 +96,14 @@ export default function SellerDashboard({
     recentOrders,
     topProducts,
 }: DashboardProps) {
+    const { t } = useTranslation();
     // Scale the bars against the tallest month so a flat run of small months
     // still reads as a chart rather than a row of slivers.
     const peak = Math.max(...salesChart.map((r) => r.total), 1);
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Tableau de bord" />
+            <Head title={t('titles.seller.dashboard')} />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>

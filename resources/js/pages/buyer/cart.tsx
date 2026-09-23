@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     Minus,
@@ -149,6 +149,7 @@ const CartPage = ({
 
     return (
         <div className="min-h-screen bg-souk-paper">
+            <Head title={t('buyer.cart.title')} />
             <SiteHeader />
 
             <section className="container pt-10 pb-6">

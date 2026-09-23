@@ -202,7 +202,7 @@ class HandleInertiaRequests extends Middleware
     private function getTranslations(): array
     {
         $locale = app()->getLocale();
-        $files = ['common', 'seller', 'buyer', 'admin', 'header', 'footer', 'welcome', 'about', 'pro', 'pages'];
+        $files = ['common', 'seller', 'buyer', 'admin', 'header', 'footer', 'welcome', 'about', 'pro', 'pages', 'titles'];
         $translations = [];
 
         foreach ($files as $file) {

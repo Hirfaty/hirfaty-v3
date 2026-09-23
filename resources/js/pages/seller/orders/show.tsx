@@ -1,4 +1,4 @@
-import { Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ArrowLeft, Mail, MapPin, Phone, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import type { Order, OrderStatus } from '@/types';
 
@@ -64,6 +65,7 @@ function SellerOrderDetail({
     order: Order;
     cancellationReasons: Record<string, string>;
 }) {
+    const { t } = useTranslation();
     const { data, setData, processing, errors } = useForm<{
         status: OrderStatus;
         tracking_number: string;
@@ -115,6 +117,7 @@ function SellerOrderDetail({
 
     return (
         <div className="mx-auto max-w-[1200px] px-6 py-8 md:px-10">
+            <Head title={`${t('titles.seller.order')} ${order.reference}`} />
             <div className="mb-6">
                 <Button
                     asChild

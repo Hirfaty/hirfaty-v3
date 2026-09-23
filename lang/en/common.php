@@ -211,6 +211,7 @@ return [
 
     'footer.care.title' => 'Customer care',
     'footer.care.privacy' => 'Privacy policy',
+    'footer.care.terms' => 'Terms of Service',
     'footer.care.shipping' => 'Shipping policy',
     'footer.care.bulk' => 'Buy in bulk',
 

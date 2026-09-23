@@ -23,6 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { PageProps, PaginatedData } from '@/types';
@@ -95,6 +96,7 @@ const Index = ({
     statusCounts: Record<string, number>;
     statuses: VerificationStatus[];
 }) => {
+    const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search);
     const [searching, setSearching] = useState(false);
     const isFirstRender = useRef(true);
@@ -192,7 +194,7 @@ const Index = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Ateliers" />
+            <Head title={t('titles.admin.stores')} />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>

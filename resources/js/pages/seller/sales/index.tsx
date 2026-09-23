@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Coins, Clock, ShoppingBag } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
 import type { Order, PaginatedData } from '@/types';
@@ -69,108 +70,115 @@ const Index = ({
 }: {
     summary: Summary;
     orders: PaginatedData<Order>;
-}) => (
-    <div className="flex flex-col gap-6 p-6 md:p-8">
-        <Head title="Ventes" />
+}) => {
+    const { t } = useTranslation();
 
-        <header>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink">
-                Ventes
-            </h1>
-            <p className="mt-1 text-sm text-ink-soft">
-                Le montant de vos commandes, livrées et en cours.
-            </p>
-        </header>
+    return (
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={t('titles.seller.sales')} />
 
-        <div className="grid gap-4 sm:grid-cols-3">
-            <Stat
-                label="Total livré"
-                value={money(summary.delivered_total)}
-                hint="Commandes arrivées chez l’acheteur"
-                icon={Coins}
-                accent="bg-emerald-50 text-emerald-600"
-            />
-            <Stat
-                label="En cours"
-                value={money(summary.in_progress_total)}
-                hint="Commandes pas encore livrées"
-                icon={Clock}
-                accent="bg-amber-50 text-amber-600"
-            />
-            <Stat
-                label="Commandes"
-                value={String(summary.orders_count)}
-                hint="Hors commandes annulées"
-                icon={ShoppingBag}
-                accent="bg-sky-50 text-sky-600"
-            />
-        </div>
-
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <table className="w-full border-collapse text-sm">
-                <thead>
-                    <tr className="border-b border-border text-left text-xs text-ink-soft">
-                        <th className="px-5 py-3 font-medium">Commande</th>
-                        <th className="px-5 py-3 font-medium">Acheteur</th>
-                        <th className="px-5 py-3 font-medium">Statut</th>
-                        <th className="px-5 py-3 font-medium">Date</th>
-                        <th className="px-5 py-3 text-end font-medium">
-                            Montant
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                    {orders.data.map((order) => {
-                        const meta = ORDER_STATUS[order.status] ?? {
-                            label: order.status,
-                            className: 'bg-slate-100 text-slate-700',
-                        };
-
-                        return (
-                            <tr key={order.id} className="hover:bg-muted/40">
-                                <td className="px-5 py-3.5">
-                                    <Link
-                                        href={route(
-                                            'seller.orders.show',
-                                            order.reference,
-                                        )}
-                                        className="font-mono text-xs text-ink underline-offset-2 hover:underline"
-                                    >
-                                        {order.reference}
-                                    </Link>
-                                </td>
-                                <td className="px-5 py-3.5 text-ink">
-                                    {order.buyer
-                                        ? `${order.buyer.first_name} ${order.buyer.last_name}`
-                                        : '—'}
-                                </td>
-                                <td className="px-5 py-3.5">
-                                    <span
-                                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
-                                    >
-                                        {meta.label}
-                                    </span>
-                                </td>
-                                <td className="px-5 py-3.5 text-ink-soft">
-                                    {formatDate(order.created_at)}
-                                </td>
-                                <td className="px-5 py-3.5 text-end font-medium text-ink tabular-nums">
-                                    {money(order.total_amount)}
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-
-            {orders.data.length === 0 && (
-                <p className="px-5 py-12 text-center text-sm text-ink-soft">
-                    Aucune vente pour l’instant.
+            <header>
+                <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                    Ventes
+                </h1>
+                <p className="mt-1 text-sm text-ink-soft">
+                    Le montant de vos commandes, livrées et en cours.
                 </p>
-            )}
+            </header>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+                <Stat
+                    label="Total livré"
+                    value={money(summary.delivered_total)}
+                    hint="Commandes arrivées chez l’acheteur"
+                    icon={Coins}
+                    accent="bg-emerald-50 text-emerald-600"
+                />
+                <Stat
+                    label="En cours"
+                    value={money(summary.in_progress_total)}
+                    hint="Commandes pas encore livrées"
+                    icon={Clock}
+                    accent="bg-amber-50 text-amber-600"
+                />
+                <Stat
+                    label="Commandes"
+                    value={String(summary.orders_count)}
+                    hint="Hors commandes annulées"
+                    icon={ShoppingBag}
+                    accent="bg-sky-50 text-sky-600"
+                />
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <table className="w-full border-collapse text-sm">
+                    <thead>
+                        <tr className="border-b border-border text-left text-xs text-ink-soft">
+                            <th className="px-5 py-3 font-medium">Commande</th>
+                            <th className="px-5 py-3 font-medium">Acheteur</th>
+                            <th className="px-5 py-3 font-medium">Statut</th>
+                            <th className="px-5 py-3 font-medium">Date</th>
+                            <th className="px-5 py-3 text-end font-medium">
+                                Montant
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                        {orders.data.map((order) => {
+                            const meta = ORDER_STATUS[order.status] ?? {
+                                label: order.status,
+                                className: 'bg-slate-100 text-slate-700',
+                            };
+
+                            return (
+                                <tr
+                                    key={order.id}
+                                    className="hover:bg-muted/40"
+                                >
+                                    <td className="px-5 py-3.5">
+                                        <Link
+                                            href={route(
+                                                'seller.orders.show',
+                                                order.reference,
+                                            )}
+                                            className="font-mono text-xs text-ink underline-offset-2 hover:underline"
+                                        >
+                                            {order.reference}
+                                        </Link>
+                                    </td>
+                                    <td className="px-5 py-3.5 text-ink">
+                                        {order.buyer
+                                            ? `${order.buyer.first_name} ${order.buyer.last_name}`
+                                            : '—'}
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                        <span
+                                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.className}`}
+                                        >
+                                            {meta.label}
+                                        </span>
+                                    </td>
+                                    <td className="px-5 py-3.5 text-ink-soft">
+                                        {formatDate(order.created_at)}
+                                    </td>
+                                    <td className="px-5 py-3.5 text-end font-medium text-ink tabular-nums">
+                                        {money(order.total_amount)}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+
+                {orders.data.length === 0 && (
+                    <p className="px-5 py-12 text-center text-sm text-ink-soft">
+                        Aucune vente pour l’instant.
+                    </p>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 Index.layout = (page: ReactNode) => <SellerLayout>{page}</SellerLayout>;
 

@@ -26,6 +26,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
 import type { PageProps, PaginatedData } from '@/types';
@@ -70,6 +71,7 @@ const Index = ({
     products,
     flash,
 }: PageProps & { products: PaginatedData<ProductRow> }) => {
+    const { t } = useTranslation();
     // Nothing on this page writes, but a flashed error can still arrive from
     // elsewhere in the seller area — surface it rather than swallow it.
     useEffect(() => {
@@ -80,7 +82,7 @@ const Index = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Produits" />
+            <Head title={t('titles.seller.products')} />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>

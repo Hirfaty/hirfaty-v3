@@ -42,7 +42,7 @@ export default function BlogShow({
 }) {
     return (
         <>
-            <Head title={`${blog.title} — Hirfaty`}>
+            <Head title={blog.title}>
                 {blog.excerpt && (
                     <meta name="description" content={blog.excerpt} />
                 )}

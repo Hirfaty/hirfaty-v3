@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/hooks/use-translation';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 
@@ -16,11 +17,12 @@ export default function Profile({
     mustVerifyEmail: boolean;
     status?: string;
 }) {
+    const { t } = useTranslation();
     const { auth } = usePage().props;
 
     return (
         <>
-            <Head title="Profile settings" />
+            <Head title={t('titles.settings.profile')} />
 
             <h1 className="sr-only">Profile settings</h1>
 

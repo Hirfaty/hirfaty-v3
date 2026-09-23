@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     Ban,
@@ -28,6 +28,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type { Order, PageProps, ResetLinkPayload, Store, User } from '@/types';
@@ -108,6 +109,7 @@ function Stat({
 }
 
 const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
+    const { t } = useTranslation();
     const [generatingReset, setGeneratingReset] = useState(false);
     const [resetLink, setResetLink] = useState<ResetLinkPayload | null>(null);
 
@@ -181,6 +183,12 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head
+                title={
+                    `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() ||
+                    t('titles.admin.users')
+                }
+            />
             {/* ── Header ───────────────────────────────────── */}
             <div>
                 <Link

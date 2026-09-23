@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     BadgePercent,
     Check,
@@ -672,6 +672,7 @@ const ProductDetail = ({
 
     return (
         <div className="min-h-screen bg-souk-paper">
+            <Head title={product.name} />
             <SiteHeader />
 
             {/*

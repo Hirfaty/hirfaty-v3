@@ -5,6 +5,7 @@ import PasswordInput from '@/components/password-input';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Input } from '@/components/ui/input';
+import { useTranslation } from '@/hooks/use-translation';
 import { update } from '@/routes/password';
 
 type Props = {
@@ -13,9 +14,11 @@ type Props = {
 };
 
 export default function ResetPassword({ token, email }: Props) {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Reset password" />
+            <Head title={t('titles.auth.reset_password')} />
             <div className="min-h-screen bg-cream paper-grain">
                 <SiteHeader />
 

@@ -1,7 +1,8 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, ImagePlus, Info, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, City, Store, StoreType, User, UserRole } from '@/types';
 
@@ -165,6 +166,7 @@ export default function EditUser({
     categories: Category[];
     canLeaveSellerRole: boolean;
 }) {
+    const { t } = useTranslation();
     const [data, setData] = useState({
         first_name: user.first_name ?? '',
         last_name: user.last_name ?? '',
@@ -216,6 +218,7 @@ export default function EditUser({
 
     return (
         <div className="min-h-screen px-6 py-10">
+            <Head title={t('titles.admin.user_edit')} />
             <div className="mx-auto max-w-3xl">
                 <Link
                     href={route('admin.users.show', user.id)}

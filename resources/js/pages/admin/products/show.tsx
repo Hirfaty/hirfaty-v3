@@ -1,4 +1,4 @@
-import { Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
     CircleCheck,
@@ -177,6 +177,7 @@ function AdminProductShow({ product }: AdminProductShowProps) {
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={product.name} />
             {/* ── Header ───────────────────────────────────── */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">

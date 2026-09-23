@@ -25,7 +25,7 @@ export default function HowItWorks() {
 
     return (
         <>
-            <Head title={`Hirfaty — ${t('pages.how.title')}`} />
+            <Head title={t('pages.how.title')} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />

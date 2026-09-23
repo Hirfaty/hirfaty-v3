@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import SingleImageInput from '@/components/admin/single-image-input';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, City, PageProps, StoreType } from '@/types';
 
@@ -214,6 +215,7 @@ const Create = ({
     cities,
     categories,
 }: PageProps & { cities: City[]; categories: Category[] }) => {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm<UserWizardForm>(
         {
             first_name: '',
@@ -328,7 +330,7 @@ const Create = ({
 
     return (
         <div className="min-h-screen px-6 py-10">
-            <Head title="Nouvel utilisateur" />
+            <Head title={t('titles.admin.user_create')} />
 
             <div className="mx-auto max-w-5xl">
                 <Link

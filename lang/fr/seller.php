@@ -63,7 +63,7 @@ return [
     'setup.terms_conditions' => 'conditions d’utilisation',
 
     // ── Inscription artisan (/sell) ─────────────────────────────────
-    'join.page_title' => 'Vendre sur Hirfaty',
+    'join.page_title' => 'Vendre vos créations',
     'join.quote' => 'Votre métier mérite mieux qu’une étagère de souk.',
     'join.quote_verify' => 'Encore un instant, et votre atelier ouvre ses portes.',
     'join.quote_details' => 'Les acheteurs viennent pour l’objet et reviennent pour l’artisan.',

@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     BadgeCheck,
     Ban,
@@ -38,6 +38,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -175,6 +176,7 @@ export default function UsersIndex({
     pendingProfessionalCount,
     filters,
 }: Props) {
+    const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
     const [searching, setSearching] = useState(false);
     const [generatingResetId, setGeneratingResetId] = useState<number | null>(
@@ -306,6 +308,7 @@ export default function UsersIndex({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={t('titles.admin.users')} />
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-ink">

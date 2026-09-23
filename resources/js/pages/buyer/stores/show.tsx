@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Loader2, MapPin, Package, Store as StoreIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
@@ -96,6 +96,7 @@ export default function StoreShow({
 
     return (
         <div className="min-h-screen bg-souk-paper">
+            <Head title={store.store_name} />
             <SiteHeader />
 
             {/* ── Shop head ─────────────────────────────────── */}

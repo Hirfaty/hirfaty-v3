@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
 import type { Order, OrderStatus, PaginatedData } from '@/types';
@@ -51,6 +52,7 @@ export default function SellerOrders({
 }: {
     orders: PaginatedData<Order>;
 }) {
+    const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
         'all',
@@ -87,7 +89,7 @@ export default function SellerOrders({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Commandes" />
+            <Head title={t('titles.seller.orders')} />
 
             <header>
                 <h1 className="text-2xl font-semibold tracking-tight text-ink">

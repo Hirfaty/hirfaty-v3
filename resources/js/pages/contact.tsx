@@ -29,7 +29,7 @@ export default function Contact() {
 
     return (
         <>
-            <Head title={`Hirfaty — ${t('pages.contact.title')}`} />
+            <Head title={t('pages.contact.title')} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />

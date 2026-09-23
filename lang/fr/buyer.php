@@ -49,7 +49,7 @@ return [
     'products.pro_price_hint' => 'Votre tarif professionnel — c’est ce que le paiement facture.',
 
     // ── Nouveautés ────────────────────────────────────────────────
-    'new.title' => 'Nouveautés — Hirfaty',
+    'new.title' => 'Nouveautés',
     'new.eyebrow' => 'Tout juste en ligne',
     'new.heading' => 'Sorties d’atelier',
     'new.lead' => 'Les pièces les plus récemment mises en ligne par nos artisans, les plus nouvelles d’abord.',
@@ -162,7 +162,7 @@ return [
     'detail.trust_packaging_body' => 'Emballé avec soin pour voyager sans risque.',
 
     // ── Onboarding (première visite d'un acheteur) ───────────────────────
-    'onboarding.title' => 'Bienvenue sur Hirfaty',
+    'onboarding.title' => 'Bienvenue',
     'onboarding.skip' => 'Passer',
     'onboarding.back' => 'Retour',
     'onboarding.next' => 'Continuer',

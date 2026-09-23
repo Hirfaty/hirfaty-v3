@@ -213,6 +213,7 @@ return [
 
     'footer.care.title' => 'Service client',
     'footer.care.privacy' => 'Politique de confidentialité',
+    'footer.care.terms' => 'Conditions d’utilisation',
     'footer.care.shipping' => 'Politique de livraison',
     'footer.care.bulk' => 'Acheter en gros',
 

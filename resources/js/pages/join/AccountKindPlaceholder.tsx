@@ -42,7 +42,7 @@ export default function AccountKindPlaceholder({
 
     return (
         <>
-            <Head title={`Hirfaty ${brand}`} />
+            <Head title={title} />
 
             <div className="flex min-h-screen flex-col bg-souk-paper px-5 py-6 sm:px-8">
                 <div className="flex items-center justify-between gap-4">

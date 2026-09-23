@@ -227,7 +227,7 @@ export default function ProductsIndex({
 
     return (
         <>
-            <Head title="Hirfaty - Catalogue" />
+            <Head title={t('titles.catalogue')} />
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />
 

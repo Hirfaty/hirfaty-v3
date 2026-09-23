@@ -3,6 +3,7 @@ import { ImageOff, Search } from 'lucide-react';
 import { useState } from 'react';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useTranslation } from '@/hooks/use-translation';
 import { formatDate } from '@/lib/utils';
 import type { Blog, PageProps, PaginatedData } from '@/types';
 
@@ -16,6 +17,7 @@ export default function BlogIndex({
     blogs: PaginatedData<Blog>;
     filters: { search: string };
 }) {
+    const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search);
 
     const submitSearch = (event: React.FormEvent) => {
@@ -34,7 +36,7 @@ export default function BlogIndex({
 
     return (
         <>
-            <Head title="Le Journal — Hirfaty" />
+            <Head title={t('titles.blog')} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />

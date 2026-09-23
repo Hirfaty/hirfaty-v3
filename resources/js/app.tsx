@@ -5,7 +5,10 @@ import { CartProvider } from '@/contexts/CartContext';
 import { CartSheetProvider } from '@/contexts/CartSheetContext';
 import { initializeTheme } from '@/hooks/use-appearance';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+// The brand, not VITE_APP_NAME: that is only defined when the build sees an
+// .env with it set, and a production image built without one shipped every
+// tab as "… - Laravel".
+const BRAND = 'Hirfaty';
 
 /**
  * Keep <html lang> / <html dir> in step with the active locale.
@@ -43,7 +46,8 @@ router.on('success', (event) => syncDocumentLocale(event.detail.page.props));
 router.on('navigate', (event) => syncDocumentLocale(event.detail.page.props));
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    // Pages pass only their own name; the brand is appended here, once.
+    title: (title) => (title ? `${title} — ${BRAND}` : BRAND),
     // No automatic per-page layout: every page wraps its own.
     layout: () => null,
     strictMode: true,

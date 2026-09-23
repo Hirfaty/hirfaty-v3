@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import type { Category, City, Store } from '@/types';
 import type { User } from '@/types/auth';
@@ -18,6 +19,7 @@ export default function SellerSettings({
     categories,
     cities,
 }: SellerSettingsProps) {
+    const { t } = useTranslation();
     const profileForm = useForm({
         first_name: user.first_name ?? '',
         last_name: user.last_name ?? '',
@@ -68,7 +70,7 @@ export default function SellerSettings({
 
     return (
         <>
-            <Head title="Seller settings" />
+            <Head title={t('titles.seller.settings')} />
 
             <div className="mx-auto max-w-[1080px] px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-8 space-y-3">

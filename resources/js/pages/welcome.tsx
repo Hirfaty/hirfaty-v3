@@ -10,6 +10,7 @@ import NewArrivals from '@/components/home_page/NewArrivals';
 import OneWorkshop from '@/components/home_page/OneWorkshop';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function Welcome({
     featuredProducts = [],
@@ -20,9 +21,11 @@ export default function Welcome({
     /** The twelve most recently listed pieces — see `HomeController`. */
     newArrivals?: ShowcaseProduct[];
 }) {
+    const { t } = useTranslation();
+
     return (
         <>
-            <Head title="Hirfaty — Moroccan craft, direct from the artisans" />
+            <Head title={t('titles.home')} />
 
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />

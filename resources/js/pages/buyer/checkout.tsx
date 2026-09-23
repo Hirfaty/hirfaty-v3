@@ -1,4 +1,4 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, Banknote, Check, Truck } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
@@ -344,6 +344,7 @@ const Checkout = ({
 
     return (
         <div className="min-h-screen bg-white">
+            <Head title={t('buyer.checkout.title')} />
             <SiteHeader />
 
             <section className="container pt-8 pb-4">

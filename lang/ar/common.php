@@ -225,6 +225,7 @@ return [
 
     'footer.care.title' => 'خدمة العملاء',
     'footer.care.privacy' => 'سياسة الخصوصية',
+    'footer.care.terms' => 'شروط الاستخدام',
     'footer.care.shipping' => 'سياسة التوصيل',
     'footer.care.bulk' => 'الشراء بالجملة',
 ];

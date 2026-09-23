@@ -153,4 +153,48 @@ return [
 
     'shipping.handmade.heading' => 'A note on handmade work',
     'shipping.handmade.body' => 'Every piece is made by hand, and some are made once you order them. If a piece needs longer than usual in the workshop, we tell you rather than let the date slip quietly.',
+
+    // ── Terms of Service ────────────────────────────────────────────────
+    // Same rule as privacy: describes what the app actually does. Cash on
+    // delivery, cancellation limited to still-'pending' orders, product
+    // moderation and account suspension are all rules the code already
+    // enforces, not promises on top of it.
+    'terms.title' => 'Terms of Service',
+    'terms.eyebrow' => 'Read before you order',
+    'terms.heading' => 'The rules of the game, plainly.',
+    'terms.lead' => 'Using Hirfaty, whether to buy or to sell, means agreeing to what follows. It is written to be read, not skipped.',
+    'terms.updated' => 'Last updated: September 2026',
+
+    'terms.marketplace.heading' => 'What Hirfaty is',
+    'terms.marketplace.body' => 'Hirfaty is a marketplace: every piece you see is made and offered for sale by the workshop named on its page. We run the site, process orders and arrange delivery, but the workshop stays responsible for what it makes.',
+
+    'terms.accounts.heading' => 'Your account',
+    'terms.accounts.body' => 'An account can be a shopper, a trade (bulk-buying) account, or an artisan. The details you give must be accurate, and you are responsible for what happens on your account. You can close it at any time from your settings.',
+
+    'terms.orders.heading' => 'Orders and payment',
+    'terms.orders.body' => 'Orders are paid on delivery, in Moroccan dirhams (MAD), directly to the courier. If the site shows a price in another currency, that is for reference only — the amount actually owed is the one shown in dirhams at checkout.',
+
+    'terms.cancellation.heading' => 'Cancelling an order',
+    'terms.cancellation.body' => 'You can cancel an order while it is still "pending" — before the workshop has confirmed it. Once it is confirmed, write to us and we will see what the workshop can still do.',
+
+    'terms.listings.heading' => 'Product listings',
+    'terms.listings.body' => 'Every listing is checked before it goes live, but the description and photographs are the workshop\'s own. If a piece you received does not match its listing, contact us.',
+
+    'terms.reviews.heading' => 'Reviews',
+    'terms.reviews.body' => 'After an order is delivered, we may invite you to leave a review. A review should be about your own experience and honest — we reserve the right to remove one that plainly is not.',
+
+    'terms.sellers.heading' => 'Selling on Hirfaty',
+    'terms.sellers.body' => 'Opening a shop goes through a review before it is approved. A shop or a listing that breaks these terms can be suspended or taken down.',
+
+    'terms.suspension.heading' => 'Account suspension',
+    'terms.suspension.body' => 'An account used for fraud or to break these terms can be suspended. We will tell you and give you a chance to explain, except in a clear emergency.',
+
+    'terms.changes.heading' => 'Changes',
+    'terms.changes.body' => 'We may update these terms; the date at the top shows the last change. Continuing to use Hirfaty after a change means you accept the new version.',
+
+    'terms.law.heading' => 'Governing law',
+    'terms.law.body' => 'These terms are governed by Moroccan law. If something is wrong, write to us first — most things get sorted out without needing to go further.',
+
+    'terms.contact.heading' => 'Getting in touch',
+    'terms.contact.body' => 'Any question about these terms goes to the same address:',
 ];

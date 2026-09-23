@@ -1,4 +1,4 @@
-import { Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     CircleCheck,
     CircleX,
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { WarmFill } from '@/components/WarmFill';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -81,6 +82,7 @@ function AdminProducts({
     totalProducts,
     statusCounts,
 }: AdminProductsProps) {
+    const { t } = useTranslation();
     const [rawSelectedId, setSelectedId] = useState<number | null>(null);
     const [note, setNote] = useState('');
     const [search, setSearch] = useState(filters.search ?? '');
@@ -302,6 +304,7 @@ function AdminProducts({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={t('titles.admin.products')} />
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-ink">

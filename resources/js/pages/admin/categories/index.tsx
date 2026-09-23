@@ -32,6 +32,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, CategoryLocale, PageProps } from '@/types';
 
@@ -321,6 +322,7 @@ const Index = ({
     parents: Category[];
     locales: CategoryLocale[];
 }) => {
+    const { t } = useTranslation();
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [query, setQuery] = useState('');
     const [incompleteOnly, setIncompleteOnly] = useState(false);
@@ -465,7 +467,7 @@ const Index = ({
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
-            <Head title="Catégories" />
+            <Head title={t('titles.admin.categories')} />
 
             <header className="flex flex-wrap items-end justify-between gap-4">
                 <div>
