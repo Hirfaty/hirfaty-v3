@@ -177,8 +177,6 @@ const Checkout = ({
     defaultCountry,
     deliveryServices,
     deliveryRates,
-    deliveryShowDestinations,
-    deliveryFlatFee,
 }: {
     items: CheckoutLine[];
     cities: City[];
@@ -188,12 +186,6 @@ const Checkout = ({
     defaultCountry: string;
     deliveryServices: DeliveryServiceOption[];
     deliveryRates: DeliveryRatesMap;
-    /**
-     * The admin toggle. Off: no country or city picker, Morocco only, and
-     * every basket pays `deliveryFlatFee` — see DeliverySettingsService.
-     */
-    deliveryShowDestinations: boolean;
-    deliveryFlatFee: number;
 }) => {
     const { t } = useTranslation();
 
@@ -218,8 +210,7 @@ const Checkout = ({
         shipping_phone: preselected?.recipient_phone ?? customer.phone ?? '',
         address_id: preselected?.id ?? null,
         shipping_address: '',
-        // No city picker while destinations are hidden, so nothing to send.
-        city_id: deliveryShowDestinations ? (cities[0]?.id ?? null) : null,
+        city_id: cities[0]?.id ?? null,
         postal_code: '',
         country: defaultCountry,
         // Cash on delivery is the only method the server accepts today, so it
@@ -330,11 +321,6 @@ const Checkout = ({
     );
 
     const deliveryTotal = (() => {
-        // Destinations hidden: one fee for every basket, nothing to look up.
-        if (!deliveryShowDestinations) {
-            return deliveryFlatFee;
-        }
-
         if (isDomestic) {
             const cityFee =
                 data.city_id === null
@@ -656,9 +642,7 @@ const Checkout = ({
                                                 )
                                             }
                                             placeholder={t(
-                                                deliveryShowDestinations
-                                                    ? 'buyer.checkout.address_placeholder'
-                                                    : 'buyer.checkout.address_placeholder_with_city',
+                                                'buyer.checkout.address_placeholder',
                                             )}
                                             className={FIELD}
                                         />
@@ -699,122 +683,88 @@ const Checkout = ({
                                         </div>
 
                                         {/*
-                                         * Hidden entirely while the admin has
-                                         * destinations switched off: Morocco
-                                         * only, flat fee, and the town is
-                                         * typed into the address line.
+                                         * Every destination the selected
+                                         * service quotes for. Picking one
+                                         * moves the delivery line in the
+                                         * summary immediately, which is why the
+                                         * rate card is a prop rather than a
+                                         * lookup on the server.
                                          */}
-                                        {deliveryShowDestinations && (
-                                            <>
-                                                {/*
-                                                 * Every destination the selected
-                                                 * service quotes for. Picking one
-                                                 * moves the delivery line in the
-                                                 * summary immediately, which is why the
-                                                 * rate card is a prop rather than a
-                                                 * lookup on the server.
-                                                 */}
-                                                <div>
-                                                    <FieldLabel
-                                                        htmlFor="country"
-                                                        required
-                                                    >
-                                                        {t(
-                                                            'buyer.checkout.country',
-                                                        )}
-                                                    </FieldLabel>
-                                                    <select
-                                                        id="country"
-                                                        value={data.country}
-                                                        onChange={(e) =>
-                                                            chooseCountry(
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className={FIELD}
-                                                    >
-                                                        {rates.countries.map(
-                                                            (country) => (
-                                                                <option
-                                                                    key={
-                                                                        country.code
-                                                                    }
-                                                                    value={
-                                                                        country.code
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        country.name
-                                                                    }
-                                                                </option>
-                                                            ),
-                                                        )}
-                                                    </select>
-                                                    <FieldError
-                                                        message={errors.country}
-                                                    />
-                                                </div>
-
-                                                {/*
-                                                 * Morocco only: `cities` holds Moroccan
-                                                 * cities, which is what the selected
-                                                 * service prices domestic delivery
-                                                 * against, so abroad there is nothing
-                                                 * to pick from and the town rides in
-                                                 * the address line instead.
-                                                 */}
-                                                {isDomestic && (
-                                                    <div>
-                                                        <FieldLabel
-                                                            htmlFor="city_id"
-                                                            required
+                                        <div>
+                                            <FieldLabel
+                                                htmlFor="country"
+                                                required
+                                            >
+                                                {t('buyer.checkout.country')}
+                                            </FieldLabel>
+                                            <select
+                                                id="country"
+                                                value={data.country}
+                                                onChange={(e) =>
+                                                    chooseCountry(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className={FIELD}
+                                            >
+                                                {rates.countries.map(
+                                                    (country) => (
+                                                        <option
+                                                            key={country.code}
+                                                            value={country.code}
                                                         >
-                                                            {t(
-                                                                'buyer.checkout.city',
-                                                            )}
-                                                        </FieldLabel>
-                                                        <select
-                                                            id="city_id"
-                                                            value={
-                                                                data.city_id ??
-                                                                ''
-                                                            }
-                                                            onChange={(e) =>
-                                                                setData(
-                                                                    'city_id',
-                                                                    Number(
-                                                                        e.target
-                                                                            .value,
-                                                                    ),
-                                                                )
-                                                            }
-                                                            className={FIELD}
-                                                        >
-                                                            {cities.map(
-                                                                (city) => (
-                                                                    <option
-                                                                        key={
-                                                                            city.id
-                                                                        }
-                                                                        value={
-                                                                            city.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            city.name
-                                                                        }
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </select>
-                                                        <FieldError
-                                                            message={
-                                                                errors.city_id
-                                                            }
-                                                        />
-                                                    </div>
+                                                            {country.name}
+                                                        </option>
+                                                    ),
                                                 )}
-                                            </>
+                                            </select>
+                                            <FieldError
+                                                message={errors.country}
+                                            />
+                                        </div>
+
+                                        {/*
+                                         * Morocco only: `cities` holds Moroccan
+                                         * cities, which is what the selected
+                                         * service prices domestic delivery
+                                         * against, so abroad there is nothing
+                                         * to pick from and the town rides in
+                                         * the address line instead.
+                                         */}
+                                        {isDomestic && (
+                                            <div>
+                                                <FieldLabel
+                                                    htmlFor="city_id"
+                                                    required
+                                                >
+                                                    {t('buyer.checkout.city')}
+                                                </FieldLabel>
+                                                <select
+                                                    id="city_id"
+                                                    value={data.city_id ?? ''}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'city_id',
+                                                            Number(
+                                                                e.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                    className={FIELD}
+                                                >
+                                                    {cities.map((city) => (
+                                                        <option
+                                                            key={city.id}
+                                                            value={city.id}
+                                                        >
+                                                            {city.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <FieldError
+                                                    message={errors.city_id}
+                                                />
+                                            </div>
                                         )}
                                     </div>
 

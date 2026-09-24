@@ -3,25 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
-use App\Services\DeliveryFeeService;
-use App\Services\DeliverySettingsService;
+use App\Services\DeliveryRateService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 /**
- * The delivery rate cards, and the switches over them.
+ * The delivery rate cards, and the desk's edits to them.
  *
  * The cards are loaded by `DeliveryRateSeeder` (which only ever adds missing
- * destinations, so it never overwrites a fee set here), and the desk can
- * correct any single line of them. On top sit two settings: whether checkout
- * offers cities and countries at all, and the flat fee every basket pays when
- * it does not — see DeliverySettingsService.
+ * destinations, so it never overwrites a fee set here). From this page the desk
+ * re-prices any line and adds or removes a Moroccan city or a foreign country —
+ * and since checkout offers exactly the destinations on the card, that is also
+ * how a destination is opened or closed to buyers. See DeliveryRateService.
  */
 class DeliveryRateController extends Controller
 {
-    public function index(Request $request, DeliverySettingsService $settings)
+    public function index(Request $request, DeliveryRateService $rates)
     {
         $services = DeliveryService::query()
             ->orderBy('sort_order')
@@ -32,28 +33,6 @@ class DeliveryRateController extends Controller
         $selected = $services->firstWhere('slug', $request->query('service'))?->id
             ?? $services->first()?->id;
 
-        $rates = DeliveryRate::query()
-            ->with(['service:id,name,slug', 'city:id,name,region'])
-            ->when($selected, fn ($query) => $query->where('delivery_service_id', $selected))
-            ->get()
-            ->map(fn (DeliveryRate $rate) => [
-                'id' => $rate->id,
-                'service_name' => $rate->service?->name ?? '—',
-                'country_code' => $rate->country_code,
-                'country_name' => $rate->country_name,
-                'city_name' => $rate->city?->name,
-                'region' => $rate->city?->region,
-                'fee' => (float) $rate->fee,
-            ])
-            // Sorted here rather than in SQL: city names live on the joined
-            // row, and ordering by them in the query would need a join that
-            // drops the country-level rows (which have no city).
-            ->sortBy([
-                fn ($a, $b) => strcmp($a['country_name'], $b['country_name']),
-                fn ($a, $b) => strcmp($a['city_name'] ?? '', $b['city_name'] ?? ''),
-            ])
-            ->values();
-
         return Inertia::render('admin/delivery-rates/index', [
             // One entry today; a service selector appears on the page only
             // once a second carrier makes the page need one.
@@ -63,36 +42,95 @@ class DeliveryRateController extends Controller
                 'name' => $service->name,
             ])->values()->all(),
             'selectedService' => $selected,
-            'rates' => $rates,
-            'settings' => [
-                'show_destinations' => $settings->showsDestinations(),
-                'flat_fee' => $settings->flatFee(),
-            ],
+            'rates' => $rates->card($selected),
+            'availableCities' => $rates->unratedCities($selected),
         ]);
     }
 
+    /** Adds a Moroccan city or a foreign country to a service's card. */
+    public function store(Request $request, DeliveryRateService $rates)
+    {
+        $serviceId = $request->input('delivery_service_id');
+
+        $data = $request->validate([
+            'delivery_service_id' => ['required', 'integer', 'exists:delivery_services,id'],
+            'type' => ['required', Rule::in(['city', 'country'])],
+            'fee' => ['required', 'numeric', 'min:0', 'max:100000'],
+
+            // ── A Moroccan city: an existing one, or a brand-new one ──
+            'city_id' => [
+                'exclude_unless:type,city',
+                'required_without:city_name',
+                'nullable',
+                'integer',
+                'exists:cities,id',
+                Rule::unique('delivery_rates', 'city_id')->where('delivery_service_id', $serviceId),
+            ],
+            'city_name' => [
+                'exclude_unless:type,city',
+                'required_without:city_id',
+                'nullable',
+                'string',
+                'max:255',
+                'unique:cities,name',
+            ],
+            'region' => ['exclude_unless:type,city', 'nullable', 'string', 'max:255'],
+
+            // ── A foreign country: Morocco is priced per city instead ──
+            'country_code' => [
+                'exclude_unless:type,country',
+                'required',
+                'alpha',
+                'size:2',
+                Rule::notIn([Address::DEFAULT_COUNTRY, strtolower(Address::DEFAULT_COUNTRY)]),
+                Rule::unique('delivery_rates', 'country_code')
+                    ->where('delivery_service_id', $serviceId)
+                    ->whereNull('city_id'),
+            ],
+            'country_name' => ['exclude_unless:type,country', 'required', 'string', 'max:100'],
+        ], [
+            'city_id.unique' => 'Cette ville a déjà un tarif.',
+            'city_name.unique' => 'Une ville portant ce nom existe déjà.',
+            'country_code.not_in' => 'Le Maroc est tarifé ville par ville.',
+            'country_code.unique' => 'Ce pays a déjà un tarif.',
+        ]);
+
+        $service = DeliveryService::findOrFail($data['delivery_service_id']);
+
+        if ($data['type'] === 'city') {
+            $rates->addCity(
+                $service,
+                $data['city_id'] ?? null,
+                $data['city_name'] ?? null,
+                $data['region'] ?? null,
+                (float) $data['fee'],
+            );
+
+            return back()->with('success', 'Ville ajoutée à la grille.');
+        }
+
+        $rates->addCountry($service, $data['country_code'], $data['country_name'], (float) $data['fee']);
+
+        return back()->with('success', 'Pays ajouté à la grille.');
+    }
+
     /** One rate line's fee. */
-    public function update(Request $request, DeliveryRate $rate, DeliveryFeeService $deliveryFees)
+    public function update(Request $request, DeliveryRate $rate, DeliveryRateService $rates)
     {
         $validated = $request->validate([
             'fee' => ['required', 'numeric', 'min:0', 'max:100000'],
         ]);
 
-        $deliveryFees->updateRateFee($rate, (float) $validated['fee']);
+        $rates->updateFee($rate, (float) $validated['fee']);
 
         return back()->with('success', 'Tarif mis à jour.');
     }
 
-    /** The flat fee and the show-cities-and-countries toggle. */
-    public function updateSettings(Request $request, DeliverySettingsService $settings)
+    /** Stops delivering to one destination. */
+    public function destroy(DeliveryRate $rate, DeliveryRateService $rates)
     {
-        $validated = $request->validate([
-            'flat_fee' => ['required', 'numeric', 'min:0', 'max:100000'],
-            'show_destinations' => ['required', 'boolean'],
-        ]);
+        $rates->remove($rate);
 
-        $settings->update((float) $validated['flat_fee'], (bool) $validated['show_destinations']);
-
-        return back()->with('success', 'Paramètres de livraison enregistrés.');
+        return back()->with('success', 'Destination retirée de la grille.');
     }
 }

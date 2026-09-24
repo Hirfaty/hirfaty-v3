@@ -191,15 +191,13 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/cities/{city}', [Admin\CityController::class, 'destroy'])->name('cities.destroy');
 
         /*
-         * Delivery rate cards and delivery settings. Rows come from
-         * DeliveryRateSeeder; the desk edits a line's fee or the flat-fee /
-         * show-destinations settings, but never adds or deletes a line. See
-         * Admin\DeliveryRateController. `settings` is declared before
-         * `{rate}` so it is not captured as a rate id.
+         * Delivery rate cards: the desk re-prices a line and adds or removes
+         * a city or country. See Admin\DeliveryRateController.
          */
         Route::get('/delivery-rates', [Admin\DeliveryRateController::class, 'index'])->name('delivery-rates.index');
-        Route::patch('/delivery-rates/settings', [Admin\DeliveryRateController::class, 'updateSettings'])->name('delivery-rates.settings');
+        Route::post('/delivery-rates', [Admin\DeliveryRateController::class, 'store'])->name('delivery-rates.store');
         Route::patch('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'update'])->name('delivery-rates.update');
+        Route::delete('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'destroy'])->name('delivery-rates.destroy');
     });
 
 /*

@@ -25,11 +25,12 @@ use Illuminate\Database\Seeder;
  *
  * Idempotent, and additive only: re-running inserts destinations that are
  * missing and leaves existing rows alone. Fees are editable from the admin
- * delivery-rates page now, so overwriting them here would silently undo the
- * desk's changes on the next seed. Matching on the destination also covers
- * the migration's note that a unique index cannot stop two country-level
- * rows on its own (NULL city_id compares as distinct on both Postgres and
- * SQLite).
+ * delivery-rates page, so overwriting them here would silently undo the
+ * desk's changes on the next seed (a destination the desk removed does come
+ * back, though — seed once, then manage the card from the admin). Matching on
+ * the destination also covers the migration's note that a unique index cannot
+ * stop two country-level rows on its own (NULL city_id compares as distinct
+ * on both Postgres and SQLite).
  */
 class DeliveryRateSeeder extends Seeder
 {

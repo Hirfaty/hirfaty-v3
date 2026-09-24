@@ -44,34 +44,11 @@ class DeliveryFeeService
      */
     public const FALLBACK_FEE = 40.00;
 
-    public function __construct(private DeliverySettingsService $settings) {}
-
-    /**
-     * Whether checkout offers a country and a Moroccan city — the admin
-     * toggle on the delivery-rates page. Off, every basket ships to Morocco at
-     * the flat fee (see DeliverySettingsService).
-     */
-    public function showsDestinations(): bool
-    {
-        return $this->settings->showsDestinations();
-    }
-
-    public function flatFee(): float
-    {
-        return $this->settings->flatFee();
-    }
-
     /**
      * @param  int|null  $cityId  Only meaningful for Morocco, which is priced per city.
      */
     public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null): float
     {
-        // Destinations hidden: there is no city or country to price by, so
-        // every basket pays the one fee the admin set.
-        if (! $this->settings->showsDestinations()) {
-            return $this->settings->flatFee();
-        }
-
         if (! $countryCode) {
             return self::FALLBACK_FEE;
         }
@@ -216,11 +193,6 @@ class DeliveryFeeService
      */
     public function shippableCountryCodes(?DeliveryService $service = null): array
     {
-        // Destinations hidden means Morocco only, whatever the rate card holds.
-        if (! $this->settings->showsDestinations()) {
-            return [Address::DEFAULT_COUNTRY];
-        }
-
         $serviceId = ($service ?? $this->defaultService())?->id;
 
         if ($serviceId === null) {
@@ -237,11 +209,71 @@ class DeliveryFeeService
     }
 
     /**
-     * The admin desk correcting one line of a rate card.
+     * The Moroccan cities a service has a rate for — the ones checkout offers.
+     *
+     * Null (no restriction) when the card has no city rows at all: a fresh
+     * database or a test that never ran DeliveryRateSeeder, where every city
+     * in the registry has to stay selectable at the fallback fee. Once the
+     * card has even one city, only the cities on it are deliverable, which is
+     * how the admin desk closes a city.
+     *
+     * @return array<int, int>|null
      */
-    public function updateRateFee(DeliveryRate $rate, float $fee): void
+    public function deliverableCityIds(?DeliveryService $service = null): ?array
     {
-        $rate->update(['fee' => $fee]);
+        $serviceId = ($service ?? $this->defaultService())?->id;
+
+        if ($serviceId === null) {
+            return null;
+        }
+
+        $ids = DeliveryRate::query()
+            ->where('delivery_service_id', $serviceId)
+            ->where('country_code', Address::DEFAULT_COUNTRY)
+            ->whereNotNull('city_id')
+            ->pluck('city_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return $ids !== [] ? $ids : null;
+    }
+
+    /**
+     * Narrows an `addresses` query to destinations the card still serves: a
+     * country on the card and, for Morocco, a city on the card.
+     *
+     * Takes either an Eloquent or a query builder, since it is used both to
+     * list the buyer's saved addresses and inside an `exists` validation rule.
+     * An address with no country is a Moroccan one (the column's default).
+     *
+     * @template TQuery of \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
+     *
+     * @param  TQuery  $query
+     * @return TQuery
+     */
+    public function scopeToDeliverable($query, ?DeliveryService $service = null)
+    {
+        $codes = $this->shippableCountryCodes($service);
+        $cityIds = $this->deliverableCityIds($service);
+
+        $query->where(function ($q) use ($codes) {
+            $q->whereIn('country', $codes);
+
+            if (in_array(Address::DEFAULT_COUNTRY, $codes, true)) {
+                $q->orWhereNull('country');
+            }
+        });
+
+        if ($cityIds !== null) {
+            $query->where(function ($q) use ($cityIds) {
+                $q->where(fn ($abroad) => $abroad
+                    ->whereNotNull('country')
+                    ->where('country', '<>', Address::DEFAULT_COUNTRY))
+                    ->orWhereIn('city_id', $cityIds);
+            });
+        }
+
+        return $query;
     }
 
     /**

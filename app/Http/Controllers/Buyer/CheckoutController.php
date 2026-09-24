@@ -56,17 +56,20 @@ class CheckoutController extends Controller
              */
             'items' => CartLineResource::collection($cart->items)->resolve($request),
 
-            'cities' => City::orderBy('name')->get(['id', 'name']),
+            // Only the cities the rate card serves — the admin desk closes a
+            // city by removing its rate (see DeliveryRateService).
+            'cities' => City::orderBy('name')
+                ->when(
+                    ($cityIds = $deliveryFees->deliverableCityIds()) !== null,
+                    fn ($query) => $query->whereIn('id', $cityIds),
+                )
+                ->get(['id', 'name']),
 
             // The buyer's address book, default first (User::addresses orders
             // on is_default), so the page can pre-select without re-sorting.
-            // Morocco-only while destinations are hidden, matching
-            // CheckoutRequest — a saved address abroad could not be used.
-            'addresses' => $user->addresses()->with('city:id,name')
-                ->when(! $deliveryFees->showsDestinations(), fn ($query) => $query->where(
-                    fn ($query) => $query->where('country', Address::DEFAULT_COUNTRY)->orWhereNull('country'),
-                ))
-                ->get()
+            // Addresses in a destination the card no longer serves are left
+            // out: they could not be priced.
+            'addresses' => $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name'))->get()
                 ->map(fn ($address) => [
                     'id' => $address->id,
                     'label' => $address->label,
@@ -115,14 +118,6 @@ class CheckoutController extends Controller
              */
             'deliveryServices' => $delivery['services'],
             'deliveryRates' => $delivery['rates'],
-
-            /*
-             * The admin toggle. Off, the page shows no country or city picker
-             * and quotes `deliveryFlatFee` for every basket — the same figure
-             * DeliveryFeeService bills.
-             */
-            'deliveryShowDestinations' => $deliveryFees->showsDestinations(),
-            'deliveryFlatFee' => $deliveryFees->flatFee(),
         ]);
     }
 

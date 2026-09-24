@@ -40,12 +40,8 @@ class CheckoutRequest extends FormRequest
      */
     public function rules(): array
     {
-        /*
-         * The admin toggle on the delivery-rates page. Off, checkout asks for
-         * no country or city: it ships to Morocco only (see
-         * DeliveryFeeService::shippableCountryCodes) at one flat fee.
-         */
-        $showsDestinations = app(DeliveryFeeService::class)->showsDestinations();
+        $deliveryFees = app(DeliveryFeeService::class);
+        $cityIds = $deliveryFees->deliverableCityIds();
 
         return [
             // ── Who the parcel is for ────────────────────────────────
@@ -64,12 +60,9 @@ class CheckoutRequest extends FormRequest
                 'integer',
                 Rule::exists('addresses', 'id')
                     ->where('user_id', $this->user()->id)
-                    // Morocco-only while destinations are hidden: a saved
-                    // address abroad would otherwise ship overseas at the
-                    // domestic flat fee.
-                    ->when(! $showsDestinations, fn ($rule) => $rule->where(
-                        fn ($query) => $query->where('country', Address::DEFAULT_COUNTRY)->orWhereNull('country'),
-                    )),
+                    // Only destinations the rate card still serves — an
+                    // address abroad, or in a closed city, has no price.
+                    ->where(fn ($query) => $deliveryFees->scopeToDeliverable($query)),
             ],
 
             // ── Where it goes, when they typed it fresh ──────────────
@@ -80,16 +73,13 @@ class CheckoutRequest extends FormRequest
              * anywhere else, since that table holds Moroccan cities only. An
              * international town rides in the free-text `shipping_address`.
              */
-            'city_id' => $showsDestinations
-                ? [
-                    'required_if:country,'.Address::DEFAULT_COUNTRY,
-                    'exclude_unless:country,'.Address::DEFAULT_COUNTRY,
-                    'nullable',
-                    'exists:cities,id',
-                ]
-                // No city picker while destinations are hidden — the town is
-                // part of the typed address line instead.
-                : ['nullable', 'exists:cities,id'],
+            'city_id' => [
+                'required_if:country,'.Address::DEFAULT_COUNTRY,
+                'exclude_unless:country,'.Address::DEFAULT_COUNTRY,
+                'nullable',
+                // Just the cities on the rate card (any, on a card with none).
+                $cityIds === null ? 'exists:cities,id' : Rule::in($cityIds),
+            ],
             'postal_code' => ['required_without:address_id', 'nullable', 'string', 'max:20'],
             /*
              * Whitelisted against the rate card's own countries rather than
@@ -101,7 +91,7 @@ class CheckoutRequest extends FormRequest
             'country' => [
                 'required_without:address_id',
                 'nullable',
-                Rule::in(app(DeliveryFeeService::class)->shippableCountryCodes()),
+                Rule::in($deliveryFees->shippableCountryCodes()),
             ],
 
             'payment_method' => ['required', Rule::in(self::PAYMENT_METHODS)],
@@ -138,6 +128,7 @@ class CheckoutRequest extends FormRequest
             'shipping_address.required_without' => __('buyer.checkout.err_address'),
             'city_id.required_if' => __('buyer.checkout.err_city'),
             'city_id.exists' => __('buyer.checkout.err_city'),
+            'city_id.in' => __('buyer.checkout.err_city'),
             'postal_code.required_without' => __('buyer.checkout.err_postal_code'),
             'country.required_without' => __('buyer.checkout.err_country'),
             'country.in' => __('buyer.checkout.err_country'),
