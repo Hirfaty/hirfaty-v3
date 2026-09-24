@@ -22,6 +22,19 @@ wait_for_db() {
 # (docker/proxy/), so there is no vhost to select here — the single
 # app.conf is baked into the image at build time.
 
+# The /media/ proxy in app.conf must read from the SeaweedFS the app writes to.
+# The image's default upstream is the bare service name `seaweedfs`, but on the
+# shared `edge` network that name resolves to *every* stack's SeaweedFS (each
+# joins edge, and compose aliases every service by name) — so prod's /media/
+# could be served from staging's storage and answer NoSuchKey for a file prod
+# just wrote. SEAWEEDFS_ENDPOINT already names the right container for the
+# writes (e.g. http://hirfaty-seaweedfs:8333), so reuse its host for the reads.
+if [ -n "${SEAWEEDFS_ENDPOINT:-}" ]; then
+    seaweedfs_host="${SEAWEEDFS_ENDPOINT#*://}"
+    seaweedfs_host="${seaweedfs_host%%[:/]*}"
+    sed -i "s|set \$seaweedfs_upstream .*;|set \$seaweedfs_upstream ${seaweedfs_host};|" /etc/nginx/sites-enabled/app
+fi
+
 wait_for_db
 php artisan config:cache
 php artisan route:cache

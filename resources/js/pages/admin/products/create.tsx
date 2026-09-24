@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import ProductForm from '@/components/admin/product-form';
 import type { StoreOption } from '@/components/admin/product-form';
+import StagingWarning from '@/components/admin/staging-warning';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import type { Category, PageProps } from '@/types';
@@ -20,6 +21,9 @@ const AdminProductCreate = ({ categories, store, stores }: Props) => {
     return (
         <>
             <Head title={t('titles.admin.product_create')} />
+            <div className="px-6 pt-6 empty:hidden md:px-8 md:pt-8">
+                <StagingWarning path="/admin/products/create" />
+            </div>
             <ProductForm
                 mode="create"
                 categories={categories}

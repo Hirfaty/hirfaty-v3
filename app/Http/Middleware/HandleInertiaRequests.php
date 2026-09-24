@@ -56,6 +56,13 @@ class HandleInertiaRequests extends Middleware
                 // every other response.
                 'reset_link' => session('reset_link'),
             ],
+            /*
+             * Non-null only on the staging host (config/hirfaty.php), so admin
+             * pages can warn against filing real data on the test site.
+             */
+            'staging' => fn () => $request->getHost() === config('hirfaty.staging_host')
+                ? ['production_url' => rtrim(config('hirfaty.production_url'), '/')]
+                : null,
             'locale' => app()->getLocale(),
             'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
             'translations' => $this->getTranslations(),

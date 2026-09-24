@@ -18,4 +18,20 @@ return [
 
     'admin_email' => env('ADMIN_EMAIL', 'creati.maroc@gmail.com'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Staging guard
+    |--------------------------------------------------------------------------
+    |
+    | Requests whose host is `staging_host` are the test copy of the site.
+    | The admin pages where data is easy to create by mistake (new product, a
+    | user's profile) shout about it and point at `production_url`, so nothing
+    | real is filed here. Shared with the frontend as the `staging` prop.
+    |
+    */
+
+    'staging_host' => env('STAGING_DOMAIN', 'init.hirfaty.com'),
+
+    'production_url' => env('PRODUCTION_URL', 'https://hirfaty.com'),
+
 ];

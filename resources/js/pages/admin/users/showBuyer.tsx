@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import ResetLinkDialog from '@/components/admin/reset-link-dialog';
+import StagingWarning from '@/components/admin/staging-warning';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -189,6 +190,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                     t('titles.admin.users')
                 }
             />
+            <StagingWarning path="/admin/users" />
             {/* ── Header ───────────────────────────────────── */}
             <div>
                 <Link

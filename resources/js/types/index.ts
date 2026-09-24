@@ -56,6 +56,8 @@ export interface PageProps extends InertiaPageProps {
     auth: Auth;
     name: string;
     sidebarOpen: boolean;
+    /** Set only on the staging host: where the real site lives. */
+    staging?: { production_url: string } | null;
     sellerStore?: SellerStoreStatus | null;
     flash: {
         success?: string;
