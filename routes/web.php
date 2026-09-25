@@ -31,12 +31,17 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SalesController;
 use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\WelcomeController as SellerWelcomeController;
+use App\Http\Controllers\SeoController;
 use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+// Crawler files — see SeoController for why they are routes, not static files.
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
 
 // Public journal. Open to guests, like the product listing.
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');

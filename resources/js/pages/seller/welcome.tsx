@@ -3,7 +3,7 @@ import { ArrowRight, Check, Clock, PackagePlus, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 import { dashboard } from '@/routes/seller';
 
 /**

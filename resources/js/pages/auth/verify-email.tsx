@@ -4,7 +4,7 @@ import VaseIcon from '@/components/home/VaseIcon';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 import type { PageProps } from '@/types';

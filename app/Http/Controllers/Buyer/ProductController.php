@@ -14,6 +14,7 @@ use App\Services\NewArrivalsService;
 use App\Services\ProductScoringService;
 use App\Services\ProductSearchService;
 use App\Services\ReviewService;
+use App\Services\SeoService;
 use App\Services\WishlistService;
 use Auth;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,6 +28,7 @@ class ProductController extends Controller
         private WishlistService $wishlist,
         private ProductSearchService $search,
         private ReviewService $reviews,
+        private SeoService $seo,
     ) {}
 
     public function index(Request $request)
@@ -52,7 +54,11 @@ class ProductController extends Controller
             $this->search->applyTerm($query, $search);
         }
 
+        $activeCategory = null;
+
         if ($catId = $request->input('category_id')) {
+            $activeCategory = Category::find($catId);
+
             /*
              * Selecting a root category should also surface its children,
              * otherwise the top-level pills match almost nothing — and a
@@ -68,7 +74,7 @@ class ProductController extends Controller
              */
             $query->whereIn('category_id', [
                 (int) $catId,
-                ...Category::find($catId)?->children->pluck('id')->all() ?? [],
+                ...$activeCategory?->children->pluck('id')->all() ?? [],
             ]);
         }
 
@@ -134,7 +140,7 @@ class ProductController extends Controller
             // The wishlist route sits behind `role:buyer`; anyone else is sent
             // to log in rather than issuing a request that would 403.
             'canWishlist' => (bool) $request->user()?->isBuyer(),
-        ]);
+        ])->withViewData('seo', fn () => $this->seo->forCatalogue($activeCategory));
     }
 
     /**
@@ -219,7 +225,11 @@ class ProductController extends Controller
                 'current_page' => $reviews->currentPage(),
                 'has_more' => $reviews->hasMorePages(),
             ],
-        ]);
+        ])->withViewData('seo', fn () => $this->seo->forProduct(
+            $product,
+            $this->reviews->summaryFor($product),
+            $reviews->items(),
+        ));
     }
 
     /**

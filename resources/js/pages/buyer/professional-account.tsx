@@ -21,7 +21,7 @@ import pottery from '@/images/cat-pottery.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
 import heroMain from '@/images/hero-main.jpg';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 import { login } from '@/routes';
 
 /** Museum-caption label, matching the rest of the storefront. */

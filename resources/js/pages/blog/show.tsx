@@ -42,11 +42,10 @@ export default function BlogShow({
 }) {
     return (
         <>
-            <Head title={blog.title}>
-                {blog.excerpt && (
-                    <meta name="description" content={blog.excerpt} />
-                )}
-            </Head>
+            {/* Description, Open Graph and structured data are rendered
+                server-side (SeoService) — a client-side copy here would
+                duplicate them once the page hydrates. */}
+            <Head title={blog.title} />
 
             <div className="min-h-screen bg-souk-paper">
                 {preview && <PreviewBanner blog={blog} />}
@@ -94,6 +93,7 @@ export default function BlogShow({
                             <img
                                 src={blog.cover_url}
                                 alt=""
+                                fetchPriority="high"
                                 className="mt-10 aspect-16/9 w-full rounded-2xl object-cover"
                             />
                         )}

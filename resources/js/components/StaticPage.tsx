@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import Reveal from '@/components/home/Reveal';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 
 /**
  * The shell every simple footer page wears: brown zellij hero, then content.

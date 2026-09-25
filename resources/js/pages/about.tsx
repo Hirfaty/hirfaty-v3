@@ -56,6 +56,7 @@ export default function About() {
                             <div className="relative mx-auto overflow-hidden rounded-md shadow-2xl shadow-black/40 sm:h-96 sm:min-w-72">
                                 <img
                                     src={ceoPhoto}
+                                    loading="lazy"
                                     alt={t('about.founder.name')}
                                     className="h-full w-full object-cover"
                                 />

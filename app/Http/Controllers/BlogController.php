@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\BlogResource;
 use App\Models\Blog;
+use App\Services\SeoService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -33,7 +34,7 @@ class BlogController extends Controller
         ]);
     }
 
-    public function show(string $slug)
+    public function show(string $slug, SeoService $seo)
     {
         // Scoped to published rather than resolved by route-model binding: a
         // draft's slug is guessable, and a 404 must not leak that it exists.
@@ -50,6 +51,6 @@ class BlogController extends Controller
                     ->get()
             ),
             'preview' => false,
-        ]);
+        ])->withViewData('seo', fn () => $seo->forBlog($blog));
     }
 }

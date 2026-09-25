@@ -4,7 +4,7 @@ import Reveal from '@/components/home/Reveal';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 import { login } from '@/routes';
 
 /**

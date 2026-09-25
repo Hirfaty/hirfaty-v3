@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerProductResource;
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\SeoService;
 use App\Services\WishlistService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,7 +24,10 @@ use Inertia\Inertia;
  */
 class StoreController extends Controller
 {
-    public function __construct(private WishlistService $wishlist) {}
+    public function __construct(
+        private WishlistService $wishlist,
+        private SeoService $seo,
+    ) {}
 
     public function show(Request $request, string $slug)
     {
@@ -92,6 +96,6 @@ class StoreController extends Controller
             // whom `products.wishlist` (behind `role:buyer`) would reject.
             'wishlisted' => $this->wishlist->idsFor($request->user(), $products->items()),
             'canWishlist' => (bool) $request->user()?->isBuyer(),
-        ]);
+        ])->withViewData('seo', fn () => $this->seo->forStore($store));
     }
 }

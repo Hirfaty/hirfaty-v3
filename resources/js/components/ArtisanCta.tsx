@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { ArrowRight, Truck } from 'lucide-react';
 import Reveal from '@/components/home/Reveal';
 import { useTranslation } from '@/hooks/use-translation';
-import zellij from '@/images/zellij-pattern.png';
+import zellij from '@/images/zellij-pattern.jpg';
 import { sell } from '@/routes';
 
 /**

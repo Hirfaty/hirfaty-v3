@@ -4,7 +4,12 @@ import { MEDIA_LIMITS } from '@/lib/media-limits';
 /** Longest side of a cropped product photo — plenty for a product page. */
 const MAX_SIDE = 2048;
 
-const QUALITIES = [0.92, 0.85, 0.78, 0.7, 0.6];
+/*
+ * Starts at 0.82, not 0.92: above ~0.85 a photograph gains no visible detail
+ * but roughly doubles in weight (2048px uploads were landing near 1 MB), and
+ * every product card and gallery downloads these originals.
+ */
+const QUALITIES = [0.82, 0.76, 0.7, 0.6];
 
 function loadImage(url: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {

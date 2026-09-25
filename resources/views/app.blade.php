@@ -46,9 +46,15 @@
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+        @php
+            // `$seo` is the closure a controller passed via withViewData();
+            // pages that pass nothing get route defaults.
+            $seoTags = app(\App\Services\SeoService::class)->resolve(request(), value($seo ?? []));
+        @endphp
         <x-inertia::head>
-            <title>Hirfaty</title>
+            <title>{{ $seoTags['title'] }}</title>
         </x-inertia::head>
+        @include('partials.seo', ['seo' => $seoTags])
 
         @routes
     </head>

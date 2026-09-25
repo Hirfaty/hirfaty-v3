@@ -722,6 +722,8 @@ const ProductDetail = ({
                                 key={active.id}
                                 src={active.url}
                                 alt={product.name}
+                                // The page's largest paint — fetch it first.
+                                fetchPriority="high"
                                 className="h-full w-full object-cover"
                             />
                         ) : (
@@ -1116,6 +1118,7 @@ const ProductDetail = ({
                                     <img
                                         src={product.store.logo}
                                         alt={product.store.store_name}
+                                        loading="lazy"
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (

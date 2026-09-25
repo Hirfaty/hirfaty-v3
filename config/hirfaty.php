@@ -34,4 +34,19 @@ return [
 
     'production_url' => env('PRODUCTION_URL', 'https://hirfaty.com'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Search-engine indexing
+    |--------------------------------------------------------------------------
+    |
+    | Only the real site may be indexed. Everywhere else — local, staging,
+    | a review copy — robots.txt disallows everything, every page carries
+    | `noindex`, and responses send an `X-Robots-Tag` header, so a test copy
+    | can never compete with hirfaty.com in search results. Requests on
+    | `staging_host` are refused indexing even if this is left on.
+    |
+    */
+
+    'indexable' => (bool) env('SEO_INDEXABLE', env('APP_ENV') === 'production'),
+
 ];

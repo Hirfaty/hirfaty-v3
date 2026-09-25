@@ -222,12 +222,27 @@ export default function ProductsIndex({
         });
     };
 
+    // A category listing is its own page for search engines, so it carries
+    // its own title (same shape as SeoService::forCatalogue).
+    const activeCategoryName = filters.category_id
+        ? categories
+              .flatMap((category) => [category, ...category.children])
+              .find((category) => category.id === Number(filters.category_id))
+              ?.translated_name
+        : undefined;
+
     const hasActiveFilters =
         Boolean(filters.search) || Boolean(filters.category_id);
 
     return (
         <>
-            <Head title={t('titles.catalogue')} />
+            <Head
+                title={
+                    activeCategoryName
+                        ? `${activeCategoryName} — ${t('titles.catalogue')}`
+                        : t('titles.catalogue')
+                }
+            />
             <div className="min-h-screen bg-souk-paper">
                 <SiteHeader />
 
