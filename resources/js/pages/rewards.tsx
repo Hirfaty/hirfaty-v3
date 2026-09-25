@@ -122,7 +122,7 @@ export default function Rewards() {
                         </div>
 
                         <Link
-                            href="/products"
+                            href={route('products.index')}
                             className="shrink-0 rounded-lg bg-souk-title px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep"
                         >
                             {t('pages.rewards.soon.button')}

@@ -797,7 +797,7 @@ const ProductDetail = ({
                         className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-souk-brown-deep/55 ${EYEBROW}`}
                     >
                         <Link
-                            href="/"
+                            href={route('home')}
                             aria-label={t('buyer.detail.home')}
                             className="transition-colors hover:text-souk-title"
                         >

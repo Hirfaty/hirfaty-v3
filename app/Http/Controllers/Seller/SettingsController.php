@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\City;
 use App\Models\Store;
+use App\Services\LocaleService;
 use App\Services\StoreVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -86,7 +87,7 @@ class SettingsController extends Controller
         return back()->with('success', 'Atelier enregistré.');
     }
 
-    public function updateLocale(Request $request)
+    public function updateLocale(Request $request, LocaleService $locales)
     {
         $request->validate([
             'locale' => ['required', 'in:fr,ar,en'],
@@ -94,8 +95,9 @@ class SettingsController extends Controller
 
         auth()->user()->update(['locale' => $request->locale]);
 
-        // Also update the session so it takes effect immediately
-        session(['locale' => $request->locale]);
+        // An explicit choice, like the switcher: takes effect immediately and
+        // outranks the browser's language from now on.
+        $locales->choose($request, $request->locale);
 
         return back()->with('success', 'Language updated.');
     }

@@ -28,7 +28,7 @@
         <x-mail.row label="السعر" :value="number_format($price, 2).' د.م'" />
     </x-mail.panel>
 
-    <x-mail.button :url="config('app.url').'/products/'.$product->slug">
+    <x-mail.button :url="route('products.show', ['locale' => 'ar', 'slug' => $product->slug])">
         مشاهدة منتجي على الموقع
     </x-mail.button>
 

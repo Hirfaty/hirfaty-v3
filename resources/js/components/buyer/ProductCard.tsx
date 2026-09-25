@@ -197,7 +197,7 @@ export function ProductCard({
 
     return (
         <Link
-            href={`/products/${product.slug}`}
+            href={route('products.show', product.slug)}
             className="group block bg-souk-brown p-3 transition-all duration-500 hover:-translate-y-1 hover:bg-souk-brown-deep hover:shadow-xl hover:shadow-souk-brown/25"
         >
             <div className="relative aspect-[4/5] overflow-hidden bg-souk-cream/8 ring-1 ring-souk-cream/15 transition-colors duration-500 group-hover:ring-souk-cream/30">

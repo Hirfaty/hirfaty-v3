@@ -229,7 +229,7 @@ test('public pages are indexable in production', function () {
 test('the staging host is never indexable, even with indexing switched on', function () {
     config(['hirfaty.indexable' => true]);
 
-    $this->get('http://'.config('hirfaty.staging_host').'/')
+    $this->get('http://'.config('hirfaty.staging_host').'/fr')
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
         ->assertSee('<meta name="robots" content="noindex, nofollow">', false);
 });

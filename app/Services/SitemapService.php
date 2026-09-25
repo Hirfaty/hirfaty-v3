@@ -19,13 +19,16 @@ use XMLWriter;
  * articles. Listing a URL that then 404s or shows an empty page wastes crawl
  * budget and reads as a low-quality site.
  *
+ * Every page appears once per language (/fr, /ar, /en), each entry listing
+ * its translations as hreflang alternates.
+ *
  * Product and article photos ride along as <image:image> entries so they can
  * surface in Google Images.
  *
  * Cached for an hour: rebuilding it walks the whole catalogue, and a new
  * product appearing an hour late in the sitemap costs nothing.
  *
- * One file holds up to 50,000 URLs; past that it must become a sitemap index.
+ * One file holds up to 50,000 URLs — about 16,000 pages at three languages; past that it must become a sitemap index.
  */
 class SitemapService
 {
@@ -57,38 +60,39 @@ class SitemapService
         $xml->startDocument('1.0', 'UTF-8');
         $xml->startElement('urlset');
         $xml->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $xml->writeAttribute('xmlns:xhtml', 'http://www.w3.org/1999/xhtml');
         $xml->writeAttribute('xmlns:image', 'http://www.google.com/schemas/sitemap-image/1.1');
 
         foreach (self::PAGES as $route) {
-            $this->url($xml, route($route));
+            $this->page($xml, fn (string $locale) => route($route, ['locale' => $locale]));
         }
 
         foreach ($this->categories() as $category) {
-            $this->url($xml, $this->seo->categoryUrl($category));
+            $this->page($xml, fn (string $locale) => $this->seo->categoryUrl($category, $locale));
         }
 
         foreach ($this->products() as $product) {
-            $this->url(
+            $this->page(
                 $xml,
-                route('products.show', $product->slug),
+                fn (string $locale) => route('products.show', ['locale' => $locale, 'slug' => $product->slug]),
                 $product->updated_at,
                 $product->images->pluck('url')->filter()->take(self::IMAGES_PER_PAGE)->all(),
             );
         }
 
         foreach ($this->stores() as $store) {
-            $this->url(
+            $this->page(
                 $xml,
-                route('stores.show', $store->slug),
+                fn (string $locale) => route('stores.show', ['locale' => $locale, 'slug' => $store->slug]),
                 $store->updated_at,
                 array_filter([$store->banner, $store->logo]),
             );
         }
 
         foreach (Blog::published()->with('media')->latest('published_at')->get() as $blog) {
-            $this->url(
+            $this->page(
                 $xml,
-                route('blog.show', $blog->slug),
+                fn (string $locale) => route('blog.show', ['locale' => $locale, 'slug' => $blog->slug]),
                 $blog->updated_at,
                 array_filter([$blog->coverUrl()]),
             );
@@ -100,23 +104,48 @@ class SitemapService
         return $xml->outputMemory();
     }
 
-    /** @param  array<int, string>  $images */
-    private function url(XMLWriter $xml, string $loc, ?DateTimeInterface $lastmod = null, array $images = []): void
+    /**
+     * One page, once per language. Each entry lists all its translations
+     * (and the language-neutral x-default) as xhtml:link alternates — the
+     * sitemap form of the hreflang tags on the page itself.
+     *
+     * @param  callable(string): string  $urlFor  The page's URL in a given language.
+     * @param  array<int, string>  $images
+     */
+    private function page(XMLWriter $xml, callable $urlFor, ?DateTimeInterface $lastmod = null, array $images = []): void
     {
-        $xml->startElement('url');
-        $xml->writeElement('loc', $loc);
+        $urls = [];
 
-        if ($lastmod) {
-            $xml->writeElement('lastmod', $lastmod->format(DATE_ATOM));
+        foreach (LocaleService::SUPPORTED as $locale) {
+            $urls[$locale] = $urlFor($locale);
         }
 
-        foreach ($images as $image) {
-            $xml->startElement('image:image');
-            $xml->writeElement('image:loc', $image);
+        $alternates = $this->seo->alternates($urls[LocaleService::DEFAULT]);
+
+        foreach ($urls as $loc) {
+            $xml->startElement('url');
+            $xml->writeElement('loc', $loc);
+
+            if ($lastmod) {
+                $xml->writeElement('lastmod', $lastmod->format(DATE_ATOM));
+            }
+
+            foreach ($alternates as $hreflang => $href) {
+                $xml->startElement('xhtml:link');
+                $xml->writeAttribute('rel', 'alternate');
+                $xml->writeAttribute('hreflang', $hreflang);
+                $xml->writeAttribute('href', $href);
+                $xml->endElement();
+            }
+
+            foreach ($images as $image) {
+                $xml->startElement('image:image');
+                $xml->writeElement('image:loc', $image);
+                $xml->endElement();
+            }
+
             $xml->endElement();
         }
-
-        $xml->endElement();
     }
 
     /** What a guest may see — the same gate as the listing and product page. */

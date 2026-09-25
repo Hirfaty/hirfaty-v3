@@ -7,6 +7,9 @@
 <meta name="robots" content="{{ $seo['robots'] }}">
 @if ($seo['indexable'])
 <link rel="canonical" href="{{ $seo['canonical'] }}">
+@foreach ($seo['alternates'] as $hreflang => $href)
+<link rel="alternate" hreflang="{{ $hreflang }}" href="{{ $href }}">
+@endforeach
 @endif
 
 <meta property="og:site_name" content="{{ $seo['site_name'] }}">
@@ -15,6 +18,9 @@
 <meta property="og:description" content="{{ $seo['description'] }}">
 <meta property="og:url" content="{{ $seo['canonical'] }}">
 <meta property="og:locale" content="{{ $seo['locale'] }}">
+@foreach ($seo['locale_alternates'] as $alternate)
+<meta property="og:locale:alternate" content="{{ $alternate }}">
+@endforeach
 @if ($seo['image'])
 <meta property="og:image" content="{{ $seo['image'] }}">
 <meta property="og:image:alt" content="{{ $seo['image_alt'] }}">

@@ -88,6 +88,10 @@ function NewsletterForm() {
  * pages that do not exist; a dead link in a footer is worse than no link, so
  * nothing goes in here without a route behind it.
  *
+ * Each `href` is a function, resolved when the footer renders: the URLs
+ * carry the current language (/fr/…, /ar/…), and a value computed once at
+ * module load would keep pointing at whichever language the tab opened in.
+ *
  * "Return and refunds" is deliberately absent: the policy has not been
  * decided, so there is no page to link to yet. Add the route, the page and
  * the entry together when it is.
@@ -96,24 +100,42 @@ const NAV_COLUMNS = [
     {
         titleKey: 'common.footer.explore.title',
         links: [
-            { labelKey: 'common.footer.buyers.explore', href: '/products' },
-            { labelKey: 'common.footer.explore.blog', href: '/blog' },
-            { labelKey: 'common.footer.explore.rewards', href: '/rewards' },
+            {
+                labelKey: 'common.footer.buyers.explore',
+                href: () => route('products.index'),
+            },
+            {
+                labelKey: 'common.footer.explore.blog',
+                href: () => route('blog.index'),
+            },
+            {
+                labelKey: 'common.footer.explore.rewards',
+                href: () => route('rewards'),
+            },
             {
                 labelKey: 'common.footer.explore.affiliate',
-                href: '/affiliate',
+                href: () => route('affiliate'),
             },
         ],
     },
     {
         titleKey: 'common.footer.about.title',
         links: [
-            { labelKey: 'common.footer.about.about', href: '/about' },
-            { labelKey: 'common.footer.company.contact', href: '/contact' },
-            { labelKey: 'common.footer.buyers.how', href: '/how-it-works' },
+            {
+                labelKey: 'common.footer.about.about',
+                href: () => route('about'),
+            },
+            {
+                labelKey: 'common.footer.company.contact',
+                href: () => route('contact'),
+            },
+            {
+                labelKey: 'common.footer.buyers.how',
+                href: () => route('how-it-works'),
+            },
             // The artisan signup, not the buyer one: /register is email-only
             // shopper signup.
-            { labelKey: 'common.footer.artisans.sell', href: sell.url() },
+            { labelKey: 'common.footer.artisans.sell', href: () => sell.url() },
         ],
     },
     {
@@ -121,15 +143,21 @@ const NAV_COLUMNS = [
         links: [
             {
                 labelKey: 'common.footer.care.shipping',
-                href: '/shipping-policy',
+                href: () => route('shipping-policy'),
             },
-            { labelKey: 'common.footer.care.privacy', href: '/privacy' },
-            { labelKey: 'common.footer.care.terms', href: '/terms' },
+            {
+                labelKey: 'common.footer.care.privacy',
+                href: () => route('privacy'),
+            },
+            {
+                labelKey: 'common.footer.care.terms',
+                href: () => route('terms'),
+            },
             // Trade buying already has a page that explains wholesale rates
             // and takes the request — no second one to keep in sync.
             {
                 labelKey: 'common.footer.care.bulk',
-                href: '/professional-account',
+                href: () => route('professional.show'),
             },
         ],
     },
@@ -169,7 +197,7 @@ export const SiteFooter = () => {
                             {col.links.map((link) => (
                                 <li key={link.labelKey}>
                                     <Link
-                                        href={link.href}
+                                        href={link.href()}
                                         className="transition-colors hover:text-ink"
                                     >
                                         {t(link.labelKey)}

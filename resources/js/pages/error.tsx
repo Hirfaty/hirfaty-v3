@@ -85,7 +85,7 @@ export default function ErrorPage({ status }: { status: number }) {
 
                     <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                         <Link
-                            href="/"
+                            href={route('home')}
                             className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep"
                         >
                             <Home className="h-4 w-4" strokeWidth={1.6} />

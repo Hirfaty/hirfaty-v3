@@ -86,8 +86,8 @@ test('a signed-in buyer can still submit a request', function () {
  */
 test('the trade copy resolves in every locale', function () {
     foreach (['fr', 'en', 'ar'] as $locale) {
-        $this->withSession(['locale' => $locale])
-            ->get(route('professional.show'))
+        // A public page: the URL carries the language, not the session.
+        $this->get(route('professional.show', ['locale' => $locale]))
             ->assertOk()
             ->assertInertia(function (Assert $page) use ($locale) {
                 $props = $page->toArray()['props'];

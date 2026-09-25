@@ -403,14 +403,14 @@ export default function SellerDetails({
                             <span className="leading-snug">
                                 {t('common.auth.login.terms_prefix')}{' '}
                                 <Link
-                                    href="/privacy"
+                                    href={route('privacy')}
                                     className="text-souk-brown underline underline-offset-4"
                                 >
                                     {t('common.auth.login.terms_privacy')}
                                 </Link>{' '}
                                 {t('common.auth.login.terms_and')}{' '}
                                 <Link
-                                    href="/terms"
+                                    href={route('terms')}
                                     className="text-souk-brown underline underline-offset-4"
                                 >
                                     {t('common.auth.login.terms_conditions')}

@@ -24,6 +24,7 @@ use App\Http\Controllers\Buyer\SearchController;
 use App\Http\Controllers\Buyer\StoreController as BuyerStoreController;
 use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\OrderController;
@@ -32,49 +33,120 @@ use App\Http\Controllers\Seller\SalesController;
 use App\Http\Controllers\Seller\SettingsController as SellerSettingsController;
 use App\Http\Controllers\Seller\WelcomeController as SellerWelcomeController;
 use App\Http\Controllers\SeoController;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use App\Services\CurrencyService;
+use App\Services\LocaleService;
 use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', HomeController::class)->name('home');
+/*
+ * The bare domain has no language of its own: it sends each visitor to
+ * /fr, /ar or /en — their saved choice, else their browser's language,
+ * else French. See LocaleController::redirect.
+ */
+Route::get('/', [LocaleController::class, 'redirect'])
+    // A bare redirect: Inertia's middleware would only overwrite its `Vary`
+    // header with its own, and caches must know the target depends on the
+    // visitor's language.
+    ->withoutMiddleware(HandleInertiaRequests::class)
+    ->name('root');
 
 // Crawler files — see SeoController for why they are routes, not static files.
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
 
-// Public journal. Open to guests, like the product listing.
-Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
-Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
-
-// Static marketing page — no backend data, so no dedicated controller.
-Route::inertia('/about', 'about')->name('about');
-
 /*
- * The two pages the footer links to. Static: all their copy comes from
- * `lang/<locale>/pages.php` and the contact details from `welcome.contact.*`,
- * so there is nothing for a controller to fetch and `Route::inertia` is the
- * whole implementation.
+ * Public pages, one URL per language: /fr/products, /ar/products,
+ * /en/products. Each language is then its own page a search engine can
+ * index and rank (with hreflang tying the three together — SeoService).
+ *
+ * SetLocale reads the segment, applies it, and removes it from the route's
+ * parameters so controllers keep their existing signatures. URL::defaults
+ * fills it back in when generating URLs, so route('products.show', $slug)
+ * needs no language argument — on the server, in Ziggy and in Wayfinder.
+ *
+ * Only GET pages live here. The forms they post to (/sell,
+ * /professional-account, /newsletter, …) stay unprefixed: a POST is not a
+ * page anyone indexes, and the session already carries the language.
  */
-Route::inertia('/how-it-works', 'how-it-works')->name('how-it-works');
-Route::inertia('/contact', 'contact')->name('contact');
+Route::prefix('{locale}')
+    ->where(['locale' => LocaleService::PATTERN])
+    ->group(function () {
+        Route::get('/', HomeController::class)->name('home');
 
-/*
- * The rest of the footer's pages, same deal — copy lives in `pages.php`.
- *
- * `affiliate` and `rewards` describe programmes that do not exist in the
- * backend yet: there is no partner record, no referral attribution and no
- * points ledger. Both pages say so rather than implying otherwise.
- *
- * `/privacy` and `/terms` close long-standing dead links: transactional
- * email footers and the registration checkbox have pointed at them since
- * they were written, and until now both 404'd.
- */
-Route::inertia('/affiliate', 'affiliate')->name('affiliate');
-Route::inertia('/rewards', 'rewards')->name('rewards');
-Route::inertia('/privacy', 'privacy')->name('privacy');
-Route::inertia('/shipping-policy', 'shipping-policy')->name('shipping-policy');
-Route::inertia('/terms', 'terms')->name('terms');
+        // Public journal. Open to guests, like the product listing.
+        Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+        Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
+
+        // Static marketing page — no backend data, so no dedicated controller.
+        Route::inertia('/about', 'about')->name('about');
+
+        /*
+         * The two pages the footer links to. Static: all their copy comes from
+         * `lang/<locale>/pages.php` and the contact details from `welcome.contact.*`,
+         * so there is nothing for a controller to fetch and `Route::inertia` is the
+         * whole implementation.
+         */
+        Route::inertia('/how-it-works', 'how-it-works')->name('how-it-works');
+        Route::inertia('/contact', 'contact')->name('contact');
+
+        /*
+         * The rest of the footer's pages, same deal — copy lives in `pages.php`.
+         *
+         * `affiliate` and `rewards` describe programmes that do not exist in the
+         * backend yet: there is no partner record, no referral attribution and no
+         * points ledger. Both pages say so rather than implying otherwise.
+         *
+         * `/privacy` and `/terms` close long-standing dead links: transactional
+         * email footers and the registration checkbox have pointed at them since
+         * they were written, and until now both 404'd.
+         */
+        Route::inertia('/affiliate', 'affiliate')->name('affiliate');
+        Route::inertia('/rewards', 'rewards')->name('rewards');
+        Route::inertia('/privacy', 'privacy')->name('privacy');
+        Route::inertia('/shipping-policy', 'shipping-policy')->name('shipping-policy');
+        Route::inertia('/terms', 'terms')->name('terms');
+
+        Route::get('/products', [BuyerProductController::class, 'index'])->name('products.index');
+
+        /*
+         * Deliberately its own path rather than /products/new: that would be captured
+         * by the {slug} route below and looked up as a product named "new", so the
+         * page would 404 for as long as no such slug existed and silently open the
+         * wrong product the moment one did.
+         */
+        Route::get('/new-arrivals', [BuyerProductController::class, 'newArrivals'])->name('products.new');
+
+        Route::get('/products/{slug}', [BuyerProductController::class, 'show'])->name('products.show');
+
+        /*
+         * A shop's public page. Deliberately not under /seller/*, which is the
+         * artisan's own back office behind `role:seller` — pointing shoppers there is
+         * the 403 this route exists to replace.
+         */
+        Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('stores.show');
+
+        /*
+         * What a trade account is and how to get one.
+         *
+         * Public, unlike its POST counterpart (`professional.request`, in the
+         * buyer group): this is the page that has to
+         * *sell* the feature, and it was previously behind `role:buyer` — so the one
+         * audience it exists to convince, people who have not signed up yet, were the
+         * only ones who could never read it. A guest following a "buying wholesale?"
+         * prompt landed on the registration form with nothing having explained what
+         * they were signing up for.
+         *
+         * The controller therefore has to tolerate a null user; see its show().
+         */
+        Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
+
+        // Seller signup's first screen; its form posts to the unprefixed `sell.identify`.
+        Route::get('/sell', [SellerRegistrationController::class, 'show'])->name('sell');
+
+        Route::get('/business', [AccountKindController::class, 'business'])->name('business');
+    });
 
 /*
  * No app-level `verification.verify` route here on purpose — Fortify already
@@ -354,7 +426,6 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 });
 
 // Public routes — no auth needed
-Route::get('/products', [BuyerProductController::class, 'index'])->name('products.index');
 
 /*
  * Live results behind the header's search field. Public, like the listing it
@@ -363,37 +434,6 @@ Route::get('/products', [BuyerProductController::class, 'index'])->name('product
 Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
     ->middleware('throttle:60,1')
     ->name('search.suggestions');
-
-/*
- * Deliberately its own path rather than /products/new: that would be captured
- * by the {slug} route below and looked up as a product named "new", so the
- * page would 404 for as long as no such slug existed and silently open the
- * wrong product the moment one did.
- */
-Route::get('/new-arrivals', [BuyerProductController::class, 'newArrivals'])->name('products.new');
-
-Route::get('/products/{slug}', [BuyerProductController::class, 'show'])->name('products.show');
-
-/*
- * A shop's public page. Deliberately not under /seller/*, which is the
- * artisan's own back office behind `role:seller` — pointing shoppers there is
- * the 403 this route exists to replace.
- */
-Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('stores.show');
-
-/*
- * What a trade account is and how to get one.
- *
- * Public, unlike its POST counterpart above: this is the page that has to
- * *sell* the feature, and it was previously behind `role:buyer` — so the one
- * audience it exists to convince, people who have not signed up yet, were the
- * only ones who could never read it. A guest following a "buying wholesale?"
- * prompt landed on the registration form with nothing having explained what
- * they were signing up for.
- *
- * The controller therefore has to tolerate a null user; see its show().
- */
-Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
 
 /*
  * The footer's mailing-list signup, and so reachable from every page.
@@ -519,22 +559,19 @@ Route::prefix('auth/{provider}')
  * price list an account is billed on, so it is deliberately impossible to
  * self-assign and needs its vetting step designed rather than bolted on.
  */
-Route::get('/sell', [SellerRegistrationController::class, 'show'])->name('sell');
 
 Route::post('/sell', [SellerRegistrationController::class, 'identify'])
     ->middleware('throttle:10,1')
     ->name('sell.identify');
 
-Route::get('/business', [AccountKindController::class, 'business'])->name('business');
-
-Route::post('/locale/{locale}', function (string $locale) {
-    if (! in_array($locale, ['ar', 'fr', 'en'])) {
-        abort(400);
-    }
-    session(['locale' => $locale]);
-
-    return back();
-})->name('locale.switch');
+/*
+ * The language switcher. `{language}`, never `{locale}`: that name is the
+ * public pages' URL segment, filled in from a default on every generated URL
+ * and stripped from the route by SetLocale — a `{locale}` here would always
+ * resolve to the *current* language, and the one being switched to would
+ * never reach the controller.
+ */
+Route::post('/locale/{language}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 /*
  * Display currency. Sits beside the locale switch and works the same way: the
@@ -566,6 +603,18 @@ require __DIR__.'/settings.php';
 if (! app()->isProduction()) {
     require __DIR__.'/email-previews.php';
 }
+
+/*
+ * The public URLs from before pages carried a language (/products/x,
+ * /about, …). Links to them live on in shared messages, bookmarks and
+ * search results, so they forward to the same page in the visitor's
+ * language rather than 404ing. GET only — the POST routes of the same
+ * name (/sell, /professional-account) are untouched.
+ */
+Route::get('{path}', [LocaleController::class, 'redirect'])
+    ->where('path', '(products|new-arrivals|stores|blog|about|how-it-works|contact|affiliate|rewards|privacy|shipping-policy|terms|sell|business|professional-account)(/.*)?')
+    ->withoutMiddleware(HandleInertiaRequests::class)
+    ->name('locale.legacy');
 
 /*
  * Catch-all for URLs that match nothing above. Must stay last — a fallback

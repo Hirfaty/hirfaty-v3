@@ -3,10 +3,14 @@
 namespace App\Providers;
 
 use App\Health\Checks\DiskSpaceCheck;
+use App\Services\LocaleService;
 use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Events\LocaleUpdated;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Health\Checks\Checks\CacheCheck;
@@ -34,8 +38,35 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureLocaleUrls();
         $this->configureHealthChecks();
         JsonResource::withoutWrapping();
+    }
+
+    /**
+     * Fill the `{locale}` segment of public routes automatically, so
+     * route('products.show', $slug) needs no language argument anywhere.
+     *
+     * Follows the active locale rather than being set once: SetLocale changes
+     * it per request, and a queued notification switches it to the
+     * recipient's language while rendering (Laravel fires LocaleUpdated for
+     * both), so an Arabic email links to /ar/… even when a French-speaking
+     * admin triggered it. Ziggy and Wayfinder read the same default on the
+     * client — see syncLocale() in resources/js/app.tsx.
+     */
+    protected function configureLocaleUrls(): void
+    {
+        $initial = app()->getLocale();
+
+        URL::defaults([
+            'locale' => in_array($initial, LocaleService::SUPPORTED, true) ? $initial : LocaleService::DEFAULT,
+        ]);
+
+        Event::listen(LocaleUpdated::class, function (LocaleUpdated $event) {
+            if (in_array($event->locale, LocaleService::SUPPORTED, true)) {
+                URL::defaults(['locale' => $event->locale]);
+            }
+        });
     }
 
     /**

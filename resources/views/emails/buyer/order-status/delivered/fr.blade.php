@@ -65,6 +65,6 @@
         Un souci avec cette commande ? Contactez-nous depuis votre espace commandes.<br>
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">Mes commandes</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
+        <a href="{{ route('privacy', ['locale' => 'fr']) }}" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
     </x-slot:footer>
 </x-mail.layout>

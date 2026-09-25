@@ -100,7 +100,7 @@ export default function HowItWorks() {
                         <Reveal delay={480}>
                             <div className="mt-12 text-center">
                                 <Link
-                                    href="/products"
+                                    href={route('products.index')}
                                     className="inline-flex items-center justify-center rounded-xl bg-souk-brown px-7 py-3.5 text-sm font-semibold tracking-[0.04em] text-white uppercase transition-colors hover:bg-souk-brown-deep"
                                 >
                                     {t('pages.how.buyers.cta')}

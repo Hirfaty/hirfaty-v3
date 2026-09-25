@@ -132,12 +132,12 @@ export const SearchPanel = ({ onClose }: SearchPanelProps) => {
         }
 
         onClose();
-        router.get('/products', { search: query });
+        router.get(route('products.index'), { search: query });
     };
 
     const openProduct = (product: Suggestion) => {
         onClose();
-        router.visit(`/products/${product.slug}`);
+        router.visit(route('products.show', product.slug));
     };
 
     const onFieldKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -258,7 +258,10 @@ export const SearchPanel = ({ onClose }: SearchPanelProps) => {
                                     {suggestions.map((product, index) => (
                                         <li key={product.id}>
                                             <Link
-                                                href={`/products/${product.slug}`}
+                                                href={route(
+                                                    'products.show',
+                                                    product.slug,
+                                                )}
                                                 onClick={onClose}
                                                 onMouseEnter={() =>
                                                     setHighlighted(index)

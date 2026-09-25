@@ -51,7 +51,7 @@
         </x-mail.note>
     @endif
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'fr'])">
         Continuer mes achats
     </x-mail.button>
 
@@ -59,6 +59,6 @@
         Une question sur cette annulation ? Contactez-nous depuis votre espace commandes.<br>
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">Mes commandes</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
+        <a href="{{ route('privacy', ['locale' => 'fr']) }}" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
     </x-slot:footer>
 </x-mail.layout>

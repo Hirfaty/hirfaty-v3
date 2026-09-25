@@ -143,7 +143,7 @@ export default function ExploreByCategories() {
         (category) => ({
             key: category.id,
             image: category.image_url,
-            href: `/products?category_id=${category.id}`,
+            href: route('products.index', { category_id: category.id }),
             label: category.translated_name,
         }),
     );

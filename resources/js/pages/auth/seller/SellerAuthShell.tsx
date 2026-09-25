@@ -64,7 +64,7 @@ export default function SellerAuthShell({
                 <main className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-y-auto lg:px-14 lg:py-8">
                     <div className="flex items-center justify-between gap-4">
                         <Link
-                            href="/"
+                            href={route('home')}
                             className="group inline-flex items-center gap-2 text-sm text-souk-brown-deep/70 transition-colors hover:text-souk-brown"
                         >
                             <ArrowLeft
@@ -99,7 +99,7 @@ export default function SellerAuthShell({
                             className={`w-full ${wide ? 'max-w-xl' : 'max-w-md'}`}
                         >
                             <Link
-                                href="/"
+                                href={route('home')}
                                 className="inline-flex items-center gap-2.5"
                                 aria-label="Hirfaty"
                             >

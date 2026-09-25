@@ -12,13 +12,13 @@ use Inertia\Testing\AssertableInertia;
  * throw anywhere — it just quietly ships `pages.how.heading` as body copy.
  */
 it('serves the how-it-works page to a visitor who is not signed in', function () {
-    $this->get('/how-it-works')
+    $this->get('/fr/how-it-works')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page->component('how-it-works'));
 });
 
 it('serves the contact page to a visitor who is not signed in', function () {
-    $this->get('/contact')
+    $this->get('/fr/contact')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page->component('contact'));
 });
@@ -32,7 +32,7 @@ it('serves the contact page to a visitor who is not signed in', function () {
  *
  * @return array<string, array<string, string>>
  */
-function sharedTranslations(string $path = '/'): array
+function sharedTranslations(string $path = '/fr'): array
 {
     return test()->get($path)->viewData('page')['props']['translations'];
 }
@@ -43,7 +43,7 @@ function sharedTranslations(string $path = '/'): array
  * would catch it being dropped.
  */
 it('ships the pages translations to the frontend', function () {
-    $translations = sharedTranslations('/contact');
+    $translations = sharedTranslations('/fr/contact');
 
     expect($translations)->toHaveKey('pages')
         ->and($translations['pages']['contact.heading'])->toBe('Parlons-en')
@@ -130,4 +130,4 @@ it('keeps the :year placeholder in every copyright translation', function () {
  */
 it('points every footer link at a page that exists', function (string $path) {
     $this->get($path)->assertSuccessful();
-})->with(['/products', '/how-it-works', '/contact', '/sell']);
+})->with(['/fr/products', '/fr/how-it-works', '/fr/contact', '/fr/sell']);

@@ -177,7 +177,7 @@ function Spotlight({
              */}
             <div className="absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-4 p-6">
                 <Link
-                    href={`/products/${frames[index].slug}`}
+                    href={route('products.show', frames[index].slug)}
                     className="flex min-w-0 flex-1 flex-col"
                 >
                     <span className="font-display text-xl leading-snug text-souk-cream">
@@ -276,7 +276,7 @@ export function ShowcaseCard({
          */
         <Link
             {...hoverProps}
-            href={`/products/${product.slug}`}
+            href={route('products.show', product.slug)}
             className="group flex min-h-0 flex-col"
         >
             {/*
@@ -604,7 +604,7 @@ export default function ProductShowcase({
         <div className="flex flex-col gap-6 lg:gap-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <Link
-                    href="/products"
+                    href={route('products.index')}
                     className="group inline-flex items-center gap-2 border-b border-souk-brown/40 pb-1 text-sm text-souk-brown transition-colors hover:border-souk-brown"
                 >
                     {labels.viewAll}

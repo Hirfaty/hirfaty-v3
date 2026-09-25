@@ -47,7 +47,7 @@ export default function AccountKindPlaceholder({
             <div className="flex min-h-screen flex-col bg-souk-paper px-5 py-6 sm:px-8">
                 <div className="flex items-center justify-between gap-4">
                     <Link
-                        href="/"
+                        href={route('home')}
                         className="group inline-flex items-center gap-2 text-sm text-souk-brown-deep/70 transition-colors hover:text-souk-brown"
                     >
                         <ArrowLeft
@@ -79,7 +79,7 @@ export default function AccountKindPlaceholder({
 
                 <div className="flex flex-1 flex-col items-center justify-center py-8">
                     <Link
-                        href="/"
+                        href={route('home')}
                         className="inline-flex items-center gap-2.5"
                         aria-label="Hirfaty"
                     >
@@ -121,7 +121,7 @@ export default function AccountKindPlaceholder({
                         </p>
 
                         <Link
-                            href="/contact"
+                            href={route('contact')}
                             className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-souk-brown px-6 py-3.5 font-display text-base text-souk-cream transition-colors duration-300 hover:bg-souk-brown-deep"
                         >
                             {t('common.auth.login.placeholder_contact')}

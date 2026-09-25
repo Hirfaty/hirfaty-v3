@@ -15,21 +15,21 @@ test('every page the footer links to resolves', function (string $uri, string $c
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page->component($component)->etc());
 })->with([
-    ['/affiliate', 'affiliate'],
-    ['/rewards', 'rewards'],
-    ['/privacy', 'privacy'],
-    ['/shipping-policy', 'shipping-policy'],
+    ['/fr/affiliate', 'affiliate'],
+    ['/fr/rewards', 'rewards'],
+    ['/fr/privacy', 'privacy'],
+    ['/fr/shipping-policy', 'shipping-policy'],
     // Pre-existing, listed so a footer restructure cannot quietly orphan one.
-    ['/about', 'about'],
-    ['/contact', 'contact'],
-    ['/how-it-works', 'how-it-works'],
-    ['/professional-account', 'buyer/professional-account'],
+    ['/fr/about', 'about'],
+    ['/fr/contact', 'contact'],
+    ['/fr/how-it-works', 'how-it-works'],
+    ['/fr/professional-account', 'buyer/professional-account'],
 ]);
 
 test('the blog link the footer points at resolves', function () {
     // Not a static page — /blog is a real controller — but it is in the same
     // column, so it belongs in the same guarantee.
-    $this->get('/blog')->assertSuccessful();
+    $this->get('/fr/blog')->assertSuccessful();
 });
 
 test('the new page copy exists in all three locales', function (string $key) {

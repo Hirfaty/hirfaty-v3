@@ -22,13 +22,13 @@
         ويمكنك تقديم طلب جديد بمجرد تغير الوضع.
     </x-mail.text>
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'ar'])">
         العودة إلى السوق
     </x-mail.button>
 
     <x-slot:footer>
         تصلك هذه الرسالة بعد طلبك حساباً مهنياً على حرفتي.<br>
-        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">السوق</a>
+        <a href="{{ route('products.index', ['locale' => 'ar']) }}" style="color:{{ config('mail_theme.soft') }};">السوق</a>
         &nbsp;·&nbsp;
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">طلباتي</a>
     </x-slot:footer>

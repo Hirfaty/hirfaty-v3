@@ -38,6 +38,8 @@ class SeoService
 
     public const CURRENCY = 'MAD';
 
+    public function __construct(private LocaleService $locales) {}
+
     /**
      * Public pages with their title key (reused from the keys the React
      * pages already set, so the server title and the tab title agree) and
@@ -107,9 +109,42 @@ class SeoService
         $seo['indexable'] = str_starts_with($seo['robots'], 'index');
         $seo['description'] = $this->clean($seo['description']);
         $seo['locale'] = self::OG_LOCALES[app()->getLocale()] ?? 'fr_MA';
+        $seo['locale_alternates'] = collect(self::OG_LOCALES)->except(app()->getLocale())->values()->all();
         $seo['site_name'] = self::BRAND;
+        $seo['alternates'] = $seo['indexable'] ? $this->alternates($seo['canonical']) : [];
 
         return $seo;
+    }
+
+    /**
+     * hreflang links: the same page in each language, plus `x-default` — the
+     * language-neutral URL, which sends each visitor to their own language.
+     * They tell a search engine the three URLs are translations of one page
+     * (not duplicates) and which to show to whom.
+     *
+     * Empty for a page with no language in its URL: there is nothing to
+     * point at.
+     *
+     * @return array<string, string> hreflang => absolute URL
+     */
+    public function alternates(string $url): array
+    {
+        $path = parse_url($url, PHP_URL_PATH) ?? '/';
+        $first = explode('/', ltrim($path, '/'))[0];
+
+        if (! $this->locales->isSupported($first)) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach (LocaleService::SUPPORTED as $locale) {
+            $links[$locale] = url($this->locales->swap($url, $locale));
+        }
+
+        $links['x-default'] = url($this->locales->strip($url));
+
+        return $links;
     }
 
     /**
@@ -301,9 +336,13 @@ class SeoService
         ];
     }
 
-    public function categoryUrl(Category $category): string
+    /** In the current language unless another is asked for (the sitemap lists all three). */
+    public function categoryUrl(Category $category, ?string $locale = null): string
     {
-        return route('products.index', ['category_id' => $category->id]);
+        return route('products.index', array_filter([
+            'locale' => $locale,
+            'category_id' => $category->id,
+        ]));
     }
 
     /**

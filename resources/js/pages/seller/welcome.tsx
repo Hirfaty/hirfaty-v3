@@ -79,7 +79,10 @@ export default function SellerWelcome({ storeName, isPending }: Props) {
                 />
 
                 <div className="relative mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-10 sm:px-8">
-                    <Link href="/" className="inline-flex items-center gap-3">
+                    <Link
+                        href={route('home')}
+                        className="inline-flex items-center gap-3"
+                    >
                         <img
                             src={logo}
                             alt=""

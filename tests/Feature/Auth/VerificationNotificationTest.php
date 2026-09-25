@@ -16,7 +16,7 @@ test('sends verification notification', function () {
 
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('home'));
+        ->assertRedirect(route('root'));
 
     // User::sendEmailVerificationNotification() sends the role-specific
     // mail, and a factory user is a buyer.

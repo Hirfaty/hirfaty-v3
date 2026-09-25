@@ -221,7 +221,7 @@ export function CollectionCard({
                     {/* Stretched link: the tile is one click target without
                         nesting the heart button inside an anchor. */}
                     <Link
-                        href={`/products/${product.slug}`}
+                        href={route('products.show', product.slug)}
                         className="after:absolute after:inset-0 after:content-['']"
                     >
                         {product.name}

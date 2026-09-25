@@ -58,7 +58,7 @@ it('sends the newest eighteen to the home page', function () {
         arrival();
     }
 
-    $this->get('/')
+    $this->get('/fr')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('newArrivals', 18));
 });
@@ -72,7 +72,7 @@ it('orders them newest first', function () {
     $first = arrival(['name' => 'Oldest piece']);
     $last = arrival(['name' => 'Newest piece']);
 
-    $this->get('/')->assertInertia(fn (Assert $page) => $page
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page
         ->where('newArrivals.0.id', $last->id)
         ->where('newArrivals.1.id', $first->id)
     );
@@ -82,11 +82,11 @@ it('sends fewer than eighteen when the catalogue is short', function () {
     arrival();
     arrival();
 
-    $this->get('/')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 2));
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 2));
 });
 
 it('sends an empty row when nothing is listed', function () {
-    $this->get('/')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 0));
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 0));
 });
 
 // ── The audience gate ────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ it('hides trade-only pieces from a visitor who is not signed in', function () {
     arrival(['name' => 'Open to all', 'visibility' => 'both']);
     arrival(['name' => 'Trade only', 'visibility' => 'professional']);
 
-    $this->get('/')->assertInertia(fn (Assert $page) => $page
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page
         ->has('newArrivals', 1)
         ->where('newArrivals.0.name', 'Open to all')
     );
@@ -105,7 +105,7 @@ it('hides trade-only pieces from an ordinary buyer', function () {
     arrival(['visibility' => 'professional']);
 
     $this->actingAs(User::factory()->create(['role' => 'buyer']))
-        ->get('/')
+        ->get('/fr')
         ->assertInertia(fn (Assert $page) => $page->has('newArrivals', 0));
 });
 
@@ -120,7 +120,7 @@ it('shows trade-only pieces to a verified professional buyer', function () {
     ]);
 
     $this->actingAs($pro)
-        ->get('/')
+        ->get('/fr')
         ->assertInertia(fn (Assert $page) => $page
             ->has('newArrivals', 1)
             ->where('newArrivals.0.name', 'Trade only')
@@ -135,7 +135,7 @@ it('leaves unpublished pieces out', function () {
     arrival(['status' => 'rejected']);
     arrival(['status' => 'archived']);
 
-    $this->get('/')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 1));
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page->has('newArrivals', 1));
 });
 
 /**
@@ -150,7 +150,7 @@ it('renders even when a shop is removed under its products', function () {
 
     $this->store->delete();
 
-    $this->get('/')->assertOk();
+    $this->get('/fr')->assertOk();
 });
 
 it('ships the row translations in all three locales', function () {

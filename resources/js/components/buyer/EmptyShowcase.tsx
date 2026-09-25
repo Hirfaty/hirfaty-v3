@@ -49,7 +49,7 @@ export default function EmptyShowcase({
     eyebrow,
     title,
     ctaLabel,
-    ctaHref = '/products',
+    ctaHref = route('products.index'),
 }: {
     eyebrow: string;
     title: string;

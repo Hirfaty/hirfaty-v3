@@ -38,8 +38,8 @@
         label="إذا لم يعمل الزر، انسخ هذا الرابط في متصفحك:" />
 
     <x-slot:footer>
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
+        <a href="{{ route('privacy', ['locale' => 'ar']) }}" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/terms" style="color:{{ config('mail_theme.soft') }};">شروط الاستخدام</a>
+        <a href="{{ route('terms', ['locale' => 'ar']) }}" style="color:{{ config('mail_theme.soft') }};">شروط الاستخدام</a>
     </x-slot:footer>
 </x-mail.layout>

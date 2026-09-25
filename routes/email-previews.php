@@ -12,12 +12,16 @@
  *  2. Every route here is `role:super_admin`, not merely `auth`. They used to
  *     be the latter, which meant any signed-up shopper could read a stranger's
  *     delivery details by guessing a preview URL.
+ *
+ * The language segment is `{lang}`, never `{locale}`: that name belongs to the
+ * public pages' URL prefix, and SetLocale strips it from any route it appears
+ * on — the closures below would then be called one argument short.
  */
 
 use App\Models\Order;
 use App\Services\LoginCodeService;
 
-Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
+Route::get('/preview/email/order-placed/{lang}', function (string $locale) {
     // A single checkout can span several stores (CheckoutService splits one
     // cart into one Order per store), so the preview mirrors that: every order
     // sharing the first one's group_reference, the same set OrderPlaced mails.
@@ -35,7 +39,7 @@ Route::get('/preview/email/order-placed/{locale}', function (string $locale) {
     ]);
 })->middleware(['auth', 'role:super_admin']);
 
-Route::get('/preview/email/seller/new-order/{locale}', function (string $locale) {
+Route::get('/preview/email/seller/new-order/{lang}', function (string $locale) {
     $order = Order::with(['store.user', 'buyer', 'items.product'])->first();
     $user = $order->store->user;
     $user->locale = $locale;
@@ -43,7 +47,7 @@ Route::get('/preview/email/seller/new-order/{locale}', function (string $locale)
     return view("emails.seller.order.new.{$locale}", compact('order', 'user'));
 })->middleware(['auth', 'role:super_admin']);
 
-Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) {
+Route::get('/preview/email/buyer/cancelled/{lang}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
     $orders = Order::where('group_reference', $first->group_reference)
         ->with(['store', 'items.product'])
@@ -64,7 +68,7 @@ Route::get('/preview/email/buyer/cancelled/{locale}', function (string $locale) 
  * One route per event since each needs slightly different mock state on the
  * orders (a tracking number for shipped, a delivered_at for delivered).
  */
-Route::get('/preview/email/buyer/confirmed/{locale}', function (string $locale) {
+Route::get('/preview/email/buyer/confirmed/{lang}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
     $orders = Order::where('group_reference', $first->group_reference)
         ->with(['store', 'items.product'])
@@ -76,7 +80,7 @@ Route::get('/preview/email/buyer/confirmed/{locale}', function (string $locale) 
     return view("emails.buyer.order-status.confirmed.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware(['auth', 'role:super_admin']);
 
-Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
+Route::get('/preview/email/buyer/shipped/{lang}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
     $orders = Order::where('group_reference', $first->group_reference)
         ->with(['store', 'items.product'])
@@ -89,7 +93,7 @@ Route::get('/preview/email/buyer/shipped/{locale}', function (string $locale) {
     return view("emails.buyer.order-status.shipped.{$locale}", compact('orders', 'reference', 'user'));
 })->middleware(['auth', 'role:super_admin']);
 
-Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) {
+Route::get('/preview/email/buyer/delivered/{lang}', function (string $locale) {
     $first = Order::with(['store', 'buyer', 'items.product'])->firstOrFail();
     $orders = Order::where('group_reference', $first->group_reference)
         ->with(['store', 'items.product'])
@@ -106,7 +110,7 @@ Route::get('/preview/email/buyer/delivered/{locale}', function (string $locale) 
  * Trade-request verdicts, both outcomes and all three locales:
  *   /preview/email/professional/approved/fr ... /professional/declined/ar
  */
-Route::get('/preview/email/professional/{outcome}/{locale}', function (string $outcome, string $locale) {
+Route::get('/preview/email/professional/{outcome}/{lang}', function (string $outcome, string $locale) {
     abort_unless(in_array($outcome, ['approved', 'declined'], true), 404);
     abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
 
@@ -120,7 +124,7 @@ Route::get('/preview/email/professional/{outcome}/{locale}', function (string $o
  * Verification email, both audiences and all three locales:
  *   /preview/email/verify/buyer/fr   ...   /preview/email/verify/seller/ar
  */
-Route::get('/preview/email/verify/{audience}/{locale}', function (string $audience, string $locale) {
+Route::get('/preview/email/verify/{audience}/{lang}', function (string $audience, string $locale) {
     abort_unless(in_array($audience, ['buyer', 'seller'], true), 404);
     abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
 
@@ -140,7 +144,7 @@ Route::get('/preview/email/verify/{audience}/{locale}', function (string $audien
  * No `user` is passed: the signup variant deliberately goes out before the
  * account exists, so the shared template has no first name to greet with.
  */
-Route::get('/preview/email/code/{copy}/{locale}', function (string $copy, string $locale) {
+Route::get('/preview/email/code/{copy}/{lang}', function (string $copy, string $locale) {
     abort_unless(in_array($copy, ['registration_code', 'login_code'], true), 404);
     abort_unless(in_array($locale, ['fr', 'en', 'ar'], true), 404);
 

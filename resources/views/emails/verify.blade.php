@@ -55,8 +55,8 @@
 
     <x-slot:footer>
         {{ $t('verify.ignore') }}<br>
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">{{ $t('verify.privacy') }}</a>
+        <a href="{{ route('privacy', ['locale' => $locale]) }}" style="color:{{ config('mail_theme.soft') }};">{{ $t('verify.privacy') }}</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/terms" style="color:{{ config('mail_theme.soft') }};">{{ $t('verify.terms') }}</a>
+        <a href="{{ route('terms', ['locale' => $locale]) }}" style="color:{{ config('mail_theme.soft') }};">{{ $t('verify.terms') }}</a>
     </x-slot:footer>
 </x-mail.layout>

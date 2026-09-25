@@ -79,7 +79,7 @@ export default function CartSheet() {
                                 {t('header.cart_empty')}
                             </p>
                             <Link
-                                href="/products"
+                                href={route('products.index')}
                                 className="mt-5 rounded-xl border border-ink/20 px-5 py-2.5 text-sm text-ink transition-colors hover:border-ink hover:bg-sand/30"
                             >
                                 {t('header.marketplace')}

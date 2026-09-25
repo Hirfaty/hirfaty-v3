@@ -38,8 +38,8 @@
         label="Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :" />
 
     <x-slot:footer>
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
+        <a href="{{ route('privacy', ['locale' => 'fr']) }}" style="color:{{ config('mail_theme.soft') }};">Politique de confidentialité</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/terms" style="color:{{ config('mail_theme.soft') }};">Conditions d'utilisation</a>
+        <a href="{{ route('terms', ['locale' => 'fr']) }}" style="color:{{ config('mail_theme.soft') }};">Conditions d'utilisation</a>
     </x-slot:footer>
 </x-mail.layout>

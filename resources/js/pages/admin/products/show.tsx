@@ -233,7 +233,7 @@ function AdminProductShow({ product, reviews }: AdminProductShowProps) {
                         <Pencil className="h-4 w-4" />
                     </Link>
                     <Link
-                        href={`/products/${product.slug}`}
+                        href={route('products.show', product.slug)}
                         target="_blank"
                         className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:bg-muted hover:text-ink"
                         title="Voir sur le site"

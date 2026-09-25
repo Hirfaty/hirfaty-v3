@@ -28,7 +28,7 @@
         <x-mail.row label="Prix" :value="number_format($price, 2).' MAD'" />
     </x-mail.panel>
 
-    <x-mail.button :url="config('app.url').'/products/'.$product->slug">
+    <x-mail.button :url="route('products.show', ['locale' => 'fr', 'slug' => $product->slug])">
         Voir mon produit en ligne
     </x-mail.button>
 

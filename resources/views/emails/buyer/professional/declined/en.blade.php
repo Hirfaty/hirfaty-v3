@@ -22,13 +22,13 @@
         welcome to submit a new request once things change.
     </x-mail.text>
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'en'])">
         Back to the market
     </x-mail.button>
 
     <x-slot:footer>
         You're receiving this email because you requested a professional account on Hirfaty.<br>
-        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">The market</a>
+        <a href="{{ route('products.index', ['locale' => 'en']) }}" style="color:{{ config('mail_theme.soft') }};">The market</a>
         &nbsp;·&nbsp;
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">My orders</a>
     </x-slot:footer>

@@ -19,13 +19,13 @@
         product page.
     </x-mail.note>
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'en'])">
         Browse trade pricing
     </x-mail.button>
 
     <x-slot:footer>
         You're receiving this email because you requested a professional account on Hirfaty.<br>
-        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">The market</a>
+        <a href="{{ route('products.index', ['locale' => 'en']) }}" style="color:{{ config('mail_theme.soft') }};">The market</a>
         &nbsp;·&nbsp;
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">My orders</a>
     </x-slot:footer>

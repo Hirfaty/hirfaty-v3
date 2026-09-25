@@ -118,7 +118,7 @@ export default function AuthShell({
                 {/* ── Top bar ─────────────────────────────────────────── */}
                 <div className="flex items-center justify-between gap-4">
                     <Link
-                        href="/"
+                        href={route('home')}
                         className="group inline-flex items-center gap-2 text-sm text-souk-brown-deep/70 transition-colors hover:text-souk-brown"
                     >
                         <ArrowLeft
@@ -151,7 +151,7 @@ export default function AuthShell({
                 {/* ── Card ────────────────────────────────────────────── */}
                 <div className="flex flex-1 flex-col items-center justify-center py-8">
                     <Link
-                        href="/"
+                        href={route('home')}
                         className="inline-flex items-center gap-2.5"
                         aria-label="Hirfaty"
                     >

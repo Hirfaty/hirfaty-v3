@@ -49,7 +49,7 @@
         </x-mail.note>
     @endif
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'ar'])">
         متابعة التسوق
     </x-mail.button>
 
@@ -57,6 +57,6 @@
         لديك سؤال حول هذا الإلغاء؟ تواصل معنا من صفحة طلباتك.<br>
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">طلباتي</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
+        <a href="{{ route('privacy', ['locale' => 'ar']) }}" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
     </x-slot:footer>
 </x-mail.layout>

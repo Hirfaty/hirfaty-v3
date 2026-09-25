@@ -19,13 +19,13 @@
         commande — elle est indiquée sur chaque fiche.
     </x-mail.note>
 
-    <x-mail.button :url="config('app.url').'/products'">
+    <x-mail.button :url="route('products.index', ['locale' => 'fr'])">
         Découvrir les tarifs professionnels
     </x-mail.button>
 
     <x-slot:footer>
         Vous recevez cet email suite à votre demande de compte professionnel sur Hirfaty.<br>
-        <a href="{{ config('app.url') }}/products" style="color:{{ config('mail_theme.soft') }};">Le marché</a>
+        <a href="{{ route('products.index', ['locale' => 'fr']) }}" style="color:{{ config('mail_theme.soft') }};">Le marché</a>
         &nbsp;·&nbsp;
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">Mes commandes</a>
     </x-slot:footer>

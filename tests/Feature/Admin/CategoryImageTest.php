@@ -229,7 +229,7 @@ test('the shared nav payload lists every top-level category with its image', fun
         'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'],
     ])->parents()->attach($withImage);
 
-    $this->get('/')
+    $this->get('/fr')
         ->assertInertia(fn ($page) => $page
             ->has('navCategories', 2)
             ->where('navCategories.0.id', $withImage->id)

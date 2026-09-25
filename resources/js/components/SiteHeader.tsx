@@ -164,12 +164,28 @@ export const SiteHeader = ({
     };
 
     const navLinks = [
-        { href: '/products', label: t('header.marketplace') },
-        { href: '/new-arrivals', label: t('header.new_products') },
+        {
+            href: route('products.index', undefined, false),
+            label: t('header.marketplace'),
+        },
+        {
+            href: route('products.new', undefined, false),
+            label: t('header.new_products'),
+        },
         // { href: '/sellers', label: t('header.sellers') },
     ];
 
-    const aboutLink = { href: '/about', label: t('header.about') };
+    const aboutLink = {
+        href: route('about', undefined, false),
+        label: t('header.about'),
+    };
+
+    /*
+     * Relative, like every href here: they are compared against the page's
+     * own URL (isActive), which is relative. "/fr", "/ar" … — the home page
+     * of the current language.
+     */
+    const homeHref = route('home', undefined, false);
 
     const categories = navCategories ?? [];
 
@@ -182,9 +198,9 @@ export const SiteHeader = ({
      * itself and sits first, to the left of Marketplace, everywhere else.
      */
     const displayedNavLinks =
-        currentUrl === '/'
+        currentUrl === homeHref
             ? navLinks
-            : [{ href: '/', label: t('header.home') }, ...navLinks];
+            : [{ href: homeHref, label: t('header.home') }, ...navLinks];
 
     /** Shared by every top-level bar link — Home/Marketplace/… and About. */
     const renderNavLink = (l: { href: string; label: string }) => (
@@ -234,7 +250,8 @@ export const SiteHeader = ({
     ).get('category_id');
 
     /** Deep-link into the listing, pre-filtered to one craft. */
-    const categoryHref = (id: number) => `/products?category_id=${id}`;
+    const categoryHref = (id: number) =>
+        route('products.index', { category_id: id }, false);
 
     /*
      * Only meaningful in `overlay`: whether the page has moved far enough for
@@ -301,7 +318,7 @@ export const SiteHeader = ({
 
             <div className="relative container flex items-center justify-between gap-6 py-5">
                 <Link
-                    href="/"
+                    href={homeHref}
                     className="group flex shrink-0 items-center gap-2.5"
                     aria-label="Hirfaty"
                 >

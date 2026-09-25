@@ -62,6 +62,6 @@
         هل لديك سؤال؟ تواصل معنا من صفحة طلباتك.<br>
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">طلباتي</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
+        <a href="{{ route('privacy', ['locale' => 'ar']) }}" style="color:{{ config('mail_theme.soft') }};">سياسة الخصوصية</a>
     </x-slot:footer>
 </x-mail.layout>

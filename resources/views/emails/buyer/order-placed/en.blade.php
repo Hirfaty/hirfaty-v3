@@ -83,6 +83,6 @@
         Have a question? Contact us and we'll follow it up with the workshop.<br>
         <a href="{{ config('app.url') }}/orders" style="color:{{ config('mail_theme.soft') }};">My orders</a>
         &nbsp;·&nbsp;
-        <a href="{{ config('app.url') }}/privacy" style="color:{{ config('mail_theme.soft') }};">Privacy Policy</a>
+        <a href="{{ route('privacy', ['locale' => 'en']) }}" style="color:{{ config('mail_theme.soft') }};">Privacy Policy</a>
     </x-slot:footer>
 </x-mail.layout>
