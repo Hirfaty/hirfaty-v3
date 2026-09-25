@@ -21,6 +21,15 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import ProductReviews, {
+    RatingStars,
+    reviewCountLabel,
+} from '@/components/buyer/ProductReviews';
+import type {
+    PublicReview,
+    ReviewSummary,
+    ReviewsPagination,
+} from '@/components/buyer/ProductReviews';
 import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
@@ -408,12 +417,18 @@ const ProductDetail = ({
     inCart,
     moreFromStore,
     relatedProducts,
+    reviewSummary,
+    reviews,
+    reviewsPagination,
 }: {
     product: DetailProduct;
     inWishlist: boolean;
     inCart: boolean;
     moreFromStore: DetailProduct[];
     relatedProducts: DetailProduct[];
+    reviewSummary: ReviewSummary;
+    reviews: PublicReview[];
+    reviewsPagination: ReviewsPagination;
 }) => {
     const { t } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
@@ -808,6 +823,30 @@ const ProductDetail = ({
                         {product.name}
                     </h1>
 
+                    {/* Rating at a glance — jumps to the full reviews. */}
+                    {reviewSummary.count > 0 && (
+                        <a
+                            href="#reviews"
+                            className="mt-3 inline-flex items-center gap-2 text-sm text-souk-brown-deep/75 transition-colors hover:text-souk-title"
+                        >
+                            <RatingStars
+                                value={reviewSummary.average ?? 0}
+                                label={t(
+                                    'buyer.detail.reviews_stars_label',
+                                ).replace(
+                                    ':n',
+                                    String(reviewSummary.average ?? 0),
+                                )}
+                            />
+                            <span className="font-medium text-souk-title">
+                                {reviewSummary.average?.toFixed(1)}
+                            </span>
+                            <span className="underline underline-offset-4">
+                                {reviewCountLabel(t, reviewSummary.count)}
+                            </span>
+                        </a>
+                    )}
+
                     {product.description && (
                         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-souk-brown-deep/80">
                             {product.description}
@@ -1171,6 +1210,12 @@ const ProductDetail = ({
                     )}
                 </div>
             </section>
+
+            <ProductReviews
+                summary={reviewSummary}
+                reviews={reviews}
+                pagination={reviewsPagination}
+            />
 
             <ProductRow
                 title={t('buyer.detail.more_from_store')}

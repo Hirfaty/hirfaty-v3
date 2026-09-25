@@ -149,6 +149,17 @@ return [
     'detail.home' => 'Accueil',
     'detail.eyebrow_handmade' => 'Fait main',
     'detail.related' => 'Vous aimerez aussi',
+    'detail.reviews_heading' => 'Avis des acheteurs',
+    'detail.reviews_count_one' => ':n avis',
+    'detail.reviews_count' => ':n avis',
+    'detail.reviews_out_of' => 'sur 5',
+    'detail.reviews_stars_label' => ':n sur 5 étoiles',
+    'detail.reviews_star_row' => ':n étoiles',
+    'detail.reviews_empty' => 'Pas encore d’avis sur cette pièce.',
+    'detail.reviews_empty_hint' => 'Les avis sont laissés par les acheteurs une fois leur commande reçue.',
+    'detail.reviews_verified' => 'Achat vérifié',
+    'detail.reviews_anonymous' => 'Acheteur Hirfaty',
+    'detail.reviews_more' => 'Voir plus d’avis',
     'detail.handmade_note' => 'Chaque pièce est faite main : de légères variations de teinte et de motif sont possibles, et rendent la vôtre unique.',
 
     // Reassurance row

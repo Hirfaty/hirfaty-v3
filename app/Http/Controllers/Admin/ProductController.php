@@ -12,6 +12,7 @@ use App\Notifications\ProductApproved;
 use App\Notifications\ProductRejected;
 use App\Rules\ValidProductMedia;
 use App\Services\ProductDeletionService;
+use App\Services\ReviewService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -587,12 +588,13 @@ class ProductController extends Controller
         }
     }
 
-    public function show(Product $product)
+    public function show(Product $product, ReviewService $reviews)
     {
         $product->load(['store.user', 'store.city', 'category', 'media', 'orderItems.order', 'variants.options', 'variants.media']);
 
         return Inertia::render('admin/products/show', [
             'product' => $product,
+            'reviews' => $reviews->forAdmin($product),
         ]);
     }
 

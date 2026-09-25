@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -154,6 +155,88 @@ class ReviewService
 
             return count($written);
         });
+    }
+
+    /**
+     * The rating block at the top of a product's public reviews: average,
+     * count, and how many reviews landed on each star.
+     *
+     * The average is taken from the same grouped counts rather than from the
+     * cached `products.average_rating`, so the headline figure and the bars
+     * under it can never disagree.
+     *
+     * @return array{average: float|null, count: int, distribution: array<int, int>}
+     */
+    public function summaryFor(Product $product): array
+    {
+        $counts = ProductReview::where('product_id', $product->id)
+            ->selectRaw('rating, count(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating');
+
+        $total = (int) $counts->sum();
+        $distribution = [];
+
+        foreach ([5, 4, 3, 2, 1] as $star) {
+            $distribution[$star] = (int) $counts->get($star, 0);
+        }
+
+        $weighted = collect($distribution)->map(fn ($count, $star) => $star * $count)->sum();
+
+        return [
+            'average' => $total > 0 ? round($weighted / $total, 1) : null,
+            'count' => $total,
+            'distribution' => $distribution,
+        ];
+    }
+
+    /**
+     * A product's reviews, newest first, for the public product page.
+     *
+     * Only the author's name columns are loaded — the page shows a masked
+     * name and nothing else about the buyer.
+     *
+     * Its own page name so "load more reviews" never collides with any other
+     * paginated prop on the product page.
+     */
+    public function paginateFor(Product $product, int $perPage = 6): LengthAwarePaginator
+    {
+        return ProductReview::where('product_id', $product->id)
+            ->with('user:id,first_name,last_name')
+            ->latest()
+            ->latest('id')
+            ->paginate($perPage, pageName: 'reviews_page');
+    }
+
+    /**
+     * Every review of a product with its *unmasked* author, for the admin
+     * product page. Unlike paginateFor() this is for Hirfaty's desk only —
+     * the desk needs to know who said what (and on which order) to moderate
+     * or follow up, so the buyer's identity is deliberately included here.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function forAdmin(Product $product): array
+    {
+        return ProductReview::where('product_id', $product->id)
+            ->with(['user:id,first_name,last_name,email', 'order:id,reference'])
+            ->latest()
+            ->latest('id')
+            ->get()
+            ->map(fn (ProductReview $review) => [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at?->toIso8601String(),
+                'user' => $review->user ? [
+                    'id' => $review->user->id,
+                    'first_name' => $review->user->first_name,
+                    'last_name' => $review->user->last_name,
+                    'email' => $review->user->email,
+                ] : null,
+                'order_reference' => $review->order?->reference,
+            ])
+            ->all();
     }
 
     /**

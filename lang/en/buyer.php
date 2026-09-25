@@ -148,6 +148,17 @@ return [
     'detail.home' => 'Home',
     'detail.eyebrow_handmade' => 'Handmade',
     'detail.related' => 'You may also like',
+    'detail.reviews_heading' => 'Buyer reviews',
+    'detail.reviews_count_one' => ':n review',
+    'detail.reviews_count' => ':n reviews',
+    'detail.reviews_out_of' => 'out of 5',
+    'detail.reviews_stars_label' => ':n out of 5 stars',
+    'detail.reviews_star_row' => ':n stars',
+    'detail.reviews_empty' => 'No reviews for this piece yet.',
+    'detail.reviews_empty_hint' => 'Reviews are left by buyers once their order has arrived.',
+    'detail.reviews_verified' => 'Verified purchase',
+    'detail.reviews_anonymous' => 'Hirfaty buyer',
+    'detail.reviews_more' => 'Show more reviews',
     'detail.handmade_note' => 'Every piece is handmade, so slight variations in colour and pattern are possible — they are what make yours one of a kind.',
 
     // Reassurance row

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Resources\ProductReviewResource;
 use App\Models\Category;
 use App\Models\City;
 use App\Models\Order;
@@ -374,4 +375,104 @@ test('the orders page marks only delivered orders as rateable', function () {
         ->where('can_review', true);
 
     expect($rateable)->toHaveCount(1);
+});
+
+/*
+ * ── The public product page ──────────────────────────────────────────────
+ */
+
+function publicReview(Store $store, Product $product, int $rating, array $user = [], ?string $comment = null): ProductReview
+{
+    $buyer = User::factory()->create(array_merge(['role' => 'buyer'], $user));
+    $order = orderFor($buyer, $store, $product);
+
+    return ProductReview::create([
+        'user_id' => $buyer->id,
+        'product_id' => $product->id,
+        'order_id' => $order->id,
+        'rating' => $rating,
+        'comment' => $comment,
+    ]);
+}
+
+test('the product page shows the rating summary and each review\'s stars', function () {
+    $product = reviewProduct($this->store);
+    publicReview($this->store, $product, 5, comment: 'Magnifique.');
+    publicReview($this->store, $product, 4);
+    publicReview($this->store, $product, 4);
+
+    $this->get(route('products.show', $product->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('buyer/products/show')
+            ->where('reviewSummary.count', 3)
+            ->where('reviewSummary.average', 4.3)
+            ->where('reviewSummary.distribution.5', 1)
+            ->where('reviewSummary.distribution.4', 2)
+            ->where('reviewSummary.distribution.1', 0)
+            ->has('reviews', 3)
+            ->has('reviews.0', fn ($review) => $review
+                ->has('id')
+                ->has('rating')
+                ->has('comment')
+                ->has('author')
+                ->has('created_at')
+            )
+        );
+});
+
+/**
+ * Masked on the server, not in the page: the full name must not be anywhere
+ * in the response a visitor's browser receives.
+ */
+test('a reviewer\'s name is masked and never sent in full', function () {
+    $product = reviewProduct($this->store);
+    publicReview($this->store, $product, 5, ['first_name' => 'Achraf', 'last_name' => 'Essaadi']);
+
+    $response = $this->get(route('products.show', $product->slug));
+
+    $response->assertInertia(fn ($page) => $page->where('reviews.0.author', 'A*** E.'));
+    $response->assertDontSee('Achraf');
+    $response->assertDontSee('Essaadi');
+});
+
+test('an Arabic name is masked without splitting a character', function () {
+    expect(ProductReviewResource::maskName('أشرف', 'السعدي'))->toBe('أ*** ا.')
+        ->and(ProductReviewResource::maskName('', null))->toBeNull()
+        ->and(ProductReviewResource::maskName('sara', ''))->toBe('S***');
+});
+
+test('a product with no reviews sends an empty summary', function () {
+    $product = reviewProduct($this->store);
+
+    $this->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page
+            ->where('reviewSummary.count', 0)
+            ->where('reviewSummary.average', null)
+            ->has('reviews', 0)
+            ->where('reviewsPagination.has_more', false)
+        );
+});
+
+test('reviews are paginated and only this product\'s are shown', function () {
+    $product = reviewProduct($this->store);
+    $other = reviewProduct($this->store, ['name' => 'Tajine']);
+
+    foreach (range(1, 8) as $i) {
+        publicReview($this->store, $product, 5);
+    }
+    publicReview($this->store, $other, 1);
+
+    $this->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page
+            ->where('reviewSummary.count', 8)
+            ->has('reviews', 6)
+            ->where('reviewsPagination.has_more', true)
+        );
+
+    $this->get(route('products.show', ['slug' => $product->slug, 'reviews_page' => 2]))
+        ->assertInertia(fn ($page) => $page
+            ->has('reviews', 2)
+            ->where('reviewsPagination.has_more', false)
+        );
 });

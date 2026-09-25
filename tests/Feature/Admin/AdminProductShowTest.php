@@ -5,6 +5,7 @@ use App\Models\City;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantOption;
 use App\Models\Store;
@@ -68,6 +69,46 @@ test('the show page renders order history with the order relation resolved', fun
                 ->where('product.id', $this->product->id)
                 ->has('product.order_items', 1)
                 ->where('product.order_items.0.order.id', $order->id)
+        );
+});
+
+test('the show page lists reviews with their unmasked owners', function () {
+    $buyer = User::factory()->create([
+        'role' => 'buyer',
+        'first_name' => 'Achraf',
+        'last_name' => 'Essaadi',
+        'email' => 'achraf@example.com',
+    ]);
+    $order = Order::create([
+        'buyer_id' => $buyer->id,
+        'store_id' => $this->store->id,
+        'city_id' => City::first()->id,
+        'status' => 'delivered',
+        'total_amount' => 200,
+        'platform_fee' => 0,
+        'delivery_fee' => 0,
+        'seller_earnings' => 190,
+        'shipping_address' => 'Test Address',
+    ]);
+    ProductReview::create([
+        'user_id' => $buyer->id,
+        'product_id' => $this->product->id,
+        'order_id' => $order->id,
+        'rating' => 4,
+        'comment' => 'Très beau.',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.show', $this->product))
+        ->assertInertia(
+            fn ($page) => $page
+                ->has('reviews', 1)
+                ->where('reviews.0.rating', 4)
+                ->where('reviews.0.comment', 'Très beau.')
+                ->where('reviews.0.user.first_name', 'Achraf')
+                ->where('reviews.0.user.last_name', 'Essaadi')
+                ->where('reviews.0.user.email', 'achraf@example.com')
+                ->where('reviews.0.order_reference', $order->reference)
         );
 });
 

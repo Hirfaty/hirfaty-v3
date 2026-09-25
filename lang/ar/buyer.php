@@ -150,6 +150,17 @@ return [
     'detail.home' => 'الرئيسية',
     'detail.eyebrow_handmade' => 'صناعة يدوية',
     'detail.related' => 'قد يعجبك أيضاً',
+    'detail.reviews_heading' => 'آراء المشترين',
+    'detail.reviews_count_one' => 'تقييم واحد',
+    'detail.reviews_count' => ':n تقييمات',
+    'detail.reviews_out_of' => 'من 5',
+    'detail.reviews_stars_label' => ':n من 5 نجوم',
+    'detail.reviews_star_row' => ':n نجوم',
+    'detail.reviews_empty' => 'لا توجد تقييمات لهذه القطعة بعد.',
+    'detail.reviews_empty_hint' => 'يترك المشترون تقييماتهم بعد استلام طلباتهم.',
+    'detail.reviews_verified' => 'شراء موثّق',
+    'detail.reviews_anonymous' => 'مشتري من حرفتي',
+    'detail.reviews_more' => 'عرض المزيد من التقييمات',
     'detail.handmade_note' => 'كل قطعة مصنوعة يدوياً، لذا قد تختلف الألوان والنقوش قليلاً، وهو ما يجعل قطعتك فريدة.',
 
     // Reassurance row

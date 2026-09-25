@@ -5,6 +5,7 @@ import {
     CircleX,
     Pencil,
     PlayCircle,
+    Star,
     SquareArrowOutUpRight,
     Trash2,
     X,
@@ -66,7 +67,23 @@ const REJECTION_REASONS = [
     'Autre',
 ] as const;
 
+interface AdminReview {
+    id: number;
+    rating: number;
+    comment: string | null;
+    created_at: string | null;
+    /** Unmasked — this page is for Hirfaty's desk only. */
+    user: {
+        id: number;
+        first_name: string;
+        last_name: string;
+        email: string | null;
+    } | null;
+    order_reference: string | null;
+}
+
 interface AdminProductShowProps {
+    reviews: AdminReview[];
     product: Product & {
         store: Store & { user: User };
         category: Category;
@@ -111,7 +128,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-function AdminProductShow({ product }: AdminProductShowProps) {
+function AdminProductShow({ product, reviews }: AdminProductShowProps) {
     const [mediaOpen, setMediaOpen] = useState(false);
     const [mediaIndex, setMediaIndex] = useState(0);
     const [deleteOpen, setDeleteOpen] = useState(false);
@@ -122,6 +139,11 @@ function AdminProductShow({ product }: AdminProductShowProps) {
     }>({
         rejection_reason: REJECTION_REASONS[0],
     });
+
+    const averageRating =
+        reviews.length > 0
+            ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+            : null;
 
     const images = product.media.filter((m) => m.type === 'image');
     const videos = product.media.filter((m) => m.type === 'video');
@@ -519,6 +541,98 @@ function AdminProductShow({ product }: AdminProductShowProps) {
                                             </div>
                                         </div>
                                     ))}
+                            </div>
+                        </Card>
+                    )}
+
+                    {reviews.length > 0 && (
+                        <Card
+                            title="Avis des acheteurs"
+                            subtitle={`${reviews.length} avis · note moyenne ${averageRating?.toFixed(1)} / 5`}
+                        >
+                            <div className="divide-y divide-border">
+                                {reviews.map((review) => (
+                                    <div
+                                        key={review.id}
+                                        className="space-y-2 px-5 py-4"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className="inline-flex items-center gap-0.5"
+                                                    role="img"
+                                                    aria-label={`${review.rating} sur 5`}
+                                                >
+                                                    {[1, 2, 3, 4, 5].map(
+                                                        (n) => (
+                                                            <Star
+                                                                key={n}
+                                                                className={`h-4 w-4 ${
+                                                                    n <=
+                                                                    review.rating
+                                                                        ? 'fill-amber-400 text-amber-400'
+                                                                        : 'fill-transparent text-ink-soft/30'
+                                                                }`}
+                                                            />
+                                                        ),
+                                                    )}
+                                                </span>
+                                                <span className="text-sm font-semibold text-ink">
+                                                    {review.rating}/5
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-ink-soft">
+                                                {formatDate(review.created_at)}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                                            {review.user ? (
+                                                <Link
+                                                    href={route(
+                                                        'admin.users.show',
+                                                        review.user.id,
+                                                    )}
+                                                    className="font-medium text-ink hover:underline"
+                                                >
+                                                    {review.user.first_name}{' '}
+                                                    {review.user.last_name}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-ink-soft">
+                                                    Compte supprimé
+                                                </span>
+                                            )}
+                                            {review.user?.email && (
+                                                <span className="text-xs text-ink-soft">
+                                                    {review.user.email}
+                                                </span>
+                                            )}
+                                            {review.order_reference && (
+                                                <Link
+                                                    href={route(
+                                                        'admin.orders.show',
+                                                        review.order_reference,
+                                                    )}
+                                                    className="text-xs text-ink-soft hover:text-ink hover:underline"
+                                                >
+                                                    Commande{' '}
+                                                    {review.order_reference}
+                                                </Link>
+                                            )}
+                                        </div>
+
+                                        {review.comment ? (
+                                            <p className="text-sm leading-relaxed whitespace-pre-line text-ink">
+                                                {review.comment}
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-ink-soft italic">
+                                                Aucun commentaire.
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </Card>
                     )}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerProductResource;
+use App\Http\Resources\ProductReviewResource;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
@@ -12,6 +13,7 @@ use App\Models\Wishlist;
 use App\Services\NewArrivalsService;
 use App\Services\ProductScoringService;
 use App\Services\ProductSearchService;
+use App\Services\ReviewService;
 use App\Services\WishlistService;
 use Auth;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,6 +26,7 @@ class ProductController extends Controller
         private ProductScoringService $scoring,
         private WishlistService $wishlist,
         private ProductSearchService $search,
+        private ReviewService $reviews,
     ) {}
 
     public function index(Request $request)
@@ -198,12 +201,24 @@ class ProductController extends Controller
         })->where('product_id', $product->id)->exists()
         : false;
 
+        $reviews = $this->reviews->paginateFor($product);
+
         return Inertia::render('buyer/products/show', [
             'product' => new BuyerProductResource($product),
             'inWishlist' => $inWishlist,
             'inCart' => $inCart,
             'moreFromStore' => BuyerProductResource::collection($this->moreFromStore($product)),
             'relatedProducts' => BuyerProductResource::collection($this->relatedProducts($product)),
+            'reviewSummary' => $this->reviews->summaryFor($product),
+            // Merged so "more reviews" appends a page instead of replacing
+            // the list — same contract as the listing's `products`.
+            'reviews' => Inertia::merge(
+                ProductReviewResource::collection($reviews->items())->resolve($request)
+            ),
+            'reviewsPagination' => [
+                'current_page' => $reviews->currentPage(),
+                'has_more' => $reviews->hasMorePages(),
+            ],
         ]);
     }
 
