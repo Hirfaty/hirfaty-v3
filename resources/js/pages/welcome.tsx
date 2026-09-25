@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+// import { Head } from '@inertiajs/react';
 import ArtisanCta from '@/components/ArtisanCta';
 import type { ShowcaseProduct } from '@/components/home/ProductShowcase';
 import BrochureSection from '@/components/home_page/BrochureSection';

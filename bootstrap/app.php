@@ -12,6 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Sentry\Laravel\Integration;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -90,4 +91,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return $response;
         });
+
+        // Without this line Sentry is installed but never told about an
+        // exception: Laravel hands unhandled errors to the handler, and this
+        // is what forwards them on.
+        Integration::handles($exceptions);
     })->create();
