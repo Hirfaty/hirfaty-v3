@@ -38,7 +38,6 @@ import { useCartSheet } from '@/contexts/CartSheetContext';
 import { useCurrency } from '@/hooks/use-currency';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useTranslation } from '@/hooks/use-translation';
-import { login } from '@/routes';
 import type { Media } from '@/types';
 import type {
     BuyerProductResource,
@@ -433,7 +432,13 @@ const ProductDetail = ({
     const { t } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
     const { openCart } = useCartSheet();
-    const { auth } = usePage().props as unknown as {
+    const page = usePage();
+    /*
+     * Where a guest is sent back to after signing in: this very page, in
+     * this language — see PostLoginRedirectService.
+     */
+    const loginHref = route('login', { redirect: page.url });
+    const { auth } = page.props as unknown as {
         auth: {
             user: {
                 role?: string;
@@ -619,7 +624,7 @@ const ProductDetail = ({
         }
 
         if (!auth.user) {
-            router.visit(route('login'));
+            router.visit(loginHref);
 
             return;
         }
@@ -666,7 +671,7 @@ const ProductDetail = ({
         // The route is auth-only, so a guest would just get bounced; send them
         // to log in instead of firing a request that cannot succeed.
         if (!auth.user) {
-            router.visit(route('login'));
+            router.visit(loginHref);
 
             return;
         }
@@ -1077,7 +1082,7 @@ const ProductDetail = ({
                         <p className="mt-3 text-[13px] leading-relaxed text-souk-brown-deep/70">
                             {t('buyer.detail.login_to_buy_hint')}{' '}
                             <Link
-                                href={login()}
+                                href={loginHref}
                                 className="text-souk-brown underline underline-offset-4"
                             >
                                 {t('buyer.detail.login_to_buy_register')}

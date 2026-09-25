@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
@@ -44,6 +44,7 @@ export function CollectionCard({
     canWishlist: boolean;
 }) {
     const [wished, setWished] = useState(wishlisted);
+    const { url } = usePage();
     const gallery = product.gallery_images ?? product.images;
     const { index, previous, hoverProps } = useHoverGallery(gallery.length);
 
@@ -77,7 +78,8 @@ export function CollectionCard({
         // bounced — send them to log in rather than fire a request that
         // cannot succeed.
         if (!canWishlist) {
-            router.visit(route('login'));
+            // Come back to this listing (filters included) once signed in.
+            router.visit(route('login', { redirect: url }));
 
             return;
         }

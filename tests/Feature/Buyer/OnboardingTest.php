@@ -73,6 +73,17 @@ test('skipping still counts as done', function () {
     expect($this->buyer->fresh()->onboarded_at)->not->toBeNull();
 });
 
+/*
+ * A new buyer who signed up to buy something still gets the tour first, but
+ * ends it back on that product rather than on the catalogue.
+ */
+test('the tour ends on the page that made them sign up', function (string $route) {
+    $this->withSession(['url.intended' => '/fr/products/vase-bleu'])
+        ->actingAs($this->buyer)
+        ->post(route($route))
+        ->assertRedirect('/fr/products/vase-bleu');
+})->with(['onboarding.skip', 'onboarding.store']);
+
 test('finishing without picking anything is fine', function () {
     $this->actingAs($this->buyer)
         ->post(route('onboarding.store'))

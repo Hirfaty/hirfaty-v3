@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse as CustomLoginResponse;
 use App\Http\Responses\VerifyEmailResponse as CustomVerifyEmailResponse;
+use App\Services\PostLoginRedirectService;
 use App\Services\RegistrationCodeService;
 use App\Services\SocialAuthService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -82,6 +83,10 @@ class FortifyServiceProvider extends ServiceProvider
          * people.
          */
         Fortify::loginView(function (Request $request) {
+            // A public page sent them here (add to cart, the heart) and says where
+            // to come back to. See PostLoginRedirectService for why it is sanitised.
+            app(PostLoginRedirectService::class)->remember($request, $request->query('redirect'));
+
             $pending = app(RegistrationCodeService::class)->resolve($request);
 
             return Inertia::render('auth/login/identify', [

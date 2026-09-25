@@ -9,6 +9,7 @@ use App\Models\City;
 use App\Models\PendingRegistration;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\PostLoginRedirectService;
 use App\Services\RegistrationCodeService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -305,8 +306,13 @@ class RegistrationController extends Controller
             return to_route('seller.welcome');
         }
 
-        return $user->needsOnboarding()
-            ? to_route('onboarding.show')
-            : to_route('products.index');
+        if ($user->needsOnboarding()) {
+            // The remembered page waits in the session until the tour ends.
+            return to_route('onboarding.show');
+        }
+
+        $intended = app(PostLoginRedirectService::class)->pull(request(), $user);
+
+        return $intended !== null ? redirect($intended) : to_route('products.index');
     }
 }

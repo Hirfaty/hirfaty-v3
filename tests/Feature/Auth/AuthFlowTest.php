@@ -570,6 +570,16 @@ test('a login code signs an existing account in', function () {
     expect(LoginCode::count())->toBe(0);
 });
 
+test('a login code sign-in returns them to the page that sent them to log in', function () {
+    $user = User::factory()->create(['email' => 'known@example.com', 'role' => 'buyer']);
+
+    $this->get(route('login', ['redirect' => '/fr/products/vase-bleu']));
+    $code = requestLoginCode($user);
+
+    $this->post(route('login.code.verify'), ['code' => $code])
+        ->assertRedirect('/fr/products/vase-bleu');
+});
+
 test('a login code is stored hashed and a wrong one is counted', function () {
     $user = User::factory()->create();
     $code = requestLoginCode($user);

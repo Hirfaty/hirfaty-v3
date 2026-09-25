@@ -2,6 +2,7 @@
 
 namespace App\Http\Responses;
 
+use App\Services\PostLoginRedirectService;
 use Laravel\Fortify\Contracts\VerifyEmailResponse as VerifyEmailResponseContract;
 
 /**
@@ -44,6 +45,8 @@ class VerifyEmailResponse implements VerifyEmailResponseContract
             return redirect()->route('onboarding.show');
         }
 
-        return redirect()->route('products.index');
+        $intended = app(PostLoginRedirectService::class)->pull($request, $user);
+
+        return $intended !== null ? redirect($intended) : redirect()->route('products.index');
     }
 }

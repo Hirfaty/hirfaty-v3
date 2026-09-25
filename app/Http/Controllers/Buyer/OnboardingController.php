@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\OnboardingService;
+use App\Services\PostLoginRedirectService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,7 +17,21 @@ use Inertia\Inertia;
  */
 class OnboardingController extends Controller
 {
-    public function __construct(private OnboardingService $onboarding) {}
+    public function __construct(
+        private OnboardingService $onboarding,
+        private PostLoginRedirectService $postLogin,
+    ) {}
+
+    /**
+     * Where the tour ends: the page that made them sign up if there was one
+     * (a product they wanted to buy), the market otherwise.
+     */
+    private function afterTour(Request $request): RedirectResponse
+    {
+        $intended = $this->postLogin->pull($request, $request->user());
+
+        return $intended !== null ? redirect($intended) : redirect()->route('products.index');
+    }
 
     public function show(Request $request)
     {
@@ -54,14 +70,13 @@ class OnboardingController extends Controller
 
         $this->onboarding->complete($request->user(), $data['interests'] ?? []);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Bienvenue sur Hirfaty !');
+        return $this->afterTour($request)->with('success', 'Bienvenue sur Hirfaty !');
     }
 
     public function skip(Request $request)
     {
         $this->onboarding->skip($request->user());
 
-        return redirect()->route('products.index');
+        return $this->afterTour($request);
     }
 }
