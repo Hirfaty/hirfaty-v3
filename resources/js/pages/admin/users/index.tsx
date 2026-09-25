@@ -3,8 +3,6 @@ import {
     BadgeCheck,
     Ban,
     CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
     Clock,
     EllipsisVertical,
     Eye,
@@ -726,52 +724,21 @@ export default function UsersIndex({
                             {users.from}–{users.to} sur {users.total}
                         </p>
                         <div className="flex items-center gap-1">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                disabled={!users.prev_page_url}
-                                onClick={() =>
-                                    router.get(users.prev_page_url!, filters, {
-                                        preserveScroll: true,
-                                    })
-                                }
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            {users.links
-                                .filter((link) => !isNaN(Number(link.label)))
-                                .map((link) => (
-                                    <Button
-                                        key={link.label}
-                                        variant={
-                                            link.active ? 'default' : 'ghost'
-                                        }
-                                        size="sm"
-                                        className="h-8 w-8"
-                                        onClick={() =>
-                                            link.url &&
-                                            router.get(link.url, filters, {
-                                                preserveScroll: true,
-                                            })
-                                        }
-                                    >
-                                        {link.label}
-                                    </Button>
-                                ))}
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                disabled={!users.next_page_url}
-                                onClick={() =>
-                                    router.get(users.next_page_url!, filters, {
-                                        preserveScroll: true,
-                                    })
-                                }
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                            {users.links.map((link, i) => (
+                                <Link
+                                    key={i}
+                                    href={link.url || '#'}
+                                    preserveScroll
+                                    className={`flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm transition ${
+                                        link.active
+                                            ? 'bg-ink font-medium text-white'
+                                            : 'text-ink-soft hover:bg-muted'
+                                    } ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ))}
                         </div>
                     </div>
                 )}

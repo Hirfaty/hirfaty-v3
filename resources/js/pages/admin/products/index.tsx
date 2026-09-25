@@ -543,8 +543,12 @@ function AdminProducts({
                     )}
                 </div>
 
-                {/* Right: review panel */}
-                <aside className="space-y-4">
+                {/* Right: review panel — pinned under the sticky admin header
+                    so it stays in view while the table scrolls. `self-start`
+                    is required: grid items stretch by default, which leaves
+                    sticky nothing to travel within. */}
+                <aside className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:self-start xl:overflow-y-auto">
+                    {' '}
                     {selected ? (
                         <>
                             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
