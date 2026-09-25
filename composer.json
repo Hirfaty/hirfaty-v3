@@ -19,6 +19,7 @@
         "league/flysystem-aws-s3-v3": "3.0",
         "mcamara/laravel-localization": "^2.4",
         "resend/resend-php": "^1.12",
+        "sentry/sentry-laravel": "^4.28",
         "spatie/laravel-health": "^1.40",
         "tightenco/ziggy": "^2.6"
     },
