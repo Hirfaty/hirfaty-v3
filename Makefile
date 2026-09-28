@@ -237,9 +237,9 @@ stage-ps:
 stage-migrate:
 	$(COMPOSE_STAGE) exec app php artisan migrate --force
 
-stage-db-reset:
-	$(COMPOSE_STAGE) run --rm app php artisan migrate:fresh --force
-	$(COMPOSE_STAGE) run --rm app php artisan db:seed --class=SuperAdminSeeder --force
+# stage-db-reset:
+# 	$(COMPOSE_STAGE) run --rm app php artisan migrate:fresh --force
+# 	$(COMPOSE_STAGE) run --rm app php artisan db:seed --class=SuperAdminSeeder --force
 
 stage-seed:
 	$(COMPOSE_STAGE) run --rm app php artisan db:seed --force
