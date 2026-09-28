@@ -242,7 +242,7 @@ class User extends Authenticatable implements AuthMustVerifyEmail
 
     /**
      * Admin-created accounts may have no email yet (see the users.email
-     * nullable migration), and every notification in app/Notifications is
+     * nullable migration), and every notification sent through here is
      * mail-only — dispatching one would queue a job that can only fail in the
      * worker with "no To address". A seller reaches this: an admin can list
      * products for them, so a buyer's order fires NewOrderReceived at an
@@ -250,7 +250,9 @@ class User extends Authenticatable implements AuthMustVerifyEmail
      *
      * Drop it instead. Nothing is lost that could have been delivered, and
      * the notification resumes working the moment an address is filled in.
-     * Revisit if a database/SMS channel is ever added.
+     * The admin bell (database channel) does not come through here: it is
+     * sent with the Notification facade by AdminNotificationService, so an
+     * admin with no address still gets it.
      */
     public function notify($instance): void
     {

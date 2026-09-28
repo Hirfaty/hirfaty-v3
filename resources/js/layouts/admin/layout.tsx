@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import NotificationBell from '@/components/admin/notification-bell';
 import AdminSidebar from '@/components/AdminSidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
@@ -20,6 +21,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         <p className="text-sm tracking-wide text-muted-foreground uppercase">
                             Espace administrateur
                         </p>
+                        <div className="ms-auto">
+                            <NotificationBell />
+                        </div>
                     </header>
                     <main className="flex-1">{children}</main>
                 </div>

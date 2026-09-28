@@ -41,6 +41,7 @@ return [
     'admin.delivery_rates' => 'أسعار التوصيل',
     'admin.newsletter' => 'مشتركو النشرة البريدية',
     'admin.orders' => 'المشتريات',
+    'admin.notifications' => 'الإشعارات',
     'admin.order' => 'عملية شراء',
     'admin.products' => 'المنتجات',
     'admin.product_create' => 'منتج جديد',

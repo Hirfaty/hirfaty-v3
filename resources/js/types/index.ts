@@ -52,6 +52,29 @@ export interface SellerStoreStatus {
     can_sell: boolean;
 }
 
+/**
+ * One row of the admin's in-app notifications, as
+ * AdminNotificationService::present() shapes it. Title and body are already
+ * written out (in French, like the rest of /admin).
+ */
+export interface AdminNotification {
+    id: string;
+    /** e.g. 'purchase.placed' — picks the icon. */
+    kind: string;
+    title: string;
+    body: string;
+    /** Where opening it leads, once it has been marked read. */
+    url: string;
+    read_at: string | null;
+    created_at: string | null;
+}
+
+/** The header bell's payload. Null for anyone who is not a super_admin. */
+export interface AdminNotificationSummary {
+    unread_count: number;
+    latest: AdminNotification[];
+}
+
 export interface PageProps extends InertiaPageProps {
     auth: Auth;
     name: string;
@@ -59,6 +82,7 @@ export interface PageProps extends InertiaPageProps {
     /** Set only on the staging host: where the real site lives. */
     staging?: { production_url: string } | null;
     sellerStore?: SellerStoreStatus | null;
+    adminNotifications?: AdminNotificationSummary | null;
     flash: {
         success?: string;
         error?: string;

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\AdminNotificationService;
 use App\Services\CurrencyService;
 use App\Services\ReviewService;
 use Illuminate\Http\Request;
@@ -96,6 +97,16 @@ class HandleInertiaRequests extends Middleware
              * admin response.
              */
             'pendingReviews' => fn () => $this->getPendingReviewCount($request),
+            /*
+             * The admin header bell: unread count plus the latest few rows.
+             * Shared because AdminLayout renders the bell on every /admin
+             * page, and polled on its own (`only: ['adminNotifications']`)
+             * so a new order shows up without a reload. Null for everyone
+             * who is not a super_admin.
+             */
+            'adminNotifications' => fn () => $request->user()?->isSuperAdmin()
+                ? app(AdminNotificationService::class)->summary($request->user())
+                : null,
         ];
     }
 

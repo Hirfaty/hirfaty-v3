@@ -172,6 +172,12 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // Dashboard
         Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
+        // Notifications — the header bell and its full list. `read-all` sits
+        // above `{notification}` so it is never taken for an id.
+        Route::get('/notifications', [Admin\NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/read-all', [Admin\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+        Route::post('/notifications/{notification}/open', [Admin\NotificationController::class, 'open'])->name('notifications.open');
+
         Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [Admin\UserController::class, 'create'])->name('users.create');
         // Above `{user}`, or "create"/"edit" would be swallowed as an id.

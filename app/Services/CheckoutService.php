@@ -24,7 +24,10 @@ class CheckoutService
 {
     const PLATFORM_FEE_PERCENT = 0.20; // 20%
 
-    public function __construct(private DeliveryFeeService $deliveryFees) {}
+    public function __construct(
+        private DeliveryFeeService $deliveryFees,
+        private AdminNotificationService $adminNotifications,
+    ) {}
 
     public function process(Cart $cart, array $checkoutData)
     {
@@ -269,6 +272,8 @@ class CheckoutService
          * and already has stock decremented against it.
          */
         $this->notifyAdmin($orders);
+        // The admin panel's bell, alongside the desk email above.
+        $this->adminNotifications->notifyNewPurchase($orders);
         $this->notifyBuyer($orders, $cart->user);
 
         return $orders;

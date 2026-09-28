@@ -41,6 +41,7 @@ return [
     'admin.delivery_rates' => 'Delivery rates',
     'admin.newsletter' => 'Newsletter subscribers',
     'admin.orders' => 'Purchases',
+    'admin.notifications' => 'Notifications',
     'admin.order' => 'Purchase',
     'admin.products' => 'Products',
     'admin.product_create' => 'New product',
