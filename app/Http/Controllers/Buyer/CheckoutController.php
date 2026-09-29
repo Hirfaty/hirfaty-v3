@@ -187,7 +187,15 @@ class CheckoutController extends Controller
 
         $orders = $checkout->process($cart, $destination);
 
+        $first = $orders[0] ?? null;
+
         return redirect()->route('buyer.account.orders.index')
-            ->with('success', __('buyer.checkout.placed', ['count' => count($orders)]));
+            ->with('success', __('buyer.checkout.placed', ['count' => count($orders)]))
+            // Drives the thank-you dialog on the orders page (OrderPlacedDialog).
+            // One flash, so it opens once and a reload does not bring it back.
+            ->with('order_placed', [
+                'reference' => $first?->group_reference ?? $first?->reference,
+                'email' => $request->user()->email,
+            ]);
     }
 }

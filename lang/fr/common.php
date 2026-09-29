@@ -94,6 +94,13 @@ return [
     'auth.login.wrong_email' => 'Mauvaise adresse ? Recommencer',
     'auth.login.session_expired' => 'Cette inscription a expiré. Saisissez votre e-mail pour recommencer.',
 
+    // Le lien « Confirmer mon e-mail » de l'e-mail d'inscription.
+    'auth.login.link_invalid' => 'Ce lien n\'est plus valide. Si votre compte est déjà créé, connectez-vous ; sinon, saisissez votre e-mail pour recevoir un nouveau code.',
+    'auth.login.link_title' => 'Presque',
+    'auth.login.link_title_accent' => 'terminé',
+    'auth.login.link_subtitle' => 'Vous avez ouvert le lien envoyé à :email. Continuez ici pour finir votre inscription.',
+    'auth.login.link_submit' => 'Continuer mon inscription',
+
     // Communs aux deux écrans de code (voir CodeEntry.tsx).
     'auth.login.code_label' => 'Code de confirmation',
     'auth.login.code_invalid' => 'Ce code n\'est pas le bon. Vérifiez l\'e-mail et réessayez.',

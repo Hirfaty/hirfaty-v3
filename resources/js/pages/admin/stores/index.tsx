@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import ExportMenu from '@/components/admin/export-menu';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -206,6 +207,7 @@ const Index = ({
                         total.
                     </p>
                 </div>
+                <ExportMenu routeName="admin.stores.export" filters={filters} />
             </header>
 
             {/* Review queue banner — only while there is work to do. */}

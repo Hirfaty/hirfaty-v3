@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Loader2, Mail, Repeat2, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import ExportMenu from '@/components/admin/export-menu';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -99,6 +100,10 @@ const Index = ({ leads, counts, filters }: Props) => {
                         {(counts.all ?? 0) > 1 ? 's' : ''} au total.
                     </p>
                 </div>
+                <ExportMenu
+                    routeName="admin.brochure-leads.export"
+                    filters={filters}
+                />
             </header>
 
             {/* ── Type tabs ────────────────────────────────── */}

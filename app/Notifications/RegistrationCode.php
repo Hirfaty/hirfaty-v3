@@ -33,11 +33,16 @@ class RegistrationCode extends Notification
      * readonly here is a *fatal compile error* rather than an override — which
      * takes the whole PHP process down, not just this class. Do not rename it
      * back.
+     *
+     * `$url` is the signed "confirm my email" link that rides alongside the
+     * code (see RegistrationCodeService::resolveLink) — public for the same
+     * reason as `$code`, so tests can follow the link that was mailed.
      */
     public function __construct(
         public readonly string $code,
         private readonly string $mailLocale,
         private readonly int $expiresInMinutes,
+        public readonly ?string $url = null,
     ) {}
 
     /**
@@ -70,6 +75,7 @@ class RegistrationCode extends Notification
                 'locale' => $locale,
                 'expiresInMinutes' => $this->expiresInMinutes,
                 'copy' => 'registration_code',
+                'url' => $this->url,
             ]);
     }
 }

@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Models\BrochureLead;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The homepage brochure request: recording who asked, and handing back the file.
@@ -30,6 +33,14 @@ class BrochureLeadService
      * The filename the visitor's browser saves it as.
      */
     public const DOWNLOAD_NAME = 'hirfaty-brochure.pdf';
+
+    private const TYPE_LABELS = ['buyer' => 'Acheteur', 'seller' => 'Vendeur'];
+
+    private const SELLER_TYPE_LABELS = ['artist' => 'Artisan', 'company' => 'Entreprise', 'cooperative' => 'Coopérative'];
+
+    public function __construct(
+        private readonly SpreadsheetExportService $spreadsheets,
+    ) {}
 
     /**
      * Record a request, or fold it into the one already there.
@@ -77,6 +88,50 @@ class BrochureLeadService
     public function exists(): bool
     {
         return Storage::disk('local')->exists(self::PATH);
+    }
+
+    /**
+     * The admin list, unordered — the table sorts by date, the export walks
+     * by id (see AdminUserListService::query for why the two differ).
+     *
+     * @param  array{search?: ?string, type?: ?string}  $filters
+     * @return Builder<BrochureLead>
+     */
+    public function adminQuery(array $filters): Builder
+    {
+        return BrochureLead::query()
+            ->when($filters['search'] ?? null, fn ($query, $search) => $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            }))
+            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type));
+    }
+
+    /**
+     * Every lead the admin's filters match, newest first, as CSV or Excel.
+     *
+     * @param  'csv'|'xlsx'  $format
+     */
+    public function export(string $format, array $filters): StreamedResponse|BinaryFileResponse
+    {
+        return $this->spreadsheets->download(
+            $format,
+            'brochure',
+            ['ID', 'Prénom', 'Nom', 'Email', 'Profil', 'Type d’activité', 'Langue', 'Téléchargements', 'Première demande', 'Dernière demande'],
+            fn () => $this->adminQuery($filters)->lazyByIdDesc(500)->map(fn (BrochureLead $lead) => [
+                $lead->id,
+                $lead->first_name,
+                $lead->last_name,
+                $lead->email,
+                self::TYPE_LABELS[$lead->type] ?? $lead->type,
+                $lead->seller_type ? (self::SELLER_TYPE_LABELS[$lead->seller_type] ?? $lead->seller_type) : '',
+                $lead->locale ?? '',
+                (int) $lead->downloads_count,
+                $lead->created_at?->format('Y-m-d H:i') ?? '',
+                $lead->updated_at?->format('Y-m-d H:i') ?? '',
+            ]),
+        );
     }
 
     /**

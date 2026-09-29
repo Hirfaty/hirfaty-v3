@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
+import ExportMenu from '@/components/admin/export-menu';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -478,6 +479,11 @@ const Index = ({
                             })}
                         </div>
                     )}
+
+                    <ExportMenu
+                        routeName="admin.delivery-rates.export"
+                        filters={{ service: selected?.slug }}
+                    />
 
                     <Button
                         type="button"

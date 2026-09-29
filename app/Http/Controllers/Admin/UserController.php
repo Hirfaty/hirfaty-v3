@@ -9,7 +9,9 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use App\Notifications\WelcomeUser;
+use App\Services\AdminUserListService;
 use App\Services\ProfessionalAccountService;
+use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -313,58 +315,11 @@ class UserController extends Controller
         ]);
     }
 
-    public function index(Request $request)
+    public function index(Request $request, AdminUserListService $list)
     {
-        $query = User::query()
-            ->where('role', '!=', 'super_admin')
-            ->withCount('products')
-            /*
-             * Shop name, type, and city are shown as columns for sellers —
-             * eager load so the table doesn't N+1 per row.
-             *
-             * `verification_status` rides along for the "Vérifié par Hirfaty"
-             * tick beside the shop name. It is an explicit column in the
-             * select list because this is a constrained eager load: a column
-             * missing from here arrives `undefined` on the page rather than
-             * erroring, which is exactly how the tick would silently never
-             * render.
-             */
-            ->with(
-                'store:id,user_id,store_name,type,city_id,verification_status',
-                'store.city:id,name',
-            );
+        $filters = $request->only(['search', 'role', 'professional_request_status']);
 
-        if ($search = $request->input('search')) {
-            // Name, email, phone, or the seller's shop name all match — the
-            // admin rarely knows which of those they're typing.
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone_number', 'like', "%{$search}%")
-                    ->orWhereHas('store', function ($storeQuery) use ($search) {
-                        $storeQuery->where('store_name', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        if ($role = $request->input('role')) {
-            $query->where('role', $role);
-        }
-
-        /*
-         * A queue view, not a role: the request status outlives the decision
-         * (a declined buyer stays `buyer`, an approved one becomes
-         * `professional_buyer`), so this filters on
-         * `professional_request_status` directly rather than folding it into
-         * the role tabs above. Kept as its own parameter so it composes with
-         * a role filter and a search.
-         */
-        if ($requestStatus = $request->input('professional_request_status')) {
-            $query->where('professional_request_status', $requestStatus);
-        }
-
-        $users = $query->latest()->paginate(20)->withQueryString();
+        $users = $list->query($filters)->latest()->paginate(20)->withQueryString();
 
         // Counts for the "all / buyer / pro / seller" filter tabs — computed
         // once, unfiltered by search, so switching tabs never shows a stale 0.
@@ -396,8 +351,31 @@ class UserController extends Controller
             ],
             // Drives the "N waiting" banner above the table.
             'pendingProfessionalCount' => $requestStatusCounts->get(User::PRO_REQUEST_PENDING, 0),
-            'filters' => $request->only(['search', 'role', 'professional_request_status']),
+            // Signups stopped before the password step — they have no row in
+            // this table, so the page links out to them with this count.
+            'pendingSignupCount' => $list->pendingSignups()->count(),
+            'filters' => $filters,
         ]);
+    }
+
+    /**
+     * Download the users table — every page of it, under the filters the
+     * admin currently has applied — as CSV or Excel.
+     */
+    public function export(Request $request, AdminUserListService $list)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'search' => ['nullable', 'string', 'max:255'],
+            'role' => ['nullable', 'in:seller,buyer,professional_buyer'],
+            'professional_request_status' => ['nullable', Rule::in([
+                User::PRO_REQUEST_PENDING,
+                User::PRO_REQUEST_APPROVED,
+                User::PRO_REQUEST_DECLINED,
+            ])],
+        ]);
+
+        return $list->export($data['format'], $data);
     }
 
     public function show(User $user)

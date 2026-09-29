@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { ArrowUpRight, ImageOff, Loader2, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import ExportMenu from '@/components/admin/export-menu';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -193,6 +194,7 @@ const Index = ({
                         {pagination.total > 1 ? 's' : ''} au total
                     </p>
                 </div>
+                <ExportMenu routeName="admin.orders.export" filters={filters} />
             </header>
 
             {/* ── Status tabs ──────────────────────────────── */}

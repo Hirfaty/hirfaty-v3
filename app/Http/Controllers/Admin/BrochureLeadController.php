@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BrochureLead;
+use App\Services\BrochureLeadService;
+use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,23 +20,13 @@ use Inertia\Response;
  */
 class BrochureLeadController extends Controller
 {
+    public function __construct(private readonly BrochureLeadService $brochure) {}
+
     public function index(Request $request): Response
     {
-        $query = BrochureLead::query();
+        $filters = $request->only(['search', 'type']);
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        if ($type = $request->input('type')) {
-            $query->where('type', $type);
-        }
-
-        $leads = $query->latest()->paginate(20)->withQueryString();
+        $leads = $this->brochure->adminQuery($filters)->latest()->paginate(20)->withQueryString();
 
         // Counts ignore the active type filter — otherwise every tab but the
         // selected one reads 0 — while still respecting the search.
@@ -46,7 +39,22 @@ class BrochureLeadController extends Controller
         return Inertia::render('admin/brochure-leads/index', [
             'leads' => $leads,
             'counts' => $counts,
-            'filters' => $request->only(['search', 'type']),
+            'filters' => $filters,
         ]);
+    }
+
+    /**
+     * Download the leads the admin is looking at — every page — as CSV or
+     * Excel.
+     */
+    public function export(Request $request)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'search' => ['nullable', 'string', 'max:255'],
+            'type' => ['nullable', Rule::in(BrochureLead::TYPES)],
+        ]);
+
+        return $this->brochure->export($data['format'], $data);
     }
 }

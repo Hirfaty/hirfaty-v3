@@ -11,8 +11,10 @@ use App\Models\Store;
 use App\Notifications\ProductApproved;
 use App\Notifications\ProductRejected;
 use App\Rules\ValidProductMedia;
+use App\Services\AdminProductListService;
 use App\Services\ProductDeletionService;
 use App\Services\ReviewService;
+use App\Services\SpreadsheetExportService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,40 +27,21 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AdminProductListService $list)
     {
-        $query = Product::query()->with(['store', 'category', 'media'])
-            ->withCount('orderItems');
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
-            });
-        }
+        $filters = $request->only(['search', 'category_id', 'status']);
 
-        if ($category = $request->input('category_id')) {
-            $query->where('category_id', $category);
-        }
-
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $products = $query->latest()->paginate(20)->withQueryString();
+        $products = $list->query($filters)
+            ->with(['store', 'category', 'media'])
+            ->withCount('orderItems')
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
 
         // Status tab counts must ignore the active status filter (so a tab
         // never reports 0 just because another tab is selected) but still
         // respect search/category, matching the scope the admin is looking at.
-        $countsQuery = Product::query();
-        if ($search) {
-            $countsQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
-            });
-        }
-        if ($category) {
-            $countsQuery->where('category_id', $category);
-        }
+        $countsQuery = $list->query([...$filters, 'status' => null]);
         $statusCounts = (clone $countsQuery)
             ->selectRaw('status, count(*) as count')
             ->groupBy('status')
@@ -67,7 +50,7 @@ class ProductController extends Controller
         return Inertia::render('admin/products/index', [
             'products' => $products,
             'categories' => Category::all(),
-            'filters' => $request->only(['search', 'category_id', 'status']),
+            'filters' => $filters,
             'totalProducts' => (clone $countsQuery)->count(),
             'statusCounts' => [
                 'draft' => $statusCounts->get('draft', 0),
@@ -77,6 +60,22 @@ class ProductController extends Controller
                 'archived' => $statusCounts->get('archived', 0),
             ],
         ]);
+    }
+
+    /**
+     * Download the products table — every page of it, under the filters the
+     * admin currently has applied — as CSV or Excel.
+     */
+    public function export(Request $request, AdminProductListService $list)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'search' => ['nullable', 'string', 'max:255'],
+            'category_id' => ['nullable', 'integer'],
+            'status' => ['nullable', Rule::in(['draft', 'pending_review', 'published', 'rejected', 'archived'])],
+        ]);
+
+        return $list->export($data['format'], $data);
     }
 
     public function create(Request $request)

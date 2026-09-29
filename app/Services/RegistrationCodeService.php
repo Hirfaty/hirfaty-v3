@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 
@@ -273,6 +274,78 @@ class RegistrationCodeService
         return $pending;
     }
 
+    /**
+     * The signup a "confirm my email" link points at, or null when the link
+     * is no good.
+     *
+     * The link is a second way of proving the same thing the code proves:
+     * only whoever reads that inbox has it. Three checks stand behind that:
+     *
+     *  - the signature, so nobody can mint a link for someone else's row by
+     *    editing the id in the URL;
+     *  - `sent`, the moment that email went out, so a resend retires every
+     *    older link exactly the way it retires the older code;
+     *  - the code's own expiry, so the link lives no longer than the code
+     *    printed beside it.
+     *
+     * A code locked by wrong guesses does *not* block the link: the lock is
+     * there to stop someone guessing six digits, and a signed URL cannot be
+     * guessed.
+     */
+    public function resolveLink(Request $request): ?PendingRegistration
+    {
+        if (! $request->hasValidSignature()) {
+            return null;
+        }
+
+        $pending = PendingRegistration::find($request->route('pending'));
+
+        if (! $pending || $pending->hasExpired()) {
+            return null;
+        }
+
+        if ($pending->last_sent_at?->getTimestamp() !== (int) $request->query('sent')) {
+            return null;
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Whether this browser already holds the resume cookie for this signup —
+     * i.e. the link was opened where the signup was started.
+     */
+    public function isResumableHere(Request $request, PendingRegistration $pending): bool
+    {
+        return $this->resolve($request)?->is($pending) ?? false;
+    }
+
+    /** Opening the emailed link counts as typing the code back. */
+    public function verifyByLink(PendingRegistration $pending): void
+    {
+        if (! $pending->isVerified()) {
+            $pending->update(['verified_at' => now()]);
+        }
+    }
+
+    /**
+     * Hand the signup to this browser: the link was opened on another device
+     * (the phone the email was read on, or a mail app's built-in browser with
+     * its own cookie jar).
+     *
+     * Replaces the resume token rather than adding a second one, so the
+     * browser the signup started in can no longer resume it — one signup,
+     * finished in one place. Returns the plaintext token for the cookie.
+     */
+    public function moveToThisBrowser(PendingRegistration $pending): string
+    {
+        $token = Str::random(48);
+
+        $pending->update(['resume_token_hash' => hash('sha256', $token)]);
+
+        return $token;
+    }
+
     /** The cookie to queue onto a response so this browser can resume. */
     public function resumeCookie(string $token): SymfonyCookie
     {
@@ -300,7 +373,22 @@ class RegistrationCodeService
     private function mail(PendingRegistration $pending, string $code): void
     {
         Notification::route('mail', $pending->email)->notify(
-            new RegistrationCode($code, $pending->locale, self::CODE_TTL_MINUTES),
+            new RegistrationCode($code, $pending->locale, self::CODE_TTL_MINUTES, $this->linkFor($pending)),
         );
+    }
+
+    /**
+     * The "confirm my email" button's URL — see resolveLink() for what makes
+     * it safe to put in an email.
+     *
+     * Built here, while the request is live, rather than inside the queued
+     * notification, so it carries the host the visitor actually signed up on.
+     */
+    private function linkFor(PendingRegistration $pending): string
+    {
+        return URL::temporarySignedRoute('login.verify.link', $pending->expires_at, [
+            'pending' => $pending->id,
+            'sent' => $pending->last_sent_at->getTimestamp(),
+        ]);
     }
 }

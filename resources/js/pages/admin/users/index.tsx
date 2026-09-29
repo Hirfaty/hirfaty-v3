@@ -6,6 +6,7 @@ import {
     Clock,
     EllipsisVertical,
     Eye,
+    Hourglass,
     KeyRound,
     Loader2,
     Package,
@@ -19,6 +20,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import ExportMenu from '@/components/admin/export-menu';
 import ResetLinkDialog from '@/components/admin/reset-link-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -74,6 +76,8 @@ interface Props {
     professionalRequestCounts: Record<ProRequestStatus, number>;
     /** Buyers waiting on a trade decision. Drives the queue banner below. */
     pendingProfessionalCount: number;
+    /** Signups stopped before the password step — see pending.tsx. */
+    pendingSignupCount: number;
     filters: {
         search?: string;
         role?: string;
@@ -172,6 +176,7 @@ export default function UsersIndex({
     roleCounts,
     professionalRequestCounts,
     pendingProfessionalCount,
+    pendingSignupCount,
     filters,
 }: Props) {
     const { t } = useTranslation();
@@ -317,13 +322,19 @@ export default function UsersIndex({
                         {totalUsers > 1 ? 's' : ''} au total.
                     </p>
                 </div>
-                <Link
-                    href={route('admin.users.create')}
-                    className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
-                >
-                    <Users className="h-4 w-4" />
-                    Nouvel utilisateur
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ExportMenu
+                        routeName="admin.users.export"
+                        filters={filters}
+                    />
+                    <Link
+                        href={route('admin.users.create')}
+                        className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-ink/90"
+                    >
+                        <Users className="h-4 w-4" />
+                        Nouvel utilisateur
+                    </Link>
+                </div>
             </header>
 
             {/*
@@ -388,6 +399,23 @@ export default function UsersIndex({
                         </button>
                     );
                 })}
+
+                {/*
+                    Not a role: these people have no account yet (the
+                    `users` row is only written at the password step), so
+                    this leads to their own page rather than filtering this
+                    table.
+                */}
+                <Link
+                    href={route('admin.users.pending')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-3.5 py-2 text-sm font-medium text-ink-soft transition hover:border-ink/30 hover:text-ink"
+                >
+                    <Hourglass className="h-3.5 w-3.5" />
+                    Inscriptions en cours
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-ink-soft">
+                        {pendingSignupCount}
+                    </span>
+                </Link>
             </div>
 
             {/*

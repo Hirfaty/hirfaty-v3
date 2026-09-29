@@ -4,25 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\AdminStoreListService;
+use App\Services\SpreadsheetExportService;
 use App\Services\StoreVerificationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class StoreController extends Controller
 {
     public function __construct(private StoreVerificationService $verification) {}
 
-    public function index(Request $request)
+    public function index(Request $request, AdminStoreListService $list)
     {
-        $query = Store::query()->with(['user', 'category', 'city'])->withCount('products');
+        $search = $request->string('search')->trim()->value() ?: null;
+        $status = $request->input('status') ?: null;
 
-        if ($search = $request->string('search')->trim()->value()) {
-            $query->where('store_name', 'like', "%{$search}%");
-        }
-
-        if ($status = $request->input('status')) {
-            $query->where('verification_status', $status);
-        }
+        $query = $list->query(['search' => $search, 'status' => $status])
+            ->with(['user', 'category', 'city'])
+            ->withCount('products');
 
         // Oldest submission first: a review queue worked newest-first leaves
         // the earliest applicant waiting longest.
@@ -34,8 +34,7 @@ class StoreController extends Controller
 
         // Counts ignore the active status filter — otherwise every tab but the
         // selected one reads 0 — while still respecting the search.
-        $counts = Store::query()
-            ->when($search, fn ($q) => $q->where('store_name', 'like', "%{$search}%"))
+        $counts = $list->query(['search' => $search])
             ->selectRaw('verification_status, count(*) as count')
             ->groupBy('verification_status')
             ->pluck('count', 'verification_status');
@@ -72,6 +71,21 @@ class StoreController extends Controller
             'statusCounts' => $counts,
             'statuses' => Store::VERIFICATION_STATUSES,
         ]);
+    }
+
+    /**
+     * Download the workshops the admin is looking at — every page, under the
+     * current search and status tab — as CSV or Excel.
+     */
+    public function export(Request $request, AdminStoreListService $list)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'search' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(Store::VERIFICATION_STATUSES)],
+        ]);
+
+        return $list->export($data['format'], $data);
     }
 
     public function approve(Request $request, Store $store)

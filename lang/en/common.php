@@ -92,6 +92,13 @@ return [
     'auth.login.wrong_email' => 'Wrong address? Start over',
     'auth.login.session_expired' => 'That signup link has expired. Enter your email to start again.',
 
+    // The "Confirm my email" link in the signup email.
+    'auth.login.link_invalid' => 'That link is no longer valid. If your account is already set up, sign in; otherwise enter your email to get a new code.',
+    'auth.login.link_title' => 'Almost',
+    'auth.login.link_title_accent' => 'there',
+    'auth.login.link_subtitle' => 'You opened the link sent to :email. Continue here to finish signing up.',
+    'auth.login.link_submit' => 'Continue signing up',
+
     // Shared by both code screens (see CodeEntry.tsx).
     'auth.login.code_label' => 'Confirmation code',
     'auth.login.code_invalid' => 'That code is not right. Check the email and try again.',

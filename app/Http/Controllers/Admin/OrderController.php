@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\AdminOrderListService;
 use App\Services\OrderStatusService;
+use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 /**
@@ -23,38 +26,11 @@ use Inertia\Inertia;
  */
 class OrderController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AdminOrderListService $list)
     {
-        $query = Order::query()->with(['buyer', 'store', 'items.product.images', 'city']);
+        $filters = $request->only(['search', 'status', 'from', 'to']);
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                // References are stored uppercase, so the needle is folded
-                // rather than the column — keeps this index-friendly and
-                // works on both Postgres and the SQLite used in tests.
-                $q->where('reference', 'like', '%'.strtoupper($search).'%')
-                    ->orWhere('group_reference', 'like', '%'.strtoupper($search).'%')
-                    ->orWhere('tracking_number', 'like', "%{$search}%")
-                    ->orWhereHas('buyer', function ($q) use ($search) {
-                        $q->where('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
-            });
-        }
-
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        if ($from = $request->input('from')) {
-            $query->whereDate('created_at', '>=', $from);
-        }
-
-        if ($to = $request->input('to')) {
-            $query->whereDate('created_at', '<=', $to);
-        }
+        $query = $list->query($filters)->with(['buyer', 'store', 'items.product.images', 'city']);
 
         /*
          * Paginated over orders, then folded into groups — not paginated over
@@ -80,8 +56,25 @@ class OrderController extends Controller
                 'total' => $paginator->total(),
                 'links' => $paginator->linkCollection(),
             ],
-            'filters' => $request->only(['search', 'status', 'from', 'to']),
+            'filters' => $filters,
         ]);
+    }
+
+    /**
+     * Download the orders the desk is looking at — every page, under the
+     * current search, status and dates — as CSV or Excel.
+     */
+    public function export(Request $request, AdminOrderListService $list)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'search' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'in:pending,confirmed,shipped,delivered,cancelled'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        return $list->export($data['format'], $data);
     }
 
     /**

@@ -180,7 +180,11 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
 
         Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [Admin\UserController::class, 'create'])->name('users.create');
-        // Above `{user}`, or "create"/"edit" would be swallowed as an id.
+        Route::get('/users/export', [Admin\UserController::class, 'export'])->name('users.export');
+        // Signups that stopped before the password step — no `users` row yet.
+        Route::get('/users/pending', [Admin\PendingSignupController::class, 'index'])->name('users.pending');
+        Route::post('/users/pending/{pending}/resend', [Admin\PendingSignupController::class, 'resend'])->name('users.pending.resend');
+        // Above `{user}`, or "create"/"export"/"pending"/"edit" would be swallowed as an id.
         Route::get('/users/{user}/edit', [Admin\UserController::class, 'edit'])->name('users.edit');
         Route::get('/users/{user}', [Admin\UserController::class, 'show'])->name('users.show');
         // POST, not PUT: the form ships a logo/banner as multipart, which
@@ -197,10 +201,11 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
-        // `create` and `bulk-destroy` must stay above `{product}`, otherwise
+        // `create`, `export` and `bulk-destroy` must stay above `{product}`, otherwise
         // they're matched as an id (and Postgres then errors casting the
         // string to the bigint id column, rather than a clean 404).
         Route::get('/products/create', [Admin\ProductController::class, 'create'])->name('products.create');
+        Route::get('/products/export', [Admin\ProductController::class, 'export'])->name('products.export');
         Route::delete('/products/bulk-destroy', [Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');
@@ -213,9 +218,10 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
 
         // Orders
         Route::get('/orders', [Admin\OrderController::class, 'index'])->name('orders.index');
+        // Above `{order}`, or "export" would be taken for an order id.
+        Route::get('/orders/export', [Admin\OrderController::class, 'export'])->name('orders.export');
         Route::get('/orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.status');
-        Route::post('/orders/export', [Admin\OrderController::class, 'export'])->name('orders.export');
 
         // Reviews
         Route::get('/reviews', [Admin\ReviewController::class, 'index'])->name('reviews.index');
@@ -258,14 +264,17 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
 
         // Stores — the review queue a shop sits in before it may sell.
         Route::get('/stores', [Admin\StoreController::class, 'index'])->name('stores.index');
+        Route::get('/stores/export', [Admin\StoreController::class, 'export'])->name('stores.export');
         Route::patch('/stores/{store}/approve', [Admin\StoreController::class, 'approve'])->name('stores.approve');
         Route::patch('/stores/{store}/reject', [Admin\StoreController::class, 'reject'])->name('stores.reject');
 
         // Brochure leads — read-only, see Admin\BrochureLeadController.
         Route::get('/brochure-leads', [Admin\BrochureLeadController::class, 'index'])->name('brochure-leads.index');
+        Route::get('/brochure-leads/export', [Admin\BrochureLeadController::class, 'export'])->name('brochure-leads.export');
 
         // Newsletter subscribers — read-only, see Admin\NewsletterSubscriberController.
         Route::get('/newsletter-subscribers', [Admin\NewsletterSubscriberController::class, 'index'])->name('newsletter-subscribers.index');
+        Route::get('/newsletter-subscribers/export', [Admin\NewsletterSubscriberController::class, 'export'])->name('newsletter-subscribers.export');
 
         // Cities
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
@@ -278,6 +287,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
          * a city or country. See Admin\DeliveryRateController.
          */
         Route::get('/delivery-rates', [Admin\DeliveryRateController::class, 'index'])->name('delivery-rates.index');
+        Route::get('/delivery-rates/export', [Admin\DeliveryRateController::class, 'export'])->name('delivery-rates.export');
         Route::post('/delivery-rates', [Admin\DeliveryRateController::class, 'store'])->name('delivery-rates.store');
         Route::patch('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'update'])->name('delivery-rates.update');
         Route::delete('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'destroy'])->name('delivery-rates.destroy');
@@ -515,6 +525,24 @@ Route::prefix('login')->name('login.')->group(function () {
     Route::post('/verify', [RegistrationController::class, 'verify'])
         ->middleware('throttle:10,1')
         ->name('verify.store');
+
+    /*
+     * The "confirm my email" button in the signup email — the same proof as
+     * the code, one click instead of six digits. Signed and tied to the latest
+     * send; see RegistrationCodeService::resolveLink.
+     *
+     * The GET only finishes the job when the signup is this browser's own.
+     * Anywhere else it shows a "continue here" button that POSTs back, so a
+     * mail scanner pre-opening every link cannot take the signup over from
+     * the person it was meant for.
+     */
+    Route::get('/verify/{pending}/link', [RegistrationController::class, 'showLink'])
+        ->middleware('throttle:10,1')
+        ->name('verify.link');
+
+    Route::post('/verify/{pending}/link', [RegistrationController::class, 'confirmLink'])
+        ->middleware('throttle:10,1')
+        ->name('verify.link.confirm');
 
     Route::post('/resend', [RegistrationController::class, 'resend'])
         ->middleware('throttle:5,1')

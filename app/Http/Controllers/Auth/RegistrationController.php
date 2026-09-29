@@ -108,6 +108,65 @@ class RegistrationController extends Controller
     }
 
     /**
+     * Step 2, the other way — the "confirm my email" button in the email.
+     *
+     * Opened in the browser that started the signup, it does the whole job:
+     * the address is confirmed and the visitor lands on the details step.
+     *
+     * Opened anywhere else it only asks. Mail scanners open every link in an
+     * incoming email; if this GET moved the signup onto whatever browser
+     * opened it, a scanner would quietly take it away from the person it was
+     * meant for. The page's button POSTs to confirmLink(), which a scanner
+     * does not do.
+     */
+    public function showLink(Request $request): Response|RedirectResponse
+    {
+        $pending = $this->codes->resolveLink($request);
+
+        if (! $pending) {
+            return $this->invalidLink();
+        }
+
+        if ($this->codes->isResumableHere($request, $pending)) {
+            $this->codes->verifyByLink($pending);
+
+            return to_route('login.details');
+        }
+
+        return Inertia::render('auth/login/link', [
+            'maskedEmail' => $pending->maskedEmail(),
+            // The signed URL itself: the POST is checked against the same
+            // signature, so it has to go back with the same query string.
+            'action' => $request->fullUrl(),
+        ]);
+    }
+
+    /**
+     * The "continue here" button: confirm the address and move the signup
+     * onto this browser.
+     */
+    public function confirmLink(Request $request): RedirectResponse
+    {
+        $pending = $this->codes->resolveLink($request);
+
+        if (! $pending) {
+            return $this->invalidLink();
+        }
+
+        $this->codes->verifyByLink($pending);
+
+        $response = to_route('login.details');
+
+        if ($this->codes->isResumableHere($request, $pending)) {
+            return $response;
+        }
+
+        return $response->withCookie(
+            $this->codes->resumeCookie($this->codes->moveToThisBrowser($pending)),
+        );
+    }
+
+    /**
      * Step 2 — send a fresh code.
      */
     public function resend(Request $request): RedirectResponse
@@ -287,6 +346,19 @@ class RegistrationController extends Controller
         return to_route('login')
             ->with('error', __('common.auth.login.session_expired'))
             ->withCookie($this->codes->forgetCookie());
+    }
+
+    /**
+     * A link that is expired, superseded by a resend, tampered with, or whose
+     * signup is already finished.
+     *
+     * Unlike restart(), the resume cookie is left alone: an old link opened
+     * in the browser that holds a live signup must not end that signup — the
+     * login page offers to resume it.
+     */
+    private function invalidLink(): RedirectResponse
+    {
+        return to_route('login')->with('error', __('common.auth.login.link_invalid'));
     }
 
     /**

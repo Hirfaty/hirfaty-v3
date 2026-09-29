@@ -56,6 +56,9 @@ class HandleInertiaRequests extends Middleware
                 // Only ever set by Admin\UserController::resetLink; null on
                 // every other response.
                 'reset_link' => session('reset_link'),
+                // Set only by Buyer\CheckoutController::store, for the
+                // thank-you dialog the orders page opens once after a checkout.
+                'order_placed' => session('order_placed'),
             ],
             /*
              * Non-null only on the staging host (config/hirfaty.php), so admin

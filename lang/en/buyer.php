@@ -395,6 +395,12 @@ return [
     'checkout.err_payment_method' => 'Choose a payment method.',
     'checkout.err_coupon_unknown' => 'That discount code isn’t valid.',
     'checkout.placed' => ':count order(s) placed successfully!',
+    'order_placed.title' => 'Thank you for your order!',
+    'order_placed.body' => 'Your order has been received. Our artisans are getting to work, and we will keep you posted at every step.',
+    'order_placed.reference' => 'Reference',
+    'order_placed.email' => 'A summary has been sent to :email.',
+    'order_placed.view' => 'View my order',
+    'order_placed.continue' => 'Continue shopping',
 
     // ── Shop page ────────────────────────────────────────────────────────
     'store.back_to_market' => 'The market',

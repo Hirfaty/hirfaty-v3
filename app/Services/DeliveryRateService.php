@@ -8,6 +8,8 @@ use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * What the admin desk does to a delivery service's rate card: read it,
@@ -24,6 +26,34 @@ use Illuminate\Support\Facades\DB;
  */
 class DeliveryRateService
 {
+    public function __construct(
+        private readonly SpreadsheetExportService $spreadsheets,
+    ) {}
+
+    /**
+     * A service's card as CSV or Excel — the same rows, in the same order, as
+     * the admin page shows.
+     *
+     * @param  'csv'|'xlsx'  $format
+     */
+    public function export(string $format, ?int $serviceId): StreamedResponse|BinaryFileResponse
+    {
+        return $this->spreadsheets->download(
+            $format,
+            'tarifs-livraison',
+            ['Transporteur', 'Code pays', 'Pays', 'Ville', 'Région', 'Tarif (MAD)'],
+            fn () => $this->card($serviceId)->map(fn (array $rate) => [
+                $rate['service_name'],
+                $rate['country_code'],
+                $rate['country_name'],
+                // Blank on a country-wide row: the fee covers the whole country.
+                $rate['city_name'] ?? '',
+                $rate['region'] ?? '',
+                $rate['fee'],
+            ]),
+        );
+    }
+
     /**
      * A service's card, sorted country then city, shaped for the admin page.
      *

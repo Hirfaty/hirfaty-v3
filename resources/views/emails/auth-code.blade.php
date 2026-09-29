@@ -12,9 +12,17 @@
      * composes <x-mail.layout> like every other email, so there is one shell
      * to keep email-safe instead of three that drift.
      *
-     * $code, $locale, $expiresInMinutes, $copy
+     * $url is optional and only the signup code sends one: a one-click
+     * "confirm my email" button above the code, so nobody has to switch back
+     * to the tab they came from and type six digits. The sign-in code has no
+     * button — a link that signs straight into an existing account is a
+     * different security bargain from one that confirms an address. The
+     * `button` key therefore exists in the registration_code block only.
+     *
+     * $code, $locale, $expiresInMinutes, $copy, $url
      */
     $t = fn (string $key, array $replace = []) => __("emails.{$copy}.{$key}", $replace, $locale);
+    $url ??= null;
 @endphp
 
 <x-mail.layout
@@ -29,6 +37,10 @@
     <x-mail.heading>{{ $t('headline') }}</x-mail.heading>
 
     <x-mail.text>{{ $t('body') }}</x-mail.text>
+
+    @if ($url)
+        <x-mail.button :url="$url">{{ $t('button') }}</x-mail.button>
+    @endif
 
     <x-mail.code
         :code="$code"

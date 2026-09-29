@@ -161,5 +161,8 @@ Route::get('/preview/email/code/{copy}/{lang}', function (string $copy, string $
          */
         'expiresInMinutes' => LoginCodeService::CODE_TTL_MINUTES,
         'copy' => $copy,
+        // Only the signup code carries a "confirm my email" button. A dummy
+        // href: the real one is signed per row, and this preview has none.
+        'url' => $copy === 'registration_code' ? url('/login/verify/0/link') : null,
     ]);
 })->middleware(['auth', 'role:super_admin']);

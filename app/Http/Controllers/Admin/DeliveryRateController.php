@@ -7,6 +7,7 @@ use App\Models\Address;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
 use App\Services\DeliveryRateService;
+use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -45,6 +46,23 @@ class DeliveryRateController extends Controller
             'rates' => $rates->card($selected),
             'availableCities' => $rates->unratedCities($selected),
         ]);
+    }
+
+    /**
+     * Download a service's rate card as CSV or Excel — `?service=slug` picks
+     * the card the same way the page does, defaulting to the first one.
+     */
+    public function export(Request $request, DeliveryRateService $rates)
+    {
+        $data = $request->validate([
+            'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
+            'service' => ['nullable', 'string'],
+        ]);
+
+        $serviceId = DeliveryService::where('slug', $data['service'] ?? null)->value('id')
+            ?? DeliveryService::orderBy('sort_order')->value('id');
+
+        return $rates->export($data['format'], $serviceId);
     }
 
     /** Adds a Moroccan city or a foreign country to a service's card. */

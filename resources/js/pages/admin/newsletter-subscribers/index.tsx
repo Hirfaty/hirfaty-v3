@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Loader2, Mail, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import ExportMenu from '@/components/admin/export-menu';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -64,6 +65,10 @@ const Index = ({ subscribers, filters }: Props) => {
                         {subscribers.total > 1 ? 's' : ''} au total.
                     </p>
                 </div>
+                <ExportMenu
+                    routeName="admin.newsletter-subscribers.export"
+                    filters={filters}
+                />
             </header>
 
             {/* ── Search ───────────────────────────────────── */}

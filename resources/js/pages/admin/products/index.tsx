@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import ExportMenu from '@/components/admin/export-menu';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -316,6 +317,10 @@ function AdminProducts({
                         catégorie{categories.length > 1 ? 's' : ''}
                     </p>
                 </div>
+                <ExportMenu
+                    routeName="admin.products.export"
+                    filters={filters}
+                />
             </header>
 
             {/* ── Status tabs ──────────────────────────────── */}

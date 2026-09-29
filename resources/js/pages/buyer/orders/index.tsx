@@ -1,4 +1,5 @@
 import EmptyShowcase from '@/components/buyer/EmptyShowcase';
+import OrderPlacedDialog from '@/components/buyer/OrderPlacedDialog';
 import OrderReviewPanel from '@/components/buyer/OrderReviewPanel';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
@@ -74,6 +75,7 @@ export default function BuyerOrders({
             title={t('buyer.account.nav_orders')}
             description={t('buyer.account.orders_intro')}
         >
+            <OrderPlacedDialog />
             {purchases.length === 0 ? (
                 <EmptyShowcase
                     eyebrow={t('buyer.orders.empty_eyebrow')}

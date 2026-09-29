@@ -91,6 +91,13 @@ return [
     'auth.login.wrong_email' => 'العنوان خطأ؟ ابدأ من جديد',
     'auth.login.session_expired' => 'انتهت صلاحية هذا التسجيل. أدخل بريدك الإلكتروني للبدء من جديد.',
 
+    // رابط «تأكيد بريدي الإلكتروني» في رسالة التسجيل.
+    'auth.login.link_invalid' => 'هذا الرابط لم يعد صالحاً. إذا كان حسابك قد أُنشئ بالفعل، سجّل الدخول؛ وإلا أدخل بريدك الإلكتروني لتلقي رمز جديد.',
+    'auth.login.link_title' => 'أوشكت',
+    'auth.login.link_title_accent' => 'على الانتهاء',
+    'auth.login.link_subtitle' => 'لقد فتحت الرابط المرسل إلى :email. تابع هنا لإتمام تسجيلك.',
+    'auth.login.link_submit' => 'متابعة التسجيل',
+
     // مشتركة بين شاشتي الرمز (انظر CodeEntry.tsx).
     'auth.login.code_label' => 'رمز التأكيد',
     'auth.login.code_invalid' => 'هذا الرمز غير صحيح. راجع الرسالة وحاول مرة أخرى.',

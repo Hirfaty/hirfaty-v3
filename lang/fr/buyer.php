@@ -397,6 +397,12 @@ return [
     'checkout.err_payment_method' => 'Choisissez un mode de paiement.',
     'checkout.err_coupon_unknown' => 'Ce code promo n’est pas valide.',
     'checkout.placed' => ':count commande(s) passée(s) avec succès !',
+    'order_placed.title' => 'Merci pour votre commande !',
+    'order_placed.body' => 'Votre commande est bien enregistrée. Nos artisans se mettent au travail et nous vous tiendrons informé(e) à chaque étape.',
+    'order_placed.reference' => 'Référence',
+    'order_placed.email' => 'Un récapitulatif a été envoyé à :email.',
+    'order_placed.view' => 'Voir ma commande',
+    'order_placed.continue' => 'Continuer mes achats',
 
     // ── Page boutique ────────────────────────────────────────────────────
     'store.back_to_market' => 'Le marché',

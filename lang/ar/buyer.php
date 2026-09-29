@@ -396,6 +396,12 @@ return [
     'checkout.err_payment_method' => 'اختر طريقة الدفع.',
     'checkout.err_coupon_unknown' => 'رمز الخصم هذا غير صالح.',
     'checkout.placed' => 'تم تسجيل :count طلب بنجاح!',
+    'order_placed.title' => 'شكرًا على طلبك!',
+    'order_placed.body' => 'تم تسجيل طلبك بنجاح. سيبدأ حرفيّونا العمل عليه، وسنُبقيك على اطلاع في كل مرحلة.',
+    'order_placed.reference' => 'المرجع',
+    'order_placed.email' => 'تم إرسال ملخص الطلب إلى :email.',
+    'order_placed.view' => 'عرض طلبي',
+    'order_placed.continue' => 'متابعة التسوق',
 
     // ── صفحة المتجر ──────────────────────────────────────────────────────
     'store.back_to_market' => 'السوق',

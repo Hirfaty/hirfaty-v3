@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Models\NewsletterSubscriber;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The footer's mailing list.
@@ -14,6 +17,10 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class NewsletterService
 {
+    public function __construct(
+        private readonly SpreadsheetExportService $spreadsheets,
+    ) {}
+
     /**
      * Put a mailbox on the list, or refresh the one already there.
      *
@@ -51,11 +58,41 @@ class NewsletterService
      */
     public function paginatedSubscribers(?string $search = null): LengthAwarePaginator
     {
-        return NewsletterSubscriber::query()
-            ->when($search, fn ($query) => $query->where('email', 'like', "%{$search}%"))
+        return $this->adminQuery($search)
             ->latest()
             ->paginate(20)
             ->withQueryString();
+    }
+
+    /**
+     * The admin list, unordered — shared by the table and the export.
+     *
+     * @return Builder<NewsletterSubscriber>
+     */
+    public function adminQuery(?string $search = null): Builder
+    {
+        return NewsletterSubscriber::query()
+            ->when($search, fn ($query) => $query->where('email', 'like', "%{$search}%"));
+    }
+
+    /**
+     * Every subscriber the search matches, newest first, as CSV or Excel.
+     *
+     * @param  'csv'|'xlsx'  $format
+     */
+    public function export(string $format, ?string $search = null): StreamedResponse|BinaryFileResponse
+    {
+        return $this->spreadsheets->download(
+            $format,
+            'newsletter',
+            ['ID', 'Email', 'Langue', 'Inscrit le'],
+            fn () => $this->adminQuery($search)->lazyByIdDesc(500)->map(fn (NewsletterSubscriber $subscriber) => [
+                $subscriber->id,
+                $subscriber->email,
+                $subscriber->locale ?? '',
+                $subscriber->created_at?->format('Y-m-d H:i') ?? '',
+            ]),
+        );
     }
 
     /**
