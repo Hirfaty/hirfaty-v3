@@ -140,6 +140,8 @@ return [
     'auth.login.phone' => 'Téléphone',
     'auth.login.password_confirm' => 'Confirmer le mot de passe',
     'auth.login.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
+    'auth.login.password_error_rules' => 'Votre mot de passe doit contenir au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
+    'auth.login.password_error_mismatch' => 'Les deux mots de passe ne correspondent pas.',
     'auth.login.details_title' => 'Presque',
     'auth.login.details_title_accent' => 'terminé',
     'auth.login.details_subtitle' => 'Juste un mot de passe. Vous compléterez votre profil plus tard, depuis votre compte.',

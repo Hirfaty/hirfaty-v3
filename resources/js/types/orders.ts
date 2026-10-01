@@ -33,6 +33,8 @@ export type BuyerOrderItem = {
     quantity: number;
     unit_price: number | string;
     subtotal: number | string;
+    /** The purchase-time variant snapshot ("Rouge / M"), null for a plain product. */
+    variant_label: string | null;
     product: {
         name: string | null;
         slug: string | null;
@@ -97,8 +99,34 @@ export type BuyerPurchase = {
     total_amount: number;
     shipping_address: string | null;
     city: string | null;
+    /** The account that placed it — not necessarily the parcel's recipient. */
+    buyer_name: string | null;
+    /** Distinct lines across every shop; "2 × vase" counts once. */
+    items_count: number;
+    /** When the last parcel arrived; null until every live shop has delivered. */
+    delivered_at: string | null;
     /** Whether any shop in this purchase has arrived and can be rated. */
     can_review: boolean;
+    /** Delivered pieces not yet rated, by product — what "Rate my items" counts. */
+    review_open_count: number;
+    /** The carrier, as named at checkout. */
+    delivery_service_name: string | null;
+    /** Every distinct tracking number across the purchase's parcels. */
+    tracking_numbers: string[];
     /** One per workshop, each with its own status, tracking and rating form. */
     orders: BuyerOrder[];
+};
+
+/**
+ * One line of a purchase's history, as `BuyerAccountService::tracking()`
+ * folds it across workshops.
+ */
+export type OrderTrackingEvent = {
+    id: number;
+    /** Null for a desk note that didn't change the status ("at the Casablanca hub"). */
+    status: OrderStatus | null;
+    note: string | null;
+    at: string;
+    /** The workshops it was about, or null when it applied to the whole purchase. */
+    stores: string[] | null;
 };

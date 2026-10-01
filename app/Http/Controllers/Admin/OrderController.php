@@ -113,11 +113,11 @@ class OrderController extends Controller
             'status' => ['required', 'in:pending,confirmed,shipped,delivered,cancelled'],
             'tracking_number' => ['nullable', 'string', 'max:255'],
             'scope' => ['nullable', 'in:group,single'],
+            // Shown to the buyer on their tracking page, against this step.
+            'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $targets = ($data['scope'] ?? 'group') === 'single'
-            ? collect([$order])
-            : $order->groupOrders()->orderBy('id')->get();
+        $targets = $this->targets($order, $data['scope'] ?? null);
 
         $attributes = array_filter(
             ['tracking_number' => $data['tracking_number'] ?? null],
@@ -129,9 +129,38 @@ class OrderController extends Controller
         // the buyer email is for the group — see transitionMany()'s
         // docblock for why looping transition() here used to send the buyer
         // one email per workshop for what was one status change.
-        $orderStatus->transitionMany($targets, $data['status'], $attributes);
+        $orderStatus->transitionMany($targets, $data['status'], $attributes, $data['note'] ?? null);
 
         return back()->with('success', 'Statut mis à jour.');
+    }
+
+    /**
+     * A tracking update without a status change — where the parcel is now.
+     * Same `scope` rule as updateStatus(): the whole purchase by default.
+     */
+    public function addNote(Request $request, Order $order, OrderStatusService $orderStatus)
+    {
+        $data = $request->validate([
+            'note' => ['required', 'string', 'max:500'],
+            'scope' => ['nullable', 'in:group,single'],
+        ]);
+
+        $orderStatus->addNote($this->targets($order, $data['scope'] ?? null), $data['note']);
+
+        return back()->with('success', 'Mise à jour du suivi publiée.');
+    }
+
+    /**
+     * The orders an action applies to: the whole purchase, or — with
+     * `scope: single` — the one workshop's parcel the desk ticked.
+     *
+     * @return Collection<int, Order>
+     */
+    private function targets(Order $order, ?string $scope)
+    {
+        return $scope === 'single'
+            ? collect([$order])
+            : $order->groupOrders()->orderBy('id')->get();
     }
 
     /**

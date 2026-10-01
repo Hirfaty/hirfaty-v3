@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     ImageOff,
     MapPin,
+    Send,
     Package,
     Phone,
     StickyNote,
@@ -69,6 +70,13 @@ const Show = ({ group }: { group: OrderGroup }) => {
      */
     const [separateOrderId, setSeparateOrderId] = useState<number | null>(null);
 
+    /*
+     * Shown to the buyer on their tracking page ("arrivé au centre de tri de
+     * Casablanca"). Sent with a status change, or on its own when the parcel
+     * moved without changing step.
+     */
+    const [note, setNote] = useState('');
+
     const target = separateOrderId
         ? group.orders.find((o) => o.id === separateOrderId)
         : null;
@@ -82,19 +90,43 @@ const Show = ({ group }: { group: OrderGroup }) => {
                 status,
                 tracking_number: tracking || null,
                 scope: target ? 'single' : 'group',
+                note: note.trim() || null,
             },
             {
                 preserveScroll: true,
-                onSuccess: () =>
+                onSuccess: () => {
+                    setNote('');
                     toast.success(
                         target
                             ? `${target.store.name} : ${STATUS_LABEL[status].toLowerCase()}`
                             : `Achat ${STATUS_LABEL[status].toLowerCase()}`,
-                    ),
+                    );
+                },
                 onError: (errors) =>
                     toast.error(
                         (Object.values(errors)[0] as string) ??
                             'Mise à jour impossible.',
+                    ),
+            },
+        );
+    };
+
+    const publishNote = () => {
+        const reference = target?.reference ?? group.primary_reference;
+
+        router.post(
+            route('admin.orders.notes.store', reference),
+            { note: note.trim(), scope: target ? 'single' : 'group' },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNote('');
+                    toast.success('Mise à jour du suivi publiée');
+                },
+                onError: (errors) =>
+                    toast.error(
+                        (Object.values(errors)[0] as string) ??
+                            'Publication impossible.',
                     ),
             },
         );
@@ -343,6 +375,24 @@ const Show = ({ group }: { group: OrderGroup }) => {
                             </div>
                         </label>
 
+                        <label className="mt-4 block">
+                            <span className="mb-1.5 block text-xs text-ink-soft">
+                                Note de suivi (visible par l’acheteur)
+                            </span>
+                            <textarea
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                rows={2}
+                                maxLength={500}
+                                placeholder="Ex. : Colis arrivé au centre de tri de Casablanca"
+                                className="w-full resize-none rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-ink transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                            />
+                            <span className="mt-1 block text-xs text-ink-soft">
+                                Jointe au prochain changement de statut, ou
+                                publiée seule ci-dessous.
+                            </span>
+                        </label>
+
                         {/*
                          * The exception, not the rule: normally the desk picks
                          * everything up at once and one tracking number covers
@@ -407,6 +457,15 @@ const Show = ({ group }: { group: OrderGroup }) => {
                                     {action.label}
                                 </button>
                             ))}
+                            <button
+                                type="button"
+                                onClick={publishNote}
+                                disabled={note.trim() === ''}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <Send className="h-4 w-4" />
+                                Publier la note seule
+                            </button>
                         </div>
                     </div>
                 </div>

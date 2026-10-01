@@ -138,6 +138,8 @@ return [
     'auth.login.phone' => 'Phone number',
     'auth.login.password_confirm' => 'Confirm password',
     'auth.login.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
+    'auth.login.password_error_rules' => 'Your password needs at least 12 characters, with upper and lower case, a number and a symbol.',
+    'auth.login.password_error_mismatch' => 'The two passwords do not match.',
     'auth.login.details_title' => 'Almost',
     'auth.login.details_title_accent' => 'there',
     'auth.login.details_subtitle' => 'Just a password. You can fill in the rest later, from your account.',

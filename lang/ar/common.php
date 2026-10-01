@@ -137,6 +137,8 @@ return [
     'auth.login.phone' => 'رقم الهاتف',
     'auth.login.password_confirm' => 'تأكيد كلمة المرور',
     'auth.login.password_hint' => '12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
+    'auth.login.password_error_rules' => 'يجب أن تتكون كلمة المرور من 12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
+    'auth.login.password_error_mismatch' => 'كلمتا المرور غير متطابقتين.',
     'auth.login.details_title' => 'أوشكت على',
     'auth.login.details_title_accent' => 'الانتهاء',
     'auth.login.details_subtitle' => 'كلمة مرور فقط. يمكنك إكمال بياناتك لاحقاً من حسابك.',

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -155,6 +156,30 @@ class ReviewService
 
             return count($written);
         });
+    }
+
+    /**
+     * Record ratings for a whole purchase — the "Rate my items" page, which
+     * lists every delivered piece across the purchase's workshops.
+     *
+     * Delegates to submit() once per delivered order, so the rules above are
+     * enforced exactly as they are for a single order: submit() drops anything
+     * not open in that order, which is what routes each product's rating to
+     * the order it was actually delivered in.
+     *
+     * @param  Collection<int, Order>  $orders  the purchase, already scoped to its buyer
+     * @param  array<int, array{rating: int, comment?: string|null}>  $productRatings
+     * @return int how many ratings were actually recorded
+     */
+    public function submitPurchase(User $user, Collection $orders, array $productRatings): int
+    {
+        $reviewable = $orders->filter(fn (Order $order) => $this->canReview($user, $order));
+
+        if ($reviewable->isEmpty()) {
+            abort(403);
+        }
+
+        return $reviewable->sum(fn (Order $order) => $this->submit($user, $order, $productRatings));
     }
 
     /**

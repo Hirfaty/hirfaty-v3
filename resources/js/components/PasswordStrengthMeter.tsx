@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
+import { PASSWORD_CHECKS } from '@/lib/password-rules';
 import { cn } from '@/lib/utils';
 
 interface PasswordStrengthMeterProps {
@@ -8,19 +9,10 @@ interface PasswordStrengthMeterProps {
 }
 
 /**
- * One check per rule in Password::defaults() (App\Providers\AppServiceProvider)
- * — min 12 chars, both cases, a number, a symbol. Four checks, four bars, and
- * "all lit" means the password actually clears registration. A meter that
- * scored differently from what the server enforces would tell the user
- * they're done when they're not.
+ * Four checks, four bars, and "all lit" means the password actually clears
+ * registration — the checks are shared with the pre-submit validation, so the
+ * meter can never score differently from what the forms (and server) enforce.
  */
-const CHECKS: Array<(password: string) => boolean> = [
-    (password) => password.length >= 12,
-    (password) => /[a-z]/.test(password) && /[A-Z]/.test(password),
-    (password) => /[0-9]/.test(password),
-    (password) => /[^a-zA-Z0-9]/.test(password),
-];
-
 /** Index 0 is "typed something, meets none of the four rules yet". */
 const LEVELS = [
     { key: 'very_weak', bar: 'bg-red-500', text: 'text-red-600' },
@@ -37,7 +29,7 @@ export default function PasswordStrengthMeter({
     const { t } = useTranslation();
 
     const score = useMemo(
-        () => CHECKS.filter((check) => check(password)).length,
+        () => PASSWORD_CHECKS.filter((check) => check(password)).length,
         [password],
     );
 
@@ -58,7 +50,7 @@ export default function PasswordStrengthMeter({
             aria-live="polite"
         >
             <div className="flex gap-1.5">
-                {CHECKS.map((_, i) => (
+                {PASSWORD_CHECKS.map((_, i) => (
                     <div
                         key={i}
                         className="h-1.5 flex-1 overflow-hidden rounded-full bg-souk-brown/10"

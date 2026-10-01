@@ -34,7 +34,14 @@ import type { PageProps, PaginatedData } from '@/types';
 interface ProductRow {
     id: number;
     name: string;
-    price: number;
+    /*
+     * Decimal columns, so they arrive as strings ("450.00"). There is no
+     * `price` column: `base_price` is NULL until Hirfaty agrees one with the
+     * artisan, and `sale_price` only counts while it undercuts it — the same
+     * rule Product::priceFor() and the product page apply.
+     */
+    base_price: string | null;
+    sale_price: string | null;
     stock: number;
     status: string;
     rejection_reason: string | null;
@@ -66,6 +73,29 @@ const STATUS: Record<string, { label: string; className: string }> = {
 
 const money = (n: number) =>
     `${new Intl.NumberFormat('fr-MA').format(Math.round(n))} MAD`;
+
+function PriceCell({ product }: { product: ProductRow }) {
+    if (product.base_price === null) {
+        return <span className="text-ink-soft">—</span>;
+    }
+
+    const base = Number(product.base_price);
+    const sale =
+        product.sale_price === null ? null : Number(product.sale_price);
+
+    if (sale === null || sale <= 0 || sale >= base) {
+        return <>{money(base)}</>;
+    }
+
+    return (
+        <>
+            {money(sale)}
+            <span className="block text-[11px] text-ink-soft line-through">
+                {money(base)}
+            </span>
+        </>
+    );
+}
 
 const Index = ({
     products,
@@ -212,7 +242,7 @@ const Index = ({
                                         </TableCell>
 
                                         <TableCell className="text-right text-sm text-ink tabular-nums">
-                                            {money(product.price)}
+                                            <PriceCell product={product} />
                                         </TableCell>
 
                                         <TableCell className="text-right text-sm tabular-nums">

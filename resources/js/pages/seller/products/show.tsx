@@ -28,7 +28,6 @@ function SellerProductPreview({
 }: {
     product: Product & { media: Media[]; category: Category };
     stats: {
-        total_views: number;
         total_wishlists: number;
         total_orders: number;
     };
@@ -248,12 +247,6 @@ function SellerProductPreview({
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-6">
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Vues totales</span>
-                                <span className="font-semibold tabular-nums">
-                                    {stats.total_views}
-                                </span>
-                            </div>
                             <div className="flex justify-between text-sm text-muted-foreground">
                                 <span>Ajouté aux favoris</span>
                                 <span className="font-semibold tabular-nums">

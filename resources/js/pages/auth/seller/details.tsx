@@ -7,6 +7,7 @@ import PasswordInput from '@/components/password-input';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { usePasswordCheck } from '@/hooks/use-password-check';
 import { useTranslation } from '@/hooks/use-translation';
 import heroZellige from '@/images/hero-zellige.jpg';
 import { store as createAccount } from '@/routes/login/details';
@@ -58,6 +59,7 @@ export default function SellerDetails({
     const { t } = useTranslation();
 
     const [passwordValue, setPasswordValue] = useState('');
+    const passwordCheck = usePasswordCheck();
     const [type, setType] = useState<StoreType>(types[0] ?? 'artist');
     const [descriptionLength, setDescriptionLength] = useState(0);
 
@@ -72,6 +74,7 @@ export default function SellerDetails({
         >
             <Form
                 {...createAccount.form()}
+                onBefore={passwordCheck.onBefore}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="mt-7"
@@ -166,15 +169,21 @@ export default function SellerDetails({
                                         required
                                         autoComplete="new-password"
                                         className={fieldClass}
-                                        onChange={(e) =>
-                                            setPasswordValue(e.target.value)
-                                        }
+                                        onChange={(e) => {
+                                            setPasswordValue(e.target.value);
+                                            passwordCheck.clearError(
+                                                'password',
+                                            );
+                                        }}
                                     />
                                     <PasswordStrengthMeter
                                         password={passwordValue}
                                     />
                                     <InputError
-                                        message={errors.password}
+                                        message={
+                                            passwordCheck.errors.password ??
+                                            errors.password
+                                        }
                                         className="mt-1.5"
                                     />
                                 </div>
@@ -194,9 +203,18 @@ export default function SellerDetails({
                                         required
                                         autoComplete="new-password"
                                         className={fieldClass}
+                                        onChange={() =>
+                                            passwordCheck.clearError(
+                                                'password_confirmation',
+                                            )
+                                        }
                                     />
                                     <InputError
-                                        message={errors.password_confirmation}
+                                        message={
+                                            passwordCheck.errors
+                                                .password_confirmation ??
+                                            errors.password_confirmation
+                                        }
                                         className="mt-1.5"
                                     />
                                 </div>

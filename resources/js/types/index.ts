@@ -53,13 +53,6 @@ export interface SellerStoreStatus {
 }
 
 /** What the orders page's thank-you dialog shows after a checkout. */
-export interface OrderPlacedPayload {
-    /** The purchase's group reference, e.g. "HRFG-WN06LKX4JV". */
-    reference: string | null;
-    /** Where the confirmation email went; null for a phone-only account. */
-    email: string | null;
-}
-
 /**
  * One row of the admin's in-app notifications, as
  * AdminNotificationService::present() shapes it. Title and body are already
@@ -97,7 +90,6 @@ export interface PageProps extends InertiaPageProps {
         /** Set only by the admin "generate reset link" action. */
         reset_link?: ResetLinkPayload;
         /** Set only right after a checkout: opens the thank-you dialog. */
-        order_placed?: OrderPlacedPayload | null;
     };
     locale: 'ar' | 'fr' | 'en';
     direction: 'ltr' | 'rtl';

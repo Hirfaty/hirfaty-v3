@@ -1,30 +1,27 @@
+import { Link } from '@inertiajs/react';
+import {
+    Copy,
+    Download,
+    History,
+    LifeBuoy,
+    MoreVertical,
+    Star,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import EmptyShowcase from '@/components/buyer/EmptyShowcase';
-import OrderPlacedDialog from '@/components/buyer/OrderPlacedDialog';
-import OrderReviewPanel from '@/components/buyer/OrderReviewPanel';
+import OrderStatusText, {
+    STATUS_COLOURS,
+} from '@/components/buyer/OrderStatusText';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
-import type { BuyerPurchase, OrderStatus } from '@/types/orders';
-
-/**
- * Status → the palette its pill wears. Kept as data rather than a chain of
- * ternaries in the markup so a new status is one line here, and so the case
- * that is genuinely different — cancelled, a dead end rather than a step — is
- * visibly so rather than buried in a condition.
- *
- * Filled tints rather than outlines, so the pills stop adding five more edges
- * to a page that was mostly edges. `delivered` keeps olive rather than taking
- * the new brand green: green is already carrying the account accent and the
- * order total on this same row, and a third green in one line would stop
- * meaning anything.
- */
-const STATUS_STYLES: Record<OrderStatus, string> = {
-    pending: 'bg-souk-brown/10 text-souk-brown-deep/75',
-    confirmed: 'bg-souk-brown/15 text-souk-brown-deep',
-    shipped: 'bg-terracotta/15 text-terracotta-deep',
-    delivered: 'bg-olive/15 text-olive',
-    cancelled: 'bg-souk-brown/5 text-souk-brown-deep/45',
-};
+import type { BuyerPurchase } from '@/types/orders';
 
 const LOCALE_TAGS: Record<string, string> = {
     fr: 'fr-MA',
@@ -37,13 +34,13 @@ const LOCALE_TAGS: Record<string, string> = {
  *
  * A basket spanning three workshops is three `Order` rows in the database —
  * that is who gets paid and who gets notified — but the buyer bought one
- * thing, and three near-identical cards read as three purchases they don't
- * remember making. So the card is the checkout, and the split shows up inside
- * it as the shop each piece came from.
+ * thing, so the card is the checkout: one reference, one status, one total,
+ * one invoice, and every piece from every workshop in a single grid.
  *
- * The split is not hidden, only demoted: status and tracking really are per
- * workshop (one parcel can arrive while another is still being packed), so
- * each shop keeps its own pill and its own rating form.
+ * The split survives only where it is genuinely per workshop: each piece says
+ * which atelier made it, and a shop that has moved on from the rest shows its
+ * own status. History and ratings each have their own page (tracking.tsx,
+ * review.tsx), linked from the foot of the card.
  */
 export default function BuyerOrders({
     purchases,
@@ -63,11 +60,38 @@ export default function BuyerOrders({
     const date = (value: string | null) =>
         value
             ? new Intl.DateTimeFormat(tag, {
+                  weekday: 'short',
                   day: 'numeric',
-                  month: 'long',
+                  month: 'short',
                   year: 'numeric',
               }).format(new Date(value))
             : null;
+
+    const placedAt = (value: string | null) => {
+        if (!value) {
+            return null;
+        }
+
+        const at = new Date(value);
+        const time = new Intl.DateTimeFormat(tag, {
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(at);
+        const day = new Intl.DateTimeFormat(tag, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        }).format(at);
+
+        return `${time}, ${day}`;
+    };
+
+    const copyReference = (reference: string) => {
+        navigator.clipboard
+            ?.writeText(reference)
+            .then(() => toast.success(t('buyer.orders.reference_copied')))
+            .catch(() => undefined);
+    };
 
     return (
         <BuyerAccountLayout
@@ -75,7 +99,6 @@ export default function BuyerOrders({
             title={t('buyer.account.nav_orders')}
             description={t('buyer.account.orders_intro')}
         >
-            <OrderPlacedDialog />
             {purchases.length === 0 ? (
                 <EmptyShowcase
                     eyebrow={t('buyer.orders.empty_eyebrow')}
@@ -85,178 +108,324 @@ export default function BuyerOrders({
             ) : (
                 <ul className="space-y-5">
                     {purchases.map((purchase) => {
-                        // Several workshops changes what the card has to say —
-                        // whose pieces are whose, and that the pills below the
-                        // header are per shop rather than repetition.
                         const split = purchase.orders.length > 1;
+                        const address = [
+                            purchase.shipping_address,
+                            purchase.city,
+                        ]
+                            .filter(Boolean)
+                            .join(', ');
+                        const byline = [
+                            purchase.items_count === 1
+                                ? t('buyer.orders.products_one')
+                                : t('buyer.orders.products_many').replace(
+                                      ':count',
+                                      String(purchase.items_count),
+                                  ),
+                            purchase.buyer_name &&
+                                t('buyer.orders.by').replace(
+                                    ':name',
+                                    purchase.buyer_name,
+                                ),
+                            placedAt(purchase.created_at),
+                        ].filter(Boolean);
 
                         return (
                             <li
                                 key={purchase.reference}
-                                // A soft card rather than a hairline box,
-                                // matching the address card and the empty
-                                // state — the whole account area now lifts its
-                                // objects off the paper instead of drawing
-                                // edges around them.
-                                className="rounded-2xl bg-white p-5 shadow-sm shadow-souk-brown/5 sm:p-6"
+                                className="rounded-2xl bg-white p-5 shadow-xl shadow-souk-brown/5 sm:p-6"
                             >
+                                {/* ── Header: reference, byline, actions ── */}
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        {/* Tabular figures so a column of
-                                            references lines up digit for
-                                            digit — they get read by eye when
-                                            matching one against an email. */}
-                                        <p className="font-display text-base tracking-[0.04em] text-souk-title tabular-nums">
-                                            {purchase.reference}
-                                        </p>
-                                        <p className="mt-1 text-sm text-souk-brown-deep/60">
-                                            {split
-                                                ? t(
-                                                      'buyer.orders.shops_count',
-                                                  ).replace(
-                                                      ':count',
-                                                      String(
-                                                          purchase.orders
-                                                              .length,
-                                                      ),
-                                                  )
-                                                : purchase.orders[0]?.store
-                                                      .store_name}
-                                            {purchase.created_at && (
-                                                <>
-                                                    {' '}
-                                                    ·{' '}
-                                                    {date(purchase.created_at)}
-                                                </>
+                                        {/* Tabular figures so a reference
+                                            can be matched digit for digit
+                                            against the confirmation email. */}
+                                        <h2 className="font-display text-lg text-souk-title tabular-nums">
+                                            {t('buyer.orders.number').replace(
+                                                ':reference',
+                                                '',
                                             )}
-                                        </p>
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
-                                        <span
-                                            className={`rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.14em] uppercase ${STATUS_STYLES[purchase.status]}`}
-                                        >
-                                            {t(
-                                                `buyer.orders.status_${purchase.status}`,
-                                            )}
-                                        </span>
-                                        <span className="font-display text-base text-souk-green">
-                                            {money(purchase.total_amount)}
-                                            TTC
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 space-y-5">
-                                    {purchase.orders.map((order) => (
-                                        <div key={order.id}>
-                                            {/* Named only once the basket
-                                                actually spans workshops —
-                                                against a single shop this
-                                                would just repeat the header. */}
-                                            {split && (
-                                                <div className="mb-2 flex items-center justify-between gap-3">
-                                                    <span className="min-w-0 truncate text-xs font-semibold tracking-[0.12em] text-souk-brown-deep/50 uppercase">
-                                                        {order.store.store_name}
-                                                    </span>
-                                                    <span
-                                                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-[0.12em] uppercase ${STATUS_STYLES[order.status]}`}
-                                                    >
-                                                        {t(
-                                                            `buyer.orders.status_${order.status}`,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            <ul className="space-y-3">
-                                                {order.items.map((item) => (
-                                                    <li
-                                                        key={item.id}
-                                                        className="flex items-center gap-3"
-                                                    >
-                                                        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-souk-peach">
-                                                            {item.product
-                                                                .image && (
-                                                                <img
-                                                                    src={
-                                                                        item
-                                                                            .product
-                                                                            .image
-                                                                    }
-                                                                    alt=""
-                                                                    loading="lazy"
-                                                                    className="h-full w-full object-cover"
-                                                                />
-                                                            )}
-                                                        </span>
-                                                        <span className="min-w-0 flex-1 truncate text-base text-souk-brown-deep/85">
-                                                            {item.product.name}
-                                                        </span>
-                                                        <span className="shrink-0 text-sm text-souk-brown-deep/55">
-                                                            ×{item.quantity}
-                                                        </span>
-                                                        <span className="shrink-0 text-sm text-souk-brown-deep/70 tabular-nums">
-                                                            {money(
-                                                                item.subtotal,
-                                                            )}{' '}
-                                                            TTC
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-
-                                            {/* `can_review` rather than
-                                                re-checking the status here:
-                                                what may be rated is the
-                                                server's rule, and deriving it
-                                                a second time in the page is
-                                                how the two drift apart. Per
-                                                shop, because a rating is of
-                                                that workshop and its pieces. */}
-                                            {order.can_review && (
-                                                <OrderReviewPanel
-                                                    order={order}
+                                            <bdi
+                                                dir="ltr"
+                                                className="font-sans"
+                                            >
+                                                {purchase.reference}
+                                            </bdi>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    copyReference(
+                                                        purchase.reference,
+                                                    )
+                                                }
+                                                aria-label={t(
+                                                    'buyer.orders.copy_reference',
+                                                )}
+                                                title={t(
+                                                    'buyer.orders.copy_reference',
+                                                )}
+                                                className="ms-2 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md align-middle text-souk-brown-deep/50 transition-colors hover:bg-souk-peach hover:text-souk-title"
+                                            >
+                                                <Copy
+                                                    className="h-3.5 w-3.5"
+                                                    strokeWidth={1.8}
                                                 />
+                                            </button>
+                                        </h2>
+                                        <p className="mt-1 text-sm text-souk-brown-deep/60">
+                                            {byline.map((part, index) => (
+                                                <span key={index}>
+                                                    {index > 0 && (
+                                                        <span
+                                                            aria-hidden
+                                                            className="mx-2 text-souk-brown-deep/25"
+                                                        >
+                                                            |
+                                                        </span>
+                                                    )}
+                                                    {part}
+                                                </span>
+                                            ))}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {/* A plain anchor, not an Inertia
+                                            Link: the response is a PDF
+                                            attachment, not a page. */}
+                                        <a
+                                            href={route(
+                                                'buyer.purchases.invoice',
+                                                purchase.reference,
                                             )}
-                                        </div>
-                                    ))}
+                                            className="inline-flex items-center gap-2 rounded-lg border border-souk-brown/20 px-3.5 py-2 text-sm font-medium text-souk-title transition-colors hover:bg-souk-peach"
+                                        >
+                                            <Download
+                                                className="h-4 w-4"
+                                                strokeWidth={1.8}
+                                            />
+                                            {t('buyer.orders.download_invoice')}
+                                        </a>
+
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger
+                                                aria-label={t(
+                                                    'buyer.orders.more_actions',
+                                                )}
+                                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-souk-brown/20 text-souk-title transition-colors hover:bg-souk-peach"
+                                            >
+                                                <MoreVertical
+                                                    className="h-4 w-4"
+                                                    strokeWidth={1.8}
+                                                />
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem asChild>
+                                                    <Link
+                                                        href={route('contact')}
+                                                    >
+                                                        <LifeBuoy className="h-4 w-4" />
+                                                        {t(
+                                                            'buyer.orders.contact',
+                                                        )}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
 
-                                {/* The pieces above are priced per shop, but
-                                    delivery is charged once for the basket —
-                                    without this line the total in the header
-                                    would look larger than the sum of what is
-                                    on screen. */}
-                                {Number(purchase.delivery_fee) > 0 && (
-                                    <dl className="mt-5 space-y-1.5 border-t border-souk-brown/12 pt-4 text-sm">
-                                        <div className="flex justify-between gap-4 text-souk-brown-deep/60">
-                                            <dt>
-                                                {t('buyer.orders.items_total')}
+                                {/* ── Facts: status, delivery, address, total ── */}
+                                <dl className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-8 gap-y-2 border-t border-souk-brown/10 pt-5 text-sm">
+                                    <dt className="text-souk-brown-deep/60">
+                                        {t('buyer.orders.status')}
+                                    </dt>
+                                    <dd>
+                                        <OrderStatusText
+                                            status={purchase.status}
+                                        />
+                                    </dd>
+
+                                    <dt className="text-souk-brown-deep/60">
+                                        {t('buyer.orders.delivery_date')}
+                                    </dt>
+                                    <dd className="text-souk-brown-deep/85">
+                                        {date(purchase.delivered_at) ??
+                                            t('buyer.orders.delivery_pending')}
+                                    </dd>
+
+                                    {address && (
+                                        <>
+                                            <dt className="text-souk-brown-deep/60">
+                                                {t('buyer.orders.delivered_to')}
                                             </dt>
-                                            <dd className="tabular-nums">
-                                                {money(purchase.items_total)}{' '}
-                                                TTC
+                                            <dd className="text-souk-brown-deep/85">
+                                                {address}
                                             </dd>
-                                        </div>
-                                        <div className="flex justify-between gap-4 text-souk-brown-deep/60">
-                                            <dt>
-                                                {t('buyer.orders.delivery')}
-                                            </dt>
-                                            <dd className="tabular-nums">
-                                                {money(purchase.delivery_fee)}{' '}
-                                                TTC
-                                            </dd>
-                                        </div>
-                                        <div className="flex justify-between gap-4 pt-1 text-souk-title">
-                                            <dt>{t('buyer.orders.total')}</dt>
-                                            <dd className="font-display tabular-nums">
-                                                {money(purchase.total_amount)}{' '}
-                                                TTC
-                                            </dd>
-                                        </div>
-                                    </dl>
-                                )}
+                                        </>
+                                    )}
+
+                                    <dt className="font-semibold text-souk-title">
+                                        {t('buyer.orders.total')}
+                                    </dt>
+                                    <dd className="text-souk-title">
+                                        <span className="font-display font-semibold tabular-nums">
+                                            {money(purchase.total_amount)} TTC
+                                        </span>
+                                        {/* Delivery is charged once for the
+                                            basket, not per piece — without
+                                            this the total would look larger
+                                            than the pieces below add up to. */}
+                                        {Number(purchase.delivery_fee) > 0 && (
+                                            <span className="ms-2 text-xs text-souk-brown-deep/55 tabular-nums">
+                                                ({t('buyer.orders.items_total')}{' '}
+                                                {money(purchase.items_total)} +{' '}
+                                                {t('buyer.orders.delivery')}{' '}
+                                                {money(purchase.delivery_fee)})
+                                            </span>
+                                        )}
+                                    </dd>
+                                </dl>
+
+                                {/* ── Every piece, from every workshop ── */}
+                                <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+                                    {purchase.orders.flatMap((order) =>
+                                        order.items.map((item) => (
+                                            <li
+                                                key={item.id}
+                                                className="flex gap-4"
+                                            >
+                                                <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-souk-peach">
+                                                    {item.product.image && (
+                                                        <img
+                                                            src={
+                                                                item.product
+                                                                    .image
+                                                            }
+                                                            alt=""
+                                                            loading="lazy"
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    )}
+                                                </span>
+                                                <div className="min-w-0 flex-1 text-sm">
+                                                    {item.product.slug ? (
+                                                        <Link
+                                                            href={route(
+                                                                'products.show',
+                                                                item.product
+                                                                    .slug,
+                                                            )}
+                                                            className="line-clamp-2 font-semibold text-souk-title hover:underline"
+                                                        >
+                                                            {item.product.name}
+                                                        </Link>
+                                                    ) : (
+                                                        <p className="line-clamp-2 font-semibold text-souk-title">
+                                                            {item.product.name}
+                                                        </p>
+                                                    )}
+                                                    <p className="mt-1 text-souk-brown-deep/65 tabular-nums">
+                                                        {t(
+                                                            'buyer.orders.quantity',
+                                                        )}
+                                                        : {item.quantity}× ={' '}
+                                                        {money(item.unit_price)}
+                                                    </p>
+                                                    {item.variant_label && (
+                                                        <p className="text-souk-brown-deep/65">
+                                                            {t(
+                                                                'buyer.orders.variant',
+                                                            )}
+                                                            :{' '}
+                                                            {item.variant_label}
+                                                        </p>
+                                                    )}
+                                                    {order.store.store_name && (
+                                                        <p className="text-souk-brown-deep/65">
+                                                            {t(
+                                                                'buyer.orders.workshop',
+                                                            )}
+                                                            :{' '}
+                                                            {
+                                                                order.store
+                                                                    .store_name
+                                                            }
+                                                            {/* Only when this
+                                                                shop has moved
+                                                                apart from the
+                                                                purchase — one
+                                                                parcel can land
+                                                                before another. */}
+                                                            {split &&
+                                                                order.status !==
+                                                                    purchase.status && (
+                                                                    <span
+                                                                        className={`ms-2 font-semibold ${STATUS_COLOURS[order.status].text}`}
+                                                                    >
+                                                                        ·{' '}
+                                                                        {t(
+                                                                            `buyer.orders.status_${order.status}`,
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </li>
+                                        )),
+                                    )}
+                                </ul>
+
+                                {/* ── Follow-ups: history, and rating ── */}
+                                <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-souk-brown/10 pt-4">
+                                    <Link
+                                        href={route(
+                                            'buyer.purchases.tracking',
+                                            purchase.reference,
+                                        )}
+                                        className="inline-flex items-center gap-2 rounded-lg border border-souk-brown/20 px-3.5 py-2 text-sm font-medium text-souk-title transition-colors hover:bg-souk-peach"
+                                    >
+                                        <History
+                                            className="h-4 w-4"
+                                            strokeWidth={1.8}
+                                        />
+                                        {t('buyer.orders.track')}
+                                    </Link>
+
+                                    {/* Offered once something has been
+                                        delivered — `can_review` is the
+                                        server's rule. Filled while pieces are
+                                        still waiting for stars; outlined once
+                                        everything is rated, to reread them. */}
+                                    {purchase.can_review && (
+                                        <Link
+                                            href={route(
+                                                'buyer.purchases.review',
+                                                purchase.reference,
+                                            )}
+                                            className={
+                                                purchase.review_open_count > 0
+                                                    ? 'inline-flex items-center gap-2 rounded-lg bg-souk-brown px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep'
+                                                    : 'inline-flex items-center gap-2 rounded-lg border border-souk-brown/20 px-3.5 py-2 text-sm font-medium text-souk-title transition-colors hover:bg-souk-peach'
+                                            }
+                                        >
+                                            <Star
+                                                className="h-4 w-4"
+                                                strokeWidth={1.8}
+                                            />
+                                            {purchase.review_open_count > 0
+                                                ? t('buyer.orders.rate')
+                                                : t('buyer.orders.my_reviews')}
+                                            {purchase.review_open_count > 0 && (
+                                                <span className="rounded-full bg-white/20 px-1.5 text-xs tabular-nums">
+                                                    {purchase.review_open_count}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    )}
+                                </div>
                             </li>
                         );
                     })}

@@ -222,6 +222,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/orders/export', [Admin\OrderController::class, 'export'])->name('orders.export');
         Route::get('/orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.status');
+        Route::post('/orders/{order}/notes', [Admin\OrderController::class, 'addNote'])->name('orders.notes.store');
 
         // Reviews
         Route::get('/reviews', [Admin\ReviewController::class, 'index'])->name('reviews.index');
@@ -382,6 +383,7 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/checkout/confirmation/{purchase}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
     // Discount codes are not implemented — see CheckoutController::applyCoupon
     // for why the field exists anyway. Throttled because it is a guessing game
     // until it is real, and will still be one afterwards.
@@ -414,6 +416,12 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::delete('/account/addresses/{address}', [AddressController::class, 'destroy'])->name('buyer.addresses.destroy');
 
     Route::get('/orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');
+    // A purchase reference — the group's, shared by every order one checkout
+    // made — not an Order route key, so it is a plain string parameter.
+    Route::get('/orders/{purchase}/invoice', [BuyerOrderController::class, 'invoice'])->name('buyer.purchases.invoice');
+    Route::get('/orders/{purchase}/tracking', [BuyerOrderController::class, 'tracking'])->name('buyer.purchases.tracking');
+    Route::get('/orders/{purchase}/review', [BuyerOrderController::class, 'review'])->name('buyer.purchases.review');
+    Route::post('/orders/{purchase}/review', [ReviewController::class, 'storePurchase'])->name('buyer.purchases.review.store');
 
     /*
      * Ratings for one delivered order — every piece in it, plus the shop, in a

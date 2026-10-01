@@ -199,3 +199,96 @@ test('the orders page is handed purchases, not raw orders', function () {
             ->has('purchases.0.orders', 2)
         );
 });
+
+test('the card counts pieces across every workshop and names who bought them', function () {
+    $this->buyer->update(['first_name' => 'Amina', 'last_name' => 'Tazi']);
+
+    $alpha = historyStore('Atelier Alpha');
+    $beta = historyStore('Atelier Beta');
+
+    historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), 'HRFG-CARD000001');
+    historyOrder($this->buyer, $beta, historyProduct($beta, 'Panier', 60), 'HRFG-CARD000001');
+
+    $purchase = app(BuyerAccountService::class)->purchases($this->buyer)[0];
+
+    expect($purchase['items_count'])->toBe(2);
+    expect($purchase['buyer_name'])->toBe('Amina Tazi');
+});
+
+test('the delivery date waits for every live workshop to deliver', function () {
+    $alpha = historyStore('Atelier Alpha');
+    $beta = historyStore('Atelier Beta');
+
+    $first = historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), 'HRFG-DATE000001', 'delivered');
+    $second = historyOrder($this->buyer, $beta, historyProduct($beta, 'Panier', 60), 'HRFG-DATE000001', 'shipped');
+    $first->update(['delivered_at' => now()->subDay()]);
+
+    $service = app(BuyerAccountService::class);
+
+    // One parcel landed, the other is still on its way.
+    expect($service->purchases($this->buyer)[0]['delivered_at'])->toBeNull();
+
+    $second->update(['status' => 'delivered', 'delivered_at' => now()]);
+
+    // The later of the two, once both are in.
+    expect($service->purchases($this->buyer)[0]['delivered_at']->toDateString())
+        ->toBe(now()->toDateString());
+});
+
+test('the confirmation page is only for the buyer who placed the purchase', function () {
+    $alpha = historyStore('Atelier Alpha');
+    historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), 'HRFG-CONF000001');
+
+    $this->actingAs($this->buyer)
+        ->get(route('checkout.confirmation', 'HRFG-CONF000001'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('buyer/checkout-confirmation')
+            ->where('purchase.reference', 'HRFG-CONF000001')
+        );
+
+    $stranger = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
+
+    $this->actingAs($stranger)
+        ->get(route('checkout.confirmation', 'HRFG-CONF000001'))
+        ->assertNotFound();
+});
+
+test('the invoice downloads as one PDF for the whole purchase', function () {
+    $alpha = historyStore('Atelier Alpha');
+    $beta = historyStore('Atelier Beta');
+
+    historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), 'HRFG-INVC000001', deliveryFee: 30);
+    historyOrder($this->buyer, $beta, historyProduct($beta, 'Panier', 60), 'HRFG-INVC000001');
+
+    $response = $this->actingAs($this->buyer)
+        ->get(route('buyer.purchases.invoice', 'HRFG-INVC000001'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    expect($response->headers->get('content-disposition'))
+        ->toContain('attachment')
+        ->toContain('HRFG-INVC000001');
+    expect(substr($response->getContent(), 0, 4))->toBe('%PDF');
+});
+
+test('an order placed before grouping existed still has an invoice', function () {
+    $alpha = historyStore('Atelier Alpha');
+    $order = historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), null);
+
+    $this->actingAs($this->buyer)
+        ->get(route('buyer.purchases.invoice', $order->reference))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+});
+
+test('another buyer cannot download the invoice', function () {
+    $alpha = historyStore('Atelier Alpha');
+    historyOrder($this->buyer, $alpha, historyProduct($alpha, 'Vase', 100), 'HRFG-PRIV000001');
+
+    $stranger = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
+
+    $this->actingAs($stranger)
+        ->get(route('buyer.purchases.invoice', 'HRFG-PRIV000001'))
+        ->assertNotFound();
+});

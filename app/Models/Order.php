@@ -87,6 +87,15 @@ class Order extends Model
         static::creating(function (self $order) {
             $order->reference ??= self::generateReference();
         });
+
+        /*
+         * The first line of the order's history, for the same reason the
+         * reference is assigned here: every creation path gets it. Recorded at
+         * whatever status the order was created with — `pending` from checkout.
+         */
+        static::created(function (self $order) {
+            $order->statusEvents()->create(['status' => $order->status]);
+        });
     }
 
     /**
@@ -161,6 +170,12 @@ class Order extends Model
     public function earning()
     {
         return $this->hasOne(Earning::class);
+    }
+
+    /** Oldest first — the order the tracking page tells the story in. */
+    public function statusEvents()
+    {
+        return $this->hasMany(OrderStatusEvent::class)->oldest()->oldest('id');
     }
 
     // ─── Status helpers ──────────────────────────────────────

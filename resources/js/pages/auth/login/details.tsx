@@ -5,6 +5,7 @@ import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Spinner } from '@/components/ui/spinner';
+import { usePasswordCheck } from '@/hooks/use-password-check';
 import { useTranslation } from '@/hooks/use-translation';
 import { store as createAccount } from '@/routes/login/details';
 import AuthShell from './AuthShell';
@@ -43,6 +44,7 @@ export default function LoginDetails() {
      * <Form>, which reads the live DOM value on submit anyway.
      */
     const [passwordValue, setPasswordValue] = useState('');
+    const passwordCheck = usePasswordCheck();
 
     return (
         <AuthShell
@@ -53,6 +55,7 @@ export default function LoginDetails() {
         >
             <Form
                 {...createAccount.form()}
+                onBefore={passwordCheck.onBefore}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="mt-7"
@@ -74,15 +77,19 @@ export default function LoginDetails() {
                                     autoFocus
                                     autoComplete="new-password"
                                     className={fieldClass}
-                                    onChange={(e) =>
-                                        setPasswordValue(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setPasswordValue(e.target.value);
+                                        passwordCheck.clearError('password');
+                                    }}
                                 />
                                 <PasswordStrengthMeter
                                     password={passwordValue}
                                 />
                                 <InputError
-                                    message={errors.password}
+                                    message={
+                                        passwordCheck.errors.password ??
+                                        errors.password
+                                    }
                                     className="mt-1.5"
                                 />
                             </div>
@@ -100,9 +107,18 @@ export default function LoginDetails() {
                                     required
                                     autoComplete="new-password"
                                     className={fieldClass}
+                                    onChange={() =>
+                                        passwordCheck.clearError(
+                                            'password_confirmation',
+                                        )
+                                    }
                                 />
                                 <InputError
-                                    message={errors.password_confirmation}
+                                    message={
+                                        passwordCheck.errors
+                                            .password_confirmation ??
+                                        errors.password_confirmation
+                                    }
                                     className="mt-1.5"
                                 />
                             </div>

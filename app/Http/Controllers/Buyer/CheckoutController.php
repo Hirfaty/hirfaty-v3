@@ -8,6 +8,7 @@ use App\Http\Resources\CartLineResource;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\City;
+use App\Services\BuyerAccountService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CurrencyService;
@@ -187,15 +188,27 @@ class CheckoutController extends Controller
 
         $orders = $checkout->process($cart, $destination);
 
-        $first = $orders[0] ?? null;
+        $first = $orders[0];
 
-        return redirect()->route('buyer.account.orders.index')
-            ->with('success', __('buyer.checkout.placed', ['count' => count($orders)]))
-            // Drives the thank-you dialog on the orders page (OrderPlacedDialog).
-            // One flash, so it opens once and a reload does not bring it back.
-            ->with('order_placed', [
-                'reference' => $first?->group_reference ?? $first?->reference,
-                'email' => $request->user()->email,
-            ]);
+        // The thank-you page for the whole purchase — however many workshops
+        // it was split across, it is keyed by the one reference they share.
+        return redirect()->route('checkout.confirmation', $first->group_reference ?? $first->reference);
+    }
+
+    /**
+     * The page a buyer lands on once checkout goes through.
+     *
+     * A real page rather than a one-shot flash: it survives a reload, and the
+     * link in a browser's history still shows what was bought. Scoped to the
+     * buyer by BuyerAccountService, so another buyer's reference 404s.
+     */
+    public function confirmation(Request $request, string $purchase, BuyerAccountService $account)
+    {
+        $shaped = $account->purchase($request->user(), $purchase) ?? abort(404);
+
+        return Inertia::render('buyer/checkout-confirmation', [
+            'purchase' => $shaped,
+            'email' => $request->user()->email,
+        ]);
     }
 }

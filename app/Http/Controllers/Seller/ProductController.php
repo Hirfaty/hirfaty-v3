@@ -57,7 +57,6 @@ class ProductController extends Controller
         return Inertia::render('seller/products/show', [
             'product' => $product,
             'stats' => [
-                'total_views' => $product->views()->count(),
                 'total_wishlists' => $product->wishlists()->count(),
                 'total_orders' => $product->orderItems()->sum('quantity'),
             ],

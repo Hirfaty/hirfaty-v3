@@ -32,9 +32,9 @@ class OrderStatusService
      * @param  array<string, mixed>  $attributes  Extra columns to write alongside the
      *                                            status change (tracking_number, cancellation_reason, ...).
      */
-    public function transition(Order $order, string $status, array $attributes = []): Order
+    public function transition(Order $order, string $status, array $attributes = [], ?string $note = null): Order
     {
-        return $this->transitionMany(collect([$order]), $status, $attributes)->first();
+        return $this->transitionMany(collect([$order]), $status, $attributes, $note)->first();
     }
 
     /**
@@ -58,15 +58,21 @@ class OrderStatusService
      * nothing new to say, so it's left out; see OrderPlaced's docblock for
      * the same "one checkout, one email" shape at checkout time).
      *
+     * Each order that moves gets a line in its history (OrderStatusEvent),
+     * carrying `$note` when the desk wrote one — or, for a cancellation, the
+     * reason. Re-submitting the status an order is already at records nothing
+     * unless there is a note, in which case it is kept as a tracking update.
+     *
      * @param  Collection<int, Order>  $orders
      * @param  array<string, mixed>  $attributes
      * @return Collection<int, Order>
      */
-    public function transitionMany(Collection $orders, string $status, array $attributes = []): Collection
+    public function transitionMany(Collection $orders, string $status, array $attributes = [], ?string $note = null): Collection
     {
         $changedIds = [];
+        $note = $this->cleanNote($note);
 
-        DB::transaction(function () use ($orders, $status, $attributes, &$changedIds) {
+        DB::transaction(function () use ($orders, $status, $attributes, $note, &$changedIds) {
             foreach ($orders as $order) {
                 $previousStatus = $order->status;
 
@@ -97,6 +103,15 @@ class OrderStatusService
 
                 if ($previousStatus !== $status) {
                     $changedIds[] = $order->id;
+
+                    $order->statusEvents()->create([
+                        'status' => $status,
+                        'note' => $note ?? ($status === 'cancelled'
+                            ? $this->cleanNote($attributes['cancellation_reason'] ?? null)
+                            : null),
+                    ]);
+                } elseif ($note !== null) {
+                    $order->statusEvents()->create(['status' => null, 'note' => $note]);
                 }
             }
         });
@@ -106,6 +121,35 @@ class OrderStatusService
         }
 
         return $orders;
+    }
+
+    /**
+     * Tell the buyer where their parcel is without moving it to a new status —
+     * "arrivé au centre de tri de Casablanca" between shipped and delivered.
+     *
+     * Shown on the buyer's tracking page only; no email, since nothing about
+     * the order changed that they need to act on.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    public function addNote(Collection $orders, string $note): void
+    {
+        $note = $this->cleanNote($note);
+
+        if ($note === null) {
+            return;
+        }
+
+        foreach ($orders as $order) {
+            $order->statusEvents()->create(['status' => null, 'note' => $note]);
+        }
+    }
+
+    private function cleanNote(?string $note): ?string
+    {
+        $note = trim((string) $note);
+
+        return $note === '' ? null : mb_substr($note, 0, 500);
     }
 
     /**

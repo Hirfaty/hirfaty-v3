@@ -213,27 +213,21 @@ test('checkout store creates grouped orders and clears cart', function () {
         'notes' => 'Fragile items',
     ]));
 
-    $response->assertRedirect(route('buyer.account.orders.index'));
-    $response->assertSessionHas('success', '2 commande(s) passée(s) avec succès !');
-
-    // The thank-you dialog on the orders page quotes the purchase's one
-    // reference — the group's, not either workshop's own.
+    // The confirmation page is keyed by the purchase's one reference — the
+    // group's, not either workshop's own — and shows both shops' pieces.
     $groupReference = Order::value('group_reference');
-    $response->assertSessionHas('order_placed', [
-        'reference' => $groupReference,
-        'email' => $buyer->email,
-    ]);
+    $response->assertRedirect(route('checkout.confirmation', $groupReference));
 
     $this->actingAs($buyer)
-        ->get(route('buyer.account.orders.index'))
+        ->get(route('checkout.confirmation', $groupReference))
+        ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('flash.order_placed.reference', $groupReference)
+            ->component('buyer/checkout-confirmation')
+            ->where('purchase.reference', $groupReference)
+            ->where('purchase.items_count', 2)
+            ->has('purchase.orders', 2)
+            ->where('email', $buyer->email)
         );
-
-    // One-shot: coming back later does not reopen it.
-    $this->actingAs($buyer)
-        ->get(route('buyer.account.orders.index'))
-        ->assertInertia(fn (Assert $page) => $page->where('flash.order_placed', null));
 
     expect(Order::count())->toBe(2);
     expect(OrderItem::count())->toBe(2);
@@ -418,8 +412,7 @@ test('checkout store applies 20% commission and passes 40 delivery through to th
         'notes' => 'Please handle with care',
     ]));
 
-    $response->assertRedirect(route('buyer.account.orders.index'));
-    $response->assertSessionHas('success', '1 commande(s) passée(s) avec succès !');
+    $response->assertRedirect(route('checkout.confirmation', Order::value('group_reference')));
 
     expect(Order::count())->toBe(1);
     expect(Earning::count())->toBe(1);

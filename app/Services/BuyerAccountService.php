@@ -146,22 +146,11 @@ class BuyerAccountService
     public function purchases(User $user): array
     {
         $orders = Order::where('buyer_id', $user->id)
-            ->with(['store', 'city', 'items.product.images'])
+            ->with(self::PURCHASE_RELATIONS)
             ->latest()
             ->get();
 
-        /*
-         * Ratings this buyer has already left, fetched once for the whole
-         * history rather than per order — the page renders every order at
-         * once, so a per-order lookup would be a query per card.
-         *
-         * Keyed by product id, which is also the grain of the unique index:
-         * one opinion per buyer per piece, spanning every order it appeared
-         * in. A row here is what closes the form — see ReviewService.
-         */
-        $productReviews = ProductReview::where('user_id', $user->id)
-            ->get()
-            ->keyBy('product_id');
+        $productReviews = $this->productReviews($user);
 
         return $orders
             /*
@@ -174,6 +163,137 @@ class BuyerAccountService
             ->map(fn (Collection $group) => $this->shapePurchase($group, $productReviews))
             ->values()
             ->all();
+    }
+
+    /**
+     * One purchase, as the order history would render its card — for the
+     * confirmation page checkout lands on.
+     *
+     * Null when the reference is unknown or belongs to someone else; the
+     * caller turns that into a 404 so a guessed reference reveals nothing.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function purchase(User $user, string $reference): ?array
+    {
+        $group = $this->purchaseOrders($user, $reference);
+
+        return $group->isEmpty()
+            ? null
+            : $this->shapePurchase($group, $this->productReviews($user));
+    }
+
+    /**
+     * Every order behind one purchase reference, scoped to its buyer.
+     *
+     * Matches either a group reference or — for an order placed before
+     * grouping existed — that lone order's own reference, which is what
+     * purchases() quotes for it. The buyer scope sits on the query rather
+     * than being checked afterwards, so another buyer's reference simply
+     * finds nothing.
+     *
+     * @return Collection<int, Order>
+     */
+    public function purchaseOrders(User $user, string $reference): Collection
+    {
+        return Order::where('buyer_id', $user->id)
+            ->where(fn ($query) => $query
+                ->where('group_reference', $reference)
+                ->orWhere(fn ($query) => $query
+                    ->whereNull('group_reference')
+                    ->where('reference', $reference)))
+            ->with(self::PURCHASE_RELATIONS)
+            ->oldest('id')
+            ->get();
+    }
+
+    /**
+     * One purchase's history, for the tracking page: the purchase card's
+     * data, plus every event across its workshops as one timeline.
+     *
+     * The desk usually moves a whole purchase at once, which writes the same
+     * event on every order in it — so events are folded back together when
+     * they say the same thing at the same minute. One that only touched some
+     * workshops (a parcel shipped separately) keeps their names, so the buyer
+     * can tell which part of the purchase it was about.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function tracking(User $user, string $reference): ?array
+    {
+        $group = $this->purchaseOrders($user, $reference);
+
+        if ($group->isEmpty()) {
+            return null;
+        }
+
+        $group->load('statusEvents');
+
+        $events = $group
+            ->flatMap(fn (Order $order) => $order->statusEvents->map(fn ($event) => [
+                'event' => $event,
+                'store' => $order->store?->store_name,
+            ]))
+            ->groupBy(fn (array $row) => implode('|', [
+                $row['event']->status ?? 'note',
+                $row['event']->note ?? '',
+                $row['event']->created_at?->format('Y-m-d H:i'),
+            ]))
+            ->map(function (Collection $rows) use ($group) {
+                $event = $rows->first()['event'];
+                $stores = $rows->pluck('store')->filter()->unique()->values();
+
+                return [
+                    'id' => $event->id,
+                    'status' => $event->status,
+                    'note' => $event->note,
+                    'at' => $event->created_at,
+                    // Null when it applied to the whole purchase.
+                    'stores' => $group->count() > 1 && $rows->count() < $group->count()
+                        ? $stores->all()
+                        : null,
+                ];
+            })
+            ->sortBy([['at', 'asc'], ['id', 'asc']])
+            ->values();
+
+        return [
+            'purchase' => $this->shapePurchase($group, $this->productReviews($user)),
+            // Newest first: what the buyer came to find out is the latest.
+            'events' => $events->reverse()->values()->all(),
+            /*
+             * When the purchase first reached each step, for the progress bar.
+             * The earliest across workshops: "shipped" lights up as soon as
+             * the first parcel leaves, while the purchase's own status (the
+             * least advanced workshop) says whether everything has.
+             */
+            'reached' => $events
+                ->whereNotNull('status')
+                ->groupBy('status')
+                ->map(fn (Collection $rows) => $rows->first()['at'])
+                ->all(),
+        ];
+    }
+
+    /** What shapePurchase() reads, loaded up front so a card costs no queries. */
+    private const PURCHASE_RELATIONS = ['store', 'city', 'buyer', 'items.product.images'];
+
+    /**
+     * Ratings this buyer has already left, fetched once for the whole history
+     * rather than per order — the page renders every order at once, so a
+     * per-order lookup would be a query per card.
+     *
+     * Keyed by product id, which is also the grain of the unique index: one
+     * opinion per buyer per piece, spanning every order it appeared in. A row
+     * here is what closes the form — see ReviewService.
+     *
+     * @return Collection<int, ProductReview>
+     */
+    private function productReviews(User $user): Collection
+    {
+        return ProductReview::where('user_id', $user->id)
+            ->get()
+            ->keyBy('product_id');
     }
 
     /**
@@ -210,9 +330,43 @@ class BuyerAccountService
             'shipping_address' => $first->shipping_address,
             'city' => $first->city?->name,
 
+            // Who placed it, as the card's byline reads — the account's name,
+            // which is not necessarily the recipient on the parcel.
+            'buyer_name' => trim(($first->buyer?->first_name ?? '').' '.($first->buyer?->last_name ?? '')) ?: null,
+
+            // Distinct lines, not units: "2 × vase" is one piece on the card.
+            'items_count' => $group->sum(fn (Order $order) => $order->items->count()),
+
+            /*
+             * When the last parcel arrived — only once every live shop has
+             * delivered, since until then the purchase has not been, whatever
+             * one workshop managed. Cancelled shops are ignored for the same
+             * reason statusFor() ignores them.
+             */
+            'delivered_at' => $this->statusFor($group) === 'delivered'
+                ? $group->reject(fn (Order $order) => $order->status === 'cancelled')->max('delivered_at')
+                : null,
+
             // Rated per shop, so the card offers the form once per shop that
             // has actually arrived rather than once for the purchase.
             'can_review' => $group->contains(fn (Order $order) => $order->status === 'delivered'),
+
+            /*
+             * Delivered pieces still waiting for a rating — what the "Rate my
+             * items" button counts. By product, matching the one-rating-per-
+             * product rule, so a piece bought from two workshops counts once.
+             */
+            'review_open_count' => $group
+                ->filter(fn (Order $order) => $order->status === 'delivered')
+                ->flatMap(fn (Order $order) => $order->items->pluck('product_id'))
+                ->filter()
+                ->unique()
+                ->reject(fn ($productId) => $productReviews->has($productId))
+                ->count(),
+
+            // Snapshotted at checkout; the same carrier for every workshop.
+            'delivery_service_name' => $first->delivery_service_name,
+            'tracking_numbers' => $group->pluck('tracking_number')->filter()->unique()->values()->all(),
 
             'orders' => $group
                 ->map(fn (Order $order) => $this->shapeOrder($order, $productReviews))
@@ -288,6 +442,9 @@ class BuyerAccountService
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
+                    // The purchase-time snapshot ("Rouge / M"), never the live
+                    // variant — see OrderItem::variant().
+                    'variant_label' => $item->variant_label,
                     'product' => [
                         'name' => $item->product?->name,
                         'slug' => $item->product?->slug,

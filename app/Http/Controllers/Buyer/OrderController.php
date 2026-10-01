@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Notifications\OrderCancelledByBuyer;
 use App\Services\BuyerAccountService;
 use App\Services\OrderStatusService;
+use App\Services\PurchaseInvoiceService;
 use Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,6 +28,39 @@ class OrderController extends Controller
     {
         return Inertia::render('buyer/orders/index', [
             'purchases' => $this->account->purchases($request->user()),
+        ]);
+    }
+
+    /**
+     * "Download invoice" on an order card — one PDF for the whole purchase,
+     * keyed by the same reference the card shows. Another buyer's reference
+     * 404s rather than 403s, so it does not confirm the purchase exists.
+     */
+    public function invoice(Request $request, string $purchase, PurchaseInvoiceService $invoices)
+    {
+        return $invoices->download($request->user(), $purchase) ?? abort(404);
+    }
+
+    /**
+     * "Track my order" — the purchase's history, step by step, with the
+     * desk's notes on where the parcel is.
+     */
+    public function tracking(Request $request, string $purchase)
+    {
+        $tracking = $this->account->tracking($request->user(), $purchase) ?? abort(404);
+
+        return Inertia::render('buyer/orders/tracking', $tracking);
+    }
+
+    /**
+     * "Rate my items" — every piece in the purchase, with a rating and a
+     * comment for each. Pieces from a workshop that hasn't delivered yet are
+     * listed but closed; ReviewService decides what is open.
+     */
+    public function review(Request $request, string $purchase)
+    {
+        return Inertia::render('buyer/orders/review', [
+            'purchase' => $this->account->purchase($request->user(), $purchase) ?? abort(404),
         ]);
     }
 

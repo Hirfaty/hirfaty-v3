@@ -121,6 +121,30 @@ test('the products list and detail stay reachable, verified or not', function ()
         ->assertOk();
 });
 
+test('the products pages carry the real price columns and no view count', function () {
+    $seller = verifiableSeller();
+    $product = verifiableSellerProduct($seller);
+    $product->update(['sale_price' => 90]);
+
+    // The list prices from `base_price`/`sale_price`; there is no `price`
+    // column, and reading one is what rendered "NaN MAD" in every row.
+    $this->actingAs($seller)
+        ->get(route('seller.products.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('seller/products/index')
+            ->where('products.data.0.base_price', '120.00')
+            ->where('products.data.0.sale_price', '90.00')
+            ->missing('products.data.0.price'));
+
+    $this->actingAs($seller)
+        ->get(route('seller.products.show', $product->id))
+        ->assertInertia(fn ($page) => $page
+            ->component('seller/products/show')
+            ->has('stats.total_wishlists')
+            ->has('stats.total_orders')
+            ->missing('stats.total_views'));
+});
+
 // ── Admin review ────────────────────────────────────────────────────
 
 test('an admin approves a shop and the seller is notified', function () {

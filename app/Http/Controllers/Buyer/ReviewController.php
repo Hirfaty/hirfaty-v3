@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\BuyerAccountService;
 use App\Services\ReviewService;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,37 @@ class ReviewController extends Controller
      */
     public function store(Request $request, Order $order)
     {
+        $this->reviews->submit(
+            $request->user(),
+            $order,
+            $this->validated($request),
+        );
+
+        return back()->with('success', __('buyer.reviews.thanks'));
+    }
+
+    /**
+     * The same submission for a whole purchase, from the "Rate my items" page.
+     * Ownership, delivery and one-shot are still ReviewService's — see
+     * submitPurchase(). An unknown or foreign reference finds no orders and
+     * 404s.
+     */
+    public function storePurchase(Request $request, string $purchase, BuyerAccountService $account)
+    {
+        $orders = $account->purchaseOrders($request->user(), $purchase);
+
+        abort_if($orders->isEmpty(), 404);
+
+        $this->reviews->submitPurchase($request->user(), $orders, $this->validated($request));
+
+        return back()->with('success', __('buyer.reviews.thanks'));
+    }
+
+    /**
+     * @return array<int, array{rating: int, comment?: string|null}>
+     */
+    private function validated(Request $request): array
+    {
         $data = $request->validate([
             'products' => ['array'],
             // The keys are product ids. `integer` on the key pattern rather
@@ -34,12 +66,6 @@ class ReviewController extends Controller
             'products.*.comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $this->reviews->submit(
-            $request->user(),
-            $order,
-            $data['products'] ?? [],
-        );
-
-        return back()->with('success', __('buyer.reviews.thanks'));
+        return $data['products'] ?? [];
     }
 }
