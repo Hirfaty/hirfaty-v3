@@ -201,11 +201,12 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
-        // `create`, `export` and `bulk-destroy` must stay above `{product}`, otherwise
-        // they're matched as an id (and Postgres then errors casting the
-        // string to the bigint id column, rather than a clean 404).
+        // `create`, `export`, `bulk-status` and `bulk-destroy` must stay above `{product}`,
+        // otherwise they're matched as an id (and Postgres then errors casting
+        // the string to the bigint id column, rather than a clean 404).
         Route::get('/products/create', [Admin\ProductController::class, 'create'])->name('products.create');
         Route::get('/products/export', [Admin\ProductController::class, 'export'])->name('products.export');
+        Route::patch('/products/bulk-status', [Admin\ProductController::class, 'bulkStatus'])->name('products.bulk-status');
         Route::delete('/products/bulk-destroy', [Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');

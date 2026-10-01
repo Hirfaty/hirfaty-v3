@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    Archive,
     CircleCheck,
     CircleX,
     Eye,
@@ -9,10 +10,12 @@ import {
     SquareArrowOutUpRight,
     Trash2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import ExportMenu from '@/components/admin/export-menu';
+import InputError from '@/components/input-error';
+import PasswordInput from '@/components/password-input';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,7 +26,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { WarmFill } from '@/components/WarmFill';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
@@ -201,19 +206,23 @@ function AdminProducts({
         }
     };
 
-    // ── Checkbox selection for bulk delete ──────────────────────
+    // ── Checkbox selection for bulk actions ─────────────────────
     // Kept separate from `selectedId` above: that one drives the review
-    // panel on the right, this one drives which rows get deleted together.
-    const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+    // panel on the right, this one drives which rows get acted on together.
+    // Each id remembers its status so a selection spanning several pages
+    // still knows which bulk actions apply to it.
+    const [checkedIds, setCheckedIds] = useState<Map<number, ProductStatus>>(
+        new Map(),
+    );
 
-    const toggleChecked = (id: number) =>
+    const toggleChecked = (product: Product) =>
         setCheckedIds((prev) => {
-            const next = new Set(prev);
+            const next = new Map(prev);
 
-            if (next.has(id)) {
-                next.delete(id);
+            if (next.has(product.id)) {
+                next.delete(product.id);
             } else {
-                next.add(id);
+                next.set(product.id, product.status);
             }
 
             return next;
@@ -227,16 +236,67 @@ function AdminProducts({
 
     const toggleAllOnPage = () =>
         setCheckedIds((prev) => {
-            const next = new Set(prev);
+            const next = new Map(prev);
 
             if (allOnPageChecked) {
                 pageIds.forEach((id) => next.delete(id));
             } else {
-                pageIds.forEach((id) => next.add(id));
+                products.data.forEach((p) => next.set(p.id, p.status));
             }
 
             return next;
         });
+
+    // Publish / archive are offered only when every checked product shares
+    // the one status they move from; a mixed selection gets delete alone.
+    // A row on the current page reports its live status, in case it changed
+    // (approved from the side panel, say) after it was checked.
+    const checkedStatuses = new Set(
+        Array.from(
+            checkedIds,
+            ([id, status]) =>
+                products.data.find((p) => p.id === id)?.status ?? status,
+        ),
+    );
+    const sharedStatus =
+        checkedStatuses.size === 1 ? Array.from(checkedStatuses)[0] : null;
+    const bulkStatusAction: 'publish' | 'archive' | null =
+        sharedStatus === 'archived'
+            ? 'publish'
+            : sharedStatus === 'published'
+              ? 'archive'
+              : null;
+    const [bulkStatusProcessing, setBulkStatusProcessing] = useState(false);
+
+    const applyBulkStatus = (action: 'publish' | 'archive') => {
+        router.patch(
+            route('admin.products.bulk-status'),
+            { action, ids: Array.from(checkedIds.keys()) },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onStart: () => setBulkStatusProcessing(true),
+                onSuccess: (page) => {
+                    const flash = (page.props as unknown as PageProps).flash;
+
+                    if (flash?.error) {
+                        toast.error(flash.error);
+
+                        return;
+                    }
+
+                    toast.success(
+                        flash?.success ??
+                            (action === 'publish'
+                                ? 'Produits publiés.'
+                                : 'Produits archivés.'),
+                    );
+                    setCheckedIds(new Map());
+                },
+                onFinish: () => setBulkStatusProcessing(false),
+            },
+        );
+    };
 
     // ── Delete (single row and bulk) ────────────────────────────
     // The dialogs' open flags are kept separate from the data they display:
@@ -247,6 +307,10 @@ function AdminProducts({
     const [deleteOneOpen, setDeleteOneOpen] = useState(false);
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
+    // Bulk delete is confirmed with the admin's own password.
+    const [bulkDeletePassword, setBulkDeletePassword] = useState('');
+    const [bulkDeleteError, setBulkDeleteError] = useState<string>();
+    const [bulkDeleteProcessing, setBulkDeleteProcessing] = useState(false);
 
     const askDeleteOne = (product: Product) => {
         setDeleteTarget(product);
@@ -255,6 +319,8 @@ function AdminProducts({
 
     const askBulkDelete = () => {
         setBulkDeleteCount(checkedIds.size);
+        setBulkDeletePassword('');
+        setBulkDeleteError(undefined);
         setBulkDeleteOpen(true);
     };
 
@@ -281,7 +347,7 @@ function AdminProducts({
 
                 toast.success(flash?.success ?? 'Produit supprimé.');
                 setCheckedIds((prev) => {
-                    const next = new Set(prev);
+                    const next = new Map(prev);
                     next.delete(deletedId);
 
                     return next;
@@ -291,15 +357,34 @@ function AdminProducts({
         });
     };
 
-    const confirmBulkDelete = () => {
+    const confirmBulkDelete = (e: FormEvent) => {
+        e.preventDefault();
+
         router.delete(route('admin.products.bulk-destroy'), {
-            data: { ids: Array.from(checkedIds) },
+            data: {
+                ids: Array.from(checkedIds.keys()),
+                password: bulkDeletePassword,
+            },
+            // Keep the dialog (and what was typed) on screen when the
+            // password is refused, so the admin can simply try again.
+            preserveState: true,
+            preserveScroll: true,
+            onStart: () => setBulkDeleteProcessing(true),
             onSuccess: (page) => {
                 const flash = (page.props as unknown as PageProps).flash;
                 toast.success(flash?.success ?? 'Produits supprimés.');
-                setCheckedIds(new Set());
+                setCheckedIds(new Map());
+                setBulkDeleteOpen(false);
             },
-            onFinish: () => setBulkDeleteOpen(false),
+            onError: (errors) => {
+                setBulkDeletePassword('');
+                setBulkDeleteError(
+                    errors.password
+                        ? 'Mot de passe incorrect.'
+                        : (errors.ids ?? 'La suppression a échoué.'),
+                );
+            },
+            onFinish: () => setBulkDeleteProcessing(false),
         });
     };
 
@@ -393,11 +478,31 @@ function AdminProducts({
                     </p>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setCheckedIds(new Set())}
+                            onClick={() => setCheckedIds(new Map())}
                             className="text-sm text-white/70 transition hover:text-white"
                         >
                             Annuler
                         </button>
+                        {bulkStatusAction && (
+                            <button
+                                onClick={() =>
+                                    applyBulkStatus(bulkStatusAction)
+                                }
+                                disabled={bulkStatusProcessing}
+                                className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                            >
+                                {bulkStatusProcessing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : bulkStatusAction === 'publish' ? (
+                                    <CircleCheck className="h-4 w-4" />
+                                ) : (
+                                    <Archive className="h-4 w-4" />
+                                )}
+                                {bulkStatusAction === 'publish'
+                                    ? 'Publier'
+                                    : 'Archiver'}
+                            </button>
+                        )}
                         <button
                             onClick={askBulkDelete}
                             className="inline-flex items-center gap-2 rounded-lg bg-terracotta px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-terracotta/90"
@@ -461,7 +566,7 @@ function AdminProducts({
                                                 <Checkbox
                                                     checked={isChecked}
                                                     onCheckedChange={() =>
-                                                        toggleChecked(p.id)
+                                                        toggleChecked(p)
                                                     }
                                                     aria-label={`Sélectionner ${p.name}`}
                                                 />
@@ -783,28 +888,67 @@ function AdminProducts({
             </AlertDialog>
 
             {/* ── Delete confirmation (bulk) ───────────────────── */}
-            <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+            <AlertDialog
+                open={bulkDeleteOpen}
+                onOpenChange={(open) =>
+                    !bulkDeleteProcessing && setBulkDeleteOpen(open)
+                }
+            >
                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            Supprimer {bulkDeleteCount} produit
-                            {bulkDeleteCount > 1 ? 's' : ''} ?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Cette action est irréversible. Les produits ayant
-                            déjà été commandés seront automatiquement ignorés
-                            plutôt que supprimés.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmBulkDelete}
-                            className="bg-terracotta text-white hover:bg-terracotta/90"
-                        >
-                            Supprimer
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
+                    {/* A plain submit button rather than AlertDialogAction:
+                        that one closes the dialog on click, before the
+                        server has had a chance to refuse the password. */}
+                    <form onSubmit={confirmBulkDelete} className="grid gap-4">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>
+                                Supprimer {bulkDeleteCount} produit
+                                {bulkDeleteCount > 1 ? 's' : ''} ?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Cette action est irréversible. Les produits
+                                ayant déjà été commandés seront automatiquement
+                                ignorés plutôt que supprimés.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="grid gap-2">
+                            <Label htmlFor="bulk-delete-password">
+                                Confirmez avec votre mot de passe
+                            </Label>
+                            <PasswordInput
+                                id="bulk-delete-password"
+                                value={bulkDeletePassword}
+                                onChange={(e) => {
+                                    setBulkDeletePassword(e.target.value);
+                                    setBulkDeleteError(undefined);
+                                }}
+                                autoComplete="current-password"
+                                autoFocus
+                                required
+                            />
+                            <InputError message={bulkDeleteError} />
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel
+                                type="button"
+                                disabled={bulkDeleteProcessing}
+                            >
+                                Annuler
+                            </AlertDialogCancel>
+                            <Button
+                                type="submit"
+                                disabled={
+                                    bulkDeleteProcessing ||
+                                    bulkDeletePassword === ''
+                                }
+                                className="bg-terracotta text-white hover:bg-terracotta/90"
+                            >
+                                {bulkDeleteProcessing && (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                )}
+                                Supprimer
+                            </Button>
+                        </AlertDialogFooter>
+                    </form>
                 </AlertDialogContent>
             </AlertDialog>
         </div>

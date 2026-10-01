@@ -6,6 +6,7 @@ import {
     Pencil,
     PlayCircle,
     Star,
+    TriangleAlert,
     SquareArrowOutUpRight,
     Trash2,
     X,
@@ -84,6 +85,13 @@ interface AdminReview {
 
 interface AdminProductShowProps {
     reviews: AdminReview[];
+    /** Resolved server-side by ProductShippingService. */
+    shipping: {
+        complete: boolean;
+        /** The product's own code, else its category's. */
+        hs_code: string | null;
+        hs_code_inherited: boolean;
+    };
     product: Product & {
         store: Store & { user: User };
         category: Category;
@@ -128,7 +136,25 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-function AdminProductShow({ product, reviews }: AdminProductShowProps) {
+/** "40 × 30 × 12 cm", or null unless all three sides are known. */
+function formatDimensions(
+    length: string | null | undefined,
+    width: string | null | undefined,
+    height: string | null | undefined,
+    unit: string,
+): string | null {
+    if (!length || !width || !height) {
+        return null;
+    }
+
+    return `${Number(length)} × ${Number(width)} × ${Number(height)} ${unit}`;
+}
+
+function AdminProductShow({
+    product,
+    reviews,
+    shipping,
+}: AdminProductShowProps) {
     const [mediaOpen, setMediaOpen] = useState(false);
     const [mediaIndex, setMediaIndex] = useState(0);
     const [deleteOpen, setDeleteOpen] = useState(false);
@@ -425,6 +451,110 @@ function AdminProductShow({ product, reviews }: AdminProductShowProps) {
                                         {product.min_order_qty_professional}{' '}
                                         unités
                                     </Field>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+
+                    <Card
+                        title="Expédition"
+                        subtitle="Depuis l’entrepôt Hirfaty — Maroc (MA)"
+                    >
+                        <div className="space-y-5 p-5">
+                            {!shipping.complete && (
+                                <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                                    <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+                                    Poids ou dimensions manquants
+                                    {product.has_variants
+                                        ? ' pour au moins une déclinaison'
+                                        : ''}{' '}
+                                    — le transporteur ne pourra pas calculer ce
+                                    colis.
+                                </p>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-5">
+                                <Field label="Poids">
+                                    {product.weight
+                                        ? `${Number(product.weight)} ${product.weight_unit}`
+                                        : '—'}
+                                </Field>
+                                <Field label="Dimensions du colis">
+                                    {formatDimensions(
+                                        product.length,
+                                        product.width,
+                                        product.height,
+                                        product.dimension_unit ?? 'cm',
+                                    ) ?? '—'}
+                                </Field>
+                                <Field label="Code SH">
+                                    {shipping.hs_code ? (
+                                        <>
+                                            {shipping.hs_code}
+                                            {shipping.hs_code_inherited && (
+                                                <span className="ms-1.5 text-xs text-ink-soft">
+                                                    (catégorie)
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <span className="text-amber-700">
+                                            Non défini
+                                        </span>
+                                    )}
+                                </Field>
+                                <Field label="Délai de préparation">
+                                    {product.handling_days === null ||
+                                    product.handling_days === undefined
+                                        ? '—'
+                                        : `${product.handling_days} jour${product.handling_days > 1 ? 's' : ''}`}
+                                </Field>
+                                <Field label="Description douanière">
+                                    {product.customs_description || '—'}
+                                </Field>
+                                <Field label="Fragile">
+                                    {product.is_fragile ? 'Oui' : 'Non'}
+                                </Field>
+                            </div>
+
+                            {product.variants.some(
+                                (v) =>
+                                    v.weight || v.length || v.width || v.height,
+                            ) && (
+                                <div className="border-t border-border pt-4">
+                                    <p className="text-xs font-medium text-ink-soft">
+                                        Valeurs propres aux déclinaisons
+                                    </p>
+                                    <ul className="mt-2 space-y-1 text-sm text-ink">
+                                        {product.variants
+                                            .filter(
+                                                (v) =>
+                                                    v.weight ||
+                                                    v.length ||
+                                                    v.width ||
+                                                    v.height,
+                                            )
+                                            .map((v) => (
+                                                <li key={v.id}>
+                                                    <span className="font-medium">
+                                                        {v.options
+                                                            .map((o) => o.value)
+                                                            .join(' / ')}
+                                                    </span>
+                                                    {' — '}
+                                                    {[
+                                                        v.weight &&
+                                                            `${Number(v.weight)} ${product.weight_unit}`,
+                                                        (v.length ||
+                                                            v.width ||
+                                                            v.height) &&
+                                                            `${[v.length ?? product.length, v.width ?? product.width, v.height ?? product.height].map((d) => (d ? Number(d) : '?')).join(' × ')} ${product.dimension_unit}`,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(', ')}
+                                                </li>
+                                            ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>

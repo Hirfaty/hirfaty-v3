@@ -16,6 +16,10 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property int $stock
  * @property string|null $price_override
  * @property string|null $professional_price_override
+ * @property string|null $weight Override of the product's, in its weight unit.
+ * @property string|null $length Override of the product's, in its dimension unit.
+ * @property string|null $width
+ * @property string|null $height
  * @property int $position
  * @property bool $is_active
  */
@@ -27,6 +31,10 @@ class ProductVariant extends Model
         'stock',
         'price_override',
         'professional_price_override',
+        'weight',
+        'length',
+        'width',
+        'height',
         'position',
         'is_active',
     ];
@@ -36,6 +44,10 @@ class ProductVariant extends Model
         return [
             'price_override' => 'decimal:2',
             'professional_price_override' => 'decimal:2',
+            'weight' => 'decimal:3',
+            'length' => 'decimal:2',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

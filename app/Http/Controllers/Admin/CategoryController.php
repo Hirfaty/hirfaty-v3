@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\CategoryService;
+use App\Services\ProductShippingService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -87,6 +88,8 @@ class CategoryController extends Controller
                     ->maxHeight(config('media.image.max_height')),
             ],
             'remove_image' => ['nullable', 'boolean'],
+            // Customs tariff code its products inherit.
+            'hs_code' => ['nullable', 'string', ProductShippingService::HS_CODE_RULE],
             'name' => ['required', 'array'],
         ];
 

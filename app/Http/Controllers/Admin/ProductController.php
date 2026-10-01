@@ -12,7 +12,9 @@ use App\Notifications\ProductApproved;
 use App\Notifications\ProductRejected;
 use App\Rules\ValidProductMedia;
 use App\Services\AdminProductListService;
+use App\Services\ProductBulkStatusService;
 use App\Services\ProductDeletionService;
+use App\Services\ProductShippingService;
 use App\Services\ReviewService;
 use App\Services\SpreadsheetExportService;
 use Auth;
@@ -27,6 +29,8 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ProductShippingService $shipping) {}
+
     public function index(Request $request, AdminProductListService $list)
     {
         $filters = $request->only(['search', 'category_id', 'status']);
@@ -143,6 +147,7 @@ class ProductController extends Controller
                 // A draft has not been reviewed yet, so don't stamp a reviewer.
                 'reviewed_by' => $isDraft ? null : Auth::id(),
                 'reviewed_at' => $isDraft ? null : now(),
+                ...$this->shipping->productAttributes($data),
             ]);
 
             $this->syncVariants($product, $data['variants'] ?? [], $request);
@@ -201,6 +206,7 @@ class ProductController extends Controller
                 'status' => $isDraft ? 'draft' : 'published',
                 'reviewed_by' => $isDraft ? null : Auth::id(),
                 'reviewed_at' => $isDraft ? null : now(),
+                ...$this->shipping->productAttributes($data),
             ]);
 
             $this->syncVariants($product, $data['variants'] ?? [], $request);
@@ -313,6 +319,9 @@ class ProductController extends Controller
             'deleted_media.*' => ['integer'],
             'media_order' => ['nullable', 'array'],
             'media_order.*' => ['integer'],
+
+            // Weight, packed dimensions, customs facts — product and variants.
+            ...$this->shipping->rules(),
         ];
     }
 
@@ -339,6 +348,7 @@ class ProductController extends Controller
                 'stock' => $variant['stock'],
                 'price_override' => $variant['price_override'] ?? null,
                 'professional_price_override' => $variant['professional_price_override'] ?? null,
+                ...$this->shipping->variantAttributes($variant),
                 'position' => $position,
                 'is_active' => (bool) ($variant['is_active'] ?? true),
             ];
@@ -594,6 +604,11 @@ class ProductController extends Controller
         return Inertia::render('admin/products/show', [
             'product' => $product,
             'reviews' => $reviews->forAdmin($product),
+            'shipping' => [
+                'complete' => $this->shipping->isComplete($product),
+                'hs_code' => $this->shipping->hsCode($product),
+                'hs_code_inherited' => $product->hs_code === null,
+            ],
         ]);
     }
 
@@ -682,11 +697,33 @@ class ProductController extends Controller
         return back()->with('success', "Product \"{$name}\" deleted.");
     }
 
+    public function bulkStatus(Request $request, ProductBulkStatusService $statuses)
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(array_keys(ProductBulkStatusService::TRANSITIONS))],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:products,id'],
+        ]);
+
+        try {
+            $count = $statuses->apply($data['action'], $data['ids']);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $verb = $data['action'] === 'publish' ? 'published' : 'archived';
+
+        return back()->with('success', $count.' product'.($count === 1 ? '' : 's').' '.$verb.'.');
+    }
+
     public function bulkDestroy(Request $request, ProductDeletionService $deletions)
     {
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:products,id'],
+            // Wiping many listings at once is one misclick away from losing
+            // a catalogue, so the admin re-types their password to confirm.
+            'password' => ['required', 'string', 'current_password'],
         ]);
 
         $result = $deletions->deleteMany($data['ids']);

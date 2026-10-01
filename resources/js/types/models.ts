@@ -38,6 +38,8 @@ export interface Category {
      * edited (the admin page); pickers that just list roots omit it.
      */
     parent_ids?: number[];
+    /** Customs tariff code its products inherit; admin screens only. */
+    hs_code?: string | null;
     /** Public URL of the picture; only top-level categories have one. */
     image_url: string | null;
     /**
@@ -139,11 +141,19 @@ export interface ProductVariant {
     price_override: string | null;
     /** Null means "inherit the product's professional price". */
     professional_price_override: string | null;
+    /** Shipping overrides, in the product's units; null inherits the product's. */
+    weight?: string | null;
+    length?: string | null;
+    width?: string | null;
+    height?: string | null;
     position: number;
     is_active: boolean;
     options: ProductVariantOption[];
     media?: Media[];
 }
+
+export type WeightUnit = 'g' | 'kg';
+export type DimensionUnit = 'cm' | 'm';
 
 export interface Product {
     id: number;
@@ -167,6 +177,21 @@ export interface Product {
     min_order_qty_professional: number;
     visibility: ProductVisibility;
     has_variants: boolean;
+    /** Shipping profile (see ProductShippingService), in the units beside it. */
+    weight?: string | null;
+    weight_unit?: WeightUnit;
+    length?: string | null;
+    width?: string | null;
+    height?: string | null;
+    dimension_unit?: DimensionUnit;
+    /** ISO country the parcel leaves from — always MA for now. */
+    origin_country?: string;
+    /** Own tariff code; null inherits the category's. */
+    hs_code?: string | null;
+    customs_description?: string | null;
+    is_fragile?: boolean;
+    /** Days to prepare the parcel before pickup. */
+    handling_days?: number | null;
     status: ProductStatus;
     average_rating: string;
     created_at: string;

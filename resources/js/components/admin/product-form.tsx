@@ -1,6 +1,6 @@
 import type { RequestPayload } from '@inertiajs/core';
 import { Link, router } from '@inertiajs/react';
-import { ArrowLeft, FileText, Loader2, Send } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Lock, Send } from 'lucide-react';
 import { useState } from 'react';
 import ProductMediaInput, {
     buildExistingItems,
@@ -11,7 +11,13 @@ import type {
 } from '@/components/admin/product-media-input';
 import VariantBuilder from '@/components/admin/variant-builder';
 import type { VariantDraft } from '@/components/admin/variant-builder';
-import type { Category, Product, ProductVisibility } from '@/types';
+import type {
+    Category,
+    DimensionUnit,
+    Product,
+    ProductVisibility,
+    WeightUnit,
+} from '@/types';
 
 export interface StoreOption {
     id: number;
@@ -36,6 +42,12 @@ interface Props {
 const INPUT =
     'w-full rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/70 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10';
 const LABEL = 'mb-1.5 block text-sm font-medium text-ink';
+
+const DIMENSION_AXES = [
+    { key: 'length', label: 'Longueur' },
+    { key: 'width', label: 'Largeur' },
+    { key: 'height', label: 'Hauteur' },
+] as const;
 
 function Section({
     title,
@@ -97,6 +109,16 @@ interface ProductFormState {
     min_order_qty_professional: number;
     visibility: ProductVisibility;
     stock: number;
+    weight: string;
+    weight_unit: WeightUnit;
+    length: string;
+    width: string;
+    height: string;
+    dimension_unit: DimensionUnit;
+    hs_code: string;
+    customs_description: string;
+    is_fragile: boolean;
+    handling_days: string;
 }
 
 /**
@@ -142,6 +164,10 @@ function variantsFromProduct(product?: Product | null): VariantDraft[] {
         stock: v.stock,
         price_override: v.price_override ?? '',
         professional_price_override: v.professional_price_override ?? '',
+        weight: v.weight ?? '',
+        length: v.length ?? '',
+        width: v.width ?? '',
+        height: v.height ?? '',
         is_active: v.is_active ?? true,
         options: (v.options ?? []).map((o) => ({
             type: o.type ?? 'other',
@@ -178,6 +204,20 @@ export default function ProductForm({
         min_order_qty_professional: product?.min_order_qty_professional ?? 1,
         visibility: product?.visibility ?? 'both',
         stock: product?.stock ?? 1,
+        weight: product?.weight ?? '',
+        weight_unit: product?.weight_unit ?? 'kg',
+        length: product?.length ?? '',
+        width: product?.width ?? '',
+        height: product?.height ?? '',
+        dimension_unit: product?.dimension_unit ?? 'cm',
+        hs_code: product?.hs_code ?? '',
+        customs_description: product?.customs_description ?? '',
+        is_fragile: product?.is_fragile ?? false,
+        handling_days:
+            product?.handling_days === null ||
+            product?.handling_days === undefined
+                ? ''
+                : String(product.handling_days),
     });
 
     // Two selects standing in for one `category_id` column: a required main
@@ -191,8 +231,16 @@ export default function ProductForm({
     const [categorySubId, setCategorySubId] = useState<number | string>(
         initialCategory.subId,
     );
-    const subCategories =
-        categories.find((c) => c.id === Number(categoryMainId))?.children ?? [];
+    const mainCategory = categories.find(
+        (c) => c.id === Number(categoryMainId),
+    );
+    const subCategories = mainCategory?.children ?? [];
+    // The code a blank HS field falls back to: the subcategory's, else the
+    // main category's — what ProductShippingService::hsCode() resolves.
+    const inheritedHsCode =
+        subCategories.find((c) => c.id === Number(categorySubId))?.hs_code ||
+        mainCategory?.hs_code ||
+        null;
 
     const [media, setMedia] = useState<MediaItem[]>(
         buildExistingItems((product?.media ?? []) as ExistingMedia[]),
@@ -235,6 +283,8 @@ export default function ProductForm({
             ...data,
             category_id: categorySubId || categoryMainId,
             status,
+            // FormData has no booleans; Laravel's `boolean` rule takes 1/0.
+            is_fragile: data.is_fragile ? 1 : 0,
             // Order the gallery exactly as shown; new files upload in sequence
             // and existing ids carry their new positions.
             media: media
@@ -256,6 +306,10 @@ export default function ProductForm({
                       price_override: v.price_override,
                       professional_price_override:
                           v.professional_price_override,
+                      weight: v.weight,
+                      length: v.length,
+                      width: v.width,
+                      height: v.height,
                       is_active: v.is_active,
                       options: v.options,
                       media: v.media,
@@ -625,7 +679,181 @@ export default function ProductForm({
                             variants={variants}
                             onChange={setVariants}
                             errors={errors}
+                            weightUnit={data.weight_unit}
+                            dimensionUnit={data.dimension_unit}
                         />
+                    </Section>
+
+                    {/* ── Shipping ───────────────────────────── */}
+                    <Section
+                        title="Expédition"
+                        description={
+                            hasVariants
+                                ? 'Poids et dimensions du colis emballé, utilisés pour calculer les frais du transporteur. Ils valent pour toutes les déclinaisons ; une déclinaison peut les remplacer dans le tableau ci-dessus.'
+                                : 'Poids et dimensions du colis emballé, utilisés pour calculer les frais du transporteur.'
+                        }
+                    >
+                        <div className="grid gap-5 sm:grid-cols-2">
+                            <Field label="Poids" error={errors.weight}>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        value={data.weight}
+                                        onChange={(e) =>
+                                            set('weight', e.target.value)
+                                        }
+                                        className={INPUT}
+                                    />
+                                    <select
+                                        value={data.weight_unit}
+                                        onChange={(e) =>
+                                            set(
+                                                'weight_unit',
+                                                e.target.value as WeightUnit,
+                                            )
+                                        }
+                                        aria-label="Unité de poids"
+                                        className={`${INPUT} w-24 shrink-0`}
+                                    >
+                                        <option value="g">g</option>
+                                        <option value="kg">kg</option>
+                                    </select>
+                                </div>
+                            </Field>
+
+                            <Field
+                                label="Pays d’expédition"
+                                hint="Tous les colis partent de l’entrepôt Hirfaty au Maroc."
+                            >
+                                <div
+                                    className={`${INPUT} flex items-center gap-2 bg-muted/40 text-ink-soft`}
+                                >
+                                    <Lock className="h-3.5 w-3.5" />
+                                    Maroc (MA)
+                                </div>
+                            </Field>
+
+                            <div className="sm:col-span-2">
+                                <Field
+                                    label="Dimensions du colis (L × l × H)"
+                                    error={
+                                        errors.length ??
+                                        errors.width ??
+                                        errors.height
+                                    }
+                                    hint="Mesurez le carton une fois emballé, pas l’objet seul : le transporteur facture le plus élevé entre le poids réel et le poids volumétrique."
+                                >
+                                    <div className="flex gap-2">
+                                        {DIMENSION_AXES.map((axis) => (
+                                            <input
+                                                key={axis.key}
+                                                type="number"
+                                                min="0"
+                                                step="any"
+                                                value={data[axis.key]}
+                                                onChange={(e) =>
+                                                    set(
+                                                        axis.key,
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder={axis.label}
+                                                aria-label={axis.label}
+                                                className={INPUT}
+                                            />
+                                        ))}
+                                        <select
+                                            value={data.dimension_unit}
+                                            onChange={(e) =>
+                                                set(
+                                                    'dimension_unit',
+                                                    e.target
+                                                        .value as DimensionUnit,
+                                                )
+                                            }
+                                            aria-label="Unité de dimension"
+                                            className={`${INPUT} w-24 shrink-0`}
+                                        >
+                                            <option value="cm">cm</option>
+                                            <option value="m">m</option>
+                                        </select>
+                                    </div>
+                                </Field>
+                            </div>
+
+                            <Field
+                                label="Code SH (douane)"
+                                error={errors.hs_code}
+                                hint={
+                                    inheritedHsCode
+                                        ? `Vide = celui de la catégorie (${inheritedHsCode}).`
+                                        : 'Vide = celui de la catégorie (aucun défini pour l’instant).'
+                                }
+                            >
+                                <input
+                                    value={data.hs_code}
+                                    onChange={(e) =>
+                                        set('hs_code', e.target.value)
+                                    }
+                                    placeholder={inheritedHsCode ?? '5701.10'}
+                                    inputMode="numeric"
+                                    className={INPUT}
+                                />
+                            </Field>
+
+                            <Field
+                                label="Délai de préparation (jours)"
+                                error={errors.handling_days}
+                                hint="Jours avant la remise au transporteur."
+                            >
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="60"
+                                    value={data.handling_days}
+                                    onChange={(e) =>
+                                        set('handling_days', e.target.value)
+                                    }
+                                    className={INPUT}
+                                />
+                            </Field>
+
+                            <div className="sm:col-span-2">
+                                <Field
+                                    label="Description douanière (en anglais)"
+                                    error={errors.customs_description}
+                                    hint="Précise et en anglais, ex. « Hand-knotted wool rug ». Une description vague (« decor », « gift ») bloque le colis en douane."
+                                >
+                                    <input
+                                        value={data.customs_description}
+                                        onChange={(e) =>
+                                            set(
+                                                'customs_description',
+                                                e.target.value,
+                                            )
+                                        }
+                                        maxLength={255}
+                                        dir="ltr"
+                                        className={INPUT}
+                                    />
+                                </Field>
+                            </div>
+
+                            <label className="flex items-center gap-2.5 text-sm text-ink sm:col-span-2">
+                                <input
+                                    type="checkbox"
+                                    checked={data.is_fragile}
+                                    onChange={(e) =>
+                                        set('is_fragile', e.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-border"
+                                />
+                                Fragile — à manipuler avec précaution
+                                (céramique, verre…)
+                            </label>
+                        </div>
                     </Section>
                 </div>
 

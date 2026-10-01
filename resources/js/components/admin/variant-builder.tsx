@@ -2,6 +2,7 @@ import { ImagePlus, Plus, Trash2, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCropQueue } from '@/hooks/use-crop-queue';
 import { validateMediaFile } from '@/lib/media-limits';
+import type { DimensionUnit, WeightUnit } from '@/types';
 
 export type OptionType =
     | 'color'
@@ -50,6 +51,11 @@ export interface VariantDraft {
     stock: number;
     price_override: string;
     professional_price_override: string;
+    /** Shipping overrides in the product's units; blank inherits. */
+    weight: string;
+    length: string;
+    width: string;
+    height: string;
     is_active: boolean;
     options: VariantOptionDraft[];
     /** Newly picked photo files, not yet uploaded. */
@@ -95,6 +101,10 @@ export const emptyVariant = (): VariantDraft => ({
     stock: 0,
     price_override: '',
     professional_price_override: '',
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
     is_active: true,
     options: [],
     media: [],
@@ -159,7 +169,16 @@ interface Props {
     variants: VariantDraft[];
     onChange: (variants: VariantDraft[]) => void;
     errors: Record<string, string>;
+    /** The product's shipping units, which variant overrides are typed in. */
+    weightUnit: WeightUnit;
+    dimensionUnit: DimensionUnit;
 }
+
+const DIMENSION_AXES = [
+    { key: 'length', label: 'Longueur' },
+    { key: 'width', label: 'Largeur' },
+    { key: 'height', label: 'Hauteur' },
+] as const;
 
 /**
  * Small multi-image picker scoped to one variant — a colour/finish photo, not
@@ -365,7 +384,13 @@ function AxisValues({
     );
 }
 
-export default function VariantBuilder({ variants, onChange, errors }: Props) {
+export default function VariantBuilder({
+    variants,
+    onChange,
+    errors,
+    weightUnit,
+    dimensionUnit,
+}: Props) {
     // Axes live alongside the variants rather than being stored: on the edit
     // screen they are reconstructed from whatever the saved variants use.
     const [axes, setAxes] = useState<AxisDraft[]>(() =>
@@ -615,7 +640,7 @@ export default function VariantBuilder({ variants, onChange, errors }: Props) {
 
             {/* ── Combinations ─────────────────────────────── */}
             {variants.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-border">
+                <div className="overflow-x-auto rounded-xl border border-border">
                     <table className="w-full text-sm">
                         <thead className="bg-muted/40 text-left text-xs text-ink-soft">
                             <tr>
@@ -630,6 +655,12 @@ export default function VariantBuilder({ variants, onChange, errors }: Props) {
                                 </th>
                                 <th className="px-3 py-2.5 font-medium">
                                     Prix pro
+                                </th>
+                                <th className="px-3 py-2.5 font-medium">
+                                    Poids ({weightUnit})
+                                </th>
+                                <th className="px-3 py-2.5 font-medium">
+                                    Colis L × l × H ({dimensionUnit})
                                 </th>
                                 <th className="px-3 py-2.5 font-medium">SKU</th>
                                 <th className="px-3 py-2.5 font-medium">
@@ -711,6 +742,52 @@ export default function VariantBuilder({ variants, onChange, errors }: Props) {
                                             placeholder="défaut"
                                             className={`${INPUT} w-24`}
                                         />
+                                    </td>
+                                    {/* Shipping overrides: blank inherits
+                                        the product's figure, which is what
+                                        the "défaut" placeholder says. */}
+                                    <td className="px-3 py-3 align-top">
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step="any"
+                                            value={variant.weight}
+                                            onChange={(e) =>
+                                                patchVariant(i, {
+                                                    weight: e.target.value,
+                                                })
+                                            }
+                                            placeholder="défaut"
+                                            className={`${INPUT} w-24`}
+                                        />
+                                        {errors[`variants.${i}.weight`] && (
+                                            <p className="mt-1 text-xs text-red-600">
+                                                {errors[`variants.${i}.weight`]}
+                                            </p>
+                                        )}
+                                    </td>
+                                    <td className="px-3 py-3 align-top">
+                                        <div className="flex gap-1.5">
+                                            {DIMENSION_AXES.map((axis) => (
+                                                <input
+                                                    key={axis.key}
+                                                    type="number"
+                                                    min={0}
+                                                    step="any"
+                                                    value={variant[axis.key]}
+                                                    onChange={(e) =>
+                                                        patchVariant(i, {
+                                                            [axis.key]:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="—"
+                                                    aria-label={axis.label}
+                                                    title={axis.label}
+                                                    className={`${INPUT} w-[4.5rem]`}
+                                                />
+                                            ))}
+                                        </div>
                                     </td>
                                     <td className="px-3 py-3 align-top">
                                         <input

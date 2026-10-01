@@ -332,6 +332,7 @@ const Index = ({
     const createForm = useForm({
         name: { ...EMPTY_NAME },
         parent_ids: [] as number[],
+        hs_code: '',
         image: null as File | null,
     });
 
@@ -362,6 +363,7 @@ const Index = ({
         _method: 'patch',
         name: { ...EMPTY_NAME },
         parent_ids: [] as number[],
+        hs_code: '',
         image: null as File | null,
         remove_image: false,
     });
@@ -376,6 +378,7 @@ const Index = ({
             // one.
             name: { ...EMPTY_NAME, ...cat.name },
             parent_ids: cat.parent_ids,
+            hs_code: cat.hs_code ?? '',
             image: null,
             remove_image: false,
         });
@@ -675,6 +678,29 @@ const Index = ({
                             />
                         </Field>
 
+                        <Field
+                            label="Code SH (douane)"
+                            error={createForm.errors.hs_code}
+                        >
+                            <p className="mb-2 text-xs text-ink-soft">
+                                Repris par chaque produit de la catégorie, sauf
+                                s’il a le sien. 6 chiffres, ex. 5701.10.
+                            </p>
+                            <input
+                                value={createForm.data.hs_code}
+                                onChange={(e) =>
+                                    createForm.setData(
+                                        'hs_code',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="5701.10"
+                                inputMode="numeric"
+                                dir="ltr"
+                                className={INPUT}
+                            />
+                        </Field>
+
                         {createForm.data.parent_ids.length === 0 && (
                             <SingleImageInput
                                 label="Image (optionnel)"
@@ -773,6 +799,26 @@ const Index = ({
                                 onChange={(next) =>
                                     editForm.setData('parent_ids', next)
                                 }
+                            />
+                        </Field>
+
+                        <Field
+                            label="Code SH (douane)"
+                            error={editForm.errors.hs_code}
+                        >
+                            <p className="mb-2 text-xs text-ink-soft">
+                                Repris par chaque produit de la catégorie, sauf
+                                s’il a le sien. 6 chiffres, ex. 5701.10.
+                            </p>
+                            <input
+                                value={editForm.data.hs_code}
+                                onChange={(e) =>
+                                    editForm.setData('hs_code', e.target.value)
+                                }
+                                placeholder="5701.10"
+                                inputMode="numeric"
+                                dir="ltr"
+                                className={INPUT}
                             />
                         </Field>
 

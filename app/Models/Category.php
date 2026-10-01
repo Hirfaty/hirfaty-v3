@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
  * @property array<string, string> $name Per-locale names, keyed by locale code.
  * @property-read string $translated_name
  * @property string $slug
+ * @property string|null $hs_code Customs tariff code inherited by its products.
  * @property string|null $image Storage path on the default disk; top-level categories only.
  * @property-read string|null $image_url
  * @property CarbonImmutable|null $created_at
@@ -33,7 +34,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name', 'slug', 'image'])]
+#[Fillable(['name', 'slug', 'image', 'hs_code'])]
 class Category extends Model
 {
     /**

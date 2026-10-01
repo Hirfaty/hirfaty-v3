@@ -20,6 +20,11 @@ class Product extends Model
         'visibility', 'has_variants',
         'status', 'average_rating',
         'rejection_reason', 'reviewed_by', 'reviewed_at',
+        // Shipping profile — see ProductShippingService. `origin_country` is
+        // deliberately absent: it is the column default (MA) until sellers
+        // ship from their own countries.
+        'weight', 'weight_unit', 'length', 'width', 'height', 'dimension_unit',
+        'hs_code', 'customs_description', 'is_fragile', 'handling_days',
     ];
 
     protected $casts = [
@@ -29,6 +34,12 @@ class Product extends Model
         'professional_sale_price' => 'decimal:2',
         'average_rating' => 'decimal:2',
         'has_variants' => 'boolean',
+        'weight' => 'decimal:3',
+        'length' => 'decimal:2',
+        'width' => 'decimal:2',
+        'height' => 'decimal:2',
+        'is_fragile' => 'boolean',
+        'handling_days' => 'integer',
     ];
 
     public function store()

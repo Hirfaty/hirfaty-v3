@@ -161,6 +161,7 @@ test('bulk delete removes deletable products and skips ones with order history',
 
     $response = $this->actingAs($this->admin)->delete(route('admin.products.bulk-destroy'), [
         'ids' => [$deletableA->id, $deletableB->id, $ordered->id],
+        'password' => 'password',
     ]);
 
     $response->assertSessionHas('success');
@@ -174,6 +175,29 @@ test('bulk delete removes deletable products and skips ones with order history',
 
 test('bulk delete requires at least one id', function () {
     $this->actingAs($this->admin)
-        ->delete(route('admin.products.bulk-destroy'), ['ids' => []])
+        ->delete(route('admin.products.bulk-destroy'), ['ids' => [], 'password' => 'password'])
         ->assertSessionHasErrors('ids');
+});
+
+test('bulk delete is refused without the admin password', function () {
+    $product = productFor($this->store->id, $this->category->id);
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.products.bulk-destroy'), ['ids' => [$product->id]])
+        ->assertSessionHasErrors('password');
+
+    expect(Product::find($product->id))->not->toBeNull();
+});
+
+test('bulk delete is refused with a wrong admin password', function () {
+    $product = productFor($this->store->id, $this->category->id);
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.products.bulk-destroy'), [
+            'ids' => [$product->id],
+            'password' => 'not-my-password',
+        ])
+        ->assertSessionHasErrors('password');
+
+    expect(Product::find($product->id))->not->toBeNull();
 });

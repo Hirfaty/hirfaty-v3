@@ -39,6 +39,7 @@ class CategoryService
                 'name' => $category->name,
                 'translated_name' => $category->translated_name,
                 'slug' => $category->slug,
+                'hs_code' => $category->hs_code,
                 'image_url' => $category->image_url,
                 'products_count' => $category->products_count,
                 'stores_count' => $category->stores_count,
@@ -59,6 +60,7 @@ class CategoryService
             // name and never changes per locale.
             'slug' => $this->uniqueSlug($data['name'][Category::FALLBACK_LOCALE]),
             'image' => $image && $parentIds === [] ? $this->storeImage($image) : null,
+            'hs_code' => $this->hsCode($data),
         ]);
 
         $this->syncParents($category, $parentIds);
@@ -76,7 +78,7 @@ class CategoryService
     {
         $parentIds = $this->parentIds($data);
 
-        $attributes = ['name' => $data['name']];
+        $attributes = ['name' => $data['name'], 'hs_code' => $this->hsCode($data)];
 
         if ($parentIds !== [] || $removeImage) {
             $this->deleteImage($category->image);
@@ -171,5 +173,17 @@ class CategoryService
         }
 
         return $slug;
+    }
+
+    /**
+     * Digits only, so "6702.90" and "670290" are stored the same way.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function hsCode(array $data): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) ($data['hs_code'] ?? ''));
+
+        return $digits !== '' ? $digits : null;
     }
 }
