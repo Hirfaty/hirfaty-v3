@@ -70,14 +70,16 @@ return [
     | Google Analytics (GA4)
     |--------------------------------------------------------------------------
     |
-    | The tag is printed only when a measurement ID is set, and never on the
-    | staging host — local and staging visits would otherwise be counted as
-    | real traffic. See resources/views/partials/analytics.blade.php.
+    | Hirfaty's own property is the default, so production tracks without any
+    | .env entry. The tag is never printed on the staging host, and an empty
+    | GOOGLE_ANALYTICS_ID= (as in .env.example, for local machines) switches
+    | it off — local and staging visits would otherwise be counted as real
+    | traffic. See resources/views/partials/analytics.blade.php.
     |
     */
 
     'google_analytics' => [
-        'measurement_id' => env('GOOGLE_ANALYTICS_ID'),
+        'measurement_id' => env('GOOGLE_ANALYTICS_ID', 'G-GJ98MN1C4R'),
     ],
 
 ];
