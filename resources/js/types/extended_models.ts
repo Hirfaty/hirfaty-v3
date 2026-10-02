@@ -1,4 +1,11 @@
-import type { Category, Media, Product, Store } from './models';
+import type {
+    Category,
+    DimensionUnit,
+    Media,
+    Product,
+    Store,
+    WeightUnit,
+} from './models';
 
 /** Axis kinds, tuned for craft goods. Mirrors ProductVariantOption::TYPES. */
 export type VariantOptionType =
@@ -38,6 +45,26 @@ export type ProductVariantResource = {
     options: VariantOption[];
     /** Variant photography; empty when the seller uploaded none. */
     images: { id: number; url: string }[];
+    /**
+     * This variant's own packed figures, in the product's units; null where
+     * it inherits the product's (`BuyerProductResource.measurements`).
+     */
+    measurements: {
+        weight: number | null;
+        length: number | null;
+        width: number | null;
+        height: number | null;
+    };
+};
+
+/** Packed weight and dimensions as the admin entered them; null = not filled in. */
+export type ProductMeasurements = {
+    weight: number | null;
+    weight_unit: WeightUnit;
+    length: number | null;
+    width: number | null;
+    height: number | null;
+    dimension_unit: DimensionUnit;
 };
 
 export type BuyerProductResource = Omit<
@@ -72,6 +99,8 @@ export type BuyerProductResource = Omit<
     /** Detail page only — the listing does not load variants. */
     variants?: ProductVariantResource[];
     option_groups?: VariantOptionGroup[];
+    /** Detail page only, like `variants`. */
+    measurements?: ProductMeasurements;
     store: Pick<Store, 'id' | 'store_name' | 'slug' | 'description'> & {
         city_name: string;
         /** Public "Vérifié par Hirfaty" mark — see BuyerProductResource. */

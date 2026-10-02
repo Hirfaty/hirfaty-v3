@@ -1,7 +1,8 @@
 import { ImagePlus, Plus, Trash2, Wand2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useCropQueue } from '@/hooks/use-crop-queue';
 import { validateMediaFile } from '@/lib/media-limits';
+import { cn } from '@/lib/utils';
 import type { DimensionUnit, WeightUnit } from '@/types';
 
 export type OptionType =
@@ -175,9 +176,9 @@ interface Props {
 }
 
 const DIMENSION_AXES = [
-    { key: 'length', label: 'Longueur' },
-    { key: 'width', label: 'Largeur' },
-    { key: 'height', label: 'Hauteur' },
+    { key: 'length', label: 'Longueur', short: 'L' },
+    { key: 'width', label: 'Largeur', short: 'l' },
+    { key: 'height', label: 'Hauteur', short: 'H' },
 ] as const;
 
 /**
@@ -701,7 +702,7 @@ export default function VariantBuilder({
                                                         ) || 0,
                                                 })
                                             }
-                                            className={`${INPUT} w-20`}
+                                            className={cn(INPUT, 'w-20')}
                                         />
                                         {errors[`variants.${i}.stock`] && (
                                             <p className="mt-1 text-xs text-red-600">
@@ -722,7 +723,7 @@ export default function VariantBuilder({
                                                 })
                                             }
                                             placeholder="défaut"
-                                            className={`${INPUT} w-24`}
+                                            className={cn(INPUT, 'w-24')}
                                         />
                                     </td>
                                     <td className="px-3 py-3 align-top">
@@ -740,7 +741,7 @@ export default function VariantBuilder({
                                                 })
                                             }
                                             placeholder="défaut"
-                                            className={`${INPUT} w-24`}
+                                            className={cn(INPUT, 'w-24')}
                                         />
                                     </td>
                                     {/* Shipping overrides: blank inherits
@@ -758,7 +759,7 @@ export default function VariantBuilder({
                                                 })
                                             }
                                             placeholder="défaut"
-                                            className={`${INPUT} w-24`}
+                                            className={cn(INPUT, 'w-24')}
                                         />
                                         {errors[`variants.${i}.weight`] && (
                                             <p className="mt-1 text-xs text-red-600">
@@ -767,25 +768,40 @@ export default function VariantBuilder({
                                         )}
                                     </td>
                                     <td className="px-3 py-3 align-top">
-                                        <div className="flex gap-1.5">
-                                            {DIMENSION_AXES.map((axis) => (
-                                                <input
-                                                    key={axis.key}
-                                                    type="number"
-                                                    min={0}
-                                                    step="any"
-                                                    value={variant[axis.key]}
-                                                    onChange={(e) =>
-                                                        patchVariant(i, {
-                                                            [axis.key]:
-                                                                e.target.value,
-                                                        })
-                                                    }
-                                                    placeholder="—"
-                                                    aria-label={axis.label}
-                                                    title={axis.label}
-                                                    className={`${INPUT} w-[4.5rem]`}
-                                                />
+                                        <div className="flex items-center gap-1">
+                                            {DIMENSION_AXES.map((axis, a) => (
+                                                <Fragment key={axis.key}>
+                                                    {a > 0 && (
+                                                        <span
+                                                            aria-hidden
+                                                            className="text-xs text-ink-soft"
+                                                        >
+                                                            ×
+                                                        </span>
+                                                    )}
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        step="any"
+                                                        value={
+                                                            variant[axis.key]
+                                                        }
+                                                        onChange={(e) =>
+                                                            patchVariant(i, {
+                                                                [axis.key]:
+                                                                    e.target
+                                                                        .value,
+                                                            })
+                                                        }
+                                                        placeholder={axis.short}
+                                                        aria-label={axis.label}
+                                                        title={axis.label}
+                                                        className={cn(
+                                                            INPUT,
+                                                            'w-16 shrink-0 px-2 text-center',
+                                                        )}
+                                                    />
+                                                </Fragment>
                                             ))}
                                         </div>
                                     </td>
@@ -798,7 +814,7 @@ export default function VariantBuilder({
                                                 })
                                             }
                                             placeholder="—"
-                                            className={`${INPUT} w-28`}
+                                            className={cn(INPUT, 'w-28')}
                                         />
                                     </td>
                                     <td className="px-3 py-3 align-top">

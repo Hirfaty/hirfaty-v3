@@ -209,6 +209,12 @@ return [
     'detail.reviews_anonymous' => 'مشتري من حرفتي',
     'detail.reviews_more' => 'عرض المزيد من التقييمات',
     'detail.handmade_note' => 'كل قطعة مصنوعة يدوياً، لذا قد تختلف الألوان والنقوش قليلاً، وهو ما يجعل قطعتك فريدة.',
+    'detail.specs_heading' => 'الوزن والأبعاد (مع التغليف)',
+    'detail.specs_weight' => 'الوزن',
+    'detail.specs_dimensions' => 'الأبعاد (الطول × العرض × الارتفاع)',
+    'detail.specs_length' => 'الطول',
+    'detail.specs_width' => 'العرض',
+    'detail.specs_height' => 'الارتفاع',
 
     // Reassurance row
     'detail.trust_materials_title' => 'مواد طبيعية',

@@ -207,6 +207,12 @@ return [
     'detail.reviews_anonymous' => 'Hirfaty buyer',
     'detail.reviews_more' => 'Show more reviews',
     'detail.handmade_note' => 'Every piece is handmade, so slight variations in colour and pattern are possible — they are what make yours one of a kind.',
+    'detail.specs_heading' => 'Weight and dimensions (packed)',
+    'detail.specs_weight' => 'Weight',
+    'detail.specs_dimensions' => 'Dimensions (L × W × H)',
+    'detail.specs_length' => 'Length',
+    'detail.specs_width' => 'Width',
+    'detail.specs_height' => 'Height',
 
     // Reassurance row
     'detail.trust_materials_title' => 'Natural materials',

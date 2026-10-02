@@ -14,10 +14,12 @@ import {
     Package,
     Play,
     Plus,
+    Ruler,
     ShieldCheck,
     ShoppingBag,
     Store as StoreIcon,
     Truck,
+    Weight,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -273,6 +275,107 @@ function TrustRow({ t }: { t: (k: string) => string }) {
 }
 
 /**
+ * Packed weight and dimensions, under the reassurance row. Only the figures
+ * the admin filled in are listed, and the whole block is left out when there
+ * are none. A selected variant's own figures win axis by axis; units are
+ * always the product's (a variant has none of its own).
+ */
+function Measurements({
+    product,
+    variant,
+    locale,
+    t,
+}: {
+    product: DetailProduct;
+    variant: ProductVariantResource | null;
+    locale: string;
+    t: (k: string) => string;
+}) {
+    const base = product.measurements;
+
+    if (!base) {
+        return null;
+    }
+
+    const own = variant?.measurements;
+    const weight = own?.weight ?? base.weight;
+    const axes = (['length', 'width', 'height'] as const).map((axis) => ({
+        axis,
+        value: own?.[axis] ?? base[axis],
+    }));
+    const filled = axes.filter((a) => a.value !== null);
+
+    if (weight === null && filled.length === 0) {
+        return null;
+    }
+
+    // Latin digits in every locale, matching the prices; up to three
+    // decimals so 0.125 kg survives but 2.500 reads as 2.5.
+    const number = new Intl.NumberFormat(`${locale}-u-nu-latn`, {
+        maximumFractionDigits: 3,
+    });
+    const unit = base.dimension_unit;
+
+    const rows: { label: string; value: string; icon: typeof Weight }[] = [];
+
+    if (weight !== null) {
+        rows.push({
+            label: t('buyer.detail.specs_weight'),
+            value: `${number.format(weight)} ${base.weight_unit}`,
+            icon: Weight,
+        });
+    }
+
+    if (filled.length === 3) {
+        rows.push({
+            label: t('buyer.detail.specs_dimensions'),
+            value: `${filled.map((a) => number.format(a.value!)).join(' × ')} ${unit}`,
+            icon: Ruler,
+        });
+    } else {
+        // A partial set would read as nonsense in "L × l × H" form, so each
+        // axis that is known gets its own row.
+        filled.forEach((a) =>
+            rows.push({
+                label: t(`buyer.detail.specs_${a.axis}`),
+                value: `${number.format(a.value!)} ${unit}`,
+                icon: Ruler,
+            }),
+        );
+    }
+
+    return (
+        <div className="mt-7">
+            <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
+                {t('buyer.detail.specs_heading')}
+            </p>
+            <dl className="mt-3 divide-y divide-souk-brown/10 rounded-2xl border border-souk-brown/12 px-5">
+                {rows.map((row) => (
+                    <div
+                        key={row.label}
+                        className="flex items-center justify-between gap-4 py-3 text-sm"
+                    >
+                        <dt className="flex items-center gap-2 text-souk-brown-deep/70">
+                            <row.icon
+                                className="h-4 w-4 text-souk-brown"
+                                strokeWidth={1.5}
+                            />
+                            {row.label}
+                        </dt>
+                        <dd
+                            dir="ltr"
+                            className="font-medium text-souk-title tabular-nums"
+                        >
+                            {row.value}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+        </div>
+    );
+}
+
+/**
  * One tile in a "more from shop" / "you may also like" row.
  *
  * Split out from `ProductRow`'s `.map()` rather than left inline:
@@ -429,7 +532,7 @@ const ProductDetail = ({
     reviews: PublicReview[];
     reviewsPagination: ReviewsPagination;
 }) => {
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
     const { openCart } = useCartSheet();
     const page = usePage();
@@ -1100,6 +1203,13 @@ const ProductDetail = ({
                     )}
 
                     <TrustRow t={t} />
+
+                    <Measurements
+                        product={product}
+                        variant={selectedVariant}
+                        locale={String(locale)}
+                        t={t}
+                    />
 
                     {/* Handmade-variation note, as in the reference. */}
                     <div className="mt-7 flex items-start gap-3 rounded-2xl bg-souk-peach px-5 py-4">

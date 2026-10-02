@@ -59,6 +59,25 @@ class BuyerProductResource extends JsonResource
                 fn () => $this->optionGroups(),
             ),
 
+            /*
+             * Packed weight and dimensions, as the admin entered them, for
+             * the detail page's spec rows. Sent wherever variants are loaded,
+             * like `option_groups`. Every figure is nullable — the page shows
+             * only what was filled in — and a variant's own figures
+             * (ProductVariantResource) replace these axis by axis.
+             */
+            'measurements' => $this->when(
+                $this->relationLoaded('variants'),
+                fn () => [
+                    'weight' => $this->figure($this->weight),
+                    'weight_unit' => $this->weight_unit ?? 'kg',
+                    'length' => $this->figure($this->length),
+                    'width' => $this->figure($this->width),
+                    'height' => $this->figure($this->height),
+                    'dimension_unit' => $this->dimension_unit ?? 'cm',
+                ],
+            ),
+
             'category' => $this->category ? [
                 'id' => $this->category->id,
                 // `name` is a per-locale map on the model; the storefront only
@@ -137,6 +156,15 @@ class BuyerProductResource extends JsonResource
                 'min_order_qty_professional' => max(1, (int) $this->min_order_qty_professional),
             ]),
         ];
+    }
+
+    /**
+     * A decimal column as a number, or null when blank or zero — "0 kg" is an
+     * unfilled field, not a measurement worth showing.
+     */
+    private function figure(mixed $value): ?float
+    {
+        return $value !== null && (float) $value > 0 ? (float) $value : null;
     }
 
     /**

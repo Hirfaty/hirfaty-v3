@@ -208,6 +208,12 @@ return [
     'detail.reviews_anonymous' => 'Acheteur Hirfaty',
     'detail.reviews_more' => 'Voir plus d’avis',
     'detail.handmade_note' => 'Chaque pièce est faite main : de légères variations de teinte et de motif sont possibles, et rendent la vôtre unique.',
+    'detail.specs_heading' => 'Poids et dimensions (emballé)',
+    'detail.specs_weight' => 'Poids',
+    'detail.specs_dimensions' => 'Dimensions (L × l × H)',
+    'detail.specs_length' => 'Longueur',
+    'detail.specs_width' => 'Largeur',
+    'detail.specs_height' => 'Hauteur',
 
     // Reassurance row
     'detail.trust_materials_title' => 'Matières naturelles',

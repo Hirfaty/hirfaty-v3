@@ -11,6 +11,7 @@ import type {
 } from '@/components/admin/product-media-input';
 import VariantBuilder from '@/components/admin/variant-builder';
 import type { VariantDraft } from '@/components/admin/variant-builder';
+import { cn } from '@/lib/utils';
 import type {
     Category,
     DimensionUnit,
@@ -704,7 +705,7 @@ export default function ProductForm({
                                         onChange={(e) =>
                                             set('weight', e.target.value)
                                         }
-                                        className={INPUT}
+                                        className={cn(INPUT, 'min-w-0 flex-1')}
                                     />
                                     <select
                                         value={data.weight_unit}
@@ -715,7 +716,7 @@ export default function ProductForm({
                                             )
                                         }
                                         aria-label="Unité de poids"
-                                        className={`${INPUT} w-24 shrink-0`}
+                                        className={cn(INPUT, 'w-24 shrink-0')}
                                     >
                                         <option value="g">g</option>
                                         <option value="kg">kg</option>
@@ -745,40 +746,69 @@ export default function ProductForm({
                                     }
                                     hint="Mesurez le carton une fois emballé, pas l’objet seul : le transporteur facture le plus élevé entre le poids réel et le poids volumétrique."
                                 >
-                                    <div className="flex gap-2">
+                                    {/*
+                                     * One column per axis, each with its own
+                                     * caption — a placeholder alone vanishes
+                                     * once a figure is typed, leaving three
+                                     * unlabelled boxes. min-w-0 lets the
+                                     * number inputs shrink to their column
+                                     * instead of their intrinsic width, which
+                                     * is what made them overlap.
+                                     */}
+                                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))_6rem]">
                                         {DIMENSION_AXES.map((axis) => (
-                                            <input
+                                            <div
                                                 key={axis.key}
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                value={data[axis.key]}
+                                                className="min-w-0"
+                                            >
+                                                <span className="mb-1 block text-xs text-ink-soft">
+                                                    {axis.label}
+                                                </span>
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="any"
+                                                        value={data[axis.key]}
+                                                        onChange={(e) =>
+                                                            set(
+                                                                axis.key,
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="0"
+                                                        aria-label={`${axis.label} (${data.dimension_unit})`}
+                                                        className={cn(
+                                                            INPUT,
+                                                            'min-w-0 pe-10',
+                                                        )}
+                                                    />
+                                                    <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-ink-soft">
+                                                        {data.dimension_unit}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <div className="col-span-3 min-w-0 sm:col-span-1">
+                                            <span className="mb-1 block text-xs text-ink-soft">
+                                                Unité
+                                            </span>
+                                            <select
+                                                value={data.dimension_unit}
                                                 onChange={(e) =>
                                                     set(
-                                                        axis.key,
-                                                        e.target.value,
+                                                        'dimension_unit',
+                                                        e.target
+                                                            .value as DimensionUnit,
                                                     )
                                                 }
-                                                placeholder={axis.label}
-                                                aria-label={axis.label}
+                                                aria-label="Unité de dimension"
                                                 className={INPUT}
-                                            />
-                                        ))}
-                                        <select
-                                            value={data.dimension_unit}
-                                            onChange={(e) =>
-                                                set(
-                                                    'dimension_unit',
-                                                    e.target
-                                                        .value as DimensionUnit,
-                                                )
-                                            }
-                                            aria-label="Unité de dimension"
-                                            className={`${INPUT} w-24 shrink-0`}
-                                        >
-                                            <option value="cm">cm</option>
-                                            <option value="m">m</option>
-                                        </select>
+                                            >
+                                                <option value="cm">cm</option>
+                                                <option value="m">m</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </Field>
                             </div>

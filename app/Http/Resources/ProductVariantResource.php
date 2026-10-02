@@ -37,6 +37,18 @@ class ProductVariantResource extends JsonResource
             // "Rouge / M" — for the cart line and the selected-variant summary.
             'label' => $this->label(),
 
+            /*
+             * This variant's own packed weight and dimensions, in the
+             * product's units. Null where it inherits the product's figure
+             * (BuyerProductResource `measurements`).
+             */
+            'measurements' => [
+                'weight' => $this->figure($this->weight),
+                'length' => $this->figure($this->length),
+                'width' => $this->figure($this->width),
+                'height' => $this->figure($this->height),
+            ],
+
             'options' => $this->whenLoaded('options', fn () => $this->options->map(fn ($option) => [
                 'type' => $option->type,
                 'name' => $option->name,
@@ -54,6 +66,12 @@ class ProductVariantResource extends JsonResource
                 ->values()
             ),
         ];
+    }
+
+    /** A decimal override as a number, or null when blank or zero. */
+    private function figure(mixed $value): ?float
+    {
+        return $value !== null && (float) $value > 0 ? (float) $value : null;
     }
 
     /**
