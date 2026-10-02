@@ -165,6 +165,19 @@ class Store extends Model
         return $this->type === 'cooperative';
     }
 
+    /**
+     * Shops the public site may show and sell from: switched on by the admin
+     * (`status`), and owned by a seller who has not been blocked
+     * (`users.is_banned`, toggled by Admin\UserController::ban). Blocking a
+     * seller takes their shop page and every product down with it, and
+     * unblocking brings them back untouched.
+     */
+    public function scopeSelling($query)
+    {
+        return $query->where('stores.status', 'active')
+            ->whereHas('user', fn ($user) => $user->where('is_banned', false));
+    }
+
     // Relationships
     public function user()
     {

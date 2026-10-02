@@ -112,14 +112,19 @@ class Product extends Model
      * product before its price has been agreed (base_price NULL), and an
      * unpriced product has no figure to put on a card, sort by, or bill.
      *
-     * Every public query goes through here rather than repeating the pair of
-     * conditions, so "priced" can never be remembered in one listing and
-     * forgotten in another.
+     * Nor is a published product enough when its shop is not: a store an
+     * admin switched off, or one whose seller was blocked, takes every piece
+     * it holds off sale with it (Store::scopeSelling).
+     *
+     * Every public query goes through here rather than repeating the
+     * conditions, so "priced" or "seller not blocked" can never be remembered
+     * in one listing and forgotten in another.
      */
     public function scopeStorefront($query)
     {
         return $query->where('status', 'published')
-            ->whereNotNull('base_price');
+            ->whereNotNull('base_price')
+            ->whereHas('store', fn ($store) => $store->selling());
     }
 
     /**

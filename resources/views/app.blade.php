@@ -55,6 +55,7 @@
             <title>{{ $seoTags['title'] }}</title>
         </x-inertia::head>
         @include('partials.seo', ['seo' => $seoTags])
+        @include('partials.analytics')
 
         @routes
     </head>

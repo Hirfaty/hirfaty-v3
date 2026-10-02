@@ -26,11 +26,13 @@ class CartService
      */
     public function addLine(Cart $cart, int $productId, ?int $variantId, int $quantity = 1): CartItem
     {
-        $product = Product::find($productId);
+        // storefront(), not a plain find: a product that is unpublished, or
+        // whose seller has been blocked, is not for sale either.
+        $product = Product::storefront()->find($productId);
 
         if (! $product) {
             throw ValidationException::withMessages([
-                'product_id' => 'Ce produit n\'existe plus.',
+                'product_id' => 'Ce produit n\'est plus disponible.',
             ]);
         }
 

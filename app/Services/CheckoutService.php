@@ -78,6 +78,26 @@ class CheckoutService
         };
 
         DB::transaction(function () use ($cart, $checkoutData, $unitPrice, $audience, &$orders) {
+            /*
+             * A line can outlive its product's place on the storefront — the
+             * piece unpublished, or its seller blocked, after it was added.
+             * Refused here like an unpriced line, naming the piece so the
+             * buyer knows which one to take out.
+             */
+            $forSale = Product::storefront()
+                ->whereIn('id', $cart->items->pluck('product_id'))
+                ->pluck('id')
+                ->all();
+
+            foreach ($cart->items as $item) {
+                if (! in_array($item->product_id, $forSale)) {
+                    throw ValidationException::withMessages([
+                        'cart' => "Le produit '".($item->product->name ?? 'Inconnu')
+                            ."' n'est plus disponible. Retirez-le du panier.",
+                    ]);
+                }
+            }
+
             // 1. Validate stock for ALL items first with lock to avoid race conditions
             foreach ($cart->items as $item) {
                 // Priced-ness is checked up front alongside stock, so an

@@ -32,9 +32,10 @@ class StoreController extends Controller
     public function show(Request $request, string $slug)
     {
         $store = Store::query()
-            // A shop an admin has switched off should read as gone, not as an
-            // empty shop — 404 rather than an eerie page with no products.
-            ->where('status', 'active')
+            // A shop an admin has switched off, or whose seller is blocked,
+            // should read as gone, not as an empty shop — 404 rather than an
+            // eerie page with no products.
+            ->selling()
             ->where('slug', $slug)
             ->with(['city:id,name', 'category'])
             ->firstOrFail();

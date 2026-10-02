@@ -65,4 +65,19 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URI', '/auth/facebook/callback'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Analytics (GA4)
+    |--------------------------------------------------------------------------
+    |
+    | The tag is printed only when a measurement ID is set, and never on the
+    | staging host — local and staging visits would otherwise be counted as
+    | real traffic. See resources/views/partials/analytics.blade.php.
+    |
+    */
+
+    'google_analytics' => [
+        'measurement_id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
 ];
