@@ -6,20 +6,25 @@ import ContactSection from '@/components/home_page/ContactSection';
 import ExploreByCategories from '@/components/home_page/ExploreByCategories';
 import { ExploreProducts } from '@/components/home_page/ExploreProducts';
 import HeroSection from '@/components/home_page/HeroSection';
+import LatestPosts from '@/components/home_page/LatestPosts';
 import NewArrivals from '@/components/home_page/NewArrivals';
 import OneWorkshop from '@/components/home_page/OneWorkshop';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useTranslation } from '@/hooks/use-translation';
+import type { Blog } from '@/types';
 
 export default function Welcome({
     featuredProducts = [],
     newArrivals = [],
+    latestPosts = [],
 }: {
     canRegister?: boolean;
     featuredProducts?: ShowcaseProduct[];
     /** The twelve most recently listed pieces — see `HomeController`. */
     newArrivals?: ShowcaseProduct[];
+    /** The three newest journal articles — see `HomeService::latestPosts()`. */
+    latestPosts?: Blog[];
 }) {
     const { t } = useTranslation();
 
@@ -44,6 +49,9 @@ export default function Welcome({
 
                 {/* ───────────────────────── Brochure ───────────────────────── */}
                 <BrochureSection />
+
+                {/* ───────────────────────── Journal ───────────────────────── */}
+                <LatestPosts posts={latestPosts} />
 
                 {/* ───────────── One workshop, two ways to sell ───────────── */}
                 <OneWorkshop />

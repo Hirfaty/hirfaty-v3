@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RefObject } from 'react';
+import TaxIncluded from '@/components/buyer/TaxIncluded';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 import { useSnapCarousel } from '@/hooks/use-snap-carousel';
@@ -338,8 +339,8 @@ export function ShowcaseCard({
                     {base !== null ? (
                         <>
                             <span className="font-display text-[15px] text-souk-brown">
-                                {money(onSale ? sale : base)}{' '}
-                                <span className="text-[10px]">TTC</span>
+                                {money(onSale ? sale : base)}
+                                <TaxIncluded />
                             </span>
                             {onSale && (
                                 <span className="text-xs text-souk-brown-deep/45 line-through">

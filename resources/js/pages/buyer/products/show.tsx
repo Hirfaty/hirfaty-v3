@@ -32,6 +32,7 @@ import type {
     ReviewSummary,
     ReviewsPagination,
 } from '@/components/buyer/ProductReviews';
+import TaxIncluded from '@/components/buyer/TaxIncluded';
 import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
@@ -201,10 +202,10 @@ function PriceBlock({
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="font-display text-4xl leading-none text-olive">
                         {money(trade)}
-                        <span className="ms-1.5 text-base">TTC</span>
+                        <TaxIncluded />
                     </span>
                     <span className="text-sm text-souk-brown-deep/50 line-through">
-                        {money(retail)} TTC
+                        {money(retail)}
                     </span>
                     {saving > 0 && (
                         <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
@@ -234,11 +235,11 @@ function PriceBlock({
                 className={`font-display text-[2.6rem] leading-none ${strike ? 'text-terracotta' : 'text-souk-title'}`}
             >
                 {money(retail)}
-                <span className="ms-1.5 text-lg">TTC</span>
+                <TaxIncluded />
             </span>
             {strike && (
                 <span className="text-base text-souk-brown-deep/45 line-through">
-                    {money(strike)} TTC
+                    {money(strike)}
                 </span>
             )}
         </div>
@@ -460,11 +461,15 @@ function RelatedProductCard({
                         {t('buyer.products.price_coming_soon')}
                     </span>
                 ) : pTrade !== null ? (
-                    <span className="text-olive">{money(pTrade)} TTC</span>
+                    <span className="text-olive">
+                        {money(pTrade)}
+                        <TaxIncluded />
+                    </span>
                 ) : pSale ? (
                     <>
                         <span className="text-terracotta">
-                            {money(Number(p.sale_price))} TTC
+                            {money(Number(p.sale_price))}
+                            <TaxIncluded />
                         </span>{' '}
                         <span className="text-xs text-souk-brown-deep/45 line-through">
                             {money(Number(p.base_price))}
@@ -472,7 +477,8 @@ function RelatedProductCard({
                     </>
                 ) : (
                     <span className="text-souk-title">
-                        {money(Number(p.base_price))} TTC
+                        {money(Number(p.base_price))}
+                        <TaxIncluded />
                     </span>
                 )}
             </p>

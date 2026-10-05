@@ -218,6 +218,12 @@ return [
     'brochure.dialog.success' => 'Merci — votre brochure est en cours de téléchargement.',
     'brochure.dialog.invalid' => 'Vérifiez le formulaire et réessayez.',
 
+    // ── Blogs (les derniers articles, sous la brochure) ──────────────────
+    'blog.heading' => 'Blogs',
+    'blog.view_all' => 'Voir tous les blogs',
+    'blog.read' => 'Lire l’article',
+    'blog.minutes' => ':count min de lecture',
+
     'gallery.eyebrow' => 'Dans les ateliers',
     'gallery.heading' => 'Galerie',
     'gallery.lead' => 'Des mains, de la poussière, du feu et de la patience — là où naît chaque pièce Hirfaty.',

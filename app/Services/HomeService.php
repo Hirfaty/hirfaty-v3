@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Blog;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -48,6 +49,22 @@ class HomeService
             ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists'])
             ->inRandomOrder()
+            ->take($limit)
+            ->get();
+    }
+
+    /**
+     * The newest journal articles, shown below the brochure on the home page.
+     *
+     * Only `published()` posts, so a draft or an archived article never
+     * surfaces here — the same scope the public /blog listing uses. `media`
+     * is eager loaded because BlogResource reads the cover through it.
+     */
+    public function latestPosts(int $limit = 3): Collection
+    {
+        return Blog::published()
+            ->with('media')
+            ->latest('published_at')
             ->take($limit)
             ->get();
     }

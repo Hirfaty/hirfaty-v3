@@ -245,4 +245,7 @@ return [
     'region_label' => 'Language and currency',
     'currency_note' => 'Prices shown in :currency as a guide. Orders are charged in dirhams (MAD).',
     'currency_charged' => 'Charged: :amount',
+
+    // ── Note beside product prices ──────────────────────────────────────
+    'tax_included' => '(taxes included)',
 ];

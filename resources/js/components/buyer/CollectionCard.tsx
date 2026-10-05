@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import TaxIncluded from '@/components/buyer/TaxIncluded';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
 
@@ -260,11 +261,12 @@ export function CollectionCard({
                     ) : (
                         <>
                             <span className="text-sm font-semibold text-souk-brown">
-                                {money(retail as number)} TTC
+                                {money(retail as number)}
+                                <TaxIncluded />
                             </span>
                             {onSale && (
                                 <span className="text-xs text-souk-brown-deep/50 line-through">
-                                    {money(base)} TTC
+                                    {money(base)}
                                 </span>
                             )}
                         </>
@@ -279,7 +281,8 @@ export function CollectionCard({
                         className="mt-1.5 text-[10px] tracking-[0.12em] text-olive uppercase"
                         title={t('buyer.products.pro_price_hint')}
                     >
-                        {t('buyer.products.pro_short')} {money(pro)} TTC
+                        {t('buyer.products.pro_short')} {money(pro)}
+                        <TaxIncluded />
                     </p>
                 )}
             </div>

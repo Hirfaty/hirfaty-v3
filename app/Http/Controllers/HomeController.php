@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\BlogResource;
 use App\Http\Resources\BuyerProductResource;
 use App\Services\HomeService;
 use App\Services\NewArrivalsService;
@@ -34,6 +35,8 @@ class HomeController extends Controller
             'newArrivals' => BuyerProductResource::collection(
                 $newArrivals->forHome($request->user()),
             ),
+            // The three newest journal articles, below the brochure.
+            'latestPosts' => BlogResource::collection($home->latestPosts()),
         ]);
     }
 }

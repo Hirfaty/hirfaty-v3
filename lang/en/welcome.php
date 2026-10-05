@@ -220,6 +220,12 @@ return [
     'brochure.dialog.success' => 'Thank you — your brochure is downloading.',
     'brochure.dialog.invalid' => 'Please check the form and try again.',
 
+    // ── Journal (latest articles, below the brochure) ────────────────────
+    'blog.heading' => 'The Journal',
+    'blog.view_all' => 'See all articles',
+    'blog.read' => 'Read the article',
+    'blog.minutes' => ':count min read',
+
     'gallery.eyebrow' => 'In the workshops',
     'gallery.heading' => 'Gallery',
     'gallery.lead' => 'Hands, dust, fire and patience — where every Hirfaty piece begins.',

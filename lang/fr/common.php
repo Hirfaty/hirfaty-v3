@@ -247,4 +247,7 @@ return [
     'region_label' => 'Langue et devise',
     'currency_note' => 'Prix affichés en :currency à titre indicatif. Les commandes sont facturées en dirhams (MAD).',
     'currency_charged' => 'Facturé : :amount',
+
+    // ── Mention sous les prix des produits ──────────────────────────────
+    'tax_included' => '(taxes comprises)',
 ];

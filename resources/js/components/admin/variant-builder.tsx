@@ -816,6 +816,11 @@ export default function VariantBuilder({
                                             placeholder="—"
                                             className={cn(INPUT, 'w-28')}
                                         />
+                                        {errors[`variants.${i}.sku`] && (
+                                            <p className="mt-1 w-28 text-xs text-red-600">
+                                                {errors[`variants.${i}.sku`]}
+                                            </p>
+                                        )}
                                     </td>
                                     <td className="px-3 py-3 align-top">
                                         <VariantMediaPicker

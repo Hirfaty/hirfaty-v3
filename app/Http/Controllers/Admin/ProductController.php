@@ -109,7 +109,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $isDraft = $request->input('status') === 'draft';
-        $data = $request->validate($this->productRules($isDraft));
+        $data = $request->validate($this->productRules($isDraft), $this->productMessages());
         $this->assertVariantsAreCoherent($data['variants'] ?? []);
 
         $store = Store::findOrFail($data['store_id']);
@@ -182,7 +182,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $isDraft = $request->input('status') === 'draft';
-        $data = $request->validate($this->productRules($isDraft, $product));
+        $data = $request->validate($this->productRules($isDraft, $product), $this->productMessages());
         $this->assertVariantsAreCoherent($data['variants'] ?? []);
 
         DB::transaction(function () use ($data, $request, $product, $isDraft) {
@@ -287,7 +287,22 @@ class ProductController extends Controller
                     ? Rule::exists('product_variants', 'id')->where('product_id', $product->id)
                     : 'prohibited',
             ],
-            'variants.*.sku' => ['nullable', 'string', 'max:100'],
+            /*
+             * Checked here so a clash comes back as a form error rather than a
+             * 500 from the unique index. This product's own variants are left
+             * out: syncVariants() frees their SKUs before reassigning them, so
+             * moving a reference from one variant to another — or removing a
+             * variant and re-adding one with the same reference — is fine.
+             */
+            'variants.*.sku' => [
+                'nullable',
+                'string',
+                'max:100',
+                'distinct',
+                Rule::unique('product_variants', 'sku')->where(
+                    fn ($query) => $product ? $query->where('product_id', '!=', $product->id) : $query
+                ),
+            ],
             'variants.*.stock' => [$required, 'integer', 'min:0'],
             'variants.*.price_override' => ['nullable', 'numeric', 'min:0'],
             'variants.*.professional_price_override' => ['nullable', 'numeric', 'min:0'],
@@ -326,7 +341,18 @@ class ProductController extends Controller
     }
 
     /**
-     * Sync a product's variants to the supplied set, matched by position.
+     * @return array<string, string>
+     */
+    private function productMessages(): array
+    {
+        return [
+            'variants.*.sku.distinct' => 'Cette référence est utilisée par une autre déclinaison du formulaire.',
+            'variants.*.sku.unique' => 'Cette référence est déjà utilisée par un autre produit.',
+        ];
+    }
+
+    /**
+     * Sync a product's variants to the supplied set, matched by id.
      *
      * Deliberately an upsert rather than delete-then-recreate: a variant's
      * photos live on the variant row via a polymorphic Media relation, and
@@ -340,7 +366,29 @@ class ProductController extends Controller
     private function syncVariants(Product $product, array $variants, Request $request): void
     {
         $existing = $product->variants()->get()->keyBy('id');
-        $keptIds = [];
+        $keptIds = collect($variants)->pluck('id')->filter()->all();
+
+        /*
+         * Clear the way before writing anything, because the SKU index is
+         * checked row by row. The variants the admin removed go first, and the
+         * kept ones give up their SKUs for the moment — otherwise re-adding a
+         * removed variant's reference, or swapping two references, would hit
+         * a row that is about to lose it anyway. Each kept row gets its SKU
+         * back in the loop below.
+         */
+        $existing->except($keptIds)->each(function (ProductVariant $v) {
+            $this->deleteVariantMedia($v, $v->media()->pluck('id')->all());
+            $v->delete();
+        });
+
+        if ($keptIds !== []) {
+            $product->variants()->whereKey($keptIds)->whereNotNull('sku')->update(['sku' => null]);
+
+            // Reloaded so the models know their SKU is now null — otherwise an
+            // unchanged reference looks clean to update() and is never written
+            // back.
+            $existing = $product->variants()->whereKey($keptIds)->get()->keyBy('id');
+        }
 
         foreach (array_values($variants) as $position => $variant) {
             $attributes = [
@@ -371,20 +419,11 @@ class ProductController extends Controller
                 $row = $product->variants()->create($attributes);
             }
 
-            $keptIds[] = $row->id;
-
             $row->options()->createMany($this->normaliseOptions($variant['options']));
 
             $this->deleteVariantMedia($row, $variant['deleted_media'] ?? []);
             $this->uploadVariantMedia($row, $request, $position);
         }
-
-        // Whatever the admin removed from the form. Clean up its media too so
-        // nothing leaks in storage.
-        $existing->except($keptIds)->each(function (ProductVariant $v) {
-            $this->deleteVariantMedia($v, $v->media()->pluck('id')->all());
-            $v->delete();
-        });
     }
 
     /**

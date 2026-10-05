@@ -323,6 +323,14 @@ export default function ProductForm({
         // RequestPayload shape, which does not model nested drafts.
         router.post(submitUrl, payload as unknown as RequestPayload, {
             forceFormData: true,
+            /*
+             * Keep what was typed only when the save is rejected. On success
+             * the form must be rebuilt from the saved product: a variant or
+             * photo created by this save only gets its id from the server, and
+             * a stale form would send it again as new on the next save —
+             * duplicating it, or tripping the variant SKU index.
+             */
+            preserveState: 'errors',
             onError: (errs) => setErrors(errs as Record<string, string>),
             onFinish: () => setProcessing(false),
         });
