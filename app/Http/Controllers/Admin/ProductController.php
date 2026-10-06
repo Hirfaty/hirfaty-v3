@@ -558,7 +558,15 @@ class ProductController extends Controller
 
     public function show(Product $product, ReviewService $reviews)
     {
-        $product->load(['store.user', 'store.city', 'category', 'media', 'orderItems.order', 'variants.options', 'variants.media']);
+        $product->load([
+            'store.user', 'store.city', 'category', 'media', 'variants.options', 'variants.media',
+            /*
+             * Only lines whose order is settled: an unpaid or released card
+             * purchase is hidden by Order's settled scope, so its line would
+             * arrive with a null `order` — and it is no sale either.
+             */
+            'orderItems' => fn ($query) => $query->whereHas('order')->with('order'),
+        ]);
 
         return Inertia::render('admin/products/show', [
             'product' => $product,

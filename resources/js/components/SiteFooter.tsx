@@ -268,17 +268,27 @@ export const SiteFooter = () => {
                 </div>
             </div>
 
-            <div className="relative container border-t border-ink/10 py-6">
-                {/* Payzone's 3D Secure badge, kept as their artwork. Its white
-                    background is multiplied away so it sits on the cream. */}
+            {/*
+             * Card payment badge and the terms of sale, side by side — Payzone
+             * requires both in the footer of any site taking cards through
+             * them. On a white plate so the logos keep their own colours in
+             * dark mode.
+             */}
+            <div className="container flex flex-col items-start gap-3 border-t border-ink/10 py-6 md:flex-row md:items-center md:justify-between">
                 <img
-                    src={paymentSecure}
-                    alt={t('common.footer.payment_secure')}
+                    src="/images/payments/payzone-secure.png"
+                    alt={t('common.footer.payments_secure')}
+                    loading="lazy"
                     width={1162}
                     height={120}
-                    loading="lazy"
-                    className="h-auto w-full max-w-md mix-blend-multiply"
+                    className="h-auto w-full max-w-md rounded-md bg-white px-2 py-1.5"
                 />
+                <Link
+                    href={route('terms')}
+                    className="text-xs text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
+                >
+                    {t('common.footer.gtc')}
+                </Link>
             </div>
 
             <div className="container flex flex-col items-start justify-between gap-4 border-t border-ink/10 pt-6 pb-10 text-xs text-ink-soft md:flex-row md:items-center">

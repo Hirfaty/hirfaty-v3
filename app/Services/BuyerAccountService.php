@@ -364,6 +364,11 @@ class BuyerAccountService
                 ->reject(fn ($productId) => $productReviews->has($productId))
                 ->count(),
 
+            // `cod` or `card`; `payment_status` says whether a card was charged
+            // (`paid`) or the money went back (`refunded`).
+            'payment_method' => $first->payment_method ?? 'cod',
+            'payment_status' => $first->payment_status ?? 'pending',
+
             // Snapshotted at checkout; the same carrier for every workshop.
             'delivery_service_name' => $first->delivery_service_name,
             'tracking_numbers' => $group->pluck('tracking_number')->filter()->unique()->values()->all(),

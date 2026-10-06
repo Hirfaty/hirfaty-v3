@@ -13,6 +13,7 @@ use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -106,9 +107,9 @@ class CheckoutController extends Controller
             /*
              * Whitelisted server-side in CheckoutRequest and shared from there,
              * so the page can only offer a method the server will actually
-             * accept. One entry today; see that constant.
+             * accept — card only while Payzone is configured.
              */
-            'paymentMethods' => CheckoutRequest::PAYMENT_METHODS,
+            'paymentMethods' => CheckoutRequest::paymentMethods(),
 
             'defaultCountry' => Address::DEFAULT_COUNTRY,
 
@@ -157,6 +158,7 @@ class CheckoutController extends Controller
         CheckoutService $checkout,
         CheckoutDestinationService $destinations,
         CurrencyService $currencies,
+        PaymentService $payments,
     ) {
         $cart = Cart::where('user_id', Auth::id())
             ->with(['items.product.store'])
@@ -186,13 +188,19 @@ class CheckoutController extends Controller
         // from it.
         $destination['display_rate'] = $currencies->rateFor($currency);
 
+        // A card purchase this buyer left unpaid is still holding its stock;
+        // this checkout replaces it.
+        $payments->releaseOpenPurchases($request->user());
+
         $orders = $checkout->process($cart, $destination);
 
-        $first = $orders[0];
-
-        // The thank-you page for the whole purchase — however many workshops
-        // it was split across, it is keyed by the one reference they share.
-        return redirect()->route('checkout.confirmation', $first->group_reference ?? $first->reference);
+        /*
+         * Off to Payzone — every purchase is paid by card before it is placed.
+         * A full page visit rather than an Inertia redirect: the launch page
+         * is a plain HTML form that posts itself to the paywall, which an XHR
+         * could not follow. The confirmation page comes after the payment.
+         */
+        return Inertia::location(route('checkout.pay', $orders[0]->group_reference));
     }
 
     /**

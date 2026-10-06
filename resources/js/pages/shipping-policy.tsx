@@ -7,7 +7,7 @@ import { useTranslation } from '@/hooks/use-translation';
  * Every figure on this page is the one the code actually charges: the flat 40
  * MAD domestic rate comes from `DeliveryRateSeeder`, the single delivery
  * charge per basket from `CheckoutService` (which attaches the whole fee to
- * one order of a split purchase), and cash on delivery from
+ * one order of a split purchase), and card-only payment (Payzone) from
  * `CheckoutRequest::PAYMENT_METHODS`. Keep them in step if any of those move.
  */
 export default function ShippingPolicy() {

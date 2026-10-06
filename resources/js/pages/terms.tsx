@@ -11,8 +11,9 @@ import { useTranslation } from '@/hooks/use-translation';
  *
  * Plain prose, and grounded in what the app actually does rather than
  * boilerplate a lawyer would recognise from nowhere in particular:
- * cash-on-delivery in MAD (CheckoutRequest::PAYMENT_METHODS), cancellation
- * only while an order is still 'pending' (Buyer\OrderController::cancel),
+ * card payment in MAD through Payzone (CheckoutRequest::PAYMENT_METHODS), orders
+ * confirmed the moment they are paid (PaymentService), cancellation by
+ * writing in, with a refund to the card (OrderStatusService),
  * product moderation (Product::isPendingReview() etc.), and account
  * suspension via User::is_banned.
  */

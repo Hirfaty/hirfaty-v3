@@ -63,7 +63,7 @@ function notificationsCheckout(User $buyer)
 {
     $city = City::create(['name' => 'Tangier', 'region' => 'Tangier-Tetouan-Al Hoceima']);
 
-    return test()->actingAs($buyer)->post(route('checkout.store'), [
+    $response = test()->actingAs($buyer)->post(route('checkout.store'), [
         'first_name' => 'Yasmine',
         'last_name' => 'Alaoui',
         'shipping_phone' => '0600000000',
@@ -71,8 +71,13 @@ function notificationsCheckout(User $buyer)
         'city_id' => $city->id,
         'postal_code' => '90000',
         'country' => 'MA',
-        'payment_method' => 'cod',
+        'payment_method' => 'card',
     ]);
+
+    // The purchase is placed — and the bell rung — once Payzone confirms it.
+    confirmCardPayment();
+
+    return $response;
 }
 
 test('a checkout puts one purchase notification in every admin bell', function () {

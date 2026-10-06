@@ -19,11 +19,15 @@
              (Buyer\OrderController::cancel). --}}
         @if ($many)
             مرحباً {{ $user->first_name }}، تم إلغاء طلبك {{ $reference }} الذي يشمل
-            {{ $orders->count() }} ورشات. لم يُخصم منك أي مبلغ — الدفع يتم عند الاستلام فقط.
+            {{ $orders->count() }} ورشات.
         @else
             مرحباً {{ $user->first_name }}، تم إلغاء طلبك {{ $reference }} من
-            {{ $first->store->store_name }}. لم يُخصم منك أي مبلغ — الدفع يتم
-            عند الاستلام فقط.
+            {{ $first->store->store_name }}.
+        @endif
+        @if ($first->isPaidByCard())
+            سيُرَدّ إليك المبلغ المدفوع بالبطاقة على البطاقة نفسها.
+        @else
+            لم يُخصم منك أي مبلغ — الدفع يتم عند الاستلام.
         @endif
     </x-mail.text>
 

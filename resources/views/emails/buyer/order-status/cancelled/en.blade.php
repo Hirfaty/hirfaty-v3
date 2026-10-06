@@ -20,12 +20,15 @@
              your order" would be plainly wrong. --}}
         @if ($many)
             Hello {{ $user->first_name }}, your order {{ $reference }}, covering
-            {{ $orders->count() }} workshops, has been cancelled. Nothing has
-            been charged — you only ever pay on delivery.
+            {{ $orders->count() }} workshops, has been cancelled.
         @else
             Hello {{ $user->first_name }}, your order {{ $reference }} from
-            {{ $first->store->store_name }} has been cancelled. Nothing
-            has been charged — you only ever pay on delivery.
+            {{ $first->store->store_name }} has been cancelled.
+        @endif
+        @if ($first->isPaidByCard())
+            What you paid by card will be refunded to the card you used.
+        @else
+            Nothing has been charged — you pay on delivery.
         @endif
     </x-mail.text>
 

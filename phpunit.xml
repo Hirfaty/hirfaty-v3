@@ -54,6 +54,17 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <!--
+            Fixed, fake Payzone credentials, whatever the developer's .env
+            holds. Card is the only way to pay, so checkout is closed without
+            them; nothing here ever reaches Payzone — tests confirm a payment
+            with confirmCardPayment() (tests/Pest.php).
+        -->
+        <env name="PAYZONE_MERCHANT_ACCOUNT" value="hirfaty_Test"/>
+        <env name="PAYZONE_SECRET_KEY" value="test-secret"/>
+        <env name="PAYZONE_NOTIFICATION_KEY" value="test-notify"/>
+        <env name="PAYZONE_PAYWALL_URL" value="https://payment-sandbox.payzone.ma/pwv4/launch"/>
+        <env name="PAYZONE_CALLBACK_BASE_URL" value=""/>
+        <!--
             Currency lookups are off by default under test. Both services call
             out to the network, and the display currency is resolved on every
             page that renders a price — left on, the suite would make a live

@@ -657,6 +657,13 @@ const ProductDetail = ({
      * something a restock would let them buy.
      */
     const belowMinimum = !needsChoice && !soldOut && stock < minQty;
+    /*
+     * Nobody can buy this right now, signed in or not. Kept apart from
+     * `needsChoice`, which is the shopper's to resolve: a guest who hasn't
+     * picked a variant can still go and sign in, but sending a guest to the
+     * login page for a sold-out piece leads nowhere.
+     */
+    const unavailable = soldOut || unpriced || belowMinimum;
 
     /*
      * Prices arrive from the server in MAD. `money()` renders them in the
@@ -728,13 +735,17 @@ const ProductDetail = ({
      * who is shopping, so the basket starts once they have signed in.
      */
     const handleAddToCart = () => {
-        if (needsChoice || unpriced || soldOut || belowMinimum || adding) {
+        if (unavailable || adding) {
             return;
         }
 
         if (!auth.user) {
             router.visit(loginHref);
 
+            return;
+        }
+
+        if (needsChoice) {
             return;
         }
 
@@ -813,17 +824,61 @@ const ProductDetail = ({
                 {/*
                  * Gallery. Sticky and a full viewport tall, so the piece holds
                  * the screen while the buying details scroll past it. The
-                 * thumbnails sit *over* the photograph's top corner rather than
-                 * in a rail beside it — a rail would eat width the image needs
-                 * to fill that height without letterboxing.
+                 * thumbnails sit in a rail on the photograph's start side, off
+                 * the image, so none of the piece is hidden behind them.
                  *
                  * On small screens it drops to a fixed 70svh: `h-screen` there
                  * would push the price and the Add-to-Cart button entirely
                  * below the fold. svh, not vh, so the mobile browser chrome
                  * collapsing doesn't resize it mid-scroll.
                  */}
-                <div className="col-span-12 h-[70svh] lg:sticky lg:top-0 lg:col-span-6 lg:h-screen lg:self-start">
-                    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10 lg:rounded-none lg:ring-0">
+                <div className="col-span-12 flex h-[70svh] gap-3 lg:sticky lg:top-0 lg:col-span-6 lg:h-screen lg:gap-4 lg:self-start">
+                    {/*
+                     * Thumbnail rail. Scrolls on its own when there are more
+                     * frames than fit; the padding keeps the active ring from
+                     * being clipped by that overflow.
+                     */}
+                    {media.length > 1 && (
+                        <div className="flex shrink-0 flex-col gap-2.5 overflow-y-auto p-0.5 lg:py-4">
+                            {media.map((m, i) => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => setActiveIdx(i)}
+                                    aria-label={t(
+                                        'buyer.detail.view_media',
+                                    ).replace(':n', String(i + 1))}
+                                    aria-current={i === activeIdx}
+                                    className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-souk-brown/5 transition-all md:h-16 md:w-16 lg:h-20 lg:w-20 ${
+                                        i === activeIdx
+                                            ? 'ring-2 ring-souk-title'
+                                            : 'opacity-70 ring-1 ring-souk-brown/15 hover:opacity-100 hover:ring-souk-brown/40'
+                                    }`}
+                                >
+                                    {m.type === 'video' ? (
+                                        <>
+                                            <video
+                                                src={m.url}
+                                                className="h-full w-full object-cover"
+                                                muted
+                                            />
+                                            <span className="absolute inset-0 flex items-center justify-center bg-souk-title/40">
+                                                <Play className="h-3.5 w-3.5 fill-white text-white" />
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <img
+                                            src={m.url}
+                                            alt=""
+                                            loading="lazy"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10 lg:rounded-none lg:ring-0">
                         {active?.type === 'video' ? (
                             <video
                                 key={active.id}
@@ -843,47 +898,6 @@ const ProductDetail = ({
                         ) : (
                             <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
                                 <ZellijStarIcon className="h-10 w-10" />
-                            </div>
-                        )}
-
-                        {/* Thumbnails, over the top-left of the photograph. */}
-                        {media.length > 1 && (
-                            <div className="absolute start-4 top-4 flex max-h-[calc(100%-2rem)] flex-col gap-2.5 overflow-y-auto md:start-5 md:top-5">
-                                {media.map((m, i) => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => setActiveIdx(i)}
-                                        aria-label={t(
-                                            'buyer.detail.view_media',
-                                        ).replace(':n', String(i + 1))}
-                                        aria-current={i === activeIdx}
-                                        className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-lg ring-1 backdrop-blur transition-all md:h-16 md:w-16 ${
-                                            i === activeIdx
-                                                ? 'ring-2 ring-white'
-                                                : 'ring-white/45 hover:ring-white/80'
-                                        }`}
-                                    >
-                                        {m.type === 'video' ? (
-                                            <>
-                                                <video
-                                                    src={m.url}
-                                                    className="h-full w-full object-cover"
-                                                    muted
-                                                />
-                                                <span className="absolute inset-0 flex items-center justify-center bg-souk-title/40">
-                                                    <Play className="h-3.5 w-3.5 fill-white text-white" />
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <img
-                                                src={m.url}
-                                                alt=""
-                                                loading="lazy"
-                                                className="h-full w-full object-cover"
-                                            />
-                                        )}
-                                    </button>
-                                ))}
                             </div>
                         )}
 
@@ -1111,18 +1125,15 @@ const ProductDetail = ({
                         <button
                             onClick={handleAddToCart}
                             /*
-                             * A guest is never disabled — the button is their
-                             * way in to signing up, and greying it out would
-                             * leave the page with no route forward at all.
+                             * A guest's button is their way in to signing up,
+                             * so it stays live while the piece is buyable —
+                             * but not for one nobody can buy: a live "sign in
+                             * to buy" that did nothing on click was a dead end.
                              */
                             disabled={
-                                auth.user
-                                    ? soldOut ||
-                                      needsChoice ||
-                                      unpriced ||
-                                      belowMinimum ||
-                                      adding
-                                    : false
+                                unavailable ||
+                                adding ||
+                                (!!auth.user && needsChoice)
                             }
                             aria-live="polite"
                             className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-xl px-6 py-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
@@ -1142,7 +1153,7 @@ const ProductDetail = ({
                                         strokeWidth={2.2}
                                     />
                                 </>
-                            ) : !auth.user ? (
+                            ) : !auth.user && !unavailable ? (
                                 <>
                                     {t('buyer.detail.login_to_buy')}
                                     <LogIn

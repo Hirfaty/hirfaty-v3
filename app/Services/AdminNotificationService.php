@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\Admin\CardRefundNeeded;
 use App\Notifications\Admin\NewPurchaseAlert;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Notifications\DatabaseNotification;
@@ -141,6 +142,7 @@ class AdminNotificationService
 
         [$title, $body, $url] = match ($notification->type) {
             NewPurchaseAlert::KIND => $this->presentPurchase($data),
+            CardRefundNeeded::KIND => $this->presentRefund($data),
             default => ['Notification', '', route('admin.notifications.index')],
         };
 
@@ -183,5 +185,28 @@ class AdminNotificationService
             : route('admin.orders.index');
 
         return [trim("Nouvelle commande {$reference}"), implode(' · ', $parts), $url];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function presentRefund(array $data): array
+    {
+        $amount = number_format((float) ($data['amount'] ?? 0), 2, ',', ' ');
+
+        $url = ! empty($data['order_reference'])
+            ? route('admin.orders.show', $data['order_reference'])
+            : route('admin.orders.index');
+
+        return [
+            trim('Remboursement carte à faire — '.($data['reference'] ?? '')),
+            implode(' · ', array_filter([
+                $amount.' MAD',
+                $data['reason'] ?? null,
+                isset($data['charge_id']) ? 'Payzone '.$data['charge_id'] : null,
+            ])),
+            $url,
+        ];
     }
 }

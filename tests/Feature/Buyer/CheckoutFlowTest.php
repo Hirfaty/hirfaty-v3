@@ -50,7 +50,7 @@ function checkoutPayload(array $overrides = []): array
             'shipping_phone' => '0600000000',
             'postal_code' => '40000',
             'country' => 'MA',
-            'payment_method' => 'cod',
+            'payment_method' => 'card',
         ], $overrides),
         fn ($value) => $value !== null,
     );
@@ -213,11 +213,15 @@ test('checkout store creates grouped orders and clears cart', function () {
         'notes' => 'Fragile items',
     ]));
 
+    // Off to Payzone first: the purchase is placed once the card is charged.
+    $groupReference = Order::withoutGlobalScope(Order::SETTLED_SCOPE)->value('group_reference');
+    $response->assertRedirect(route('checkout.pay', $groupReference));
+    expect(Order::count())->toBe(0);
+
+    confirmCardPayment($groupReference);
+
     // The confirmation page is keyed by the purchase's one reference — the
     // group's, not either workshop's own — and shows both shops' pieces.
-    $groupReference = Order::value('group_reference');
-    $response->assertRedirect(route('checkout.confirmation', $groupReference));
-
     $this->actingAs($buyer)
         ->get(route('checkout.confirmation', $groupReference))
         ->assertOk()
@@ -271,6 +275,8 @@ test('a split basket sends the buyer one confirmation carrying every order and i
         'city_id' => $city->id,
     ]))->assertSessionHasNoErrors();
 
+    confirmCardPayment();
+
     // One OrderPlaced for the buyer, not one per store — otherwise a
     // multi-seller purchase reads, in the inbox, as only its last order.
     Notification::assertSentToTimes($buyer, OrderPlaced::class, 1);
@@ -305,6 +311,8 @@ test('the phone the buyer gives is stored on every order the basket produces', f
         'city_id' => $city->id,
         'shipping_phone' => '0655443322',
     ]))->assertSessionHasNoErrors();
+
+    confirmCardPayment();
 
     // Both halves of a split basket ship to the same person, so each order
     // needs the number — a courier holds one parcel, not the whole basket.
@@ -343,6 +351,8 @@ test('a buyer can check out against a saved address', function () {
         'postal_code' => null,
         'country' => null,
     ]))->assertSessionHasNoErrors();
+
+    confirmCardPayment();
 
     /*
      * Snapshotted flat, so editing or deleting the saved address later cannot
@@ -412,7 +422,11 @@ test('checkout store applies 20% commission and passes 40 delivery through to th
         'notes' => 'Please handle with care',
     ]));
 
-    $response->assertRedirect(route('checkout.confirmation', Order::value('group_reference')));
+    $response->assertRedirect(route('checkout.pay', Order::withoutGlobalScope(Order::SETTLED_SCOPE)->value('group_reference')));
+
+    // Nothing is earned until the card is charged.
+    expect(Earning::count())->toBe(0);
+    confirmCardPayment();
 
     expect(Order::count())->toBe(1);
     expect(Earning::count())->toBe(1);
@@ -460,6 +474,8 @@ test('checkout fills in a name and phone the account was missing', function () {
         'shipping_phone' => '0622334455',
     ]))->assertSessionHasNoErrors();
 
+    confirmCardPayment();
+
     expect($buyer->fresh())
         ->first_name->toBe('Yasmine')
         ->last_name->toBe('Alaoui')
@@ -497,6 +513,8 @@ test('checkout never overwrites a name the account already has', function () {
         'shipping_phone' => '0600000001',
     ]))->assertSessionHasNoErrors();
 
+    confirmCardPayment();
+
     expect($buyer->fresh())
         ->first_name->toBe('Karim')
         ->last_name->toBe('Tazi')
@@ -526,6 +544,8 @@ test('the postal code is snapshotted onto the order address', function () {
         'city_id' => $city->id,
         'postal_code' => '80000',
     ]))->assertSessionHasNoErrors();
+
+    confirmCardPayment();
 
     expect(Order::first()->shipping_address)
         ->toBe('Yasmine Alaoui, 21 Boulevard du Port, Agadir 80000');
@@ -557,6 +577,8 @@ test('saving an address from checkout keeps its postal code and country', functi
         'address_label' => 'Maison',
     ]))->assertSessionHasNoErrors();
 
+    confirmCardPayment();
+
     expect($buyer->addresses()->first())
         ->postal_code->toBe('46000')
         ->country->toBe('MA')
@@ -564,10 +586,11 @@ test('saving an address from checkout keeps its postal code and country', functi
 });
 
 /*
- * Cash on delivery is the only method wired up. The whitelist is what stops an
- * order being created as "paid by card" when no card was ever charged.
+ * Card is the only way to pay, and it exists only while Payzone is
+ * configured. Without it checkout is closed — no order is created that
+ * nothing could ever charge — and cash on delivery is never an option.
  */
-test('checkout refuses a payment method that is not implemented', function () {
+test('checkout is closed while Payzone is not configured, and never takes cash', function () {
     $buyer = createBuyer();
     $city = City::create(['name' => 'Meknes', 'region' => 'Fes-Meknes']);
     $store = createStoreWithSeller('Alpha');
@@ -579,13 +602,26 @@ test('checkout refuses a payment method that is not implemented', function () {
         'quantity' => 1,
     ]);
 
-    $this->actingAs($buyer)->from(route('checkout.show'))->post(route('checkout.store'), checkoutPayload([
+    $payload = checkoutPayload([
         'shipping_address' => '2 Rue Rouamzine',
         'city_id' => $city->id,
-        'payment_method' => 'card',
-    ]))->assertSessionHasErrors('payment_method');
+    ]);
 
-    expect(Order::count())->toBe(0);
+    // Cash on delivery is gone, even with Payzone up.
+    $this->actingAs($buyer)->from(route('checkout.show'))
+        ->post(route('checkout.store'), ['payment_method' => 'cod'] + $payload)
+        ->assertSessionHasErrors('payment_method');
+
+    config(['services.payzone.secret_key' => null]);
+
+    $this->actingAs($buyer)->get(route('checkout.show'))
+        ->assertInertia(fn (Assert $page) => $page->where('paymentMethods', []));
+
+    $this->actingAs($buyer)->from(route('checkout.show'))
+        ->post(route('checkout.store'), $payload)
+        ->assertSessionHasErrors('payment_method');
+
+    expect(Order::withoutGlobalScope(Order::SETTLED_SCOPE)->count())->toBe(0);
 });
 
 /*
@@ -660,6 +696,8 @@ test('an order records the currency the buyer was reading without billing in it'
         ]))
         ->assertRedirect();
 
+    confirmCardPayment();
+
     $order = Order::firstOrFail();
 
     expect($order->display_currency)->toBe('EUR')
@@ -688,6 +726,8 @@ test('a dirham buyer records dirhams, not a null currency', function () {
             'city_id' => $city->id,
         ]))
         ->assertRedirect();
+
+    confirmCardPayment();
 
     $order = Order::firstOrFail();
 

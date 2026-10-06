@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Notifications\OrderCancelled;
@@ -70,9 +71,10 @@ class OrderStatusService
     public function transitionMany(Collection $orders, string $status, array $attributes = [], ?string $note = null): Collection
     {
         $changedIds = [];
+        $refundable = collect();
         $note = $this->cleanNote($note);
 
-        DB::transaction(function () use ($orders, $status, $attributes, $note, &$changedIds) {
+        DB::transaction(function () use ($orders, $status, $attributes, $note, &$changedIds, &$refundable) {
             foreach ($orders as $order) {
                 $previousStatus = $order->status;
 
@@ -99,6 +101,11 @@ class OrderStatusService
                  */
                 if ($status === 'cancelled' && $previousStatus !== 'cancelled') {
                     $this->restoreStock($order);
+
+                    // Paid by card: the money has to go back the same way.
+                    if ($order->isPaidByCard()) {
+                        $refundable->push($order);
+                    }
                 }
 
                 if ($previousStatus !== $status) {
@@ -120,7 +127,39 @@ class OrderStatusService
             $this->notifyBuyer($changedIds, $status);
         }
 
+        if ($refundable->isNotEmpty()) {
+            $this->flagCardRefunds($refundable);
+        }
+
         return $orders;
+    }
+
+    /**
+     * Ask the desk to refund cancelled orders the buyer had already paid for
+     * by card — refunds are made from Payzone's back-office, not from here.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    private function flagCardRefunds(Collection $orders): void
+    {
+        foreach ($orders->groupBy('group_reference') as $reference => $group) {
+            $payment = Payment::where('group_reference', $reference)
+                ->where('status', Payment::STATUS_PAID)
+                ->latest('id')
+                ->first();
+
+            if (! $payment) {
+                continue;
+            }
+
+            // Resolved here rather than injected: PaymentService depends on this class.
+            app(PaymentService::class)->flagRefund(
+                $payment,
+                'Commande annulée après paiement par carte.',
+                round((float) $group->sum(fn (Order $order) => (float) $order->total_amount + (float) $order->delivery_fee), 2),
+                $group->first()->reference,
+            );
+        }
     }
 
     /**
@@ -157,7 +196,7 @@ class OrderStatusService
      * line's stock lives on the variant row, not the product (see
      * CheckoutService, which decremented it from the same place).
      */
-    private function restoreStock(Order $order): void
+    public function restoreStock(Order $order): void
     {
         foreach ($order->items as $item) {
             if ($item->product_variant_id !== null) {

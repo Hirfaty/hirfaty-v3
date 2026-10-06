@@ -67,16 +67,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Google Analytics (GA4)
+    | Payzone (card payments)
     |--------------------------------------------------------------------------
     |
-    | Hirfaty's own property is the default, so production tracks without any
-    | .env entry. The tag is never printed on the staging host, and an empty
-    | GOOGLE_ANALYTICS_ID= (as in .env.example, for local machines) switches
-    | it off — local and staging visits would otherwise be counted as real
-    | traffic. See resources/views/partials/analytics.blade.php.
+    | Card payment is offered at checkout only when all three credentials are
+    | set (see PayzoneClient::isConfigured). The sandbox paywall is
+    | https://payment-sandbox.payzone.ma/pwv4/launch; Payzone sends the
+    | production URL with the live credentials.
+    |
+    | Payzone's callback must reach this app from the internet, which
+    | localhost cannot. PAYZONE_CALLBACK_BASE_URL points just the callback at
+    | a tunnel (e.g. `cloudflared tunnel --url http://localhost:8000`) while
+    | the browser stays on APP_URL. Leave it empty on staging and production.
     |
     */
+
+    'payzone' => [
+        'merchant_account' => env('PAYZONE_MERCHANT_ACCOUNT'),
+        'secret_key' => env('PAYZONE_SECRET_KEY'),
+        'notification_key' => env('PAYZONE_NOTIFICATION_KEY'),
+        'paywall_url' => env('PAYZONE_PAYWALL_URL', 'https://payment-sandbox.payzone.ma/pwv4/launch'),
+        'callback_base_url' => env('PAYZONE_CALLBACK_BASE_URL'),
+        // How long an unpaid card purchase holds its stock before it is released.
+        'expire_after_minutes' => (int) env('PAYZONE_EXPIRE_AFTER_MINUTES', 60),
+    ]
+    // | Google Analytics (GA4)
+    // |--------------------------------------------------------------------------
+    // |
+    // | Hirfaty's own property is the default, so production tracks without any
+    // | .env entry. The tag is never printed on the staging host, and an empty
+    // | GOOGLE_ANALYTICS_ID= (as in .env.example, for local machines) switches
+    // | it off — local and staging visits would otherwise be counted as real
+    // | traffic. See resources/views/partials/analytics.blade.php.
+    // |
+    ,
 
     'google_analytics' => [
         'measurement_id' => env('GOOGLE_ANALYTICS_ID', 'G-GJ98MN1C4R'),

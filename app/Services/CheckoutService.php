@@ -29,6 +29,17 @@ class CheckoutService
         private AdminNotificationService $adminNotifications,
     ) {}
 
+    /**
+     * Turn a cart into orders awaiting their card payment.
+     *
+     * Every purchase is paid online, through Payzone, before it is placed. So
+     * this only reserves: the orders and their stock are written so nobody
+     * else can buy the last piece while the buyer is on the payment page, but
+     * they stay hidden (Order's settled scope), earn nothing and announce
+     * nothing, and the cart is kept. PaymentService finishes the job once
+     * Payzone confirms the charge — recordEarning() and announce() below — or
+     * releases everything if it never does.
+     */
     public function process(Cart $cart, array $checkoutData)
     {
         $orders = [];
@@ -211,6 +222,8 @@ class CheckoutService
                     'city_id' => $checkoutData['city_id'],
                     'group_reference' => $groupReference,
                     'status' => 'pending',
+                    'payment_method' => Order::PAYMENT_CARD,
+                    'payment_status' => 'pending',
                     'total_amount' => $grossAmount,
                     'platform_fee' => $platformFee,
                     'delivery_fee' => $orderDeliveryFee,
@@ -259,16 +272,8 @@ class CheckoutService
                     }
                 }
 
-                // Create earning record
-                Earning::create([
-                    'store_id' => $storeId,
-                    'order_id' => $order->id,
-                    'gross_amount' => $grossAmount,
-                    'platform_fee' => $platformFee,
-                    'delivery_fee' => $orderDeliveryFee,
-                    'net_amount' => $sellerEarnings,
-                    'status' => 'pending',
-                ]);
+                // No Earning yet: an order earns nothing until it is paid for,
+                // and PaymentService records it then.
 
                 // Notify seller
                 // try {
@@ -281,22 +286,54 @@ class CheckoutService
                 $orders[] = $order;
             }
 
-            // Clear cart
-            $cart->items()->delete();
+            /*
+             * The cart is kept: if the payment never happens the buyer comes
+             * back to the basket they left, and if it does, PaymentService
+             * clears exactly the lines that were bought.
+             */
         });
 
-        /*
-         * Outside the transaction, deliberately. Hirfaty's desk fulfils every
-         * purchase, so this is the email that actually starts the work — but a
-         * mail failure must not roll back an order that is already paid for
-         * and already has stock decremented against it.
-         */
-        $this->notifyAdmin($orders);
-        // The admin panel's bell, alongside the desk email above.
-        $this->adminNotifications->notifyNewPurchase($orders);
-        $this->notifyBuyer($orders, $cart->user);
-
         return $orders;
+    }
+
+    /**
+     * The store's share of one order, in the earnings ledger.
+     *
+     * Read off the order rather than recomputed, so a card order paid an hour
+     * after checkout earns exactly what it was priced at then. Idempotent: an
+     * order that already has its row keeps it.
+     */
+    public function recordEarning(Order $order): void
+    {
+        if (Earning::where('order_id', $order->id)->exists()) {
+            return;
+        }
+
+        Earning::create([
+            'store_id' => $order->store_id,
+            'order_id' => $order->id,
+            'gross_amount' => $order->total_amount,
+            'platform_fee' => $order->platform_fee,
+            'delivery_fee' => $order->delivery_fee,
+            'net_amount' => $order->seller_earnings,
+            'status' => 'pending',
+        ]);
+    }
+
+    /**
+     * Tell the desk (email and bell) and the buyer that a purchase is placed.
+     *
+     * Call it after the transaction has committed — a mail failure must not
+     * roll back an order that is already placed.
+     *
+     * @param  array<int, Order>  $orders
+     */
+    public function announce(array $orders, ?User $buyer): void
+    {
+        $this->notifyAdmin($orders);
+        // The admin panel's bell, alongside the desk email.
+        $this->adminNotifications->notifyNewPurchase($orders);
+        $this->notifyBuyer($orders, $buyer);
     }
 
     /**

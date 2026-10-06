@@ -15,6 +15,7 @@ use App\Http\Controllers\Buyer\CheckoutController;
 use App\Http\Controllers\Buyer\DashboardController as BuyerDashboardController;
 use App\Http\Controllers\Buyer\OnboardingController;
 use App\Http\Controllers\Buyer\OrderController as BuyerOrderController;
+use App\Http\Controllers\Buyer\PaymentController as BuyerPaymentController;
 use App\Http\Controllers\Buyer\PaymentMethodController;
 use App\Http\Controllers\Buyer\ProductController as BuyerProductController;
 use App\Http\Controllers\Buyer\ProfessionalRequestController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\PayzoneController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
@@ -55,6 +57,15 @@ Route::get('/', [LocaleController::class, 'redirect'])
 // Crawler files — see SeoController for why they are routes, not static files.
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+
+/*
+ * Payzone (card payments). Outside every auth group and exempt from CSRF
+ * (bootstrap/app.php): the notification comes from Payzone's servers, and the
+ * buyer's browser may come back from the payment page by a cross-site POST.
+ * See PayzoneController.
+ */
+Route::post('/payments/payzone/callback', [PayzoneController::class, 'callback'])->name('payments.payzone.callback');
+Route::match(['get', 'post'], '/payments/payzone/return/{charge}', [PayzoneController::class, 'return'])->name('payments.payzone.return');
 
 /*
  * Public pages, one URL per language: /fr/products, /ar/products,
@@ -385,6 +396,10 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/checkout/confirmation/{purchase}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
+    // Card payment for a purchase — see Buyer\PaymentController.
+    Route::get('/checkout/pay/{purchase}', [BuyerPaymentController::class, 'launch'])->name('checkout.pay');
+    Route::get('/checkout/payment/{purchase}', [BuyerPaymentController::class, 'show'])->name('checkout.payment');
+    Route::post('/checkout/payment/{purchase}/cancel', [BuyerPaymentController::class, 'cancel'])->name('checkout.payment.cancel');
     // Discount codes are not implemented — see CheckoutController::applyCoupon
     // for why the field exists anyway. Throttled because it is a guessing game
     // until it is real, and will still be one afterwards.

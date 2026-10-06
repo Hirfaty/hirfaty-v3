@@ -42,10 +42,9 @@
         <x-mail.row label="Order number" :value="$reference" />
         <x-mail.row label="Date" :value="$first->created_at->format('d/m/Y H:i')" />
         <x-mail.row label="Delivery to" :value="$first->shipping_address" />
-        {{-- Cash on delivery is the only method checkout accepts
-             (CheckoutRequest::PAYMENT_METHODS), so the buyer is told plainly
-             that nothing has been charged yet. --}}
-        <x-mail.row label="Payment" value="Cash on delivery" />
+        {{-- Only ever sent once the card payment has gone through
+             (PaymentService) — nothing is left to pay at the door. --}}
+        <x-mail.row label="Payment" value="Paid by card" />
     </x-mail.panel>
 
     {{-- One block per workshop, so a purchase spanning several sellers still
@@ -63,7 +62,7 @@
             ['label' => 'Subtotal', 'amount' => $subtotal],
             ['label' => 'Delivery', 'amount' => $delivery],
         ]"
-        :total="['label' => 'Total to pay on delivery', 'amount' => $subtotal + $delivery]" />
+        :total="['label' => 'Total paid', 'amount' => $subtotal + $delivery]" />
 
     <x-mail.note title="Delivery">
         Your order will be delivered to the address above, usually

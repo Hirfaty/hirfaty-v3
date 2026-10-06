@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PaymentService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -37,3 +38,16 @@ Schedule::command(DispatchQueueCheckJobsCommand::class)->everyMinute();
  * figures are indicative, and prices settle in MAD regardless.
  */
 Schedule::command('currency:refresh-rates')->dailyAt('04:30');
+
+/*
+ * ── Unpaid card purchases ───────────────────────────────────────────
+ *
+ * A card checkout holds its stock while the buyer is on Payzone's page. One
+ * nobody pays for within PAYZONE_EXPIRE_AFTER_MINUTES is cancelled and its
+ * stock handed back — see PaymentService::expireStale.
+ */
+Artisan::command('payments:expire-stale', function (PaymentService $payments) {
+    $this->info($payments->expireStale().' unpaid card purchase(s) released.');
+})->purpose('Release card purchases nobody paid for in time');
+
+Schedule::command('payments:expire-stale')->everyFiveMinutes()->withoutOverlapping();

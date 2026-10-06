@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
+    CreditCard,
     ImageOff,
     MapPin,
     Send,
@@ -57,8 +58,26 @@ const currency = (value: number) =>
  * to the whole purchase by default; the per-workshop checkbox is there for the
  * exception where one artisan's piece has to travel on its own.
  */
-const Show = ({ group }: { group: OrderGroup }) => {
+/** The Payzone transaction behind a card purchase, as Admin\OrderController::show sends it. */
+type CardPayment = {
+    charge_id: string;
+    transaction_id: string | null;
+    card_brand: string | null;
+    amount: number;
+    status: string;
+    paid_at: string | null;
+};
+
+const Show = ({
+    group,
+    payment,
+}: {
+    group: OrderGroup;
+    payment: CardPayment | null;
+}) => {
     const { t } = useTranslation();
+    const paidByCard =
+        group.payment_method === 'card' && group.payment_status === 'paid';
     const [tracking, setTracking] = useState(
         group.orders[0]?.tracking_number ?? '',
     );
@@ -310,7 +329,11 @@ const Show = ({ group }: { group: OrderGroup }) => {
                                 </dd>
                             </div>
                             <div className="flex justify-between border-t border-border pt-2 font-medium">
-                                <dt className="text-ink">À encaisser</dt>
+                                <dt className="text-ink">
+                                    {paidByCard
+                                        ? 'Payé par carte'
+                                        : 'À encaisser'}
+                                </dt>
                                 <dd className="text-ink tabular-nums">
                                     {currency(
                                         group.products_total +
@@ -319,6 +342,44 @@ const Show = ({ group }: { group: OrderGroup }) => {
                                 </dd>
                             </div>
                         </dl>
+
+                        {/*
+                         * Paid online: the courier collects nothing, and a
+                         * refund (after a cancellation) is made from Payzone's
+                         * back-office using the references below.
+                         */}
+                        {group.payment_method === 'card' && (
+                            <div className="mt-3 space-y-1 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
+                                <p className="flex items-center gap-1.5 font-medium">
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                    {group.payment_status === 'refunded'
+                                        ? 'Carte — remboursée'
+                                        : 'Payée par carte (Payzone) — rien à encaisser'}
+                                </p>
+                                {payment && (
+                                    <>
+                                        {payment.card_brand && (
+                                            <p>Carte : {payment.card_brand}</p>
+                                        )}
+                                        <p className="break-all">
+                                            Charge Payzone : {payment.charge_id}
+                                        </p>
+                                        {payment.transaction_id && (
+                                            <p className="break-all">
+                                                Transaction :{' '}
+                                                {payment.transaction_id}
+                                            </p>
+                                        )}
+                                        {payment.paid_at && (
+                                            <p>
+                                                Payée le{' '}
+                                                {formatDate(payment.paid_at)}
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
 
                         {/*
                          * What the buyer was reading when they ordered, using

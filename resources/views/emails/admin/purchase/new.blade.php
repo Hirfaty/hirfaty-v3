@@ -41,6 +41,8 @@
             <x-mail.row label="Téléphone" :value="$first->shipping_phone" />
         @endif
         <x-mail.row label="Livraison à" :value="$first?->shipping_address" />
+        {{-- Envoyé une fois le paiement par carte accepté : le livreur n'encaisse rien. --}}
+        <x-mail.row label="Paiement" value="Payée par carte (Payzone) — rien à encaisser" />
         @if ($first?->notes)
             <x-mail.row label="Note du client" :value="$first->notes" />
         @endif

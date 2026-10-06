@@ -33,6 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Payzone posts here from outside the app (PayzoneController): its
+        // notification carries an HMAC signature instead of a CSRF token.
+        $middleware->validateCsrfTokens(except: ['payments/payzone/*']);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'store.sellable' => EnsureStoreCanSell::class,

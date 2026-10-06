@@ -160,11 +160,11 @@ export default function OneWorkshop() {
                             {t('welcome.audience.heading')}
                         </h2>
                     </Reveal>
-                    <Reveal delay={160}>
+                    {/* <Reveal delay={160}>
                         <p className="mx-auto mt-6 max-w-xl text-xl leading-relaxed text-souk-brown-deep/75">
                             {t('welcome.audience.lead')}
                         </p>
-                    </Reveal>
+                    </Reveal> */}
                 </div>
 
                 {/*

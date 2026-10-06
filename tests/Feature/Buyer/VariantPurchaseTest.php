@@ -223,6 +223,7 @@ test('checkout bills the variant price and decrements the variant stock', functi
         'city_id' => $city->id,
         'shipping_address' => '1 rue du Souk',
     ]);
+    confirmCardPayment($orders[0]->group_reference);
 
     $line = OrderItem::where('order_id', $orders[0]->id)->first();
 
@@ -277,6 +278,7 @@ test('the order line survives its variant being deleted', function () {
         'city_id' => $city->id,
         'shipping_address' => '1 rue du Souk',
     ]);
+    confirmCardPayment($orders[0]->group_reference);
 
     ProductVariant::find($variants['Rouge']->id)->delete();
 

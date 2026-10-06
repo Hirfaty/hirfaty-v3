@@ -111,6 +111,10 @@ export type BuyerPurchase = {
     review_open_count: number;
     /** The carrier, as named at checkout. */
     delivery_service_name: string | null;
+    /** `card` through Payzone; `cod` only on purchases from before card payment. */
+    payment_method: 'cod' | 'card';
+    /** `paid` / `refunded` for a card; always `pending` for cash on delivery. */
+    payment_status: string;
     /** Every distinct tracking number across the purchase's parcels. */
     tracking_numbers: string[];
     /** One per workshop, each with its own status, tracking and rating form. */

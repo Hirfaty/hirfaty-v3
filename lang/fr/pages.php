@@ -124,7 +124,7 @@ return [
     'privacy.use.body' => 'Traiter et livrer votre commande, vous répondre quand vous nous écrivez, et envoyer les e-mails liés à une commande — confirmations, avis d’expédition et assimilés. Les e-mails marketing ne partent que si vous les avez demandés, et chacun porte un moyen de se désinscrire.',
 
     'privacy.share.heading' => 'Qui y a accès',
-    'privacy.share.body' => 'L’atelier qui prépare votre commande voit ce dont il a besoin pour le faire. Notre partenaire de livraison voit l’adresse et le téléphone pour pouvoir livrer. Personne d’autre — nous ne vendons ni ne louons vos coordonnées.',
+    'privacy.share.body' => 'L’atelier qui prépare votre commande voit ce dont il a besoin pour le faire. Notre partenaire de livraison voit l’adresse et le téléphone pour pouvoir livrer. Vos données de carte sont saisies directement chez Payzone, notre prestataire de paiement : Hirfaty ne les voit jamais. Personne d’autre — nous ne vendons ni ne louons vos coordonnées.',
 
     'privacy.rights.heading' => 'Vos droits',
     'privacy.rights.body' => 'Vous pouvez demander une copie de ce que nous détenons, demander une correction, ou demander la fermeture de votre compte. Écrivez-nous et nous répondrons. Certains enregistrements de commande doivent être conservés pour des raisons comptables, même après la fermeture d’un compte.',
@@ -134,8 +134,8 @@ return [
 
     // ── Politique de livraison ───────────────────────────────────────────
     // Les chiffres sont les vrais : DeliveryRateSeeder facture 40 MAD
-    // forfaitaires au Maroc et CheckoutRequest n'accepte que le paiement à
-    // la livraison.
+    // forfaitaires au Maroc et CheckoutRequest n'accepte que la carte
+    // bancaire (Payzone).
     'shipping.title' => 'Politique de livraison',
     'shipping.eyebrow' => 'Livraison',
     'shipping.heading' => 'Comment votre commande vous parvient.',
@@ -148,7 +148,7 @@ return [
     'shipping.abroad.body' => 'Nous livrons en Europe, en Amérique du Nord et dans le Golfe. Le montant dépend de la destination et s’affiche au moment de payer, avant confirmation — rien n’est ajouté ensuite.',
 
     'shipping.payment.heading' => 'Le paiement',
-    'shipping.payment.body' => 'Les commandes sont payées à la livraison : vous réglez le livreur à la réception, en dirhams. Si le site vous affiche des prix dans une autre devise, c’est à titre indicatif — le montant encaissé est le total en dirhams affiché au moment de payer.',
+    'shipping.payment.body' => 'Les commandes se paient en ligne, par carte bancaire (Visa, Mastercard), via la plateforme sécurisée Payzone (3D Secure), au moment de commander. Rien n’est à régler au livreur. Le montant est débité en dirhams : si le site vous affiche des prix dans une autre devise, c’est à titre indicatif.',
 
     'shipping.tracking.heading' => 'Suivre votre commande',
     'shipping.tracking.body' => 'Vous recevez un e-mail quand l’atelier confirme votre commande, puis un autre au départ en livraison, avec un numéro de suivi. Tout se retrouve aussi dans votre espace commandes.',
@@ -175,10 +175,10 @@ return [
     'terms.accounts.body' => 'Un compte peut être particulier, professionnel (achat en gros) ou artisan. Les informations que vous donnez doivent être exactes, et vous êtes responsable de ce qui se passe sur votre compte. Vous pouvez le fermer à tout moment depuis vos paramètres.',
 
     'terms.orders.heading' => 'Commandes et paiement',
-    'terms.orders.body' => 'Les commandes se paient à la livraison, en dirhams (MAD), directement au livreur. Si le site affiche un prix dans une autre devise, c’est à titre indicatif — le montant réellement dû est celui affiché en dirhams au moment de payer.',
+    'terms.orders.body' => 'Les commandes se paient en ligne, par carte bancaire (Visa, Mastercard), via la plateforme sécurisée Payzone (3D Secure). Une commande n’est validée qu’une fois le paiement accepté ; le montant est débité en dirhams (MAD). Hirfaty ne reçoit ni ne conserve vos données de carte. Si une commande payée est annulée, son montant est remboursé sur la carte utilisée. Si le site affiche un prix dans une autre devise, c’est à titre indicatif — le montant réellement débité est celui affiché en dirhams au moment de payer.',
 
     'terms.cancellation.heading' => 'Annuler une commande',
-    'terms.cancellation.body' => 'Vous pouvez annuler une commande tant qu’elle est encore « en attente », c’est-à-dire avant que l’atelier ne l’ait confirmée. Une fois confirmée, écrivez-nous : nous voyons avec l’atelier ce qui est possible.',
+    'terms.cancellation.body' => 'Une commande est confirmée dès que son paiement est accepté. Pour l’annuler, écrivez-nous : si elle n’est pas encore expédiée, nous l’annulons avec l’atelier et remboursons le montant sur la carte utilisée.',
 
     'terms.listings.heading' => 'Les fiches produit',
     'terms.listings.body' => 'Chaque fiche est vérifiée avant sa mise en ligne, mais la description et les photographies restent celles fournies par l’atelier. Si une pièce reçue ne correspond pas à sa fiche, contactez-nous.',

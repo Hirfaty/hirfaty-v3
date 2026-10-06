@@ -123,7 +123,7 @@ return [
     'privacy.use.body' => 'Taking and delivering your order, answering you when you write to us, and sending the emails that belong to an order — confirmations, dispatch notices and the like. Marketing email goes out only if you asked for it, and every one carries a way out.',
 
     'privacy.share.heading' => 'Who sees it',
-    'privacy.share.body' => 'The workshop fulfilling your order sees what it needs to prepare it. Our delivery partner sees the address and phone number so they can deliver. Nobody else — we do not sell or rent your details.',
+    'privacy.share.body' => 'The workshop fulfilling your order sees what it needs to prepare it. Our delivery partner sees the address and phone number so they can deliver. Your card details are typed directly into Payzone, our payment provider — Hirfaty never sees them. Nobody else — we do not sell or rent your details.',
 
     'privacy.rights.heading' => 'Your rights',
     'privacy.rights.body' => 'You can ask for a copy of what we hold on you, ask us to correct it, or ask us to close your account. Write to us and we will answer. Some order records have to be kept for accounting reasons even after an account is closed.',
@@ -133,7 +133,7 @@ return [
 
     // ── Shipping policy ──────────────────────────────────────────────────
     // Figures here are the real ones: DeliveryRateSeeder charges a flat 40
-    // MAD in Morocco and CheckoutRequest accepts cash on delivery only.
+    // MAD in Morocco and CheckoutRequest accepts card payment (Payzone) only.
     'shipping.title' => 'Shipping policy',
     'shipping.eyebrow' => 'Delivery',
     'shipping.heading' => 'How your order reaches you.',
@@ -146,7 +146,7 @@ return [
     'shipping.abroad.body' => 'We ship to Europe, North America and the Gulf. The charge depends on the destination and is shown at checkout before you confirm — nothing is added afterwards.',
 
     'shipping.payment.heading' => 'Paying',
-    'shipping.payment.body' => 'Orders are cash on delivery: you pay the courier when the parcel reaches you, in dirhams. If the site is showing prices in another currency, that is a guide — the amount collected is the dirham total shown at checkout.',
+    'shipping.payment.body' => 'Orders are paid online, by bank card (Visa, Mastercard), through Payzone’s secure platform (3D Secure), when you place them. There is nothing to pay the courier. The amount is charged in dirhams: if the site is showing prices in another currency, that is a guide.',
 
     'shipping.tracking.heading' => 'Following your order',
     'shipping.tracking.body' => 'You get an email when the workshop confirms your order, and another when it goes out for delivery with a tracking number. Everything is on your orders page too.',
@@ -172,10 +172,10 @@ return [
     'terms.accounts.body' => 'An account can be a shopper, a trade (bulk-buying) account, or an artisan. The details you give must be accurate, and you are responsible for what happens on your account. You can close it at any time from your settings.',
 
     'terms.orders.heading' => 'Orders and payment',
-    'terms.orders.body' => 'Orders are paid on delivery, in Moroccan dirhams (MAD), directly to the courier. If the site shows a price in another currency, that is for reference only — the amount actually owed is the one shown in dirhams at checkout.',
+    'terms.orders.body' => 'Orders are paid online, by bank card (Visa, Mastercard), through Payzone’s secure platform (3D Secure). An order is placed only once the payment is accepted; the amount is charged in Moroccan dirhams (MAD). Hirfaty never receives or stores your card details. If a paid order is cancelled, its amount is refunded to the card you used. If the site shows a price in another currency, that is for reference only — the amount actually charged is the one shown in dirhams at checkout.',
 
     'terms.cancellation.heading' => 'Cancelling an order',
-    'terms.cancellation.body' => 'You can cancel an order while it is still "pending" — before the workshop has confirmed it. Once it is confirmed, write to us and we will see what the workshop can still do.',
+    'terms.cancellation.body' => 'An order is confirmed as soon as its payment is accepted. To cancel it, write to us: if it has not shipped yet, we cancel it with the workshop and refund the amount to the card you used.',
 
     'terms.listings.heading' => 'Product listings',
     'terms.listings.body' => 'Every listing is checked before it goes live, but the description and photographs are the workshop\'s own. If a piece you received does not match its listing, contact us.',

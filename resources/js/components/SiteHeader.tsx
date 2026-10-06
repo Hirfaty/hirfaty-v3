@@ -575,14 +575,15 @@ export const SiteHeader = ({
                         </Popover>
                     ) : (
                         <Link
-                            href="/login"
-                            className={`inline-flex items-center rounded-md border bg-souk-paper px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
-                                light
-                                    ? 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
-                                    : 'rounded-sm bg-terracotta/12 px-2 py-1 text-terracotta ring-1 ring-terracotta/25 transition-colors'
-                            }`}
+                            href={route('login')}
+                            aria-label={t('header.account_login')}
+                            title={t('header.account_login')}
+                            className={iconButton(light)}
                         >
-                            {t('header.account_login')}
+                            <User
+                                className="h-[18px] w-[18px]"
+                                strokeWidth={1.5}
+                            />
                         </Link>
                     )}
 

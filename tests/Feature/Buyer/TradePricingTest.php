@@ -69,8 +69,11 @@ function checkoutAs(User $user, Product $product, int $qty = 2): void
         'country' => 'MA',
         // Required now: Amana rings the buyer to deliver.
         'shipping_phone' => '0600000000',
-        'payment_method' => 'cod',
+        'payment_method' => 'card',
     ])->assertSessionHasNoErrors();
+
+    // Placed once the card payment is confirmed.
+    confirmCardPayment();
 }
 
 test('a verified trade buyer is billed the wholesale rate', function () {

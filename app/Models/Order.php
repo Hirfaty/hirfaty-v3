@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -15,12 +16,31 @@ class Order extends Model
 
     private const REFERENCE_PREFIX = 'HRF';
 
+    public const PAYMENT_COD = 'cod';
+
+    public const PAYMENT_CARD = 'card';
+
+    /**
+     * Name of the global scope that hides card orders nobody has paid for.
+     *
+     * A card checkout writes its orders (and holds their stock) before the
+     * buyer reaches Payzone, but until the callback says CHARGED the purchase
+     * has not happened: the desk must not fulfil it, the seller must not see
+     * it, and the buyer's history must not list it. Hiding it here covers
+     * every one of those screens at once. PaymentService, the only code that
+     * deals in unpaid orders, opts out with withoutGlobalScope().
+     */
+    public const SETTLED_SCOPE = 'settled';
+
     protected $fillable = [
         'reference',
         // Shared by every order one checkout produced — see the migration.
         'group_reference',
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
+        // How the purchase settles: cash to the courier, or a card through
+        // Payzone — see the payments migration.
+        'payment_method', 'payment_status',
         'total_amount', 'platform_fee', 'delivery_fee', 'seller_earnings',
         // What the buyer was reading at checkout, and the rate that was live
         // then. Presentation history, not money: the order settles in MAD.
@@ -84,6 +104,13 @@ class Order extends Model
      */
     protected static function booted(): void
     {
+        // Cash orders are always visible; card orders once paid (or refunded).
+        static::addGlobalScope(self::SETTLED_SCOPE, function (Builder $query) {
+            $query->where(fn (Builder $query) => $query
+                ->where('orders.payment_method', '!=', self::PAYMENT_CARD)
+                ->orWhereNotIn('orders.payment_status', ['pending', 'failed']));
+        });
+
         static::creating(function (self $order) {
             $order->reference ??= self::generateReference();
         });
@@ -119,7 +146,7 @@ class Order extends Model
                 ->join('');
 
             $reference = self::REFERENCE_PREFIX.'-'.substr($body, 0, 4).'-'.substr($body, 4);
-        } while (self::where('reference', $reference)->exists());
+        } while (self::withoutGlobalScope(self::SETTLED_SCOPE)->where('reference', $reference)->exists());
 
         return $reference;
     }
@@ -202,5 +229,10 @@ class Order extends Model
     public function isCancelled(): bool
     {
         return $this->status === 'cancelled';
+    }
+
+    public function isPaidByCard(): bool
+    {
+        return $this->payment_method === self::PAYMENT_CARD && $this->payment_status === 'paid';
     }
 }

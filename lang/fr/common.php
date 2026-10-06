@@ -231,7 +231,12 @@ return [
     // `:year` est remplacé côté React par l'année en cours.
     'footer.copyright' => '© :year Hirfaty.com — Tous droits réservés.',
     'footer.shipping' => 'Livraison dans tout le Maroc.',
+<<<<<<< HEAD
     'footer.payment_secure' => 'Paiement sécurisé 3D Secure par Payzone — Visa et Mastercard acceptées.',
+=======
+    'footer.payments_secure' => 'Paiement sécurisé 3D Secure par Payzone — Visa, Mastercard',
+    'footer.gtc' => 'Conditions générales de vente',
+>>>>>>> payzone_test
     // ── Connexion via Google / Facebook ─────────────────────────────────
     'auth.login.social_divider' => 'ou',
     'auth.login.social_google' => 'Continuer avec Google',

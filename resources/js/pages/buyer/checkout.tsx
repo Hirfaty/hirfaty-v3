@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, Banknote, Check, Truck } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, CreditCard, Truck } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
@@ -197,6 +197,9 @@ const Checkout = ({
         preselected ? preselected.id : NEW_ADDRESS,
     );
 
+    // Empty only while Payzone is not configured — checkout is closed then.
+    const canPay = paymentMethods.includes('card');
+
     const { data, setData, post, processing, errors } = useForm<CheckoutForm>({
         /*
          * Pre-filled from the account where it knows, blank where it does not.
@@ -213,9 +216,8 @@ const Checkout = ({
         city_id: cities[0]?.id ?? null,
         postal_code: '',
         country: defaultCountry,
-        // Cash on delivery is the only method the server accepts today, so it
-        // is selected rather than offered as a choice of one.
-        payment_method: paymentMethods[0] ?? 'cod',
+        // Card through Payzone — the only method there is.
+        payment_method: 'card',
         // The first carrier in display order (Amana today) is pre-selected.
         delivery_service_id: deliveryServices[0]?.id ?? null,
         save_address: false,
@@ -249,7 +251,7 @@ const Checkout = ({
     /*
      * Totals arrive in MAD. `money()` shows them in whatever the buyer is
      * reading; `baseMoney()` keeps a figure in dirhams, which the total below
-     * needs — the courier collects MAD whatever the page is displaying.
+     * needs — the card is charged in MAD whatever the page is displaying.
      */
     const { money, baseMoney, currency, isBase } = useCurrency();
 
@@ -831,89 +833,97 @@ const Checkout = ({
                             </div>
                         </div>
 
-                        {/* ── Delivery method ──────────────────── */}
-                        <div className="mt-10">
-                            <h2
-                                id="delivery-service-heading"
-                                className="font-display text-lg text-souk-title"
-                            >
-                                {t('buyer.checkout.delivery_service_heading')}
-                            </h2>
+                        {/*
+                         * ── Delivery method ──────────────────────
+                         * Only offered once there is a choice to make. With a
+                         * single carrier the form already holds its id (the
+                         * first in display order) and the buyer is never shown
+                         * the carrier's name; a second one — DHL, say — brings
+                         * the picker back with no page change. Picking a
+                         * service swaps which rate card the summary quotes,
+                         * and the server whitelists the same list
+                         * (CheckoutRequest rules on delivery_service_id).
+                         */}
+                        {deliveryServices.length > 1 && (
+                            <div className="mt-10">
+                                <h2
+                                    id="delivery-service-heading"
+                                    className="font-display text-lg text-souk-title"
+                                >
+                                    {t(
+                                        'buyer.checkout.delivery_service_heading',
+                                    )}
+                                </h2>
 
-                            {/*
-                             * A radio group like the payment method below: with
-                             * one carrier (Amana) it is a single selected
-                             * option, and a second carrier — DHL, say — slots
-                             * into the same shape with no page change. Picking
-                             * a service swaps which rate card the summary
-                             * quotes, and the server whitelists the same list
-                             * (CheckoutRequest rules on delivery_service_id).
-                             */}
-                            <fieldset
-                                className="mt-4 space-y-2"
-                                aria-labelledby="delivery-service-heading"
-                            >
-                                {deliveryServices.map((service) => {
-                                    const active =
-                                        data.delivery_service_id === service.id;
+                                <fieldset
+                                    className="mt-4 space-y-2"
+                                    aria-labelledby="delivery-service-heading"
+                                >
+                                    {deliveryServices.map((service) => {
+                                        const active =
+                                            data.delivery_service_id ===
+                                            service.id;
 
-                                    return (
-                                        <label
-                                            key={service.id}
-                                            className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
-                                                active
-                                                    ? 'border-souk-brown bg-souk-brown/[0.04]'
-                                                    : 'border-souk-brown/15 hover:border-souk-brown/40'
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="delivery_service"
-                                                value={service.id}
-                                                checked={active}
-                                                onChange={() =>
-                                                    setData(
-                                                        'delivery_service_id',
-                                                        service.id,
-                                                    )
-                                                }
-                                                className="sr-only"
-                                            />
-                                            <span
-                                                aria-hidden
-                                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                        return (
+                                            <label
+                                                key={service.id}
+                                                className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
                                                     active
-                                                        ? 'border-souk-brown bg-souk-brown text-souk-cream'
-                                                        : 'border-souk-brown/30'
+                                                        ? 'border-souk-brown bg-souk-brown/[0.04]'
+                                                        : 'border-souk-brown/15 hover:border-souk-brown/40'
                                                 }`}
                                             >
-                                                {active && (
-                                                    <Check
-                                                        className="h-2.5 w-2.5"
-                                                        strokeWidth={3}
-                                                    />
-                                                )}
-                                            </span>
-
-                                            <span className="min-w-0 flex-1 text-sm">
-                                                <span className="flex items-center gap-2 font-medium text-souk-title">
-                                                    <Truck
-                                                        className="h-4 w-4 shrink-0 text-souk-brown"
-                                                        strokeWidth={1.6}
-                                                    />
-                                                    {service.name}
+                                                <input
+                                                    type="radio"
+                                                    name="delivery_service"
+                                                    value={service.id}
+                                                    checked={active}
+                                                    onChange={() =>
+                                                        setData(
+                                                            'delivery_service_id',
+                                                            service.id,
+                                                        )
+                                                    }
+                                                    className="sr-only"
+                                                />
+                                                <span
+                                                    aria-hidden
+                                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                        active
+                                                            ? 'border-souk-brown bg-souk-brown text-souk-cream'
+                                                            : 'border-souk-brown/30'
+                                                    }`}
+                                                >
+                                                    {active && (
+                                                        <Check
+                                                            className="h-2.5 w-2.5"
+                                                            strokeWidth={3}
+                                                        />
+                                                    )}
                                                 </span>
-                                                {service.description && (
-                                                    <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
-                                                        {service.description}
+
+                                                <span className="min-w-0 flex-1 text-sm">
+                                                    <span className="flex items-center gap-2 font-medium text-souk-title">
+                                                        <Truck
+                                                            className="h-4 w-4 shrink-0 text-souk-brown"
+                                                            strokeWidth={1.6}
+                                                        />
+                                                        {service.name}
                                                     </span>
-                                                )}
-                                            </span>
-                                        </label>
-                                    );
-                                })}
-                            </fieldset>
-                        </div>
+                                                    {service.description && (
+                                                        <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                                            {
+                                                                service.description
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </fieldset>
+                            </div>
+                        )}
 
                         {/* ── Payment method ────────────────────── */}
                         <div className="mt-10">
@@ -925,58 +935,43 @@ const Checkout = ({
                             </h2>
 
                             {/*
-                             * A one-option radio group rather than a bare
-                             * statement: the shape is what the design calls for
-                             * and what a second method will slot into, and the
-                             * server whitelists the same single value
-                             * (CheckoutRequest::PAYMENT_METHODS).
-                             *
-                             * Named by the heading above rather than by a
-                             * visually-hidden <legend> repeating it — two
-                             * identical strings would be announced twice.
+                             * Card through Payzone is the only way to pay — the
+                             * order is placed once the payment goes through.
+                             * With Payzone unconfigured the server accepts no
+                             * method at all (CheckoutRequest::paymentMethods),
+                             * so checkout says so rather than failing on submit.
                              */}
-                            <fieldset
-                                className="mt-4"
-                                aria-labelledby="payment-heading"
-                            >
-                                <label
-                                    className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border border-souk-brown bg-souk-brown/[0.04] p-3.5`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name="payment_method"
-                                        value="cod"
-                                        checked={data.payment_method === 'cod'}
-                                        onChange={() =>
-                                            setData('payment_method', 'cod')
-                                        }
-                                        className="sr-only"
+                            {canPay ? (
+                                <div className="mt-4 flex items-start gap-3 rounded-lg border border-souk-brown bg-souk-brown/[0.04] p-3.5">
+                                    <CreditCard
+                                        className="mt-0.5 h-4 w-4 shrink-0 text-souk-brown"
+                                        strokeWidth={1.6}
                                     />
-                                    <span
-                                        aria-hidden
-                                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-souk-brown bg-souk-brown text-souk-cream"
-                                    >
-                                        <Check
-                                            className="h-2.5 w-2.5"
-                                            strokeWidth={3}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-souk-title">
+                                            {t('buyer.checkout.payment_card')}
+                                        </p>
+                                        <p className="mt-1 text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                            {t('buyer.checkout.card_note')}
+                                        </p>
+                                        <img
+                                            src="/images/payments/payzone-secure.png"
+                                            alt="Payzone · Visa · Mastercard — 3D Secure"
+                                            loading="lazy"
+                                            className="mt-2.5 h-5 w-auto max-w-full object-contain object-left rtl:object-right"
                                         />
-                                    </span>
-
-                                    <span className="min-w-0 flex-1">
-                                        <span className="flex items-center gap-2 text-sm font-medium text-souk-title">
-                                            <Banknote
-                                                className="h-4 w-4 shrink-0 text-souk-brown"
-                                                strokeWidth={1.6}
-                                            />
-                                            {t('buyer.checkout.payment_cod')}
-                                        </span>
-                                        <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
-                                            {t('buyer.checkout.cod_note')}
-                                        </span>
-                                    </span>
-                                </label>
-                                <FieldError message={errors.payment_method} />
-                            </fieldset>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="mt-4 flex items-start gap-2.5 rounded-lg border border-terracotta/25 bg-terracotta/5 px-3.5 py-3 text-sm text-terracotta">
+                                    <AlertCircle
+                                        className="mt-0.5 h-4 w-4 shrink-0"
+                                        strokeWidth={1.6}
+                                    />
+                                    {t('buyer.checkout.payment_unavailable')}
+                                </p>
+                            )}
+                            <FieldError message={errors.payment_method} />
                         </div>
                     </div>
 
@@ -1118,10 +1113,10 @@ const Checkout = ({
 
                         {/*
                          * The one place the converted figure is not enough.
-                         * Everything above is indicative; the courier collects
+                         * Everything above is indicative; the card is charged in
                          * dirhams, so the actual amount has to be stated here
-                         * rather than left for the buyer to discover at the
-                         * door. Hidden for anyone already reading MAD, where
+                         * rather than left for the buyer to discover on the
+                         * payment page. Hidden for anyone already reading MAD, where
                          * it would just repeat the line above it.
                          */}
                         {!isBase && (
@@ -1141,13 +1136,13 @@ const Checkout = ({
 
                         <button
                             type="submit"
-                            disabled={processing}
+                            disabled={processing || !canPay}
                             data-test="checkout-submit"
                             className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-lg bg-souk-title px-6 py-3.5 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {processing
                                 ? t('buyer.checkout.processing')
-                                : t('buyer.checkout.confirm')}
+                                : t('buyer.checkout.confirm_card')}
                         </button>
                     </aside>
                 </form>

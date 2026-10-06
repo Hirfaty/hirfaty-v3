@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Services\AdminOrderListService;
 use App\Services\OrderStatusService;
 use App\Services\SpreadsheetExportService;
@@ -90,11 +91,27 @@ class OrderController extends Controller
             ->orderBy('id')
             ->get();
 
+        // The Payzone transaction that paid for it, for refunds and disputes.
+        $payment = $order->group_reference
+            ? Payment::where('group_reference', $order->group_reference)
+                ->whereIn('status', [Payment::STATUS_PAID, Payment::STATUS_REFUNDED])
+                ->latest('id')
+                ->first()
+            : null;
+
         return Inertia::render('admin/orders/show', [
             'group' => $this->summariseGroup(
                 $order->group_reference ?? $order->reference,
                 $orders,
             ),
+            'payment' => $payment ? [
+                'charge_id' => $payment->charge_id,
+                'transaction_id' => $payment->provider_transaction_id,
+                'card_brand' => $payment->card_brand,
+                'amount' => (float) $payment->amount,
+                'status' => $payment->status,
+                'paid_at' => $payment->paid_at,
+            ] : null,
         ]);
     }
 
@@ -217,6 +234,11 @@ class OrderController extends Controller
              * renamed later still reads correctly on dispatch screens.
              */
             'delivery_service_name' => $first->delivery_service_name ?? 'Amana',
+
+            // Cash to collect, or already paid by card (Payzone) — one checkout,
+            // one method, so the first order speaks for the group.
+            'payment_method' => $first->payment_method ?? Order::PAYMENT_COD,
+            'payment_status' => $first->payment_status ?? 'pending',
 
             /*
              * One status when every parcel agrees, null when they have been

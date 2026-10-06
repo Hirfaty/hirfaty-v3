@@ -52,6 +52,10 @@ export type OrderGroup = {
     display_rate: number | null;
     /** Which carrier the purchase shipped by (snapshot from checkout). */
     delivery_service_name: string | null;
+    /** Cash to collect (`cod`), or paid online through Payzone (`card`). */
+    payment_method: 'cod' | 'card';
+    /** For a card: `paid` or `refunded`. Always `pending` for cash. */
+    payment_status: string;
     /** Null when the workshops' parcels have been moved apart. */
     status: OrderStatus | null;
     tracking_numbers: string[];
@@ -302,6 +306,14 @@ const Index = ({
                                             Livraison :{' '}
                                             {currency(group.delivery_total)}
                                         </p>
+                                        {group.payment_method === 'card' && (
+                                            <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                                {group.payment_status ===
+                                                'refunded'
+                                                    ? 'Carte — remboursée'
+                                                    : 'Payée par carte'}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-5 py-3 text-ink-soft">
                                         {formatDate(group.created_at)}

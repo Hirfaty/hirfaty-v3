@@ -206,7 +206,8 @@ return [
     // `:year` يُستبدل في React بالسنة الجارية.
     'footer.copyright' => '© :year Hirfaty.com — جميع الحقوق محفوظة.',
     'footer.shipping' => 'التوصيل إلى جميع أنحاء المغرب.',
-    'footer.payment_secure' => 'دفع آمن 3D Secure عبر Payzone — نقبل Visa وMastercard.',
+    'footer.payments_secure' => 'دفع آمن بتقنية 3D Secure عبر Payzone — Visa وMastercard',
+    'footer.gtc' => 'الشروط العامة للبيع',
     // ── تسجيل الدخول عبر Google / Facebook ──────────────────────────────
     'auth.login.social_divider' => 'أو',
     'auth.login.social_google' => 'المتابعة عبر Google',

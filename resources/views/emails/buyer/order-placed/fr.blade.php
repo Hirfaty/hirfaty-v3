@@ -42,10 +42,9 @@
         <x-mail.row label="Numéro de commande" :value="$reference" />
         <x-mail.row label="Date" :value="$first->created_at->format('d/m/Y à H:i')" />
         <x-mail.row label="Livraison à" :value="$first->shipping_address" />
-        {{-- Le paiement à la livraison est le seul mode accepté au checkout
-             (CheckoutRequest::PAYMENT_METHODS) : on le dit clairement, rien
-             n'a encore été débité. --}}
-        <x-mail.row label="Paiement" value="À la livraison" />
+        {{-- Envoyé seulement une fois le paiement par carte accepté
+             (PaymentService) : rien à régler à la porte. --}}
+        <x-mail.row label="Paiement" value="Payée par carte bancaire" />
     </x-mail.panel>
 
     {{-- Un bloc par atelier, pour qu'un achat auprès de plusieurs vendeurs
@@ -63,7 +62,7 @@
             ['label' => 'Sous-total', 'amount' => $subtotal],
             ['label' => 'Livraison', 'amount' => $delivery],
         ]"
-        :total="['label' => 'Total à payer à la livraison', 'amount' => $subtotal + $delivery]" />
+        :total="['label' => 'Total payé', 'amount' => $subtotal + $delivery]" />
 
     <x-mail.note title="Livraison">
         Votre commande sera livrée à l'adresse indiquée ci-dessus,

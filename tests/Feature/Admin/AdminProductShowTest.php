@@ -72,6 +72,36 @@ test('the show page renders order history with the order relation resolved', fun
         );
 });
 
+test('the order history leaves out card purchases that were never paid', function () {
+    $buyer = User::factory()->create(['role' => 'buyer']);
+    $order = Order::create([
+        'buyer_id' => $buyer->id,
+        'store_id' => $this->store->id,
+        'city_id' => City::first()->id,
+        'status' => 'pending',
+        'payment_method' => Order::PAYMENT_CARD,
+        'payment_status' => 'pending',
+        'total_amount' => 200,
+        'platform_fee' => 0,
+        'delivery_fee' => 0,
+        'seller_earnings' => 160,
+        'shipping_address' => 'Test Address',
+    ]);
+    OrderItem::create([
+        'order_id' => $order->id,
+        'product_id' => $this->product->id,
+        'quantity' => 1,
+        'unit_price' => 200,
+        'subtotal' => 200,
+    ]);
+
+    // The settled scope hides the order; its line must not arrive without it.
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.show', $this->product))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->has('product.order_items', 0));
+});
+
 test('the show page lists reviews with their unmasked owners', function () {
     $buyer = User::factory()->create([
         'role' => 'buyer',

@@ -150,6 +150,15 @@ export default function CheckoutConfirmation({
                                     {money(purchase.total_amount)} TTC
                                 </dd>
                             </div>
+                            {/* Absent for a purchase from before card payment. */}
+                            {purchase.payment_method === 'card' && (
+                                <div className="flex justify-between gap-4 pt-2 text-souk-brown-deep/60">
+                                    <dt>{t('buyer.orders.payment')}</dt>
+                                    <dd className="text-end">
+                                        {t('buyer.orders.payment_card')}
+                                    </dd>
+                                </div>
+                            )}
                             {address && (
                                 <div className="flex justify-between gap-4 pt-2 text-souk-brown-deep/60">
                                     <dt>{t('buyer.orders.delivered_to')}</dt>

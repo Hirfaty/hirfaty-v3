@@ -4,6 +4,7 @@ namespace App\Http\Requests\Buyer;
 
 use App\Models\Address;
 use App\Services\DeliveryFeeService;
+use App\Services\PaymentService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,13 +28,23 @@ use Illuminate\Validation\Rule;
 class CheckoutRequest extends FormRequest
 {
     /**
-     * The payment methods checkout will accept.
-     *
-     * One, for now. A whitelist rather than an ignored field, so the day a card
-     * processor is wired in, anything not actually implemented is rejected here
-     * rather than quietly creating an order nobody has been charged for.
+     * Every payment method checkout knows. Card through Payzone only: Hirfaty
+     * takes payment online, before anything ships (see PaymentService). Cash on
+     * delivery is gone — orders that used it before keep `cod` as history.
      */
-    public const PAYMENT_METHODS = ['cod'];
+    public const PAYMENT_METHODS = ['card'];
+
+    /**
+     * The methods checkout accepts right now: none while Payzone's credentials
+     * are missing, which closes checkout rather than creating orders nobody
+     * can pay for.
+     *
+     * @return array<int, string>
+     */
+    public static function paymentMethods(): array
+    {
+        return app(PaymentService::class)->cardAvailable() ? self::PAYMENT_METHODS : [];
+    }
 
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -94,7 +105,7 @@ class CheckoutRequest extends FormRequest
                 Rule::in($deliveryFees->shippableCountryCodes()),
             ],
 
-            'payment_method' => ['required', Rule::in(self::PAYMENT_METHODS)],
+            'payment_method' => ['required', Rule::in(self::paymentMethods())],
 
             /*
              * Which carrier ships the basket. Optional and defaulted to Amana

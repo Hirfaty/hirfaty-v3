@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Order;
+use App\Models\Payment;
+use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -59,4 +62,42 @@ TestResponse::macro('assertRoleDenied', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Pay for a card purchase the way Payzone confirms one: a CHARGED
+ * notification for an attempt against it, handled by PaymentService.
+ *
+ * Every checkout is paid by card now, and an order is only placed — visible,
+ * earning, announced, cart cleared — once that confirmation arrives. Tests
+ * that check out and then look at the placed purchase call this in between.
+ * Defaults to the most recent purchase.
+ */
+function confirmCardPayment(?string $reference = null): void
+{
+    $reference ??= Order::withoutGlobalScope(Order::SETTLED_SCOPE)->latest('id')->value('group_reference');
+
+    // Nothing to pay for: the checkout under test was refused.
+    if ($reference === null) {
+        return;
+    }
+
+    $orders = Order::withoutGlobalScope(Order::SETTLED_SCOPE)->where('group_reference', $reference)->get();
+    $payments = app(PaymentService::class);
+
+    $payment = Payment::create([
+        'group_reference' => $reference,
+        'buyer_id' => $orders->first()?->buyer_id,
+        'charge_id' => Payment::newChargeId(),
+        'amount' => $payments->amountFor($orders),
+        'currency' => 'MAD',
+    ]);
+
+    $payments->handleNotification([
+        'id' => $payment->charge_id,
+        'status' => 'CHARGED',
+        'lineItem' => ['amount' => (float) $payment->amount, 'currency' => 'MAD'],
+        'transactions' => [['type' => 'CHARGE', 'state' => 'APPROVED', 'resultCode' => 0, 'amount' => (float) $payment->amount]],
+        'paymentMethod' => 'Visa',
+    ]);
 }

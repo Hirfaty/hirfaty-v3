@@ -41,10 +41,8 @@
         <x-mail.row label="رقم الطلب" :value="$reference" />
         <x-mail.row label="التاريخ" :value="$first->created_at->format('d/m/Y H:i')" />
         <x-mail.row label="عنوان التوصيل" :value="$first->shipping_address" />
-        {{-- الدفع عند الاستلام هو الوسيلة الوحيدة المقبولة عند إتمام الطلب
-             (CheckoutRequest::PAYMENT_METHODS)، لذا نوضّح للمشتري أنه لم
-             يُخصم منه أي مبلغ بعد. --}}
-        <x-mail.row label="طريقة الدفع" value="الدفع عند الاستلام" />
+        {{-- لا يُرسل هذا البريد إلا بعد قبول الدفع بالبطاقة (PaymentService). --}}
+        <x-mail.row label="طريقة الدفع" value="مدفوع بالبطاقة البنكية" />
     </x-mail.panel>
 
     {{-- بطاقة واحدة لكل ورشة، حتى يبقى الشراء من عدة بائعين مقروءاً كطلب
@@ -62,7 +60,7 @@
             ['label' => 'المجموع الفرعي', 'amount' => $subtotal],
             ['label' => 'التوصيل', 'amount' => $delivery],
         ]"
-        :total="['label' => 'الإجمالي المستحق عند الاستلام', 'amount' => $subtotal + $delivery]" />
+        :total="['label' => 'الإجمالي المدفوع', 'amount' => $subtotal + $delivery]" />
 
     <x-mail.note title="التوصيل">
         سيتم توصيل طلبك إلى العنوان المذكور أعلاه، عادةً خلال 3 إلى 7

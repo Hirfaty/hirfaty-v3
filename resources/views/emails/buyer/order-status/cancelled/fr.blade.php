@@ -20,12 +20,15 @@
              a annulé votre commande » serait tout simplement faux. --}}
         @if ($many)
             Bonjour {{ $user->first_name }}, votre commande {{ $reference }}, concernant
-            {{ $orders->count() }} ateliers, a été annulée. Rien ne vous a été
-            débité — le paiement se fait uniquement à la livraison.
+            {{ $orders->count() }} ateliers, a été annulée.
         @else
             Bonjour {{ $user->first_name }}, votre commande {{ $reference }} de
-            {{ $first->store->store_name }} a été annulée. Rien ne vous a
-            été débité — le paiement se fait uniquement à la livraison.
+            {{ $first->store->store_name }} a été annulée.
+        @endif
+        @if ($first->isPaidByCard())
+            Le montant payé par carte vous sera remboursé sur la carte utilisée.
+        @else
+            Rien ne vous a été débité — le paiement se fait à la livraison.
         @endif
     </x-mail.text>
 

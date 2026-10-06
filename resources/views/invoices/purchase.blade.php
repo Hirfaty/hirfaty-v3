@@ -127,7 +127,7 @@
         </tr>
     </table>
 
-    <p class="muted" style="margin-top: 28px;">{{ $t('payment') }}</p>
+    <p class="muted" style="margin-top: 28px;">{{ $first->isPaidByCard() ? $t('payment_card') : $t('payment') }}</p>
 
     <div class="footer">{{ $t('footer') }}</div>
 </body>
