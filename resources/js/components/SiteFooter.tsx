@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import paymentSecure from '@/images/payment-secure.png';
 import { sell } from '@/routes';
 import newsletter from '@/routes/newsletter';
 
@@ -265,6 +266,19 @@ export const SiteFooter = () => {
 
                     <NewsletterForm />
                 </div>
+            </div>
+
+            <div className="relative container border-t border-ink/10 py-6">
+                {/* Payzone's 3D Secure badge, kept as their artwork. Its white
+                    background is multiplied away so it sits on the cream. */}
+                <img
+                    src={paymentSecure}
+                    alt={t('common.footer.payment_secure')}
+                    width={1162}
+                    height={120}
+                    loading="lazy"
+                    className="h-auto w-full max-w-md mix-blend-multiply"
+                />
             </div>
 
             <div className="container flex flex-col items-start justify-between gap-4 border-t border-ink/10 pt-6 pb-10 text-xs text-ink-soft md:flex-row md:items-center">

@@ -229,6 +229,7 @@ return [
     // `:year` is substituted on the React side with the current year.
     'footer.copyright' => '© :year Hirfaty.com — All rights reserved.',
     'footer.shipping' => 'Delivery throughout Morocco.',
+    'footer.payment_secure' => '3D Secure payment by Payzone — Visa and Mastercard accepted.',
     // ── Google / Facebook sign-in ───────────────────────────────────────
     'auth.login.social_divider' => 'or',
     'auth.login.social_google' => 'Continue with Google',
