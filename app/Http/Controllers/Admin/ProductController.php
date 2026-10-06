@@ -15,6 +15,7 @@ use App\Services\AdminProductListService;
 use App\Services\ProductBulkStatusService;
 use App\Services\ProductDeletionService;
 use App\Services\ProductShippingService;
+use App\Services\ProductVariantService;
 use App\Services\ReviewService;
 use App\Services\SpreadsheetExportService;
 use Auth;
@@ -24,12 +25,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly ProductShippingService $shipping) {}
+    public function __construct(
+        private readonly ProductShippingService $shipping,
+        private readonly ProductVariantService $variants,
+    ) {}
 
     public function index(Request $request, AdminProductListService $list)
     {
@@ -110,7 +113,7 @@ class ProductController extends Controller
     {
         $isDraft = $request->input('status') === 'draft';
         $data = $request->validate($this->productRules($isDraft), $this->productMessages());
-        $this->assertVariantsAreCoherent($data['variants'] ?? []);
+        $this->variants->assertCoherent($data['variants'] ?? []);
 
         $store = Store::findOrFail($data['store_id']);
 
@@ -183,7 +186,7 @@ class ProductController extends Controller
     {
         $isDraft = $request->input('status') === 'draft';
         $data = $request->validate($this->productRules($isDraft, $product), $this->productMessages());
-        $this->assertVariantsAreCoherent($data['variants'] ?? []);
+        $this->variants->assertCoherent($data['variants'] ?? []);
 
         DB::transaction(function () use ($data, $request, $product, $isDraft) {
             $hasVariants = ! empty($data['variants']);
@@ -217,7 +220,7 @@ class ProductController extends Controller
         });
 
         return redirect()
-            ->route('admin.products.edit', $product)
+            ->route('admin.products.show', $product)
             ->with(
                 'success',
                 $isDraft ? 'Brouillon mis à jour.' : 'Produit publié.'
@@ -419,93 +422,10 @@ class ProductController extends Controller
                 $row = $product->variants()->create($attributes);
             }
 
-            $row->options()->createMany($this->normaliseOptions($variant['options']));
+            $row->options()->createMany($this->variants->normaliseOptions($variant['options']));
 
             $this->deleteVariantMedia($row, $variant['deleted_media'] ?? []);
             $this->uploadVariantMedia($row, $request, $position);
-        }
-    }
-
-    /**
-     * Turn submitted options into rows, forcing the canonical axis name for
-     * every type but `other`.
-     *
-     * The axis is derived server-side rather than trusted from the form, so
-     * "Couleur" cannot arrive as "couleur"/"Color" and split one selector row
-     * into several that no variant can satisfy together.
-     *
-     * @param  array<int, array<string, mixed>>  $options
-     * @return array<int, array<string, string>>
-     */
-    private function normaliseOptions(array $options): array
-    {
-        return collect($options)
-            ->map(fn (array $o) => [
-                'type' => $o['type'],
-                'name' => ProductVariantOption::axisFor($o['type'])
-                    ?? trim((string) ($o['name'] ?? '')) ?: 'Option',
-                'value' => trim((string) $o['value']),
-            ])
-            ->all();
-    }
-
-    /**
-     * Structural rules a set of variants must satisfy, checked before anything
-     * is written.
-     *
-     * Both failures here are silent-corruption bugs rather than cosmetic ones:
-     *
-     *  - Ragged axes (one variant on "Couleur", another on "Dimension") make
-     *    the storefront render selector rows that no single variant answers,
-     *    so the product cannot be added to a basket at all. This is the shape
-     *    the old admin produced.
-     *  - Two variants on the same combination leave the shopper picking one
-     *    row while stock silently splits across two, and the storefront can
-     *    only ever resolve the first.
-     *
-     * @param  array<int, array<string, mixed>>  $variants
-     *
-     * @throws ValidationException
-     */
-    private function assertVariantsAreCoherent(array $variants): void
-    {
-        if ($variants === []) {
-            return;
-        }
-
-        $axesOf = function (array $variant): array {
-            $axes = collect($this->normaliseOptions($variant['options']))
-                ->pluck('name')
-                ->all();
-            sort($axes);
-
-            return $axes;
-        };
-
-        $expected = $axesOf($variants[array_key_first($variants)]);
-        $seen = [];
-
-        foreach (array_values($variants) as $i => $variant) {
-            if ($axesOf($variant) !== $expected) {
-                throw ValidationException::withMessages([
-                    "variants.{$i}.options" => 'Toutes les déclinaisons doivent utiliser les mêmes options ('
-                        .implode(', ', $expected).').',
-                ]);
-            }
-
-            // Order-independent, so Rouge/4m and 4m/Rouge count as the same.
-            $signature = collect($this->normaliseOptions($variant['options']))
-                ->map(fn (array $o) => $o['name'].'='.mb_strtolower($o['value']))
-                ->sort()
-                ->implode('|');
-
-            if (isset($seen[$signature])) {
-                throw ValidationException::withMessages([
-                    "variants.{$i}.options" => 'Cette combinaison existe déjà dans une autre déclinaison.',
-                ]);
-            }
-
-            $seen[$signature] = true;
         }
     }
 

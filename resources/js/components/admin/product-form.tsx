@@ -340,7 +340,7 @@ export default function ProductForm({
 
     return (
         <div className="min-h-screen px-6 py-10">
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto w-full">
                 <Link
                     href={backUrl}
                     className="mb-6 inline-flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"

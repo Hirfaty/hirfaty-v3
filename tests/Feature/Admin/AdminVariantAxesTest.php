@@ -205,3 +205,35 @@ test('a variant id belonging to another product is rejected', function () {
     expect(ProductVariant::find($foreignVariant->id)->product_id)
         ->not->toBe($other->id);
 });
+
+test('stale rows left behind after adding an axis are the ones blamed', function () {
+    // Vert/Noir kept only Couleur while Rouge moved to Rouge / 20. The old
+    // check measured everyone against the first row, so it blamed Rouge / 20.
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.store'), axisProduct([
+            axisVariant(['color' => 'Vert']),
+            axisVariant(['color' => 'Noir']),
+            axisVariant(['color' => 'Rouge', 'dimension' => '20']),
+        ]))
+        ->assertSessionHasErrors([
+            'variants.0.options' => 'Il manque l’option Dimension : complétez cette déclinaison ou supprimez-la.',
+            'variants.1.options',
+        ])
+        ->assertSessionDoesntHaveErrors('variants.2.options');
+
+    expect(Product::count())->toBe(0);
+});
+
+test('saving an edit returns to the product detail page', function () {
+    $this->actingAs($this->admin)->post(route('admin.products.store'), axisProduct([
+        axisVariant(['color' => 'Rouge']),
+    ]));
+    $product = Product::first();
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.update', $product), axisProduct([
+            axisVariant(['color' => 'Rouge'], id: $product->variants()->first()->id),
+        ]))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.products.show', $product));
+});

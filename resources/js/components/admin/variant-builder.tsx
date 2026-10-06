@@ -166,6 +166,121 @@ function cartesian(axes: AxisDraft[]): VariantOptionDraft[][] {
     );
 }
 
+/** Axes that can take part in a combination: named, with at least one value. */
+const usableAxes = (axes: AxisDraft[]) =>
+    axes.filter((a) => a.values.length > 0 && a.name !== '');
+
+/** The usable axes this variant has no value on, e.g. ["Dimension"]. */
+const missingAxesOf = (variant: VariantDraft, usable: AxisDraft[]) =>
+    usable.filter((a) => !variant.options.some((o) => o.name === a.name));
+
+/** A generated row the admin hasn't touched yet — safe to replace. */
+const isBlank = (v: VariantDraft) =>
+    v.id === undefined &&
+    v.sku.trim() === '' &&
+    v.stock === 0 &&
+    v.price_override === '' &&
+    v.professional_price_override === '' &&
+    v.weight === '' &&
+    v.length === '' &&
+    v.width === '' &&
+    v.height === '' &&
+    v.media.length === 0 &&
+    v.existingMedia.length === 0;
+
+/**
+ * What "Générer" does, computed up front so the button can say whether it
+ * has anything to do.
+ *
+ * Adding an axis to a product that already has variants used to leave the old
+ * rows behind (Rouge alone, next to the new Rouge / 20), which the server then
+ * rejects for mixing axes. Instead, an incomplete row is *extended*: it becomes
+ * its first missing combination, keeping its id, SKU, stock and photos, and the
+ * rest of its combinations are added as new rows right after it. If every
+ * combination it could become already exists, it takes over an untouched
+ * generated row instead; failing that it is left alone, flagged incomplete.
+ */
+function planGeneration(axes: AxisDraft[], variants: VariantDraft[]) {
+    const usable = usableAxes(axes);
+
+    if (usable.length === 0) {
+        return { next: variants, added: 0, completed: 0 };
+    }
+
+    const names = usable.map((a) => a.name);
+    const isComplete = (v: VariantDraft) =>
+        missingAxesOf(v, usable).length === 0;
+    // Options in axis order, so labels read "Rouge / 20", not "20 / Rouge".
+    const ordered = (options: VariantOptionDraft[]) => [
+        ...usable.flatMap((a) => options.filter((o) => o.name === a.name)),
+        ...options.filter((o) => !names.includes(o.name)),
+    ];
+
+    const taken = new Set(
+        variants.filter(isComplete).map((v) => combinationKey(v.options)),
+    );
+    const replaced = new Set<VariantDraft>();
+    const next: VariantDraft[] = [];
+    let added = 0;
+    let completed = 0;
+
+    for (const variant of variants) {
+        const missing = missingAxesOf(variant, usable);
+
+        if (missing.length === 0) {
+            next.push(variant);
+            continue;
+        }
+
+        const completions = cartesian(missing).map((extra) =>
+            ordered([...variant.options, ...extra]),
+        );
+        const free = completions.filter((o) => !taken.has(combinationKey(o)));
+
+        if (free.length > 0) {
+            free.forEach((o) => taken.add(combinationKey(o)));
+            next.push({ ...variant, options: free[0] });
+            next.push(
+                ...free.slice(1).map((options) => ({
+                    ...emptyVariant(),
+                    options,
+                })),
+            );
+            added += free.length - 1;
+            completed++;
+            continue;
+        }
+
+        const blank = variants.find(
+            (w) =>
+                !replaced.has(w) &&
+                isComplete(w) &&
+                isBlank(w) &&
+                completions.some(
+                    (o) => combinationKey(o) === combinationKey(w.options),
+                ),
+        );
+
+        if (blank) {
+            replaced.add(blank);
+            next.push({ ...variant, options: blank.options });
+            completed++;
+        } else {
+            next.push(variant);
+        }
+    }
+
+    const additions = cartesian(usable)
+        .filter((options) => !taken.has(combinationKey(options)))
+        .map((options) => ({ ...emptyVariant(), options }));
+
+    return {
+        next: [...next.filter((v) => !replaced.has(v)), ...additions],
+        added: added + additions.length,
+        completed,
+    };
+}
+
 interface Props {
     variants: VariantDraft[];
     onChange: (variants: VariantDraft[]) => void;
@@ -492,42 +607,16 @@ export default function VariantBuilder({
     };
 
     /**
-     * Add every combination the axes imply that doesn't exist yet, leaving
-     * existing rows (and their ids, stock and photos) untouched. Combinations
-     * the admin deleted stay deleted until they generate again — which is what
-     * makes a sparse grid like Rouge/4m, Rouge/6m, Bleu/4m expressible.
+     * Add every combination the axes imply that doesn't exist yet, extending
+     * incomplete rows rather than leaving them behind (see planGeneration).
+     * Complete rows are untouched, and combinations the admin deleted stay
+     * deleted until they generate again — which is what makes a sparse grid
+     * like Rouge/4m, Rouge/6m, Bleu/4m expressible.
      */
-    const generate = () => {
-        const usable = axes.filter((a) => a.values.length > 0 && a.name !== '');
+    const plan = planGeneration(axes, variants);
+    const usable = usableAxes(axes);
 
-        if (usable.length === 0) {
-            return;
-        }
-
-        const existing = new Set(
-            variants.map((v) => combinationKey(v.options)),
-        );
-        const additions = cartesian(usable)
-            .filter((options) => !existing.has(combinationKey(options)))
-            .map((options) => ({ ...emptyVariant(), options }));
-
-        onChange([...variants, ...additions]);
-    };
-
-    const missingCount = (() => {
-        const usable = axes.filter((a) => a.values.length > 0 && a.name !== '');
-
-        if (usable.length === 0) {
-            return 0;
-        }
-
-        const existing = new Set(
-            variants.map((v) => combinationKey(v.options)),
-        );
-
-        return cartesian(usable).filter((o) => !existing.has(combinationKey(o)))
-            .length;
-    })();
+    const generate = () => onChange(plan.next);
 
     return (
         <div className="space-y-6">
@@ -617,15 +706,16 @@ export default function VariantBuilder({
                         <Plus className="h-4 w-4" /> Ajouter une option
                     </button>
 
-                    {missingCount > 0 && (
+                    {(plan.added > 0 || plan.completed > 0) && (
                         <button
                             type="button"
                             onClick={generate}
                             className="inline-flex items-center gap-2 rounded-lg bg-ink px-3.5 py-2 text-sm font-medium text-white transition hover:bg-ink/90"
                         >
                             <Wand2 className="h-4 w-4" />
-                            Générer {missingCount} déclinaison
-                            {missingCount > 1 ? 's' : ''}
+                            {plan.added > 0
+                                ? `Générer ${plan.added} déclinaison${plan.added > 1 ? 's' : ''}`
+                                : `Compléter ${plan.completed} déclinaison${plan.completed > 1 ? 's' : ''}`}
                         </button>
                     )}
                 </div>
@@ -679,7 +769,7 @@ export default function VariantBuilder({
                                                 variant.options,
                                             ) || '—'}
                                         </span>
-                                        {errors[`variants.${i}.options`] && (
+                                        {errors[`variants.${i}.options`] ? (
                                             <p className="mt-1 text-xs text-red-600">
                                                 {
                                                     errors[
@@ -687,6 +777,22 @@ export default function VariantBuilder({
                                                     ]
                                                 }
                                             </p>
+                                        ) : (
+                                            missingAxesOf(variant, usable)
+                                                .length > 0 && (
+                                                <p className="mt-1 max-w-56 text-xs text-amber-700">
+                                                    Incomplète : il manque{' '}
+                                                    {missingAxesOf(
+                                                        variant,
+                                                        usable,
+                                                    )
+                                                        .map((a) => a.name)
+                                                        .join(', ')}
+                                                    . Complétez-la avec le
+                                                    bouton ci-dessus ou
+                                                    supprimez-la.
+                                                </p>
+                                            )
                                         )}
                                     </td>
                                     <td className="px-3 py-3 align-top">
