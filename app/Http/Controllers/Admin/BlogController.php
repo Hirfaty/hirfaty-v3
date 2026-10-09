@@ -28,7 +28,7 @@ class BlogController extends Controller
         }
 
         // Newest first by the date the reader sees, falling back to creation
-        // for drafts, which have no published_at yet.
+        // for an article archived before it ever went live.
         $blogs = $query
             ->orderByRaw('COALESCE(published_at, created_at) DESC')
             ->paginate(15)
@@ -113,8 +113,8 @@ class BlogController extends Controller
     }
 
     /**
-     * The article exactly as a visitor would see it, drafts included — the
-     * whole point being to check the layout before anyone else can.
+     * The article exactly as a visitor would see it, archived ones included —
+     * the whole point being to check the layout before anyone else can.
      *
      * Renders the same page component as the public route, so what is approved
      * here is what ships.
@@ -128,22 +128,22 @@ class BlogController extends Controller
             'related' => BlogResource::collection(
                 Blog::published()->whereKeyNot($blog->id)->latest('published_at')->take(3)->get()
             ),
-            // Drives the "you are previewing a draft" banner and the back link.
+            // Drives the "you are previewing" banner and the back link.
             'preview' => true,
         ]);
     }
 
     /**
-     * Take an article off the journal, or put an archived one back into
-     * drafts. One endpoint for both directions because the row offers whichever
-     * of the two applies, never both.
+     * Take an article off the journal, or put an archived one back online.
+     * One endpoint for both directions because the row offers whichever of
+     * the two applies, never both.
      */
     public function archive(Blog $blog)
     {
         if ($blog->isArchived()) {
             $this->blogs->unarchive($blog);
 
-            return back()->with('success', "Article « {$blog->title} » remis en brouillon.");
+            return back()->with('success', "Article « {$blog->title} » republié.");
         }
 
         $this->blogs->archive($blog);

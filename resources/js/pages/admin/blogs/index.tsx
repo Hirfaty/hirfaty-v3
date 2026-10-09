@@ -39,21 +39,18 @@ import type { Blog, BlogStatus, PageProps, PaginatedData } from '@/types';
 
 /** Plural, because these label the filter tabs alongside a count. */
 const STATUS_LABELS: Record<BlogStatus, string> = {
-    draft: 'Brouillons',
     published: 'Publiés',
     archived: 'Archivés',
 };
 
 /** Singular, for the badge on a single row. */
 const STATUS_PILL_LABELS: Record<BlogStatus, string> = {
-    draft: 'Brouillon',
     published: 'Publié',
     archived: 'Archivé',
 };
 
 /** Badge colours per status, matching the role badges on /admin/users. */
 const STATUS_BADGE: Record<BlogStatus, string> = {
-    draft: 'bg-slate-100 text-slate-700',
     published: 'bg-emerald-100 text-emerald-700',
     archived: 'bg-amber-100 text-amber-700',
 };
@@ -358,8 +355,7 @@ const Index = ({
                                                     'archived' ? (
                                                         <>
                                                             <ArchiveRestore className="h-4 w-4" />
-                                                            Remettre en
-                                                            brouillon
+                                                            Republier
                                                         </>
                                                     ) : (
                                                         <>

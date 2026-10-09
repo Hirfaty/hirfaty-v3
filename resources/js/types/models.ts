@@ -56,7 +56,7 @@ export interface City {
 }
 
 /** Where an article sits in its lifecycle. Mirrors Blog::STATUSES. */
-export type BlogStatus = 'draft' | 'published' | 'archived';
+export type BlogStatus = 'published' | 'archived';
 
 /**
  * An editorial article, as shaped by App\Http\Resources\BlogResource — not the
@@ -74,7 +74,7 @@ export interface Blog {
      */
     content?: string | null;
     status: BlogStatus;
-    /** False for a draft or an archived post. */
+    /** False for an archived post. */
     is_published: boolean;
     published_at: string | null;
     cover_url: string | null;

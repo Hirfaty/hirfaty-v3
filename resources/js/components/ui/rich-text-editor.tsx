@@ -27,6 +27,7 @@ import {
     Undo2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { MAX_EDITOR_IMAGE_BYTES, uploadEditorImage } from '@/lib/editor-upload';
 import { cn } from '@/lib/utils';
 
 interface RichTextEditorProps {
@@ -41,16 +42,14 @@ interface RichTextEditorProps {
     uploadUrl: string;
     placeholder?: string;
     className?: string;
+    /**
+     * Report the editor's own HTML for `value` as soon as it mounts. For
+     * content that did not come from this editor (a Word import): Tiptap drops
+     * whatever it cannot represent, and without this the form would still hold
+     * — and save — the original markup rather than what the admin sees.
+     */
+    reportInitialHtml?: boolean;
 }
-
-/** Laravel accepts the session CSRF token as an X-XSRF-TOKEN header. */
-function csrfToken(): string {
-    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-
-    return match ? decodeURIComponent(match[1]) : '';
-}
-
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 export function RichTextEditor({
     value,
@@ -58,6 +57,7 @@ export function RichTextEditor({
     uploadUrl,
     placeholder = 'Écrivez votre article…',
     className,
+    reportInitialHtml = false,
 }: RichTextEditorProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -97,6 +97,11 @@ export function RichTextEditor({
             handlePaste: (_view, event) => handleImageEvent(event.clipboardData),
             handleDrop: (_view, event) => handleImageEvent(event.dataTransfer),
         },
+        onCreate: ({ editor }) => {
+            if (reportInitialHtml) {
+                onChange(editor.getHTML());
+            }
+        },
         onUpdate: ({ editor }) => onChange(editor.getHTML()),
     });
 
@@ -119,7 +124,7 @@ export function RichTextEditor({
     }
 
     async function upload(file: File) {
-        if (file.size > MAX_IMAGE_BYTES) {
+        if (file.size > MAX_EDITOR_IMAGE_BYTES) {
             setError('Image trop lourde — 4 Mo maximum.');
 
             return;
@@ -129,23 +134,7 @@ export function RichTextEditor({
         setUploading(true);
 
         try {
-            const body = new FormData();
-            body.append('image', file);
-
-            const response = await fetch(uploadUrl, {
-                method: 'POST',
-                body,
-                headers: {
-                    'X-XSRF-TOKEN': csrfToken(),
-                    Accept: 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error(String(response.status));
-            }
-
-            const { url } = (await response.json()) as { url: string };
+            const url = await uploadEditorImage(uploadUrl, file);
 
             editor?.chain().focus().setImage({ src: url, alt: file.name }).run();
         } catch {

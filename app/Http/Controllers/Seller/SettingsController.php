@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\City;
 use App\Models\Store;
 use App\Services\LocaleService;
+use App\Services\StoreImageService;
 use App\Services\StoreVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -85,6 +86,22 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', 'Atelier enregistré.');
+    }
+
+    /**
+     * The shop's photo — the framed picture on the public shop page. Its own
+     * endpoint rather than a field on updateStore: it uploads the moment a
+     * file is picked, and a new photo is not a reason to re-run the review.
+     */
+    public function updateLogo(Request $request, StoreImageService $images)
+    {
+        $request->validate([
+            'logo' => ['required', ...$images->rules()],
+        ]);
+
+        $images->replace(auth()->user()->store, $request->file('logo'), 'logo');
+
+        return back()->with('success', 'Photo de l’atelier mise à jour.');
     }
 
     public function updateLocale(Request $request, LocaleService $locales)

@@ -56,7 +56,7 @@ class HomeService
     /**
      * The newest journal articles, shown below the brochure on the home page.
      *
-     * Only `published()` posts, so a draft or an archived article never
+     * Only `published()` posts, so an archived article never
      * surfaces here — the same scope the public /blog listing uses. `media`
      * is eager loaded because BlogResource reads the cover through it.
      */

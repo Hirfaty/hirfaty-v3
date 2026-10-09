@@ -12,13 +12,12 @@ use App\Notifications\WelcomeUser;
 use App\Services\AdminUserListService;
 use App\Services\ProfessionalAccountService;
 use App\Services\SpreadsheetExportService;
+use App\Services\StoreImageService;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Dimensions;
@@ -27,6 +26,8 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    public function __construct(private StoreImageService $images) {}
+
     public function create()
     {
         return Inertia::render('admin/users/create', [
@@ -81,6 +82,9 @@ class UserController extends Controller
             'email_verified_at' => isset($data['email']) ? now() : null,
         ]);
 
+        // Not fillable: only ever this admin, never request input.
+        $user->forceFill(['created_by' => $request->user()->id])->save();
+
         if ($data['role'] === 'seller') {
             $store = Store::create([
                 'user_id' => $user->id,
@@ -93,11 +97,11 @@ class UserController extends Controller
             ]);
 
             if ($request->hasFile('logo')) {
-                $store->update(['logo' => $this->storeShopImage($request->file('logo'), $store->id)]);
+                $this->images->replace($store, $request->file('logo'), 'logo');
             }
 
             if ($request->hasFile('banner')) {
-                $store->update(['banner' => $this->storeShopImage($request->file('banner'), $store->id)]);
+                $this->images->replace($store, $request->file('banner'), 'banner');
             }
 
             // try {
@@ -120,20 +124,6 @@ class UserController extends Controller
         return Rule::dimensions()
             ->maxWidth(config('media.image.max_width'))
             ->maxHeight(config('media.image.max_height'));
-    }
-
-    /**
-     * Store a single shop image (logo or banner) and return its public URL.
-     */
-    private function storeShopImage(UploadedFile $file, int $storeId): string
-    {
-        $disk = config('filesystems.default');
-        $path = $file->store("stores/{$storeId}", [
-            'disk' => $disk,
-            'visibility' => 'public',
-        ]);
-
-        return Storage::disk($disk)->url($path);
     }
 
     public function edit(User $user)
@@ -256,11 +246,11 @@ class UserController extends Controller
                 }
 
                 if ($request->hasFile('logo')) {
-                    $store->update(['logo' => $this->storeShopImage($request->file('logo'), $store->id)]);
+                    $this->images->replace($store, $request->file('logo'), 'logo');
                 }
 
                 if ($request->hasFile('banner')) {
-                    $store->update(['banner' => $this->storeShopImage($request->file('banner'), $store->id)]);
+                    $this->images->replace($store, $request->file('banner'), 'banner');
                 }
             }
         });
@@ -319,7 +309,8 @@ class UserController extends Controller
     {
         $filters = $request->only(['search', 'role', 'professional_request_status']);
 
-        $users = $list->query($filters)->latest()->paginate(20)->withQueryString();
+        $users = $list->query($filters)->latest()->paginate(20)->withQueryString()
+            ->through(fn (User $user) => $list->presentRow($user));
 
         // Counts for the "all / buyer / pro / seller" filter tabs — computed
         // once, unfiltered by search, so switching tabs never shows a stale 0.

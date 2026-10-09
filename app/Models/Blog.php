@@ -27,17 +27,17 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class Blog extends Model
 {
-    /** Written but not visible to the public. */
-    public const STATUS_DRAFT = 'draft';
-
-    /** Live on the public blog, provided `published_at` is in the past. */
+    /** Live on the public blog, from the moment it is saved. */
     public const STATUS_PUBLISHED = 'published';
 
-    /** Taken down without being deleted; keeps the slug reserved. */
+    /**
+     * Not visible to the public; keeps the slug reserved. Also where an
+     * article waits when it is saved before it is ready to go live — there is
+     * no separate draft stage and no scheduling.
+     */
     public const STATUS_ARCHIVED = 'archived';
 
     public const STATUSES = [
-        self::STATUS_DRAFT,
         self::STATUS_PUBLISHED,
         self::STATUS_ARCHIVED,
     ];
@@ -78,11 +78,6 @@ class Blog extends Model
     {
         return $this->status === self::STATUS_PUBLISHED
             && $this->published_at !== null;
-    }
-
-    public function isDraft(): bool
-    {
-        return $this->status === self::STATUS_DRAFT;
     }
 
     public function isArchived(): bool

@@ -4,6 +4,7 @@ use App\Models\Blog;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 function admin(): User
 {
@@ -16,7 +17,7 @@ test('an admin creates an article and the slug comes from the title', function (
             'title' => 'La poterie de Safi',
             'excerpt' => 'De la terre au four.',
             'content' => '<p>Un premier paragraphe.</p>',
-            'status' => 'draft',
+            'status' => 'archived',
         ])
         ->assertRedirect();
 
@@ -24,9 +25,45 @@ test('an admin creates an article and the slug comes from the title', function (
 
     expect($blog)->not->toBeNull()
         ->and($blog->title)->toBe('La poterie de Safi')
-        ->and($blog->status)->toBe('draft')
-        // A draft has no parution date until it actually goes live.
+        ->and($blog->status)->toBe('archived')
+        // Saved straight into the archive: no parution date until it goes live.
         ->and($blog->published_at)->toBeNull();
+});
+
+test('draft is no longer a status an article can take', function () {
+    $this->actingAs(admin())
+        ->post(route('admin.blogs.store'), [
+            'title' => 'Ancien brouillon',
+            'status' => 'draft',
+        ])
+        ->assertSessionHasErrors('status');
+
+    expect(Blog::count())->toBe(0);
+});
+
+test('archiving an article keeps its parution date', function () {
+    $published = now()->subWeek()->startOfSecond();
+    $blog = Blog::create([
+        'title' => 'Tadelakt', 'slug' => 'tadelakt',
+        'status' => 'published', 'published_at' => $published,
+    ]);
+
+    $this->actingAs(admin())->patch(route('admin.blogs.archive', $blog));
+
+    expect($blog->refresh()->status)->toBe('archived')
+        ->and($blog->published_at->equalTo($published))->toBeTrue();
+});
+
+test('unarchiving puts an article straight back online', function () {
+    $blog = Blog::create(['title' => 'Cuivre', 'slug' => 'cuivre', 'status' => 'archived']);
+
+    $this->actingAs(admin())->patch(route('admin.blogs.archive', $blog));
+
+    // Never live before, so it is stamped like a first publish.
+    expect($blog->refresh()->status)->toBe('published')
+        ->and($blog->published_at)->not->toBeNull();
+
+    $this->get(route('blog.show', 'cuivre'))->assertOk();
 });
 
 test('publishing stamps published_at automatically', function () {
@@ -46,7 +83,7 @@ test('a second article with the same title gets a distinct slug', function () {
     foreach ([1, 2] as $_) {
         $this->actingAs($admin)->post(route('admin.blogs.store'), [
             'title' => 'Zellige',
-            'status' => 'draft',
+            'status' => 'archived',
         ]);
     }
 
@@ -58,7 +95,7 @@ test('script tags and event handlers are stripped from the body', function () {
         'title' => 'Article piégé',
         'content' => '<p onclick="steal()">Bonjour</p><script>alert(1)</script>'
             .'<a href="javascript:alert(1)">lien</a>',
-        'status' => 'draft',
+        'status' => 'archived',
     ]);
 
     $content = Blog::first()->content;
@@ -73,7 +110,7 @@ test('accented and arabic copy survives sanitising intact', function () {
     $this->actingAs(admin())->post(route('admin.blogs.store'), [
         'title' => 'Héritage',
         'content' => '<p>Poterie de Safi — çàéù</p><p>الفخار</p>',
-        'status' => 'draft',
+        'status' => 'archived',
     ]);
 
     expect(Blog::first()->content)
@@ -84,7 +121,7 @@ test('accented and arabic copy survives sanitising intact', function () {
 test('an arabic title is transliterated into a usable slug', function () {
     $this->actingAs(admin())->post(route('admin.blogs.store'), [
         'title' => 'الفخار المغربي',
-        'status' => 'draft',
+        'status' => 'archived',
     ]);
 
     expect(Blog::first()->slug)->toBe('alfkhar-almghrby');
@@ -93,7 +130,7 @@ test('an arabic title is transliterated into a usable slug', function () {
 test('a title with no sluggable characters still gets a URL', function () {
     $this->actingAs(admin())->post(route('admin.blogs.store'), [
         'title' => '!!! ???',
-        'status' => 'draft',
+        'status' => 'archived',
     ]);
 
     // Str::slug() returns '' here, and an article with no slug would have no
@@ -118,35 +155,31 @@ test('renaming a published article keeps its original slug', function () {
         ->and($blog->title)->toBe('Titre corrigé');
 });
 
-test('the public listing shows published articles and hides drafts', function () {
+test('the public listing shows published articles and hides archived ones', function () {
     Blog::create([
         'title' => 'En ligne', 'slug' => 'en-ligne',
         'status' => 'published', 'published_at' => now()->subHour(),
     ]);
-    Blog::create(['title' => 'Brouillon', 'slug' => 'brouillon', 'status' => 'draft']);
-    Blog::create([
-        'title' => 'Programmé', 'slug' => 'programme',
-        'status' => 'published', 'published_at' => now()->addWeek(),
-    ]);
+    Blog::create(['title' => 'Rangé', 'slug' => 'range', 'status' => 'archived']);
 
     $this->get(route('blog.index'))
         ->assertOk()
-        ->assertSee('En ligne')
-        ->assertDontSee('Brouillon')
-        // Dated forward: queued, not yet readable.
-        ->assertDontSee('Programmé');
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('blogs.data', 1)
+            ->where('blogs.data.0.title', 'En ligne')
+        );
 });
 
-test('a guest cannot reach a draft by guessing its slug', function () {
-    Blog::create(['title' => 'Secret', 'slug' => 'secret', 'status' => 'draft']);
+test('a guest cannot reach an archived article by guessing its slug', function () {
+    Blog::create(['title' => 'Secret', 'slug' => 'secret', 'status' => 'archived']);
 
     $this->get(route('blog.show', 'secret'))->assertNotFound();
 });
 
-test('an admin previews a draft that the public cannot see', function () {
+test('an admin previews an archived article that the public cannot see', function () {
     $blog = Blog::create([
-        'title' => 'Brouillon', 'slug' => 'brouillon',
-        'content' => '<p>Encore en cours.</p>', 'status' => 'draft',
+        'title' => 'Archivé', 'slug' => 'archive',
+        'content' => '<p>Encore en cours.</p>', 'status' => 'archived',
     ]);
 
     $this->actingAs(admin())
@@ -178,7 +211,7 @@ test('deleting an article removes its cover file', function () {
 
     $this->actingAs($admin)->post(route('admin.blogs.store'), [
         'title' => 'Avec couverture',
-        'status' => 'draft',
+        'status' => 'archived',
         'cover' => UploadedFile::fake()->create('cover.jpg', 40, 'image/jpeg'),
     ]);
 
@@ -199,7 +232,7 @@ test('replacing the cover discards the previous file', function () {
 
     $this->actingAs($admin)->post(route('admin.blogs.store'), [
         'title' => 'Couverture',
-        'status' => 'draft',
+        'status' => 'archived',
         'cover' => UploadedFile::fake()->create('first.jpg', 40, 'image/jpeg'),
     ]);
 
@@ -208,7 +241,7 @@ test('replacing the cover discards the previous file', function () {
 
     $this->actingAs($admin)->post(route('admin.blogs.update', $blog), [
         'title' => 'Couverture',
-        'status' => 'draft',
+        'status' => 'archived',
         'cover' => UploadedFile::fake()->create('second.jpg', 40, 'image/jpeg'),
     ]);
 

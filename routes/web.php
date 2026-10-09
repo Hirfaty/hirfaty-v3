@@ -376,6 +376,8 @@ Route::middleware(['auth', 'verified', 'role:seller'])
         Route::get('settings', [SellerSettingsController::class, 'index'])->name('settings.index');
         Route::patch('settings/profile', [SellerSettingsController::class, 'updateProfile'])->name('settings.profile.update');
         Route::patch('settings/store', [SellerSettingsController::class, 'updateStore'])->name('settings.store.update');
+        // POST, not PATCH: PHP only parses multipart bodies on POST.
+        Route::post('settings/store/logo', [SellerSettingsController::class, 'updateLogo'])->name('settings.store.logo.update');
         Route::patch('settings/locale', [SellerSettingsController::class, 'updateLocale'])->name('settings.locale.update');
         Route::patch('settings/password', [SellerSettingsController::class, 'updatePassword'])->name('settings.password.update');
     });

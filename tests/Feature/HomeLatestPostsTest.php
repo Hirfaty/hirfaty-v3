@@ -35,9 +35,9 @@ it('sends the three newest published articles, newest first', function () {
     );
 });
 
-it('leaves drafts and archived articles off the home page', function () {
+it('leaves archived articles off the home page', function () {
     homePost('Live');
-    homePost('Draft', ['status' => Blog::STATUS_DRAFT, 'published_at' => null]);
+    homePost('Never live', ['status' => Blog::STATUS_ARCHIVED, 'published_at' => null]);
     homePost('Archived', ['status' => Blog::STATUS_ARCHIVED]);
 
     $this->get('/fr')->assertInertia(fn (Assert $page) => $page

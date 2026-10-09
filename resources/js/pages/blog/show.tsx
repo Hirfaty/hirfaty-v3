@@ -7,21 +7,11 @@ import type { Blog, PageProps } from '@/types';
 
 const EYEBROW = 'text-[10px] font-semibold uppercase tracking-[0.16em]';
 
-/**
- * What the preview banner calls the article's state. Not the bare `status`
- * string: "published" on a post dated into the future would read as live when
- * it is only queued, which is exactly what the preview exists to catch.
- */
+/** What the preview banner calls the article's state. */
 function stateLabel(blog: Blog): string {
-    if (blog.is_published) {
-        return 'article en ligne';
-    }
-
-    if (blog.status === 'published') {
-        return 'programmé, pas encore visible';
-    }
-
-    return blog.status === 'archived' ? 'archivé' : 'brouillon';
+    return blog.is_published
+        ? 'article en ligne'
+        : 'archivé, invisible pour le public';
 }
 
 /**
@@ -170,8 +160,8 @@ export default function BlogShow({
 }
 
 /**
- * Sticky bar telling the admin they are looking at an unpublished draft, so a
- * preview is never mistaken for the live article.
+ * Sticky bar telling the admin they are looking at a preview, so an archived
+ * article is never mistaken for a live one.
  */
 function PreviewBanner({ blog }: { blog: Blog }) {
     return (

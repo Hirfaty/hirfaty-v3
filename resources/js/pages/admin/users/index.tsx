@@ -12,8 +12,10 @@ import {
     Package,
     Pencil,
     Search,
+    ShieldCheck,
     Trash2,
     UserCheck,
+    Mail,
     Users,
     XCircle,
 } from 'lucide-react';
@@ -41,6 +43,8 @@ import {
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
+import { SOCIAL_MARKS } from '@/pages/auth/login/SocialButtons';
+import type { SocialProvider } from '@/pages/auth/login/SocialButtons';
 import type {
     PageProps,
     PaginatedData,
@@ -50,8 +54,21 @@ import type {
     UserRole,
 } from '@/types';
 
+type SignupMethod = 'admin' | 'email' | SocialProvider;
+
 type UserRow = User & {
     products_count: number;
+    /** The admin who opened the account; null when they signed up themselves. */
+    created_by: number | null;
+    creator: {
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+    } | null;
+    /** How the account was opened — AdminUserListService::signupMethod(). */
+    signup_method: SignupMethod;
+    /** Social identities the person can sign in with, whenever linked. */
+    linked_providers: SocialProvider[];
     store: {
         id: number;
         store_name: string;
@@ -148,6 +165,93 @@ function ProRequestStatusBadge({ user }: { user: UserRow }) {
     }
 
     return null;
+}
+
+const PROVIDER_LABEL: Record<SocialProvider, string> = {
+    google: 'Google',
+    facebook: 'Facebook',
+};
+
+/** Brand mark shrunk to badge size — the marks ship at 18px. */
+function ProviderMark({ provider }: { provider: SocialProvider }) {
+    return (
+        <span className="inline-flex [&_svg]:h-3 [&_svg]:w-3">
+            {SOCIAL_MARKS[provider]}
+        </span>
+    );
+}
+
+/**
+ * How the account was opened: by the desk (an artisan signed up in person),
+ * or by the person themselves — with an email code, Google, or Facebook.
+ * Social identities linked after the fact are listed underneath.
+ */
+function SignupMethodBadge({ user }: { user: UserRow }) {
+    const linkedLater = user.linked_providers.filter(
+        (provider) => provider !== user.signup_method,
+    );
+
+    return (
+        <>
+            <SignupBadge user={user} />
+            {linkedLater.map((provider) => (
+                <span
+                    key={provider}
+                    className="inline-flex items-center gap-1 text-[11px] text-ink-soft"
+                    title={`Compte ${PROVIDER_LABEL[provider]} lié après l'inscription`}
+                >
+                    <ProviderMark provider={provider} />
+                    {PROVIDER_LABEL[provider]} lié
+                </span>
+            ))}
+        </>
+    );
+}
+
+function SignupBadge({ user }: { user: UserRow }) {
+    const method = user.signup_method;
+
+    if (method === 'google' || method === 'facebook') {
+        return (
+            <span
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-2 py-0.5 text-[11px] font-medium text-ink"
+                title={`Inscrit avec ${PROVIDER_LABEL[method]}`}
+            >
+                <ProviderMark provider={method} />
+                {PROVIDER_LABEL[method]}
+            </span>
+        );
+    }
+
+    if (method === 'email') {
+        return (
+            <span
+                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700"
+                title="Inscrit avec son adresse email"
+            >
+                <Mail className="h-3 w-3" />
+                Email
+            </span>
+        );
+    }
+
+    const adminName = [user.creator?.first_name, user.creator?.last_name]
+        .filter(Boolean)
+        .join(' ');
+
+    return (
+        <span
+            className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+            title={
+                adminName
+                    ? `Compte créé par ${adminName}`
+                    : "Compte créé par l'administration"
+            }
+        >
+            <ShieldCheck className="h-3 w-3" />
+            Créé par l'admin
+        </span>
+    );
 }
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -619,8 +723,13 @@ export default function UsersIndex({
                                             </span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-sm text-ink-soft">
-                                        {formatDate(user.created_at)}
+                                    <TableCell>
+                                        <div className="flex flex-col items-start gap-1">
+                                            <span className="text-sm text-ink-soft">
+                                                {formatDate(user.created_at)}
+                                            </span>
+                                            <SignupMethodBadge user={user} />
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {user.role === 'seller' ? (

@@ -295,7 +295,7 @@ test('the sitemap lists only what a guest can open', function () {
     $emptyCategory = Category::create(['slug' => 'cuir', 'name' => ['fr' => 'Cuir', 'ar' => 'جلد', 'en' => 'Leather']]);
 
     $published = Blog::create(['title' => 'Publié', 'slug' => 'publie', 'content' => '<p>x</p>', 'status' => Blog::STATUS_PUBLISHED, 'published_at' => now()->subDay()]);
-    $draft = Blog::create(['title' => 'Brouillon', 'slug' => 'brouillon', 'content' => '<p>x</p>', 'status' => Blog::STATUS_DRAFT]);
+    $archived = Blog::create(['title' => 'Archivé', 'slug' => 'archive', 'content' => '<p>x</p>', 'status' => Blog::STATUS_ARCHIVED]);
 
     $xml = $this->get('/sitemap.xml')
         ->assertOk()
@@ -313,7 +313,7 @@ test('the sitemap lists only what a guest can open', function () {
         ->not->toContain(route('products.show', $unpriced->slug))
         ->not->toContain(route('stores.show', $emptyStore->slug))
         ->not->toContain('category_id='.$emptyCategory->id)
-        ->not->toContain(route('blog.show', $draft->slug));
+        ->not->toContain(route('blog.show', $archived->slug));
 
     // Well-formed XML, not just a string that looks like it.
     expect(simplexml_load_string($xml))->not->toBeFalse();

@@ -36,8 +36,9 @@ class BlogController extends Controller
 
     public function show(string $slug, SeoService $seo)
     {
-        // Scoped to published rather than resolved by route-model binding: a
-        // draft's slug is guessable, and a 404 must not leak that it exists.
+        // Scoped to published rather than resolved by route-model binding: an
+        // archived article's slug is guessable, and a 404 must not leak that
+        // it exists.
         $blog = Blog::published()->with(['author', 'media'])->where('slug', $slug)->firstOrFail();
 
         return Inertia::render('blog/show', [

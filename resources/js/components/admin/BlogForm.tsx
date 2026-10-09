@@ -1,21 +1,60 @@
 import { Link, useForm } from '@inertiajs/react';
-import { Eye, ImageOff, ImagePlus, Loader2, Save } from 'lucide-react';
+import {
+    AlertTriangle,
+    Archive,
+    CheckCircle2,
+    Eye,
+    FileText,
+    FileUp,
+    Globe,
+    ImageOff,
+    ImagePlus,
+    Loader2,
+    Save,
+} from 'lucide-react';
 import { useRef, useState } from 'react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { importDocx, MAX_DOCX_BYTES } from '@/lib/docx-import';
 import type { Blog, BlogStatus } from '@/types';
 
 /** Human labels for Blog::STATUSES, which arrives as raw strings. */
 const STATUS_LABELS: Record<BlogStatus, string> = {
-    draft: 'Brouillon',
     published: 'Publié',
     archived: 'Archivé',
 };
 
 const STATUS_HINTS: Record<BlogStatus, string> = {
-    draft: 'Visible seulement ici. Personne d’autre ne peut le lire.',
-    published: 'Publié immédiatement sur le journal public.',
-    archived: 'Retiré du journal, mais conservé.',
+    published: 'En ligne sur le journal public dès l’enregistrement.',
+    archived: 'Invisible pour le public, mais conservé ici.',
 };
+
+const STATUS_ICONS: Record<BlogStatus, typeof Globe> = {
+    published: Globe,
+    archived: Archive,
+};
+
+/** What the last Word import produced, for the notice under the import card. */
+type ImportNotice =
+    | { kind: 'success'; fileName: string; skippedImages: number }
+    | { kind: 'error'; message: string };
+
+/** True when the HTML holds no text and no image — an untouched editor. */
+function isBlankHtml(html: string): boolean {
+    return (
+        !/<img\b/i.test(html) &&
+        html
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .trim() === ''
+    );
+}
+
+function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+
+    return div.innerHTML;
+}
 
 interface BlogFormProps {
     /** Absent when writing a new article. */
@@ -41,6 +80,13 @@ interface BlogFormProps {
 export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
     const isEdit = blog !== undefined;
     const coverInputRef = useRef<HTMLInputElement>(null);
+    const docxInputRef = useRef<HTMLInputElement>(null);
+
+    // Bumped by a Word import to remount the editor on the new content: the
+    // editor only reads `value` when it mounts.
+    const [editorKey, setEditorKey] = useState(0);
+    const [importing, setImporting] = useState(false);
+    const [importNotice, setImportNotice] = useState<ImportNotice | null>(null);
 
     // The existing cover, until the admin swaps or clears it. A local preview
     // URL replaces it the moment a new file is chosen.
@@ -52,7 +98,7 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
         title: blog?.title ?? '',
         excerpt: blog?.excerpt ?? '',
         content: blog?.content ?? '',
-        status: blog?.status ?? ('draft' as BlogStatus),
+        status: blog?.status ?? ('published' as BlogStatus),
         cover: null as File | null,
         remove_cover: false as boolean,
     });
@@ -74,6 +120,90 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
         setCoverPreview(URL.createObjectURL(file));
     };
 
+    const importWord = async (file: File | undefined) => {
+        if (docxInputRef.current) {
+            docxInputRef.current.value = '';
+        }
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.docx')) {
+            setImportNotice({
+                kind: 'error',
+                message:
+                    'Seuls les fichiers Word .docx sont acceptés. Un ancien .doc doit d’abord être réenregistré au format .docx depuis Word.',
+            });
+
+            return;
+        }
+
+        if (file.size > MAX_DOCX_BYTES) {
+            setImportNotice({
+                kind: 'error',
+                message: 'Fichier trop lourd — 20 Mo maximum.',
+            });
+
+            return;
+        }
+
+        if (
+            !isBlankHtml(form.data.content) &&
+            !confirm(
+                'Remplacer le contenu actuel de l’article par celui du document Word ?',
+            )
+        ) {
+            return;
+        }
+
+        setImporting(true);
+        setImportNotice(null);
+
+        try {
+            const imported = await importDocx(file, uploadUrl);
+            const takeTitle =
+                imported.title !== null && form.data.title.trim() === '';
+
+            // The opening heading only moves to the title field while that is
+            // still empty; otherwise it stays at the top of the body, so a
+            // title the admin already typed is never overwritten.
+            const html =
+                imported.title !== null && !takeTitle
+                    ? `<h2>${escapeHtml(imported.title)}</h2>${imported.html}`
+                    : imported.html;
+
+            if (isBlankHtml(html)) {
+                setImportNotice({
+                    kind: 'error',
+                    message: 'Ce document ne contient aucun texte à importer.',
+                });
+
+                return;
+            }
+
+            form.setData((data) => ({
+                ...data,
+                content: html,
+                title: takeTitle ? (imported.title ?? '') : data.title,
+            }));
+            setEditorKey((key) => key + 1);
+            setImportNotice({
+                kind: 'success',
+                fileName: file.name,
+                skippedImages: imported.skippedImages,
+            });
+        } catch {
+            setImportNotice({
+                kind: 'error',
+                message:
+                    'Ce fichier n’a pas pu être lu. Vérifiez qu’il s’agit bien d’un document Word (.docx) non protégé.',
+            });
+        } finally {
+            setImporting(false);
+        }
+    };
+
     const clearCover = () => {
         form.setData((data) => ({ ...data, cover: null, remove_cover: true }));
         setCoverPreview(null);
@@ -85,6 +215,76 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
+            {/* ── Word import ── */}
+            <section className="rounded-xl border border-dashed border-border bg-card p-5 shadow-sm md:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-ink-soft">
+                            <FileText className="h-4 w-4" />
+                        </span>
+                        <div>
+                            <h2 className="text-sm font-semibold text-ink">
+                                Partir d’un document Word
+                            </h2>
+                            <p className="mt-0.5 max-w-md text-xs text-ink-soft">
+                                Le texte, les intertitres, les listes, les liens
+                                et les images du .docx arrivent dans l’éditeur
+                                ci-dessous, où vous pouvez tout relire et
+                                corriger avant d’enregistrer.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        disabled={importing}
+                        onClick={() => docxInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-ink transition hover:border-ink/30 disabled:opacity-50"
+                    >
+                        {importing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <FileUp className="h-4 w-4" />
+                        )}
+                        {importing ? 'Import en cours…' : 'Importer un .docx'}
+                    </button>
+                    <input
+                        ref={docxInputRef}
+                        type="file"
+                        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        className="hidden"
+                        onChange={(e) => void importWord(e.target.files?.[0])}
+                    />
+                </div>
+
+                {importNotice?.kind === 'success' && (
+                    <div className="mt-4 flex items-start gap-2 rounded-lg bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-800">
+                        <CheckCircle2 className="mt-px h-4 w-4 shrink-0" />
+                        <div>
+                            <p>
+                                « {importNotice.fileName} » importé. Relisez le
+                                contenu ci-dessous, puis enregistrez.
+                            </p>
+                            {importNotice.skippedImages > 0 && (
+                                <p className="mt-1 text-amber-800">
+                                    {importNotice.skippedImages === 1
+                                        ? '1 image n’a pas pu être reprise'
+                                        : `${importNotice.skippedImages} images n’ont pas pu être reprises`}{' '}
+                                    (format non pris en charge ou plus de 4 Mo)
+                                    — ajoutez-les depuis la barre d’outils de
+                                    l’éditeur.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+                {importNotice?.kind === 'error' && (
+                    <div className="mt-4 flex items-start gap-2 rounded-lg bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive">
+                        <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
+                        <p>{importNotice.message}</p>
+                    </div>
+                )}
+            </section>
+
             {/* ── 1. Title ── */}
             <Section title="Titre" step={1}>
                 <input
@@ -185,9 +385,11 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                 hint="La barre d’outils reste visible pendant que vous écrivez."
             >
                 <RichTextEditor
-                    value={blog?.content ?? ''}
+                    key={editorKey}
+                    value={form.data.content}
                     onChange={(html) => form.setData('content', html)}
                     uploadUrl={uploadUrl}
+                    reportInitialHtml={editorKey > 0}
                 />
                 {form.errors.content && (
                     <FieldError>{form.errors.content}</FieldError>
@@ -195,30 +397,51 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
             </Section>
 
             {/* ── 5. Publication ── */}
-            <Section title="Publication" step={5}>
-                <label
-                    htmlFor="status"
-                    className="mb-1.5 block text-sm font-medium text-ink"
+            <Section
+                title="Publication"
+                step={5}
+                hint="Pas de programmation : l’article est en ligne ou archivé."
+            >
+                <div
+                    role="radiogroup"
+                    aria-label="Statut"
+                    className="grid gap-3 sm:grid-cols-2"
                 >
-                    Statut
-                </label>
-                <select
-                    id="status"
-                    value={form.data.status}
-                    onChange={(e) =>
-                        form.setData('status', e.target.value as BlogStatus)
-                    }
-                    className="w-full max-w-xs rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-ink transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
-                >
-                    {statuses.map((status) => (
-                        <option key={status} value={status}>
-                            {STATUS_LABELS[status]}
-                        </option>
-                    ))}
-                </select>
-                <p className="mt-2 text-xs text-ink-soft">
-                    {STATUS_HINTS[form.data.status]}
-                </p>
+                    {statuses.map((status) => {
+                        const Icon = STATUS_ICONS[status];
+                        const active = form.data.status === status;
+
+                        return (
+                            <button
+                                key={status}
+                                type="button"
+                                role="radio"
+                                aria-checked={active}
+                                onClick={() => form.setData('status', status)}
+                                className={`flex items-start gap-3 rounded-lg border p-4 text-left transition ${
+                                    active
+                                        ? 'border-ink bg-ink/[0.03] ring-2 ring-ink/10'
+                                        : 'border-border hover:border-ink/30'
+                                }`}
+                            >
+                                <Icon
+                                    className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-ink' : 'text-ink-soft'}`}
+                                />
+                                <span>
+                                    <span className="block text-sm font-medium text-ink">
+                                        {STATUS_LABELS[status]}
+                                    </span>
+                                    <span className="mt-0.5 block text-xs text-ink-soft">
+                                        {STATUS_HINTS[status]}
+                                    </span>
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+                {form.errors.status && (
+                    <FieldError>{form.errors.status}</FieldError>
+                )}
             </Section>
 
             {/* ── 6. Actions ── */}
@@ -233,7 +456,11 @@ export function BlogForm({ blog, statuses, action, uploadUrl }: BlogFormProps) {
                     ) : (
                         <Save className="h-4 w-4" />
                     )}
-                    {isEdit ? 'Enregistrer' : 'Créer l’article'}
+                    {isEdit
+                        ? 'Enregistrer'
+                        : form.data.status === 'published'
+                          ? 'Publier l’article'
+                          : 'Enregistrer dans les archives'}
                 </button>
 
                 {isEdit && (

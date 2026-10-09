@@ -60,7 +60,9 @@ test('admin creates a seller together with their store', function () {
         ->and($user->email_verified_at)->not->toBeNull()
         ->and($store->store_name)->toBe('Poterie Safi')
         // No type was sent — falls back to the DB/controller default.
-        ->and($store->type)->toBe('artist');
+        ->and($store->type)->toBe('artist')
+        // Recorded so the users table can tell it from a self-signup.
+        ->and($user->created_by)->toBe($this->admin->id);
 });
 
 test('admin sets the seller type and uploads shop photos', function () {

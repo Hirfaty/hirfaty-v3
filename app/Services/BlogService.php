@@ -100,15 +100,17 @@ class BlogService
     }
 
     /**
-     * Pull an archived article back into the editing flow.
+     * Put an archived article back on the public journal.
      *
-     * Returns it as a draft rather than straight to published: an admin who
-     * archived a post almost certainly wants to look at it again before it is
-     * publicly readable a second time.
+     * An article archived before it ever went live has no parution date yet,
+     * so it is stamped now, exactly as a first publish would be.
      */
     public function unarchive(Blog $blog): Blog
     {
-        $blog->update(['status' => Blog::STATUS_DRAFT]);
+        $blog->update([
+            'status' => Blog::STATUS_PUBLISHED,
+            'published_at' => $this->resolvePublishedAt(['status' => Blog::STATUS_PUBLISHED], $blog),
+        ]);
 
         return $blog->refresh();
     }

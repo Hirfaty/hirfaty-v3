@@ -11,7 +11,7 @@ export type SocialProvider = 'google' | 'facebook';
  * mark has a fixed blue, and recolouring either to match the page would breach
  * the brand guidelines these buttons have to follow.
  */
-const MARKS: Record<SocialProvider, React.ReactNode> = {
+export const SOCIAL_MARKS: Record<SocialProvider, React.ReactNode> = {
     google: (
         <svg
             viewBox="0 0 18 18"
@@ -94,7 +94,7 @@ export default function SocialButtons({
                         data-test={`social-${provider}`}
                         className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-souk-brown/25 bg-white px-6 py-3 text-sm text-souk-title transition-colors hover:border-souk-brown/50 hover:bg-souk-brown/5"
                     >
-                        {MARKS[provider]}
+                        {SOCIAL_MARKS[provider]}
                         {t(`common.auth.login.social_${provider}`)}
                     </a>
                 ))}

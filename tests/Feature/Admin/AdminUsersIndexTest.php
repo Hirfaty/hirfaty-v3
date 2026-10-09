@@ -3,6 +3,7 @@
 use App\Models\Category;
 use App\Models\City;
 use App\Models\Product;
+use App\Models\SocialAccount;
 use App\Models\Store;
 use App\Models\User;
 
@@ -247,4 +248,56 @@ test('non admins cannot list users', function () {
             ->get(route('admin.users.index'))
             ->assertRoleDenied();
     }
+});
+
+test('each row says whether an admin or the person opened the account', function () {
+    $selfSignup = User::factory()->create(['role' => 'buyer']);
+    $byAdmin = User::factory()->create(['role' => 'buyer']);
+    $byAdmin->forceFill(['created_by' => $this->admin->id])->save();
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.users.index'))
+        ->assertInertia(
+            fn ($page) => $page->where('users.data', function ($users) use ($selfSignup, $byAdmin) {
+                $rows = collect($users)->keyBy('id');
+
+                return $rows[$selfSignup->id]['created_by'] === null
+                    && $rows[$selfSignup->id]['creator'] === null
+                    && $rows[$byAdmin->id]['created_by'] === $this->admin->id
+                    && $rows[$byAdmin->id]['creator']['first_name'] === $this->admin->first_name;
+            })
+        );
+});
+
+test('each row says whether the person registered by email, Google or Facebook', function () {
+    $viaGoogle = User::factory()->create(['role' => 'buyer']);
+    SocialAccount::create(['user_id' => $viaGoogle->id, 'provider' => 'google', 'provider_id' => 'g-1']);
+
+    $viaFacebook = User::factory()->create(['role' => 'buyer']);
+    SocialAccount::create(['user_id' => $viaFacebook->id, 'provider' => 'facebook', 'provider_id' => 'f-1']);
+
+    // Registered with a code, then signed in with Google weeks later: the
+    // link matched their address, it did not open the account.
+    $viaEmail = User::factory()->create(['role' => 'buyer', 'created_at' => now()->subWeeks(3)]);
+    SocialAccount::create(['user_id' => $viaEmail->id, 'provider' => 'google', 'provider_id' => 'g-2']);
+
+    $byAdmin = User::factory()->create(['role' => 'seller']);
+    $byAdmin->forceFill(['created_by' => $this->admin->id])->save();
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.users.index'))
+        ->assertInertia(
+            fn ($page) => $page->where('users.data', function ($users) use ($viaGoogle, $viaFacebook, $viaEmail, $byAdmin) {
+                $rows = collect($users)->keyBy('id');
+
+                return $rows[$viaGoogle->id]['signup_method'] === 'google'
+                    && $rows[$viaFacebook->id]['signup_method'] === 'facebook'
+                    && $rows[$viaEmail->id]['signup_method'] === 'email'
+                    && $rows[$viaEmail->id]['linked_providers'] === ['google']
+                    && $rows[$byAdmin->id]['signup_method'] === 'admin'
+                    && $rows[$byAdmin->id]['linked_providers'] === []
+                    // The provider's subject id never reaches the page.
+                    && ! array_key_exists('social_accounts', $rows[$viaGoogle->id]);
+            })
+        );
 });

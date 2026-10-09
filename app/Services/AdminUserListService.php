@@ -40,6 +40,20 @@ class AdminUserListService
         User::PRO_REQUEST_DECLINED => 'Refusée',
     ];
 
+    private const SIGNUP_METHOD_LABELS = [
+        'email' => 'Email',
+        'google' => 'Google',
+        'facebook' => 'Facebook',
+    ];
+
+    /**
+     * How far apart the account and its social link may have been written and
+     * still count as one signup. SocialAuthService creates both in a single
+     * transaction, so in practice they share a second; the slack only absorbs
+     * a slow commit.
+     */
+    private const SOCIAL_SIGNUP_WINDOW_SECONDS = 60;
+
     private const STORE_VERIFICATION_LABELS = [
         'pending' => 'En attente',
         'approved' => 'Vérifiée',
@@ -73,6 +87,11 @@ class AdminUserListService
             ->with(
                 'store:id,user_id,store_name,type,city_id,verification_status',
                 'store.city:id,name',
+                // "Créé par l'admin" vs self-signup, with who on hover.
+                'creator:id,first_name,last_name',
+                // How a self-signup came in (email, Google, Facebook) — see
+                // signupMethod(). Never `provider_id`.
+                'socialAccounts:id,user_id,provider,created_at',
             );
 
         if ($search = $filters['search'] ?? null) {
@@ -190,6 +209,7 @@ class AdminUserListService
             'Boutique vérifiée',
             'Produits',
             'Inscrit le',
+            'Inscription',
         ];
     }
 
@@ -215,7 +235,58 @@ class AdminUserListService
             $store ? (self::STORE_VERIFICATION_LABELS[$store->verification_status] ?? $store->verification_status) : '',
             $user->role === 'seller' ? (int) $user->products_count : '',
             $this->date($user->created_at),
+            $this->createdBy($user),
         ];
+    }
+
+    /**
+     * A table row: the model plus how the account was opened, and which
+     * social identities it can sign in with. The `socialAccounts` relation
+     * itself is dropped so only the provider names reach the page.
+     */
+    public function presentRow(User $user): User
+    {
+        $user->setAttribute('signup_method', $this->signupMethod($user));
+        $user->setAttribute('linked_providers', $user->socialAccounts->pluck('provider')->unique()->values()->all());
+
+        return $user->unsetRelation('socialAccounts');
+    }
+
+    /**
+     * 'admin' when the desk opened the account, otherwise how the person
+     * registered: 'google' / 'facebook' when the account was created by that
+     * sign-in, 'email' for everything else.
+     *
+     * Derived rather than stored. A social sign-in that matches an existing
+     * address only *links* to it (SocialAuthService::resolveUser), so having
+     * a Google row does not mean the person registered with Google — the
+     * link has to have been written together with the account.
+     */
+    public function signupMethod(User $user): string
+    {
+        if ($user->created_by !== null) {
+            return 'admin';
+        }
+
+        $signupLink = $user->socialAccounts
+            ->sortBy('created_at')
+            ->first(fn ($account) => $account->created_at && $user->created_at
+                && abs($account->created_at->diffInSeconds($user->created_at)) <= self::SOCIAL_SIGNUP_WINDOW_SECONDS);
+
+        return $signupLink->provider ?? 'email';
+    }
+
+    private function createdBy(User $user): string
+    {
+        $method = $this->signupMethod($user);
+
+        if ($method !== 'admin') {
+            return self::SIGNUP_METHOD_LABELS[$method] ?? $method;
+        }
+
+        $name = trim(($user->creator?->first_name ?? '').' '.($user->creator?->last_name ?? ''));
+
+        return $name !== '' ? "Admin ({$name})" : 'Admin';
     }
 
     private function date(?DateTimeInterface $date): string

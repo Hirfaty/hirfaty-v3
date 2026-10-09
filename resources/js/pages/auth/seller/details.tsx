@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { usePasswordCheck } from '@/hooks/use-password-check';
 import { useTranslation } from '@/hooks/use-translation';
-import heroZellige from '@/images/hero-zellige.jpg';
+import registerPhoto from '@/images/auth/register-3.jpg';
 import { store as createAccount } from '@/routes/login/details';
 import SellerAuthShell from './SellerAuthShell';
 
@@ -66,7 +66,7 @@ export default function SellerDetails({
     return (
         <SellerAuthShell
             wide
-            image={heroZellige}
+            image={registerPhoto}
             quote={t('seller.join.quote_details')}
             title={t('seller.join.details_title')}
             titleAccent={t('seller.join.details_title_accent')}

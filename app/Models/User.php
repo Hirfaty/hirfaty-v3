@@ -26,6 +26,7 @@ use Override;
  * @property string|null $last_name
  * @property string|null $phone_number
  * @property string $role
+ * @property int|null $created_by
  * @property CarbonImmutable|null $onboarded_at
  * @property CarbonImmutable|null $professional_verified_at
  * @property string|null $professional_request_status
@@ -130,6 +131,18 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     public function interests()
     {
         return $this->belongsToMany(Category::class);
+    }
+
+    /** The admin who opened this account by hand; null when they signed up themselves. */
+    public function creator()
+    {
+        return $this->belongsTo(self::class, 'created_by');
+    }
+
+    /** Google / Facebook identities linked to this account. */
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class);
     }
 
     /** The admin who approved or declined the trade request. */

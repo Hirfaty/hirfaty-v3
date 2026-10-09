@@ -59,9 +59,13 @@ export default function SellerAuthShell({
         <>
             <Head title={t('seller.join.page_title')} />
 
-            <div className="min-h-screen bg-souk-paper lg:grid lg:h-screen lg:grid-cols-[1.05fr_0.95fr]">
+            {/*
+             * The page itself scrolls and the photograph is `sticky`, so it
+             * stays pinned beside the form however long the form gets.
+             */}
+            <div className="min-h-screen bg-souk-paper lg:grid lg:grid-cols-[1.05fr_0.95fr]">
                 {/* ── Form column ─────────────────────────────────────── */}
-                <main className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:h-screen lg:min-h-0 lg:overflow-y-auto lg:px-14 lg:py-8">
+                <main className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14 lg:py-8">
                     <div className="flex items-center justify-between gap-4">
                         <Link
                             href={route('home')}
@@ -151,8 +155,10 @@ export default function SellerAuthShell({
                  * `order-last` puts it on the trailing edge; hidden below `lg`
                  * so a phone gets the form rather than a half-screen of
                  * decoration above it. Decorative, hence empty alt.
+                 * `self-start` keeps the grid from stretching it to the form's
+                 * height, which would leave `sticky` nothing to stick within.
                  */}
-                <aside className="relative order-last hidden overflow-hidden bg-souk-brown lg:block lg:h-screen">
+                <aside className="sticky top-0 order-last hidden h-screen self-start overflow-hidden bg-souk-brown lg:block">
                     <img
                         src={image}
                         alt=""
