@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import VaseIcon from '@/components/home/VaseIcon';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
-import paymentSecure from '@/images/payment-secure.png';
 import { sell } from '@/routes';
 import newsletter from '@/routes/newsletter';
 

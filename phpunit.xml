@@ -32,6 +32,10 @@
         -->
         <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
+        <!-- French is the site's default (LocaleService::DEFAULT), and the
+             suite asserts French copy. Pinned here so it never depends on
+             whatever .env the machine has — CI copies .env.example. -->
+        <env name="APP_LOCALE" value="fr"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
