@@ -20,6 +20,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Artisan onboarding inbox
+    |--------------------------------------------------------------------------
+    |
+    | Told whenever an artisan signs up on /sell, so someone can call them and
+    | file their first listings (sellers never create products themselves).
+    | Accounts the desk opens by hand are not announced — the desk already
+    | knows. Set SELLER_SIGNUP_EMAIL to an empty string to silence it.
+    |
+    */
+
+    'seller_signup_email' => env('SELLER_SIGNUP_EMAIL', 's.fatia@hirfaty.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Staging guard
     |--------------------------------------------------------------------------
     |

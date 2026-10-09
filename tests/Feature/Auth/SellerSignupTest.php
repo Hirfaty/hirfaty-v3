@@ -5,6 +5,7 @@ use App\Models\City;
 use App\Models\PendingRegistration;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\NewSellerForAdmin;
 use App\Notifications\RegistrationCode;
 use App\Services\RegistrationCodeService;
 use Illuminate\Support\Facades\Notification;
@@ -220,6 +221,81 @@ test('the workshop half of the form is not skippable', function (string $field) 
 
     expect(User::where('email', 'artisan@example.com')->exists())->toBeFalse();
 })->with(['store_name', 'type', 'category_id', 'city_id', 'description']);
+
+test('a new artisan is announced to the onboarding inbox in French', function () {
+    config(['hirfaty.seller_signup_email' => 's.fatia@hirfaty.com']);
+
+    [$category, $city] = sellerTaxonomy();
+    ['cookie' => $cookie, 'code' => $code] = startSellerSignup();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $code]);
+
+    // An Arabic-speaking artisan: the desk's email must still be French.
+    app()->setLocale('ar');
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.details.store'), sellerDetails($category, $city));
+
+    $seller = User::firstWhere('email', 'artisan@example.com');
+
+    Notification::assertSentOnDemandTimes(NewSellerForAdmin::class, 1);
+    Notification::assertSentOnDemand(
+        NewSellerForAdmin::class,
+        function (NewSellerForAdmin $notification, array $channels, object $notifiable) use ($seller) {
+            $mail = $notification->toMail($notifiable);
+            $html = (string) $mail->render();
+
+            return $notifiable->routes['mail'] === 's.fatia@hirfaty.com'
+                && $notification->seller->is($seller)
+                && $mail->subject === 'Nouvel artisan inscrit — Atelier Bab Boujloud'
+                && str_contains($html, 'vient de s’inscrire comme artisan')
+                && str_contains($html, 'Poterie')
+                && str_contains($html, 'Fès');
+        },
+    );
+});
+
+test('a shopper signup does not announce a new artisan', function () {
+    $response = $this->post(route('login.identify'), ['email' => 'shopper@example.com']);
+    $cookie = $response->getCookie(RegistrationCodeService::COOKIE)->getValue();
+
+    $code = null;
+    Notification::assertSentOnDemand(RegistrationCode::class, function (RegistrationCode $n) use (&$code) {
+        $code = $n->code;
+
+        return true;
+    });
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $code]);
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.details.store'), [
+            'password' => 'Zellige!2026Fes',
+            'password_confirmation' => 'Zellige!2026Fes',
+            'terms_accepted' => true,
+        ]);
+
+    expect(User::firstWhere('email', 'shopper@example.com')?->role)->toBe('buyer');
+    Notification::assertSentOnDemandTimes(NewSellerForAdmin::class, 0);
+});
+
+test('a blank onboarding address silences the announcement', function () {
+    config(['hirfaty.seller_signup_email' => '']);
+
+    [$category, $city] = sellerTaxonomy();
+    ['cookie' => $cookie, 'code' => $code] = startSellerSignup();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $code]);
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.details.store'), sellerDetails($category, $city))
+        ->assertRedirect(route('seller.welcome'));
+
+    Notification::assertSentOnDemandTimes(NewSellerForAdmin::class, 0);
+});
 
 // ── The line that matters ──────────────────────────────────────────────
 

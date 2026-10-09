@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Concerns\GeneratesEmailCodes;
 use App\Models\PendingRegistration;
 use App\Models\User;
+use App\Notifications\NewSellerForAdmin;
 use App\Notifications\RegistrationCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -216,7 +218,7 @@ class RegistrationCodeService
      */
     public function completeSeller(PendingRegistration $pending, array $data): User
     {
-        return DB::transaction(function () use ($pending, $data) {
+        $user = DB::transaction(function () use ($pending, $data) {
             $user = User::create([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
@@ -245,6 +247,35 @@ class RegistrationCodeService
 
             return $user;
         });
+
+        $this->notifyOnboarding($user);
+
+        return $user;
+    }
+
+    /**
+     * Tell the onboarding inbox an artisan has arrived, so someone can call
+     * them — sellers never file their own listings.
+     *
+     * After the transaction rather than inside it, so a rolled-back signup
+     * never announces an account that does not exist. A mail failure is
+     * logged and swallowed: the artisan's account is already made, and an
+     * email to the desk is no reason to show them an error.
+     */
+    private function notifyOnboarding(User $seller): void
+    {
+        $address = config('hirfaty.seller_signup_email');
+
+        if (! $address) {
+            return;
+        }
+
+        try {
+            Notification::route('mail', $address)
+                ->notify(new NewSellerForAdmin($seller->load('store.category', 'store.city')));
+        } catch (\Exception $e) {
+            Log::error('Seller signup notification failed: '.$e->getMessage());
+        }
     }
 
     /**

@@ -19,7 +19,19 @@
  */
 
 use App\Models\Order;
+use App\Models\User;
+use App\Notifications\NewSellerForAdmin;
 use App\Services\LoginCodeService;
+
+/*
+ * The "new artisan" notice to the onboarding inbox — French only, so no
+ * {lang}. Renders the most recent seller, the same way the real one does.
+ */
+Route::get('/preview/email/admin/new-seller', function () {
+    $seller = User::where('role', 'seller')->with('store.category', 'store.city')->latest()->firstOrFail();
+
+    return (new NewSellerForAdmin($seller))->toMail($seller)->render();
+})->middleware(['auth', 'role:super_admin']);
 
 Route::get('/preview/email/order-placed/{lang}', function (string $locale) {
     // A single checkout can span several stores (CheckoutService splits one
