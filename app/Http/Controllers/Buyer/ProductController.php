@@ -4,20 +4,19 @@ namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerProductResource;
-use App\Http\Resources\ProductReviewResource;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\Wishlist;
 use App\Services\NewArrivalsService;
+use App\Services\ProductDetailService;
 use App\Services\ProductScoringService;
 use App\Services\ProductSearchService;
 use App\Services\ReviewService;
 use App\Services\SeoService;
 use App\Services\WishlistService;
 use Auth;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -29,6 +28,7 @@ class ProductController extends Controller
         private ProductSearchService $search,
         private ReviewService $reviews,
         private SeoService $seo,
+        private ProductDetailService $details,
     ) {}
 
     public function index(Request $request)
@@ -183,18 +183,7 @@ class ProductController extends Controller
             // by its slug, so a consumer could open it and add it to the cart
             // through a link, a search engine or a browser's history.
             ->whereIn('visibility', ['both', $audience])
-            ->with([
-                'store.city',
-                'store.user',
-                'category',
-                'images',
-                'videos',
-                // Only sellable variants reach the selector — an inactive one
-                // would render as a pickable option that the cart then refuses.
-                'variants' => fn ($q) => $q->where('is_active', true)->orderBy('position'),
-                'variants.options',
-                'variants.media',
-            ])
+            ->with($this->details->relations())
             ->withCount('wishlists')
             ->firstOrFail();
 
@@ -210,64 +199,14 @@ class ProductController extends Controller
         $reviews = $this->reviews->paginateFor($product);
 
         return Inertia::render('buyer/products/show', [
-            'product' => new BuyerProductResource($product),
+            ...$this->details->props($product, $request),
             'inWishlist' => $inWishlist,
             'inCart' => $inCart,
-            'moreFromStore' => BuyerProductResource::collection($this->moreFromStore($product)),
-            'relatedProducts' => BuyerProductResource::collection($this->relatedProducts($product)),
-            'reviewSummary' => $this->reviews->summaryFor($product),
-            // Merged so "more reviews" appends a page instead of replacing
-            // the list — same contract as the listing's `products`.
-            'reviews' => Inertia::merge(
-                ProductReviewResource::collection($reviews->items())->resolve($request)
-            ),
-            'reviewsPagination' => [
-                'current_page' => $reviews->currentPage(),
-                'has_more' => $reviews->hasMorePages(),
-            ],
         ])->withViewData('seo', fn () => $this->seo->forProduct(
             $product,
             $this->reviews->summaryFor($product),
             $reviews->items(),
         ));
-    }
-
-    /**
-     * Other pieces by the same artisan.
-     *
-     * @return Collection<int, Product>
-     */
-    private function moreFromStore(Product $product)
-    {
-        return Product::storefront()
-            ->where('store_id', $product->store_id)
-            ->where('id', '!=', $product->id)
-            ->with(['images', 'variants.media'])
-            ->latest()
-            ->limit(4)
-            ->get();
-    }
-
-    /**
-     * Fallback row for the bottom of the detail page: same category, different
-     * shop. A store with a single product would otherwise end the page on an
-     * empty "more from this shop" strip.
-     *
-     * @return Collection<int, Product>
-     */
-    private function relatedProducts(Product $product)
-    {
-        return Product::storefront()
-            ->where('id', '!=', $product->id)
-            ->where('store_id', '!=', $product->store_id)
-            ->when(
-                $product->category_id,
-                fn ($q) => $q->where('category_id', $product->category_id),
-            )
-            ->with(['images', 'store', 'variants.media'])
-            ->latest()
-            ->limit(4)
-            ->get();
     }
 
     /**

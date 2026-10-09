@@ -14,6 +14,7 @@ use App\Rules\ValidProductMedia;
 use App\Services\AdminProductListService;
 use App\Services\ProductBulkStatusService;
 use App\Services\ProductDeletionService;
+use App\Services\ProductDetailService;
 use App\Services\ProductShippingService;
 use App\Services\ProductVariantService;
 use App\Services\ReviewService;
@@ -575,6 +576,27 @@ class ProductController extends Controller
                 'complete' => $this->shipping->isComplete($product),
                 'hs_code' => $this->shipping->hsCode($product),
                 'hs_code_inherited' => $product->hs_code === null,
+            ],
+        ]);
+    }
+
+    /**
+     * The real public product page for any product — pending, rejected,
+     * archived, unpriced, or sold by a closed shop — so the desk can check a
+     * listing before it goes live. The banner lists what still keeps it off
+     * the storefront; the basket and wishlist are switched off.
+     */
+    public function preview(Request $request, Product $product, ProductDetailService $details)
+    {
+        $product->load($details->relations())->loadCount('wishlists');
+
+        return Inertia::render('buyer/products/show', [
+            ...$details->props($product, $request),
+            'inWishlist' => false,
+            'inCart' => false,
+            'preview' => [
+                'issues' => $details->previewIssues($product),
+                'back_url' => route('admin.products.show', $product),
             ],
         ]);
     }

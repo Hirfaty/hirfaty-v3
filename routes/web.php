@@ -223,6 +223,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');
         Route::post('/products/{product}', [Admin\ProductController::class, 'update'])->name('products.update');
         Route::get('/products/{product}', [Admin\ProductController::class, 'show'])->name('products.show');
+        // The public product page as a buyer would see it — whatever the status, price or shop.
+        Route::get('/products/{product}/preview', [Admin\ProductController::class, 'preview'])->name('products.preview');
         Route::patch('/products/{product}/approve', [Admin\ProductController::class, 'approve'])->name('products.approve');
         Route::patch('/products/{product}/reject', [Admin\ProductController::class, 'reject'])->name('products.reject');
         Route::patch('/products/{product}/archive', [Admin\ProductController::class, 'archive'])->name('products.archive');

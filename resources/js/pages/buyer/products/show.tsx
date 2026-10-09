@@ -1,9 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
+    ArrowLeft,
     BadgePercent,
     Check,
     CheckCircle2,
     Clock,
+    Eye,
     Hand,
     Heart,
     Home,
@@ -519,6 +521,66 @@ function ProductRow({
     );
 }
 
+/**
+ * Set only by the admin preview (Admin\ProductController::preview): the same
+ * page, rendered for a product the storefront may not show yet.
+ */
+type PreviewInfo = {
+    /** Why the public page would 404 right now; empty when it is live. */
+    issues: string[];
+    back_url: string;
+};
+
+/**
+ * Sticky strip across the top of the admin preview, so it can never be
+ * mistaken for the live page. Admin-only, hence French like the rest of the
+ * admin.
+ */
+function PreviewBanner({ preview }: { preview: PreviewInfo }) {
+    const live = preview.issues.length === 0;
+
+    return (
+        <div
+            className={`sticky top-0 z-50 border-b px-4 py-3 text-sm ${
+                live
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    : 'border-amber-200 bg-amber-50 text-amber-900'
+            }`}
+        >
+            <div className="container flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                    <Eye className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                        <p className="font-semibold">
+                            Aperçu administrateur —{' '}
+                            {live
+                                ? 'ce produit est visible sur le site.'
+                                : 'ce produit n’est pas visible sur le site.'}
+                        </p>
+                        {!live && (
+                            <ul className="mt-1 list-disc ps-5">
+                                {preview.issues.map((issue) => (
+                                    <li key={issue}>{issue}</li>
+                                ))}
+                            </ul>
+                        )}
+                        <p className="mt-1 text-xs opacity-75">
+                            Panier et favoris désactivés dans l’aperçu.
+                        </p>
+                    </div>
+                </div>
+                <Link
+                    href={preview.back_url}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-current/25 bg-white/70 px-3 py-1.5 text-xs font-medium hover:bg-white"
+                >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Retour à l’admin
+                </Link>
+            </div>
+        </div>
+    );
+}
+
 const ProductDetail = ({
     product,
     inWishlist,
@@ -528,6 +590,7 @@ const ProductDetail = ({
     reviewSummary,
     reviews,
     reviewsPagination,
+    preview = null,
 }: {
     product: DetailProduct;
     inWishlist: boolean;
@@ -537,6 +600,7 @@ const ProductDetail = ({
     reviewSummary: ReviewSummary;
     reviews: PublicReview[];
     reviewsPagination: ReviewsPagination;
+    preview?: PreviewInfo | null;
 }) => {
     const { t, locale } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
@@ -735,6 +799,12 @@ const ProductDetail = ({
      * who is shopping, so the basket starts once they have signed in.
      */
     const handleAddToCart = () => {
+        if (preview) {
+            toast.info('Aperçu — l’ajout au panier est désactivé.');
+
+            return;
+        }
+
         if (unavailable || adding) {
             return;
         }
@@ -788,6 +858,12 @@ const ProductDetail = ({
     };
 
     const toggleWishlist = () => {
+        if (preview) {
+            toast.info('Aperçu — les favoris sont désactivés.');
+
+            return;
+        }
+
         // The route is auth-only, so a guest would just get bounced; send them
         // to log in instead of firing a request that cannot succeed.
         if (!auth.user) {
@@ -812,7 +888,8 @@ const ProductDetail = ({
 
     return (
         <div className="min-h-screen bg-souk-paper">
-            <Head title={product.name} />
+            <Head title={preview ? `Aperçu — ${product.name}` : product.name} />
+            {preview && <PreviewBanner preview={preview} />}
             <SiteHeader />
 
             {/*

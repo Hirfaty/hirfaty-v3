@@ -258,14 +258,21 @@ function AdminProductShow({
                     >
                         <Pencil className="h-4 w-4" />
                     </Link>
-                    <Link
-                        href={route('products.show', product.slug)}
+                    {/*
+                     * The admin preview, not the public URL: that one 404s
+                     * until the product is published, priced and its shop
+                     * open — exactly when the desk most needs to look.
+                     */}
+                    <a
+                        href={route('admin.products.preview', product.id)}
                         target="_blank"
-                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:bg-muted hover:text-ink"
-                        title="Voir sur le site"
+                        rel="noopener"
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm text-ink-soft transition hover:bg-muted hover:text-ink"
+                        title="Voir la fiche comme un acheteur"
                     >
                         <SquareArrowOutUpRight className="h-4 w-4" />
-                    </Link>
+                        Aperçu
+                    </a>
                     <button
                         onClick={() => setDeleteOpen(true)}
                         disabled={hasOrders}
