@@ -86,8 +86,8 @@ class AdminOrderListService
                 'Articles',
                 'Total produits (MAD)',
                 'Frais de livraison (MAD)',
-                'Commission Hirfaty (MAD)',
-                'Part artisan (MAD)',
+                // No commission or artisan-share columns: only the CEO deals
+                // with that split for now, so it never leaves in a file.
                 'Transporteur',
                 'N° de suivi',
                 'Livrée le',
@@ -130,8 +130,6 @@ class AdminOrderListService
                 .($item->variant_label ? " ({$item->variant_label})" : ''))->implode('; '),
             (float) $order->total_amount,
             (float) $order->delivery_fee,
-            (float) $order->platform_fee,
-            (float) $order->seller_earnings,
             $order->delivery_service_name ?? '',
             $order->tracking_number ?? '',
             $order->delivered_at?->format('Y-m-d H:i') ?? '',

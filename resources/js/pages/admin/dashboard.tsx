@@ -1,6 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowUpRight,
+    Briefcase,
     CheckCircle2,
     Clock,
     LayoutGrid,
@@ -8,9 +9,12 @@ import {
     Package,
     Settings,
     ShoppingBag,
+    Store,
+    UserPlus,
     Users,
     XCircle,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Area,
@@ -29,9 +33,9 @@ import { formatDate } from '@/lib/utils';
 import type { PageProps, Product, User, UserRole } from '@/types';
 
 /**
- * Order money only. The platform-fee take, payout balances and seller-owed
- * figures were removed on purpose — no screen reports what Hirfaty or an
- * artisan earns for now. The ledger behind them is still written.
+ * Money figures are what buyers paid — products plus delivery, as on the
+ * order page. Hirfaty's commission and the artisan's share are deliberately
+ * not shown to admins for now.
  */
 interface DashboardStats {
     total_orders: number;
@@ -42,13 +46,90 @@ interface DashboardStats {
     total_users: number;
     total_sellers: number;
     total_buyers: number;
+    pending_sellers: number;
+    pending_professional_buyers: number;
 }
 
-interface SalesTrend {
-    total: number;
+type RegistrationPeriod = 'day' | 'week' | 'month' | 'year';
+
+type RegistrationRole = 'all' | 'seller' | 'buyer' | 'professional_buyer';
+
+interface RegistrationBucket {
+    /** First day of the bucket, YYYY-MM-DD — a Monday for weeks. */
+    start: string;
     count: number;
-    month: string;
 }
+
+/** The registration chart, as filtered — see AdminDashboardService::registrations(). */
+interface Registrations {
+    period: RegistrationPeriod;
+    role: RegistrationRole;
+    /** Every account the role filter matches, whenever it signed up. */
+    total: number;
+    trend: RegistrationBucket[];
+}
+
+const REGISTRATION_ROLES: {
+    value: RegistrationRole;
+    label: string;
+    total: string;
+}[] = [
+    { value: 'all', label: 'Tous', total: 'inscrits au total' },
+    { value: 'seller', label: 'Vendeurs', total: 'vendeurs au total' },
+    { value: 'buyer', label: 'Acheteurs', total: 'acheteurs au total' },
+    {
+        value: 'professional_buyer',
+        label: 'Acheteurs pro',
+        total: 'acheteurs pro au total',
+    },
+];
+
+const REGISTRATION_PERIODS: {
+    value: RegistrationPeriod;
+    label: string;
+    axis: Intl.DateTimeFormatOptions;
+    tooltip: Intl.DateTimeFormatOptions;
+}[] = [
+    {
+        value: 'day',
+        label: 'Jour',
+        axis: { day: 'numeric', month: 'short' },
+        tooltip: {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        },
+    },
+    {
+        value: 'week',
+        label: 'Semaine',
+        axis: { day: 'numeric', month: 'short' },
+        tooltip: { day: 'numeric', month: 'long', year: 'numeric' },
+    },
+    {
+        value: 'month',
+        label: 'Mois',
+        axis: { month: 'short', year: '2-digit' },
+        tooltip: { month: 'long', year: 'numeric' },
+    },
+    {
+        value: 'year',
+        label: 'Année',
+        axis: { year: 'numeric' },
+        tooltip: { year: 'numeric' },
+    },
+];
+
+/**
+ * A bucket start is a calendar date, not an instant, so it is read and
+ * printed in UTC — otherwise a browser west of Greenwich would label every
+ * bucket with the day before.
+ */
+const formatBucket = (start: string, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat('fr-FR', { ...options, timeZone: 'UTC' }).format(
+        new Date(`${start}T00:00:00Z`),
+    );
 
 const ROLE_LABEL: Record<UserRole, string> = {
     buyer: 'Acheteur',
@@ -132,20 +213,95 @@ function Stat({
     return href ? <Link href={href}>{content}</Link> : content;
 }
 
+/** A row of mutually exclusive buttons — the registration chart's filters. */
+function Segmented<T extends string>({
+    label,
+    options,
+    value,
+    onChange,
+}: {
+    label: string;
+    options: { value: T; label: string }[];
+    value: T;
+    onChange: (value: T) => void;
+}) {
+    return (
+        <div
+            role="group"
+            aria-label={label}
+            className="inline-flex flex-wrap rounded-lg border border-border bg-muted/30 p-0.5"
+        >
+            {options.map((option) => {
+                const active = option.value === value;
+
+                return (
+                    <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => onChange(option.value)}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                            active
+                                ? 'bg-ink text-white'
+                                : 'text-ink-soft hover:text-ink'
+                        }`}
+                    >
+                        {option.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 const AdminDashboard = ({
     stats,
     latestUsers,
     pendingProducts,
-    salesTrend,
+    registrations,
     health,
 }: PageProps & {
     stats: DashboardStats;
     latestUsers: User[];
     pendingProducts: Product[];
-    salesTrend: SalesTrend[];
+    registrations: Registrations;
     health: HealthReport;
 }) => {
     const { t } = useTranslation();
+    // The filters being fetched, shown as selected straight away so the
+    // buttons do not feel dead while the chart reloads.
+    const [requested, setRequested] = useState<{
+        period: RegistrationPeriod;
+        role: RegistrationRole;
+    } | null>(null);
+    const active = requested ?? {
+        period: registrations.period,
+        role: registrations.role,
+    };
+    const period =
+        REGISTRATION_PERIODS.find((p) => p.value === registrations.period) ??
+        REGISTRATION_PERIODS[2];
+    const role =
+        REGISTRATION_ROLES.find((r) => r.value === registrations.role) ??
+        REGISTRATION_ROLES[0];
+
+    const filterRegistrations = (
+        next: Partial<{ period: RegistrationPeriod; role: RegistrationRole }>,
+    ) => {
+        const target = { ...active, ...next };
+
+        if (target.period === active.period && target.role === active.role) {
+            return;
+        }
+
+        // Only the chart's prop — the rest of the dashboard is left as is.
+        router.reload({
+            data: target,
+            only: ['registrations'],
+            onStart: () => setRequested(target),
+            onFinish: () => setRequested(null),
+        });
+    };
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('fr-MA', {
             style: 'currency',
@@ -192,8 +348,8 @@ const AdminDashboard = ({
                 />
             </div>
 
-            {/* ── Activity ─────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {/* ── Activity, then the review queues ─────────── */}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <Stat
                     label="Commandes"
                     value={stats.total_orders}
@@ -220,6 +376,26 @@ const AdminDashboard = ({
                         status: 'pending_review',
                     })}
                 />
+                <Stat
+                    label="Vendeurs en attente"
+                    value={stats.pending_sellers}
+                    icon={Store}
+                    tone={stats.pending_sellers > 0 ? 'warning' : 'default'}
+                    href={route('admin.stores.index', { status: 'pending' })}
+                />
+                <Stat
+                    label="Acheteurs pro en attente"
+                    value={stats.pending_professional_buyers}
+                    icon={Briefcase}
+                    tone={
+                        stats.pending_professional_buyers > 0
+                            ? 'warning'
+                            : 'default'
+                    }
+                    href={route('admin.users.index', {
+                        professional_request_status: 'pending',
+                    })}
+                />
             </div>
 
             {/*
@@ -230,23 +406,45 @@ const AdminDashboard = ({
             */}
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                {/* ── Sales trend chart ──────────────────────── */}
+                {/* ── Registrations chart ────────────────────── */}
                 <div className="lg:col-span-8">
-                    <Card title="Évolution des ventes">
-                        {/* One series now — the "Commission plateforme" swatch
-                            that sat beside it is gone with the series it
-                            labelled. */}
-                        <div className="flex items-center gap-4 border-b border-border px-5 py-3">
-                            <div className="flex items-center gap-1.5">
-                                <div className="h-2 w-2 rounded-full bg-terracotta" />
-                                <span className="text-xs font-medium text-ink-soft">
-                                    Montant des commandes
-                                </span>
-                            </div>
+                    <Card
+                        title="Évolution des inscriptions"
+                        icon={UserPlus}
+                        action={
+                            <span className="text-xs text-ink-soft">
+                                <span className="font-semibold text-ink">
+                                    {registrations.total}
+                                </span>{' '}
+                                {role.total}
+                            </span>
+                        }
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+                            <Segmented
+                                label="Type de compte"
+                                options={REGISTRATION_ROLES}
+                                value={active.role}
+                                onChange={(next) =>
+                                    filterRegistrations({ role: next })
+                                }
+                            />
+                            <Segmented
+                                label="Période"
+                                options={REGISTRATION_PERIODS}
+                                value={active.period}
+                                onChange={(next) =>
+                                    filterRegistrations({ period: next })
+                                }
+                            />
                         </div>
-                        <div className="h-[300px] w-full p-5">
+                        <div
+                            className={`h-[300px] w-full p-5 transition-opacity ${
+                                requested ? 'opacity-50' : ''
+                            }`}
+                        >
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={salesTrend}>
+                                <AreaChart data={registrations.trend}>
                                     <defs>
                                         <linearGradient
                                             id="colorTotal"
@@ -273,7 +471,11 @@ const AdminDashboard = ({
                                         stroke="oklch(91% 0.004 255)"
                                     />
                                     <XAxis
-                                        dataKey="month"
+                                        dataKey="start"
+                                        tickFormatter={(start: string) =>
+                                            formatBucket(start, period.axis)
+                                        }
+                                        minTickGap={16}
                                         axisLine={false}
                                         tickLine={false}
                                         style={{
@@ -284,6 +486,7 @@ const AdminDashboard = ({
                                         dy={10}
                                     />
                                     <YAxis
+                                        allowDecimals={false}
                                         axisLine={false}
                                         tickLine={false}
                                         style={{
@@ -293,9 +496,16 @@ const AdminDashboard = ({
                                         }}
                                     />
                                     <Tooltip
-                                        formatter={(value) =>
-                                            formatCurrency(Number(value))
-                                        }
+                                        labelFormatter={(start) => {
+                                            const label = formatBucket(
+                                                String(start),
+                                                period.tooltip,
+                                            );
+
+                                            return period.value === 'week'
+                                                ? `Semaine du ${label}`
+                                                : label;
+                                        }}
                                         contentStyle={{
                                             backgroundColor: CHART_INK,
                                             border: 'none',
@@ -305,16 +515,14 @@ const AdminDashboard = ({
                                         itemStyle={{ color: '#fff' }}
                                         labelStyle={{ color: '#fff' }}
                                     />
-                                    {/*
-                                        One series: order value. The
-                                        "Commission" area that used to sit
-                                        alongside it is gone — the platform's
-                                        take is not plotted anywhere for now.
-                                    */}
                                     <Area
                                         type="monotone"
-                                        dataKey="total"
-                                        name="Ventes"
+                                        dataKey="count"
+                                        name={
+                                            role.value === 'all'
+                                                ? 'Inscrits'
+                                                : role.label
+                                        }
                                         stroke={CHART_TERRACOTTA}
                                         strokeWidth={2}
                                         fillOpacity={1}

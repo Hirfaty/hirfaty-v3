@@ -136,7 +136,7 @@ function exportStore(string $name = 'Atelier Fès'): Store
     ]);
 }
 
-test('the orders export has one row per parcel, with the money split and the items', function () {
+test('the orders export has one row per parcel, with what the buyer paid and the items', function () {
     $store = exportStore();
     $buyer = User::factory()->create(['role' => 'buyer', 'first_name' => 'Salma', 'last_name' => 'Bennani']);
     $product = Product::create(['store_id' => $store->id, 'name' => 'Tajine bleu', 'slug' => 'tajine-bleu', 'base_price' => 250, 'stock' => 4, 'status' => 'published']);
@@ -166,7 +166,15 @@ test('the orders export has one row per parcel, with the money split and the ite
 
     expect($rows)->toHaveCount(2)
         ->and($rows[1][1])->toBe($order->fresh()->reference)
-        ->and($rows[1])->toContain('Expédiée', 'Salma Bennani', '+212 600000000', 'Atelier Fès', '2 × Tajine bleu (Grand)', '500', '40', '100', '400', 'AM123456MA');
+        ->and($rows[1])->toContain('Expédiée', 'Salma Bennani', '+212 600000000', 'Atelier Fès', '2 × Tajine bleu (Grand)', '500', '40', 'AM123456MA')
+        // Hirfaty's commission and the artisan's share stay out of the file.
+        // (one value per call: a negated multi-value toContain() passes as soon
+        // as any one of them is missing)
+        ->and($rows[0])->not->toContain('Commission Hirfaty (MAD)')
+        ->and($rows[0])->not->toContain('Part artisan (MAD)')
+        ->and($rows[1])->not->toContain('100')
+        ->and($rows[1])->not->toContain('400')
+        ->and($rows[1])->toHaveCount(count($rows[0]));
 });
 
 // ── Stores ──────────────────────────────────────────────────────────────────
