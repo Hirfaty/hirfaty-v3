@@ -450,7 +450,7 @@ function AdminProducts({
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Nom du produit ou boutique…"
+                        placeholder="Nom du produit, SKU ou boutique…"
                         className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                     />
                 </div>
@@ -537,6 +537,7 @@ function AdminProducts({
                                         />
                                     </th>
                                     <th className="px-5 py-3">Produit</th>
+                                    <th className="px-5 py-3">SKU</th>
                                     <th className="px-5 py-3">Catégorie</th>
                                     <th className="px-5 py-3">Boutique</th>
                                     <th className="px-5 py-3">Date</th>
@@ -579,6 +580,9 @@ function AdminProducts({
                                                     #{p.id}
                                                 </p>
                                             </td>
+                                            <td className="px-5 py-3 font-mono text-xs whitespace-nowrap text-ink-soft">
+                                                {p.sku ?? '—'}
+                                            </td>
                                             <td className="px-5 py-3 text-ink-soft">
                                                 {p.category?.translated_name ??
                                                     '—'}
@@ -614,7 +618,7 @@ function AdminProducts({
                                 {products.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={7}
+                                            colSpan={8}
                                             className="px-5 py-10 text-center text-ink-soft"
                                         >
                                             Aucun produit trouvé.
@@ -690,6 +694,15 @@ function AdminProducts({
                                 </div>
 
                                 <div className="space-y-4 p-5">
+                                    <div>
+                                        <p className="text-xs font-medium text-ink-soft">
+                                            Référence (SKU)
+                                        </p>
+                                        <p className="mt-1 font-mono text-sm text-ink">
+                                            {selected.sku ?? '—'}
+                                        </p>
+                                    </div>
+
                                     <div>
                                         <p className="text-xs font-medium text-ink-soft">
                                             Description

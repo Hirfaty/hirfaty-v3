@@ -3,6 +3,7 @@
 use App\Models\Category;
 use App\Models\City;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -97,6 +98,41 @@ test('search matches the product name or the seller shop name', function () {
             fn ($page) => $page
                 ->has('products.data', 1)
                 ->where('products.data.0.name', 'Plateau')
+        );
+});
+
+test('each row carries its sku for the table and the review panel', function () {
+    makeProduct('Tapis Berbère', 'published', $this->store->id, $this->tapis->id)
+        ->update(['sku' => 'TAP-001']);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.index'))
+        ->assertInertia(
+            fn ($page) => $page->where('products.data.0.sku', 'TAP-001')
+        );
+});
+
+test('search matches the product sku or one of its variant skus', function () {
+    makeProduct('Tapis Berbère', 'published', $this->store->id, $this->tapis->id)
+        ->update(['sku' => 'TAP-001']);
+    $babouches = makeProduct('Babouches', 'published', $this->store->id, $this->tapis->id);
+    ProductVariant::create(['product_id' => $babouches->id, 'sku' => 'BAB-RED-40', 'stock' => 1]);
+    makeProduct('Vase en terre', 'published', $this->store->id, $this->potterie->id);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.index', ['search' => 'TAP-001']))
+        ->assertInertia(
+            fn ($page) => $page
+                ->has('products.data', 1)
+                ->where('products.data.0.name', 'Tapis Berbère')
+        );
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.index', ['search' => 'BAB-RED']))
+        ->assertInertia(
+            fn ($page) => $page
+                ->has('products.data', 1)
+                ->where('products.data.0.name', 'Babouches')
         );
 });
 

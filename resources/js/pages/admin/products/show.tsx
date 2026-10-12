@@ -93,7 +93,8 @@ interface AdminProductShowProps {
         hs_code_inherited: boolean;
     };
     product: Product & {
-        store: Store & { user: User };
+        /** Null when the owner's account no longer exists. */
+        store: Store & { user: User | null };
         category: Category;
         media: Media[];
         // The controller always eager-loads orderItems.order for this page,
@@ -371,7 +372,12 @@ function AdminProductShow({
                                 </p>
                             </Field>
 
-                            <div className="grid grid-cols-2 gap-5">
+                            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+                                <Field label="Référence (SKU)">
+                                    <span className="font-mono">
+                                        {product.sku ?? '—'}
+                                    </span>
+                                </Field>
                                 <Field label="Catégorie">
                                     {product.category?.translated_name ||
                                         'Non catégorisé'}
@@ -783,13 +789,21 @@ function AdminProductShow({
                                 {product.store.store_name}
                             </Field>
                             <Field label="Propriétaire">
-                                <p>
-                                    {product.store.user.first_name}{' '}
-                                    {product.store.user.last_name}
-                                </p>
-                                <p className="text-xs text-ink-soft">
-                                    {product.store.user.email}
-                                </p>
+                                {product.store.user ? (
+                                    <>
+                                        <p>
+                                            {product.store.user.first_name}{' '}
+                                            {product.store.user.last_name}
+                                        </p>
+                                        <p className="text-xs text-ink-soft">
+                                            {product.store.user.email}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <span className="text-ink-soft">
+                                        Compte supprimé
+                                    </span>
+                                )}
                             </Field>
                             <Field label="Ville">
                                 {product.store.city?.name || 'Non renseignée'}

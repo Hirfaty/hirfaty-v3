@@ -47,6 +47,8 @@ class AdminProductListService
         return Product::query()
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhereHas('variants', fn ($q) => $q->where('sku', 'like', "%{$search}%"))
                     ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
             }))
             ->when($filters['category_id'] ?? null, fn ($query, $category) => $query->where('category_id', $category))
