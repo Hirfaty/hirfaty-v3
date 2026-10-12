@@ -15,6 +15,7 @@ import {
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import ProductDescription from '@/components/product-description';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -366,10 +367,16 @@ function AdminProductShow({
                     <Card title="Détails du produit">
                         <div className="space-y-5 p-5">
                             <Field label="Description">
-                                <p className="leading-relaxed">
-                                    {product.description ||
-                                        'Aucune description fournie.'}
-                                </p>
+                                {product.description ? (
+                                    <ProductDescription
+                                        html={product.description}
+                                        className="leading-relaxed"
+                                    />
+                                ) : (
+                                    <p className="text-ink-soft">
+                                        Aucune description fournie.
+                                    </p>
+                                )}
                             </Field>
 
                             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">

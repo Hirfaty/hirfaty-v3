@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import ExportMenu from '@/components/admin/export-menu';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import ProductDescription from '@/components/product-description';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -707,10 +708,16 @@ function AdminProducts({
                                         <p className="text-xs font-medium text-ink-soft">
                                             Description
                                         </p>
-                                        <p className="mt-1 text-sm leading-relaxed text-ink">
-                                            {selected.description ||
-                                                'Aucune description.'}
-                                        </p>
+                                        {selected.description ? (
+                                            <ProductDescription
+                                                html={selected.description}
+                                                className="mt-1 text-sm leading-relaxed text-ink"
+                                            />
+                                        ) : (
+                                            <p className="mt-1 text-sm text-ink-soft">
+                                                Aucune description.
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">

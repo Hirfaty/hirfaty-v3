@@ -12,6 +12,7 @@ use App\Notifications\ProductApproved;
 use App\Notifications\ProductRejected;
 use App\Rules\ValidProductMedia;
 use App\Services\AdminProductListService;
+use App\Services\HtmlSanitizer;
 use App\Services\ProductBulkStatusService;
 use App\Services\ProductDeletionService;
 use App\Services\ProductDetailService;
@@ -33,6 +34,7 @@ class ProductController extends Controller
     public function __construct(
         private readonly ProductShippingService $shipping,
         private readonly ProductVariantService $variants,
+        private readonly HtmlSanitizer $sanitizer,
     ) {}
 
     public function index(Request $request, AdminProductListService $list)
@@ -126,7 +128,8 @@ class ProductController extends Controller
                 'slug' => Str::slug($data['name']).'-'.Str::random(5),
                 // Blank strings become null so the unique index stays usable.
                 'sku' => ($data['sku'] ?? null) ?: null,
-                'description' => $data['description'] ?? null,
+                // Editor HTML, cut down to the allowlist before it is stored.
+                'description' => $this->sanitizer->cleanProse($data['description'] ?? null),
 
                 // Retail price list. NULL means "not priced yet", which is not
                 // the same as 0 (free) — an unpriced product stays off the
@@ -196,7 +199,8 @@ class ProductController extends Controller
                 'name' => $data['name'],
                 // Blank strings become null so the unique index stays usable.
                 'sku' => ($data['sku'] ?? null) ?: null,
-                'description' => $data['description'] ?? null,
+                // Editor HTML, cut down to the allowlist before it is stored.
+                'description' => $this->sanitizer->cleanProse($data['description'] ?? null),
                 // See store(): NULL is "not priced yet", not free.
                 'base_price' => $data['base_price'] ?? null,
                 'sale_price' => $data['sale_price'] ?? null,

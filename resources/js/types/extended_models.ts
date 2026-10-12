@@ -81,6 +81,8 @@ export type BuyerProductResource = Omit<
     // would produce a variant type satisfiable by neither.
     | 'variants'
 > & {
+    /** The description as plain text, one line per paragraph — for cards. */
+    description_text: string | null;
     images: Media[];
     /**
      * Own images plus every variant's, deduplicated — present only when the

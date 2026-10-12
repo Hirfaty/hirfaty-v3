@@ -37,6 +37,7 @@ import type {
 import TaxIncluded from '@/components/buyer/TaxIncluded';
 import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import ProductDescription from '@/components/product-description';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCartSheet } from '@/contexts/CartSheetContext';
@@ -1055,9 +1056,10 @@ const ProductDetail = ({
                     )}
 
                     {product.description && (
-                        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-souk-brown-deep/80">
-                            {product.description}
-                        </p>
+                        <ProductDescription
+                            html={product.description}
+                            className="mt-4 max-w-xl text-[15px] leading-relaxed text-souk-brown-deep/80"
+                        />
                     )}
 
                     {/* Price, with availability opposite it. */}
@@ -1376,7 +1378,7 @@ const ProductDetail = ({
                             )}
                         </div>
                         {product.store.description && (
-                            <p className="mt-4 text-[13px] leading-relaxed text-souk-brown-deep/70">
+                            <p className="mt-4 text-[13px] leading-relaxed whitespace-pre-line text-souk-brown-deep/70">
                                 {product.store.description}
                             </p>
                         )}

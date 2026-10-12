@@ -37,10 +37,16 @@ interface RichTextEditorProps {
      * Endpoint that accepts an `image` file and answers `{ url }`. Images are
      * uploaded the moment they are dropped rather than with the form, because
      * the document needs a real src to render immediately — see
-     * Admin\BlogController::uploadImage.
+     * Admin\BlogController::uploadImage. Without one, images are not offered.
      */
-    uploadUrl: string;
+    uploadUrl?: string;
     placeholder?: string;
+    /**
+     * `article` is the full blog toolkit. `description` is text only — no
+     * images, code or separators — and keeps every line and space exactly as
+     * typed: one Enter is one new line, as on the product page.
+     */
+    variant?: 'article' | 'description';
     className?: string;
     /**
      * Report the editor's own HTML for `value` as soon as it mounts. For
@@ -58,7 +64,10 @@ export function RichTextEditor({
     placeholder = 'Écrivez votre article…',
     className,
     reportInitialHtml = false,
+    variant = 'article',
 }: RichTextEditorProps) {
+    const isDescription = variant === 'description';
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -67,8 +76,14 @@ export function RichTextEditor({
         extensions: [
             StarterKit.configure({
                 // Reserved for the post's own title field, so the body starts
-                // at h2 and the page keeps a single h1.
-                heading: { levels: [2, 3, 4] },
+                // at h2 and the page keeps a single h1. A description sits
+                // under the product's own heading, so it gets h3 only.
+                heading: { levels: isDescription ? [3] : [2, 3, 4] },
+                ...(isDescription && {
+                    code: false,
+                    codeBlock: false,
+                    horizontalRule: false,
+                }),
                 link: {
                     openOnClick: false,
                     autolink: true,
@@ -78,21 +93,32 @@ export function RichTextEditor({
                     protocols: ['http', 'https', 'mailto'],
                 },
             }),
-            Image.configure({
-                // Uploaded files only. Base64 would inline megabytes of image
-                // data into the content column on every paste.
-                allowBase64: false,
-            }),
+            ...(uploadUrl
+                ? [
+                      Image.configure({
+                          // Uploaded files only. Base64 would inline megabytes
+                          // of image data into the content column on every paste.
+                          allowBase64: false,
+                      }),
+                  ]
+                : []),
             TextAlign.configure({ types: ['heading', 'paragraph'] }),
             Placeholder.configure({ placeholder }),
         ],
         content: value,
+        // HTML collapses runs of spaces when it is parsed; a description must
+        // reload with the spacing it was saved with.
+        ...(isDescription && {
+            parseOptions: { preserveWhitespace: 'full' as const },
+        }),
         // Vite pre-renders pages for SSR (npm run build:ssr); without this
         // Tiptap warns about a hydration mismatch on every mount.
         immediatelyRender: false,
         editorProps: {
             attributes: {
-                class: cn('blog-article px-5 py-4'),
+                class: isDescription
+                    ? 'product-description px-4 py-3'
+                    : 'blog-article px-5 py-4',
             },
             handlePaste: (_view, event) => handleImageEvent(event.clipboardData),
             handleDrop: (_view, event) => handleImageEvent(event.dataTransfer),
@@ -110,6 +136,10 @@ export function RichTextEditor({
      * image was found, so ProseMirror keeps its default handling for text.
      */
     function handleImageEvent(data: DataTransfer | null): boolean {
+        if (!uploadUrl) {
+            return false;
+        }
+
         const file = Array.from(data?.files ?? []).find((f) =>
             f.type.startsWith('image/'),
         );
@@ -124,6 +154,10 @@ export function RichTextEditor({
     }
 
     async function upload(file: File) {
+        if (!uploadUrl) {
+            return;
+        }
+
         if (file.size > MAX_EDITOR_IMAGE_BYTES) {
             setError('Image trop lourde — 4 Mo maximum.');
 
@@ -189,6 +223,8 @@ export function RichTextEditor({
         >
             <Toolbar
                 editor={editor}
+                variant={variant}
+                canUpload={Boolean(uploadUrl)}
                 uploading={uploading}
                 onPickImage={() => fileInputRef.current?.click()}
                 onLink={promptForLink}
@@ -225,11 +261,15 @@ export function RichTextEditor({
 
 function Toolbar({
     editor,
+    variant,
+    canUpload,
     uploading,
     onPickImage,
     onLink,
 }: {
     editor: Editor;
+    variant: 'article' | 'description';
+    canUpload: boolean;
     uploading: boolean;
     onPickImage: () => void;
     onLink: () => void;
@@ -240,6 +280,7 @@ function Toolbar({
      * editor.isActive() straight in render would leave the buttons stuck on
      * whatever they showed at mount.
      */
+    const isDescription = variant === 'description';
     const state = useEditorState({
         editor,
         selector: ({ editor }) => ({
@@ -303,17 +344,19 @@ function Toolbar({
 
             <Divider />
 
+            {!isDescription && (
+                <ToolbarButton
+                    label="Titre"
+                    active={state.h2}
+                    onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 2 }).run()
+                    }
+                >
+                    <Heading2 className="h-4 w-4" />
+                </ToolbarButton>
+            )}
             <ToolbarButton
-                label="Titre"
-                active={state.h2}
-                onClick={() =>
-                    editor.chain().focus().toggleHeading({ level: 2 }).run()
-                }
-            >
-                <Heading2 className="h-4 w-4" />
-            </ToolbarButton>
-            <ToolbarButton
-                label="Sous-titre"
+                label={isDescription ? 'Titre' : 'Sous-titre'}
                 active={state.h3}
                 onClick={() =>
                     editor.chain().focus().toggleHeading({ level: 3 }).run()
@@ -345,13 +388,17 @@ function Toolbar({
             >
                 <Quote className="h-4 w-4" />
             </ToolbarButton>
-            <ToolbarButton
-                label="Bloc de code"
-                active={state.codeBlock}
-                onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            >
-                <Code2 className="h-4 w-4" />
-            </ToolbarButton>
+            {!isDescription && (
+                <ToolbarButton
+                    label="Bloc de code"
+                    active={state.codeBlock}
+                    onClick={() =>
+                        editor.chain().focus().toggleCodeBlock().run()
+                    }
+                >
+                    <Code2 className="h-4 w-4" />
+                </ToolbarButton>
+            )}
 
             <Divider />
 
@@ -397,23 +444,29 @@ function Toolbar({
             >
                 <Link2Off className="h-4 w-4" />
             </ToolbarButton>
-            <ToolbarButton
-                label="Insérer une image"
-                disabled={uploading}
-                onClick={onPickImage}
-            >
-                {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                    <ImagePlus className="h-4 w-4" />
-                )}
-            </ToolbarButton>
-            <ToolbarButton
-                label="Séparateur"
-                onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            >
-                <Minus className="h-4 w-4" />
-            </ToolbarButton>
+            {canUpload && (
+                <ToolbarButton
+                    label="Insérer une image"
+                    disabled={uploading}
+                    onClick={onPickImage}
+                >
+                    {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <ImagePlus className="h-4 w-4" />
+                    )}
+                </ToolbarButton>
+            )}
+            {!isDescription && (
+                <ToolbarButton
+                    label="Séparateur"
+                    onClick={() =>
+                        editor.chain().focus().setHorizontalRule().run()
+                    }
+                >
+                    <Minus className="h-4 w-4" />
+                </ToolbarButton>
+            )}
 
             <Divider />
 

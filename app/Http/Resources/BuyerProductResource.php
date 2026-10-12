@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Product;
+use App\Services\HtmlSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,7 +28,9 @@ class BuyerProductResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'slug' => $this->slug,
+            // Sanitised editor HTML, for the product page; cards show the text.
             'description' => $this->description,
+            'description_text' => HtmlSanitizer::toText($this->description),
 
             // Retail list — what every audience is billed today.
             'base_price' => $this->base_price,

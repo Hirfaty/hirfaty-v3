@@ -1,5 +1,6 @@
 ﻿import { Head, Link } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, Package } from 'lucide-react';
+import ProductDescription from '@/components/product-description';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -79,10 +80,16 @@ function SellerProductPreview({
                     <h1 className="mt-4 font-display text-4xl leading-tight md:text-5xl lg:text-6xl">
                         {product.name}
                     </h1>
-                    <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
-                        {product.description ||
-                            'Aucune description disponible pour ce produit.'}
-                    </p>
+                    {product.description ? (
+                        <ProductDescription
+                            html={product.description}
+                            className="mt-4 max-w-2xl leading-relaxed text-muted-foreground"
+                        />
+                    ) : (
+                        <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">
+                            Aucune description disponible pour ce produit.
+                        </p>
+                    )}
                 </div>
                 {/* No "Modifier": listings are maintained by the Hirfaty
                     team, so this page is a read-only record of the piece. */}
@@ -230,10 +237,16 @@ function SellerProductPreview({
                                 <p className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                                     Description
                                 </p>
-                                <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
-                                    {product.description ||
-                                        'Aucune description renseignée.'}
-                                </p>
+                                {product.description ? (
+                                    <ProductDescription
+                                        html={product.description}
+                                        className="mt-3 text-sm leading-relaxed text-muted-foreground"
+                                    />
+                                ) : (
+                                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                                        Aucune description renseignée.
+                                    </p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

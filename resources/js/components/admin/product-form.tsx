@@ -11,6 +11,7 @@ import type {
 } from '@/components/admin/product-media-input';
 import VariantBuilder from '@/components/admin/variant-builder';
 import type { VariantDraft } from '@/components/admin/variant-builder';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
 import type {
     Category,
@@ -507,15 +508,16 @@ export default function ProductForm({
                                 <Field
                                     label="Description"
                                     error={errors.description}
+                                    hint="Affichée telle quelle sur la fiche : retours à la ligne, espaces et mise en forme compris."
                                 >
-                                    <textarea
-                                        rows={5}
+                                    <RichTextEditor
+                                        variant="description"
                                         value={data.description}
-                                        onChange={(e) =>
-                                            set('description', e.target.value)
+                                        onChange={(html) =>
+                                            set('description', html)
                                         }
                                         placeholder="Matière, dimensions, savoir-faire…"
-                                        className={INPUT}
+                                        className="shadow-sm"
                                     />
                                 </Field>
                             </div>

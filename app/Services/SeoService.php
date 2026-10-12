@@ -421,7 +421,9 @@ class SeoService
     /** Plain text, single-spaced, cut on a word boundary. */
     private function clean(?string $text, int $limit = 160): string
     {
-        $plain = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        // toText() first, so paragraphs end in a space rather than gluing
+        // the last word of one onto the first of the next.
+        $plain = trim(preg_replace('/\s+/u', ' ', (string) HtmlSanitizer::toText($text)));
 
         return Str::limit($plain, $limit - 1, '…', preserveWords: true);
     }

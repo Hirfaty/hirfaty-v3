@@ -726,7 +726,7 @@ const ShowSeller = ({
                                 </span>
                             </div>
 
-                            <p className="text-sm leading-relaxed text-ink-soft">
+                            <p className="text-sm leading-relaxed whitespace-pre-line text-ink-soft">
                                 {user.store?.description ||
                                     'Aucune description fournie.'}
                             </p>

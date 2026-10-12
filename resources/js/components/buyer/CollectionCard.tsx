@@ -245,9 +245,9 @@ export function CollectionCard({
                     line-clamp` declaration inert. `line-clamp-3` already sets
                     its own non-`none` display, so it needs no help clearing
                     `hidden`. */}
-                {product.description && (
+                {product.description_text && (
                     <p className="mt-2 hidden text-xs leading-relaxed text-souk-brown-deep/75 sm:line-clamp-3">
-                        {product.description}
+                        {product.description_text}
                     </p>
                 )}
 

@@ -16,7 +16,10 @@ export type ListingProduct = {
     id: number;
     name: string;
     slug: string;
+    /** Sanitised editor HTML — render with ProductDescription. */
     description: string | null;
+    /** The same, as plain text, for snippets that cannot render markup. */
+    description_text: string | null;
     /**
      * Always present in practice: `Product::scopeStorefront()` excludes an
      * unpriced product from every buyer-facing query, so a card is never

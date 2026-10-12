@@ -98,6 +98,33 @@ class HtmlSanitizer
     }
 
     /**
+     * clean(), but null when nothing readable is left: the editor's empty
+     * document is `<p></p>`, which is markup, not content.
+     */
+    public function cleanProse(?string $html): ?string
+    {
+        $clean = $this->clean($html);
+
+        return self::toText($clean) === null ? null : $clean;
+    }
+
+    /**
+     * Editor HTML as plain text, one line per paragraph, list item or <br> —
+     * for places that cannot render markup (a card snippet, a meta tag).
+     */
+    public static function toText(?string $html): ?string
+    {
+        if ($html === null) {
+            return null;
+        }
+
+        $text = preg_replace('#<br\s*/?>|</(p|li|h[1-6]|blockquote|pre|div)>#i', "\n", $html);
+        $text = html_entity_decode(strip_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return preg_match('/\S/u', str_replace("\u{00A0}", ' ', $text)) === 1 ? rtrim($text) : null;
+    }
+
+    /**
      * Walk a snapshot of the children — the live NodeList shifts underneath us
      * as disallowed elements are unwrapped or removed.
      */

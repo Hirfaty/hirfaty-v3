@@ -202,7 +202,7 @@ export default function StoreShow({
                     </div>
 
                     {store.description && (
-                        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-souk-brown-deep/80">
+                        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed whitespace-pre-line text-souk-brown-deep/80">
                             {store.description}
                         </p>
                     )}
