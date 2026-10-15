@@ -69,6 +69,16 @@
         <env name="PAYZONE_PAYWALL_URL" value="https://payment-sandbox.payzone.ma/pwv4/launch"/>
         <env name="PAYZONE_CALLBACK_BASE_URL" value=""/>
         <!--
+            PayPal off, whatever the developer's .env holds, so checkout offers
+            card alone unless a test switches PayPal on — and nothing ever
+            reaches PayPal: its tests fake the API with Http::fake().
+        -->
+        <env name="PAYPAL_MODE" value="sandbox"/>
+        <env name="PAYPAL_CLIENT_ID" value=""/>
+        <env name="PAYPAL_CLIENT_SECRET" value=""/>
+        <env name="PAYPAL_WEBHOOK_ID" value=""/>
+        <env name="PAYPAL_CURRENCY" value="EUR"/>
+        <!--
             Currency lookups are off by default under test. Both services call
             out to the network, and the display currency is resolved on every
             page that renders a price — left on, the suite would make a live

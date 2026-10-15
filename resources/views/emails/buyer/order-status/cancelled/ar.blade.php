@@ -2,6 +2,8 @@
 @php
     $first = $orders->first();
     $many = $orders->count() > 1;
+    // The desk's picked reasons in this language, then any words of its own.
+    $reasons = \App\Services\OrderCancellationService::describe($first, 'ar');
 @endphp
 
 <x-mail.layout
@@ -24,7 +26,11 @@
             مرحباً {{ $user->first_name }}، تم إلغاء طلبك {{ $reference }} من
             {{ $first->store->store_name }}.
         @endif
-        @if ($first->isPaidByCard())
+        @if ($first->wasPaidOnline() && $first->cancellation_refund === false)
+            لا يترتّب على هذا الإلغاء أي استرداد للمبلغ.
+        @elseif ($first->wasPaidOnline() && $first->payment_method === \App\Models\Order::PAYMENT_PAYPAL)
+            سيُرَدّ إليك المبلغ المدفوع عبر PayPal إلى حسابك على PayPal.
+        @elseif ($first->wasPaidOnline())
             سيُرَدّ إليك المبلغ المدفوع بالبطاقة على البطاقة نفسها.
         @else
             لم يُخصم منك أي مبلغ — الدفع يتم عند الاستلام.
@@ -47,9 +53,11 @@
         @endforeach
     @endif
 
-    @if ($first->cancellation_reason)
+    @if ($reasons !== [])
         <x-mail.note tone="danger" title="السبب المذكور">
-            {{ $first->cancellation_reason }}
+            @foreach ($reasons as $reason)
+                {{ $reason }}@if (! $loop->last)<br>@endif
+            @endforeach
         </x-mail.note>
     @endif
 

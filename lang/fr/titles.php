@@ -39,6 +39,7 @@ return [
     'admin.categories' => 'Catégories',
     'admin.cities' => 'Villes',
     'admin.delivery_rates' => 'Tarifs de livraison',
+    'admin.invoices' => 'Factures',
     'admin.newsletter' => 'Abonnés à la newsletter',
     'admin.orders' => 'Achats',
     'admin.notifications' => 'Notifications',

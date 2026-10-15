@@ -42,9 +42,11 @@
         <x-mail.row label="Order number" :value="$reference" />
         <x-mail.row label="Date" :value="$first->created_at->format('d/m/Y H:i')" />
         <x-mail.row label="Delivery to" :value="$first->shipping_address" />
-        {{-- Only ever sent once the card payment has gone through
+        {{-- Only ever sent once the online payment has gone through
              (PaymentService) — nothing is left to pay at the door. --}}
-        <x-mail.row label="Payment" value="Paid by card" />
+        <x-mail.row label="Payment" :value="$first->payment_method === \App\Models\Order::PAYMENT_PAYPAL
+            ? 'Paid with PayPal'
+            : 'Paid by card'" />
     </x-mail.panel>
 
     {{-- One block per workshop, so a purchase spanning several sellers still

@@ -199,12 +199,19 @@ class AdminNotificationService
             ? route('admin.orders.show', $data['order_reference'])
             : route('admin.orders.index');
 
+        // Rows from before PayPal carry neither key: Payzone, in dirhams.
+        $paypal = ($data['provider'] ?? 'payzone') === 'paypal';
+
         return [
-            trim('Remboursement carte à faire — '.($data['reference'] ?? '')),
+            trim(($paypal ? 'Remboursement PayPal à faire — ' : 'Remboursement carte à faire — ').($data['reference'] ?? '')),
             implode(' · ', array_filter([
-                $amount.' MAD',
+                $amount.' '.($data['currency'] ?? 'MAD'),
                 $data['reason'] ?? null,
-                isset($data['charge_id']) ? 'Payzone '.$data['charge_id'] : null,
+                match (true) {
+                    $paypal => 'PayPal '.($data['transaction_id'] ?? $data['charge_id'] ?? ''),
+                    isset($data['charge_id']) => 'Payzone '.$data['charge_id'],
+                    default => null,
+                },
             ])),
             $url,
         ];

@@ -13,6 +13,7 @@ use App\Services\AdminUserListService;
 use App\Services\ProfessionalAccountService;
 use App\Services\SpreadsheetExportService;
 use App\Services\StoreImageService;
+use App\Services\UserNoteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -369,7 +370,7 @@ class UserController extends Controller
         return $list->export($data['format'], $data);
     }
 
-    public function show(User $user)
+    public function show(User $user, UserNoteService $notes)
     {
         if ($user->role === 'seller') {
             $user->load([
@@ -438,7 +439,9 @@ class UserController extends Controller
                 'sales' => $sales,
                 'orderStats' => $orderStats,
                 'productStats' => $productStats,
-                'recentOrders' => $recentOrders, ]);
+                'recentOrders' => $recentOrders,
+                'notes' => $notes->forUser($user),
+            ]);
         }
 
         // ── Buyer ─────────────────────────────────────────────────
@@ -462,6 +465,7 @@ class UserController extends Controller
             'user' => $user,
             'orderStats' => $orderStats,
             'totalSpent' => $totalSpent,
+            'notes' => $notes->forUser($user),
         ]);
 
     }

@@ -8,20 +8,27 @@ use App\Http\Resources\CartLineResource;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\City;
+use App\Models\Order;
 use App\Services\BuyerAccountService;
+use App\Services\BuyNowService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
 use App\Services\PaymentService;
+use App\Services\PayPalPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
-    public function show(Request $request, DeliveryFeeService $deliveryFees)
-    {
+    public function show(
+        Request $request,
+        DeliveryFeeService $deliveryFees,
+        CurrencyService $currencies,
+        PayPalPaymentService $paypal,
+    ) {
         $cart = Cart::where('user_id', Auth::id())
             ->with([
                 'items.product.images',
@@ -35,6 +42,66 @@ class CheckoutController extends Controller
             return redirect()->route('products.index');
         }
 
+        return $this->page($request, $cart, false, $deliveryFees, $currencies, $paypal);
+    }
+
+    /**
+     * "Buy now" on a product page: hold that one piece for checkout and go
+     * there, leaving the cart alone. Refused with the same messages as adding
+     * it to the cart, which the product page shows as a toast.
+     */
+    public function startBuyNow(Request $request, BuyNowService $buyNow)
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'integer'],
+            'variant_id' => ['nullable', 'integer'],
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $buyNow->start(
+            $request->session(),
+            $request->user(),
+            (int) $data['product_id'],
+            isset($data['variant_id']) ? (int) $data['variant_id'] : null,
+            (int) $data['quantity'],
+        );
+
+        return redirect()->route('checkout.buy_now');
+    }
+
+    /**
+     * Checkout for the piece "Buy now" is holding — the same page as the
+     * cart's, over a one-line cart that is never saved (BuyNowService).
+     */
+    public function buyNow(
+        Request $request,
+        BuyNowService $buyNow,
+        DeliveryFeeService $deliveryFees,
+        CurrencyService $currencies,
+        PayPalPaymentService $paypal,
+    ) {
+        $cart = $buyNow->cart($request->session(), $request->user());
+
+        // Nothing held, or the piece went off sale since: the cart is the
+        // nearest sensible place.
+        if (! $cart) {
+            return redirect()->route('cart.show');
+        }
+
+        return $this->page($request, $cart, true, $deliveryFees, $currencies, $paypal);
+    }
+
+    /**
+     * The checkout page, over either the buyer's cart or a buy-now line.
+     */
+    private function page(
+        Request $request,
+        Cart $cart,
+        bool $buyNow,
+        DeliveryFeeService $deliveryFees,
+        CurrencyService $currencies,
+        PayPalPaymentService $paypal,
+    ) {
         $user = $request->user();
 
         /*
@@ -48,6 +115,8 @@ class CheckoutController extends Controller
          * bill.
          */
         $delivery = $deliveryFees->cards();
+
+        $methods = CheckoutRequest::paymentMethods();
 
         return Inertia::render('buyer/checkout', [
             /*
@@ -107,9 +176,19 @@ class CheckoutController extends Controller
             /*
              * Whitelisted server-side in CheckoutRequest and shared from there,
              * so the page can only offer a method the server will actually
-             * accept — card only while Payzone is configured.
+             * accept — card while Payzone is configured, PayPal while PayPal is.
              */
-            'paymentMethods' => CheckoutRequest::paymentMethods(),
+            'paymentMethods' => $methods,
+
+            /*
+             * What PayPal would charge this buyer, since it cannot take MAD:
+             * the currency they are reading when PayPal takes it, else EUR,
+             * with the rate — the page states the figure before they choose.
+             * The same resolution prices the attempt (PayPalPaymentService).
+             */
+            'paypalCharge' => in_array(Order::PAYMENT_PAYPAL, $methods, true)
+                ? $paypal->quoteFor($currencies->resolve($request))
+                : null,
 
             'defaultCountry' => Address::DEFAULT_COUNTRY,
 
@@ -120,6 +199,15 @@ class CheckoutController extends Controller
              */
             'deliveryServices' => $delivery['services'],
             'deliveryRates' => $delivery['rates'],
+
+            /*
+             * Checking out one piece straight from its page rather than the
+             * cart: the form says so when it posts, and "back" leads to the
+             * product instead of a basket that does not hold it.
+             */
+            'buyNow' => $buyNow ? [
+                'product_slug' => $cart->items->first()?->product?->slug,
+            ] : null,
         ]);
     }
 
@@ -159,8 +247,21 @@ class CheckoutController extends Controller
         CheckoutDestinationService $destinations,
         CurrencyService $currencies,
         PaymentService $payments,
+        BuyNowService $buyNow,
     ) {
-        $cart = Cart::where('user_id', Auth::id())
+        /*
+         * A buy-now checkout bills the piece held in the session, never the
+         * cart — whatever else the basket holds stays there for later.
+         */
+        $buyNowCart = $request->boolean('buy_now')
+            ? $buyNow->cart($request->session(), $request->user())
+            : null;
+
+        if ($request->boolean('buy_now') && ! $buyNowCart) {
+            return back()->withErrors(['cart' => __('buyer.checkout.err_buy_now_gone')]);
+        }
+
+        $cart = $buyNowCart ?? Cart::where('user_id', Auth::id())
             ->with(['items.product.store'])
             ->firstOrFail();
 
@@ -188,17 +289,25 @@ class CheckoutController extends Controller
         // from it.
         $destination['display_rate'] = $currencies->rateFor($currency);
 
-        // A card purchase this buyer left unpaid is still holding its stock;
-        // this checkout replaces it.
+        // Card or PayPal — validated against what is on offer right now.
+        $destination['payment_method'] = $request->validated('payment_method');
+
+        // An online purchase this buyer left unpaid is still holding its
+        // stock; this checkout replaces it.
         $payments->releaseOpenPurchases($request->user());
 
         $orders = $checkout->process($cart, $destination);
 
+        if ($buyNowCart) {
+            $buyNow->placed($request->session(), $buyNowCart, $orders[0]->group_reference);
+        }
+
         /*
-         * Off to Payzone — every purchase is paid by card before it is placed.
-         * A full page visit rather than an Inertia redirect: the launch page
-         * is a plain HTML form that posts itself to the paywall, which an XHR
-         * could not follow. The confirmation page comes after the payment.
+         * Off to Payzone or PayPal — every purchase is paid online before it
+         * is placed. A full page visit rather than an Inertia redirect: the
+         * launch route answers with a self-posting form (Payzone) or a
+         * redirect to paypal.com, neither of which an XHR could follow. The
+         * confirmation page comes after the payment.
          */
         return Inertia::location(route('checkout.pay', $orders[0]->group_reference));
     }

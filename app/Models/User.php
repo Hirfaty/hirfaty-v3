@@ -139,6 +139,15 @@ class User extends Authenticatable implements AuthMustVerifyEmail
         return $this->belongsTo(self::class, 'created_by');
     }
 
+    /**
+     * The desk's private notes about this account. Admin-only — read through
+     * UserNoteService, never loaded onto a User the account holder can see.
+     */
+    public function adminNotes()
+    {
+        return $this->hasMany(UserNote::class);
+    }
+
     /** Google / Facebook identities linked to this account. */
     public function socialAccounts()
     {

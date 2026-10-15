@@ -1,5 +1,12 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, Check, CreditCard, Truck } from 'lucide-react';
+import {
+    AlertCircle,
+    ArrowLeft,
+    Check,
+    CreditCard,
+    Truck,
+    Wallet,
+} from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
@@ -15,6 +22,27 @@ import { useTranslation } from '@/hooks/use-translation';
  * figure applies is charged once, not per workshop or per product.
  */
 const FALLBACK_DELIVERY_FEE = 40;
+
+/**
+ * What PayPal would take for this basket. PayPal cannot charge MAD, so the
+ * server picks the currency (the one being read, when PayPal takes it, else
+ * EUR) and its rate — the same resolution that prices the payment.
+ */
+type PayPalCharge = {
+    currency: string;
+    /** How many units of `currency` one MAD buys. */
+    rate: number;
+    /** BCP-47 tag for writing the figure. */
+    locale: string;
+};
+
+/** The figure PayPal will take, written in its own currency. */
+function paypalAmount(mad: number, charge: PayPalCharge): string {
+    return new Intl.NumberFormat(charge.locale, {
+        style: 'currency',
+        currency: charge.currency,
+    }).format(Math.round(mad * charge.rate * 100) / 100);
+}
 
 /** A carrier the buyer can check out with, as CheckoutController hands it over. */
 type DeliveryServiceOption = {
@@ -68,7 +96,9 @@ const FIELD_LOCKED =
 const LABEL_RESET = 'mb-0 tracking-normal normal-case';
 
 type CheckoutLine = {
-    id: number;
+    /** Null for a buy-now line, which is never saved. */
+    id: number | null;
+    product_id: number;
     name: string;
     store_id: number | null;
     store_name: string;
@@ -120,6 +150,8 @@ type CheckoutForm = {
     postal_code: string;
     country: string;
     payment_method: string;
+    /** Bill the piece "Buy now" holds rather than the cart. */
+    buy_now: boolean;
     /** Which carrier ships the basket — one of `deliveryServices`. */
     delivery_service_id: number | null;
     save_address: boolean;
@@ -174,15 +206,26 @@ const Checkout = ({
     addresses,
     customer,
     paymentMethods,
+    paypalCharge,
     defaultCountry,
     deliveryServices,
     deliveryRates,
+    buyNow,
 }: {
     items: CheckoutLine[];
     cities: City[];
     addresses: SavedAddress[];
     customer: Customer;
+    /** `card` and/or `paypal` — whichever providers are configured. */
     paymentMethods: string[];
+    /** Null unless PayPal is on offer. */
+    paypalCharge: PayPalCharge | null;
+    /**
+     * Set when checking out one piece straight from its page ("Buy now")
+     * rather than the cart — `items` is then that piece alone, and the cart
+     * is left as it is.
+     */
+    buyNow: { product_slug: string | null } | null;
     defaultCountry: string;
     deliveryServices: DeliveryServiceOption[];
     deliveryRates: DeliveryRatesMap;
@@ -197,8 +240,9 @@ const Checkout = ({
         preselected ? preselected.id : NEW_ADDRESS,
     );
 
-    // Empty only while Payzone is not configured — checkout is closed then.
-    const canPay = paymentMethods.includes('card');
+    // Empty only while neither Payzone nor PayPal is configured — checkout
+    // is closed then.
+    const canPay = paymentMethods.length > 0;
 
     const { data, setData, post, processing, errors } = useForm<CheckoutForm>({
         /*
@@ -216,8 +260,9 @@ const Checkout = ({
         city_id: cities[0]?.id ?? null,
         postal_code: '',
         country: defaultCountry,
-        // Card through Payzone — the only method there is.
-        payment_method: 'card',
+        // Card through Payzone when it is on offer, else PayPal.
+        payment_method: paymentMethods[0] ?? 'card',
+        buy_now: buyNow !== null,
         // The first carrier in display order (Amana today) is pre-selected.
         delivery_service_id: deliveryServices[0]?.id ?? null,
         save_address: false,
@@ -339,6 +384,8 @@ const Checkout = ({
 
     const grandTotal = subtotal + deliveryTotal;
 
+    const payingWithPayPal = data.payment_method === 'paypal';
+
     const submit = (e: FormEvent) => {
         e.preventDefault();
         post(route('checkout.store'));
@@ -350,12 +397,19 @@ const Checkout = ({
             <SiteHeader />
 
             <section className="container pt-8 pb-4">
+                {/* A buy-now piece was never in the cart: back to its page. */}
                 <Link
-                    href={route('cart.show')}
+                    href={
+                        buyNow?.product_slug
+                            ? route('products.show', buyNow.product_slug)
+                            : route('cart.show')
+                    }
                     className="inline-flex items-center gap-2 text-xs text-souk-brown-deep/60 transition-colors hover:text-souk-title"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.6} />
-                    {t('buyer.checkout.back')}
+                    {buyNow?.product_slug
+                        ? t('buyer.checkout.back_to_product')
+                        : t('buyer.checkout.back')}
                 </Link>
             </section>
 
@@ -935,33 +989,114 @@ const Checkout = ({
                             </h2>
 
                             {/*
-                             * Card through Payzone is the only way to pay — the
-                             * order is placed once the payment goes through.
-                             * With Payzone unconfigured the server accepts no
-                             * method at all (CheckoutRequest::paymentMethods),
-                             * so checkout says so rather than failing on submit.
+                             * Card through Payzone, or PayPal — the order is
+                             * placed once the payment goes through. Each is on
+                             * offer only while its provider is configured; with
+                             * neither the server accepts no method at all
+                             * (CheckoutRequest::paymentMethods), so checkout
+                             * says so rather than failing on submit.
                              */}
                             {canPay ? (
-                                <div className="mt-4 flex items-start gap-3 rounded-lg border border-souk-brown bg-souk-brown/[0.04] p-3.5">
-                                    <CreditCard
-                                        className="mt-0.5 h-4 w-4 shrink-0 text-souk-brown"
-                                        strokeWidth={1.6}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-medium text-souk-title">
-                                            {t('buyer.checkout.payment_card')}
-                                        </p>
-                                        <p className="mt-1 text-[13px] leading-relaxed text-souk-brown-deep/70">
-                                            {t('buyer.checkout.card_note')}
-                                        </p>
-                                        <img
-                                            src="/images/payments/payzone-secure.png"
-                                            alt="Payzone · Visa · Mastercard — 3D Secure"
-                                            loading="lazy"
-                                            className="mt-2.5 h-5 w-auto max-w-full object-contain object-left rtl:object-right"
-                                        />
-                                    </div>
-                                </div>
+                                <fieldset
+                                    className="mt-4 space-y-2"
+                                    aria-labelledby="payment-heading"
+                                >
+                                    {paymentMethods.map((method) => {
+                                        const active =
+                                            data.payment_method === method;
+                                        const paypal = method === 'paypal';
+                                        const Icon = paypal
+                                            ? Wallet
+                                            : CreditCard;
+
+                                        return (
+                                            <label
+                                                key={method}
+                                                className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
+                                                    active
+                                                        ? 'border-souk-brown bg-souk-brown/[0.04]'
+                                                        : 'border-souk-brown/15 hover:border-souk-brown/40'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="payment_method"
+                                                    value={method}
+                                                    checked={active}
+                                                    onChange={() =>
+                                                        setData(
+                                                            'payment_method',
+                                                            method,
+                                                        )
+                                                    }
+                                                    className="sr-only"
+                                                />
+                                                {/* A lone method needs no
+                                                    radio dot — there is
+                                                    nothing to choose. */}
+                                                {paymentMethods.length > 1 && (
+                                                    <span
+                                                        aria-hidden
+                                                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                            active
+                                                                ? 'border-souk-brown bg-souk-brown text-souk-cream'
+                                                                : 'border-souk-brown/30'
+                                                        }`}
+                                                    >
+                                                        {active && (
+                                                            <Check
+                                                                className="h-2.5 w-2.5"
+                                                                strokeWidth={3}
+                                                            />
+                                                        )}
+                                                    </span>
+                                                )}
+
+                                                <span className="min-w-0 flex-1 text-sm">
+                                                    <span className="flex items-center gap-2 font-medium text-souk-title">
+                                                        <Icon
+                                                            className="h-4 w-4 shrink-0 text-souk-brown"
+                                                            strokeWidth={1.6}
+                                                        />
+                                                        {paypal
+                                                            ? t(
+                                                                  'buyer.checkout.payment_paypal',
+                                                              )
+                                                            : t(
+                                                                  'buyer.checkout.payment_card',
+                                                              )}
+                                                    </span>
+                                                    <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                                        {paypal
+                                                            ? t(
+                                                                  'buyer.checkout.paypal_note',
+                                                              )
+                                                            : t(
+                                                                  'buyer.checkout.card_note',
+                                                              )}
+                                                    </span>
+                                                    {paypal ? (
+                                                        <img
+                                                            src="/images/payments/paypal.svg"
+                                                            alt="PayPal"
+                                                            loading="lazy"
+                                                            width={170}
+                                                            height={48}
+                                                            className="mt-2.5 h-5 w-auto"
+                                                        />
+                                                    ) : (
+                                                        <img
+                                                            src="/images/payments/payzone-secure.png"
+                                                            alt="Payzone · Visa · Mastercard — 3D Secure"
+                                                            loading="lazy"
+                                                            className="mt-2.5 h-5 w-auto max-w-full object-contain object-left rtl:object-right"
+                                                        />
+                                                    )}
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </fieldset>
                             ) : (
                                 <p className="mt-4 flex items-start gap-2.5 rounded-lg border border-terracotta/25 bg-terracotta/5 px-3.5 py-3 text-sm text-terracotta">
                                     <AlertCircle
@@ -983,7 +1118,11 @@ const Checkout = ({
 
                         <ul className="mt-5 space-y-4">
                             {items.map((line) => (
-                                <li key={line.id} className="flex gap-3.5">
+                                <li
+                                    // A buy-now line is never saved, so it has no id.
+                                    key={`${line.product_id}-${line.variant_label ?? ''}`}
+                                    className="flex gap-3.5"
+                                >
                                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-souk-brown/5 ring-1 ring-souk-brown/10">
                                         {line.image ? (
                                             <img
@@ -1113,13 +1252,25 @@ const Checkout = ({
 
                         {/*
                          * The one place the converted figure is not enough.
-                         * Everything above is indicative; the card is charged in
-                         * dirhams, so the actual amount has to be stated here
-                         * rather than left for the buyer to discover on the
-                         * payment page. Hidden for anyone already reading MAD, where
-                         * it would just repeat the line above it.
+                         * Everything above is indicative; what is actually
+                         * taken has to be stated here rather than left for the
+                         * buyer to discover on the payment page. PayPal cannot
+                         * take dirhams, so it says what PayPal will charge —
+                         * dirham readers included.
                          */}
-                        {!isBase && (
+                        {payingWithPayPal && paypalCharge && (
+                            <p className="mt-3 rounded-lg bg-souk-brown/5 px-3 py-2.5 text-xs leading-relaxed font-medium text-souk-title">
+                                {t('buyer.checkout.paypal_charged').replace(
+                                    ':amount',
+                                    paypalAmount(grandTotal, paypalCharge),
+                                )}
+                            </p>
+                        )}
+
+                        {/* The card is charged in dirhams. Hidden for anyone
+                            already reading MAD, where it would just repeat the
+                            line above it. */}
+                        {!payingWithPayPal && !isBase && (
                             <p className="mt-3 rounded-lg bg-souk-brown/5 px-3 py-2.5 text-xs leading-relaxed text-souk-brown-deep/75">
                                 {t('common.currency_note').replace(
                                     ':currency',
@@ -1142,7 +1293,9 @@ const Checkout = ({
                         >
                             {processing
                                 ? t('buyer.checkout.processing')
-                                : t('buyer.checkout.confirm_card')}
+                                : payingWithPayPal
+                                  ? t('buyer.checkout.confirm_paypal')
+                                  : t('buyer.checkout.confirm_card')}
                         </button>
                     </aside>
                 </form>

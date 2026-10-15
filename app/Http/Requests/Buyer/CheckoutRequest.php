@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Buyer;
 
 use App\Models\Address;
+use App\Models\Order;
 use App\Services\DeliveryFeeService;
 use App\Services\PaymentService;
+use App\Services\PayPalPaymentService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,22 +30,26 @@ use Illuminate\Validation\Rule;
 class CheckoutRequest extends FormRequest
 {
     /**
-     * Every payment method checkout knows. Card through Payzone only: Hirfaty
-     * takes payment online, before anything ships (see PaymentService). Cash on
-     * delivery is gone — orders that used it before keep `cod` as history.
+     * Every payment method checkout knows: card through Payzone, or PayPal.
+     * Hirfaty takes payment online, before anything ships (see
+     * PaymentService). Cash on delivery is gone — orders that used it before
+     * keep `cod` as history.
      */
-    public const PAYMENT_METHODS = ['card'];
+    public const PAYMENT_METHODS = Order::ONLINE_METHODS;
 
     /**
-     * The methods checkout accepts right now: none while Payzone's credentials
-     * are missing, which closes checkout rather than creating orders nobody
-     * can pay for.
+     * The methods checkout accepts right now: each one only while its
+     * provider's credentials are set. With neither, checkout is closed rather
+     * than creating orders nobody can pay for.
      *
      * @return array<int, string>
      */
     public static function paymentMethods(): array
     {
-        return app(PaymentService::class)->cardAvailable() ? self::PAYMENT_METHODS : [];
+        return array_values(array_filter([
+            app(PaymentService::class)->cardAvailable() ? Order::PAYMENT_CARD : null,
+            app(PayPalPaymentService::class)->available() ? Order::PAYMENT_PAYPAL : null,
+        ]));
     }
 
     /**
@@ -125,6 +131,9 @@ class CheckoutRequest extends FormRequest
             'address_label' => ['nullable', 'string', 'max:60'],
 
             'notes' => ['nullable', 'string', 'max:500'],
+
+            // Checking out the piece "Buy now" holds, rather than the cart.
+            'buy_now' => ['nullable', 'boolean'],
         ];
     }
 

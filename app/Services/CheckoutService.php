@@ -30,19 +30,25 @@ class CheckoutService
     ) {}
 
     /**
-     * Turn a cart into orders awaiting their card payment.
+     * Turn a cart into orders awaiting their online payment.
      *
-     * Every purchase is paid online, through Payzone, before it is placed. So
-     * this only reserves: the orders and their stock are written so nobody
-     * else can buy the last piece while the buyer is on the payment page, but
-     * they stay hidden (Order's settled scope), earn nothing and announce
-     * nothing, and the cart is kept. PaymentService finishes the job once
-     * Payzone confirms the charge — recordEarning() and announce() below — or
-     * releases everything if it never does.
+     * Every purchase is paid online — by card through Payzone, or with
+     * PayPal (`payment_method`) — before it is placed. So this only reserves:
+     * the orders and their stock are written so nobody else can buy the last
+     * piece while the buyer is on the payment page, but they stay hidden
+     * (Order's settled scope), earn nothing and announce nothing, and the cart
+     * is kept. PaymentService finishes the job once the provider confirms the
+     * money — recordEarning() and announce() below — or releases everything
+     * if it never does.
      */
     public function process(Cart $cart, array $checkoutData)
     {
         $orders = [];
+
+        // Card unless PayPal was chosen — never anything that skips payment.
+        $paymentMethod = in_array($checkoutData['payment_method'] ?? null, Order::ONLINE_METHODS, true)
+            ? $checkoutData['payment_method']
+            : Order::PAYMENT_CARD;
 
         /*
          * Which price list this basket is billed on, resolved once from the
@@ -88,7 +94,7 @@ class CheckoutService
             return $price;
         };
 
-        DB::transaction(function () use ($cart, $checkoutData, $unitPrice, $audience, &$orders) {
+        DB::transaction(function () use ($cart, $checkoutData, $unitPrice, $audience, $paymentMethod, &$orders) {
             /*
              * A line can outlive its product's place on the storefront — the
              * piece unpublished, or its seller blocked, after it was added.
@@ -222,7 +228,7 @@ class CheckoutService
                     'city_id' => $checkoutData['city_id'],
                     'group_reference' => $groupReference,
                     'status' => 'pending',
-                    'payment_method' => Order::PAYMENT_CARD,
+                    'payment_method' => $paymentMethod,
                     'payment_status' => 'pending',
                     'total_amount' => $grossAmount,
                     'platform_fee' => $platformFee,

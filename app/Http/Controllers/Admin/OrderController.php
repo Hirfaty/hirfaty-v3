@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\AdminOrderListService;
+use App\Services\OrderCancellationService;
 use App\Services\OrderStatusService;
 use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
@@ -84,14 +85,14 @@ class OrderController extends Controller
      * Route-model-bound on a single order because that is what a link carries;
      * the group is reassembled from it here.
      */
-    public function show(Order $order)
+    public function show(Order $order, OrderCancellationService $cancellations)
     {
         $orders = $order->groupOrders()
             ->with(['buyer', 'store', 'items.product.images', 'city'])
             ->orderBy('id')
             ->get();
 
-        // The Payzone transaction that paid for it, for refunds and disputes.
+        // The Payzone or PayPal transaction that paid for it, for refunds and disputes.
         $payment = $order->group_reference
             ? Payment::where('group_reference', $order->group_reference)
                 ->whereIn('status', [Payment::STATUS_PAID, Payment::STATUS_REFUNDED])
@@ -104,11 +105,18 @@ class OrderController extends Controller
                 $order->group_reference ?? $order->reference,
                 $orders,
             ),
+            // The reasons the cancel dialog offers, labelled in French.
+            'cancellationReasons' => $cancellations->options(),
             'payment' => $payment ? [
+                'provider' => $payment->provider,
                 'charge_id' => $payment->charge_id,
                 'transaction_id' => $payment->provider_transaction_id,
                 'card_brand' => $payment->card_brand,
+                // What the provider took: MAD for Payzone, EUR/USD… for PayPal.
                 'amount' => (float) $payment->amount,
+                'currency' => $payment->currency,
+                // MAD → `currency`, for the dialog to state a partial refund. Null for MAD.
+                'exchange_rate' => $payment->exchange_rate === null ? null : (float) $payment->exchange_rate,
                 'status' => $payment->status,
                 'paid_at' => $payment->paid_at,
             ] : null,
@@ -149,6 +157,38 @@ class OrderController extends Controller
         $orderStatus->transitionMany($targets, $data['status'], $attributes, $data['note'] ?? null);
 
         return back()->with('success', 'Statut mis à jour.');
+    }
+
+    /**
+     * Cancel from the dialog: the reasons (picked from a fixed list, so the
+     * buyer reads them in their own language), the desk's own precisions, and
+     * — for an order paid online — whether the buyer is refunded. Same
+     * `scope` rule as updateStatus().
+     */
+    public function cancel(Request $request, Order $order, OrderCancellationService $cancellations)
+    {
+        $data = $request->validate([
+            'reasons' => ['nullable', 'array'],
+            'reasons.*' => ['string', Rule::in(OrderCancellationService::REASONS)],
+            // A cancellation always says why: a reason, or words of its own.
+            'details' => ['nullable', 'string', 'max:500', 'required_without:reasons'],
+            'refund' => ['nullable', 'boolean'],
+            'scope' => ['nullable', 'in:group,single'],
+        ], [
+            'details.required_without' => 'Choisissez au moins un motif, ou précisez-le.',
+        ]);
+
+        $results = $cancellations->cancel(
+            $this->targets($order, $data['scope'] ?? null),
+            $data['reasons'] ?? [],
+            $data['details'] ?? null,
+            (bool) ($data['refund'] ?? false),
+        );
+
+        return back()->with(
+            $cancellations->anyFailed($results) ? 'error' : 'success',
+            $cancellations->summary($results),
+        );
     }
 
     /**
@@ -235,8 +275,9 @@ class OrderController extends Controller
              */
             'delivery_service_name' => $first->delivery_service_name ?? 'Amana',
 
-            // Cash to collect, or already paid by card (Payzone) — one checkout,
-            // one method, so the first order speaks for the group.
+            // Cash to collect, or already paid online (card through Payzone, or
+            // PayPal) — one checkout, one method, so the first order speaks
+            // for the group.
             'payment_method' => $first->payment_method ?? Order::PAYMENT_COD,
             'payment_status' => $first->payment_status ?? 'pending',
 
@@ -259,6 +300,11 @@ class OrderController extends Controller
                 'tracking_number' => $o->tracking_number,
                 'total_amount' => (float) $o->total_amount,
                 'delivery_fee' => (float) $o->delivery_fee,
+                // Per order: one workshop's part may be refunded on its own.
+                'payment_status' => $o->payment_status,
+                // Why it was cancelled, in French, and whether the money went back.
+                'cancellation' => OrderCancellationService::describe($o, 'fr'),
+                'cancellation_refund' => $o->cancellation_refund,
                 'store' => [
                     'id' => $o->store?->id,
                     'name' => $o->store?->store_name ?? '—',

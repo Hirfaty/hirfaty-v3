@@ -39,6 +39,7 @@ return [
     'admin.categories' => 'الفئات',
     'admin.cities' => 'المدن',
     'admin.delivery_rates' => 'أسعار التوصيل',
+    'admin.invoices' => 'الفواتير',
     'admin.newsletter' => 'مشتركو النشرة البريدية',
     'admin.orders' => 'المشتريات',
     'admin.notifications' => 'الإشعارات',

@@ -7,6 +7,7 @@ import {
     MapPin,
     Newspaper,
     Package,
+    Receipt,
     ShieldCheck,
     ShoppingBag,
     Store,
@@ -86,6 +87,11 @@ const communityItems: NavItem[] = [
         title: 'Commandes',
         url: route('admin.orders.index', undefined, false),
         icon: ShoppingBag,
+    },
+    {
+        title: 'Factures',
+        url: route('admin.invoices.index', undefined, false),
+        icon: Receipt,
     },
     {
         title: 'Brochure',

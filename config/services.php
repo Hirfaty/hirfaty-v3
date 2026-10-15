@@ -90,6 +90,36 @@ return [
         'callback_base_url' => env('PAYZONE_CALLBACK_BASE_URL'),
         // How long an unpaid card purchase holds its stock before it is released.
         'expire_after_minutes' => (int) env('PAYZONE_EXPIRE_AFTER_MINUTES', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | PayPal
+    |--------------------------------------------------------------------------
+    |
+    | Offered at checkout once the client id and secret are set (see
+    | PayPalClient::isConfigured). `mode` picks the API host: `sandbox` for
+    | api-m.sandbox.paypal.com, `live` for api-m.paypal.com — the credentials
+    | of one never work on the other.
+    |
+    | The webhook is registered in PayPal's developer dashboard, pointing at
+    | /payments/paypal/webhook; its id is what lets the app check that an event
+    | really came from PayPal. Without it the return from PayPal still places
+    | the order, but a delayed (PENDING) payment never settles and a refund
+    | made from PayPal is never recorded.
+    |
+    | PayPal cannot charge MAD. A buyer reading a currency PayPal takes is
+    | charged in it, at the rate stored on their order at checkout; everyone
+    | else — dirhams included — is charged in `currency`.
+    |
+    */
+
+    'paypal' => [
+        'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+        'currency' => env('PAYPAL_CURRENCY', 'EUR'),
     ]
     // | Google Analytics (GA4)
     // |--------------------------------------------------------------------------

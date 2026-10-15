@@ -268,20 +268,30 @@ export const SiteFooter = () => {
             </div>
 
             {/*
-             * Card payment badge and the terms of sale, side by side — Payzone
+             * Payment badges and the terms of sale, side by side — Payzone
              * requires both in the footer of any site taking cards through
-             * them. On a white plate so the logos keep their own colours in
-             * dark mode.
+             * them; PayPal sits beside it as the other way to pay. On a white
+             * plate so the logos keep their own colours in dark mode.
              */}
             <div className="container flex flex-col items-start gap-3 border-t border-ink/10 py-6 md:flex-row md:items-center md:justify-between">
-                <img
-                    src="/images/payments/payzone-secure.png"
-                    alt={t('common.footer.payments_secure')}
-                    loading="lazy"
-                    width={1162}
-                    height={120}
-                    className="h-auto w-full max-w-md rounded-md bg-white px-2 py-1.5"
-                />
+                <div className="flex w-full max-w-xl flex-wrap items-center gap-2">
+                    <img
+                        src="/images/payments/payzone-secure.png"
+                        alt={t('common.footer.payments_secure')}
+                        loading="lazy"
+                        width={1162}
+                        height={120}
+                        className="h-auto w-full max-w-md rounded-md bg-white px-2 py-1.5"
+                    />
+                    <img
+                        src="/images/payments/paypal.svg"
+                        alt="PayPal"
+                        loading="lazy"
+                        width={170}
+                        height={48}
+                        className="h-[46px] w-auto rounded-md bg-white px-3 py-2.5"
+                    />
+                </div>
                 <Link
                     href={route('terms')}
                     className="text-xs text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"

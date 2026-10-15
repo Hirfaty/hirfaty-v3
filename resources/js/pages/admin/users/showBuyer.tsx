@@ -19,6 +19,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import ResetLinkDialog from '@/components/admin/reset-link-dialog';
 import StagingWarning from '@/components/admin/staging-warning';
+import UserNotesCard from '@/components/admin/user-notes-card';
+import type { AdminUserNote } from '@/components/admin/user-notes-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +47,7 @@ interface Props {
         cancelled: number;
     };
     totalSpent: number;
+    notes: AdminUserNote[];
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -109,7 +112,7 @@ function Stat({
     );
 }
 
-const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
+const ShowBuyer = ({ user, orderStats, totalSpent, notes }: Props) => {
     const { t } = useTranslation();
     const [generatingReset, setGeneratingReset] = useState(false);
     const [resetLink, setResetLink] = useState<ResetLinkPayload | null>(null);
@@ -415,7 +418,7 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
 
             {/* ── Body ─────────────────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                <aside className="lg:col-span-4">
+                <aside className="space-y-6 lg:col-span-4">
                     <Card title="Contact">
                         <div className="space-y-4 p-5 text-sm">
                             <div className="flex items-start gap-3">
@@ -443,14 +446,14 @@ const ShowBuyer = ({ user, orderStats, totalSpent }: Props) => {
                         </div>
                     </Card>
 
+                    <UserNotesCard userId={user.id} notes={notes} />
+
                     {user.bio && (
-                        <div className="mt-6">
-                            <Card title="Description" icon={FileText}>
-                                <p className="p-5 text-sm whitespace-pre-line text-ink-soft">
-                                    {user.bio}
-                                </p>
-                            </Card>
-                        </div>
+                        <Card title="Description" icon={FileText}>
+                            <p className="p-5 text-sm whitespace-pre-line text-ink-soft">
+                                {user.bio}
+                            </p>
+                        </Card>
                     )}
                 </aside>
 

@@ -113,7 +113,9 @@ class AdminOrderListService
             $order->created_at?->format('Y-m-d H:i') ?? '',
             self::STATUS_LABELS[$order->status] ?? $order->status,
             match (true) {
-                $order->payment_method !== Order::PAYMENT_CARD => 'À la livraison',
+                ! $order->paysOnline() => 'À la livraison',
+                $order->payment_method === Order::PAYMENT_PAYPAL && $order->payment_status === 'refunded' => 'PayPal — remboursé',
+                $order->payment_method === Order::PAYMENT_PAYPAL => 'PayPal — payé',
                 $order->payment_status === 'refunded' => 'Carte — remboursée',
                 default => 'Carte — payée',
             },
@@ -133,7 +135,8 @@ class AdminOrderListService
             $order->delivery_service_name ?? '',
             $order->tracking_number ?? '',
             $order->delivered_at?->format('Y-m-d H:i') ?? '',
-            $order->cancellation_reason ?? '',
+            // Picked reasons in French, then any words of the desk's own.
+            implode(' · ', OrderCancellationService::describe($order, 'fr')),
             $order->display_currency ?? 'MAD',
             $order->notes ?? '',
         ];

@@ -42,9 +42,11 @@
         <x-mail.row label="Numéro de commande" :value="$reference" />
         <x-mail.row label="Date" :value="$first->created_at->format('d/m/Y à H:i')" />
         <x-mail.row label="Livraison à" :value="$first->shipping_address" />
-        {{-- Envoyé seulement une fois le paiement par carte accepté
+        {{-- Envoyé seulement une fois le paiement en ligne accepté
              (PaymentService) : rien à régler à la porte. --}}
-        <x-mail.row label="Paiement" value="Payée par carte bancaire" />
+        <x-mail.row label="Paiement" :value="$first->payment_method === \App\Models\Order::PAYMENT_PAYPAL
+            ? 'Payée avec PayPal'
+            : 'Payée par carte bancaire'" />
     </x-mail.panel>
 
     {{-- Un bloc par atelier, pour qu'un achat auprès de plusieurs vendeurs

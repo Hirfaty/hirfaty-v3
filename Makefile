@@ -189,9 +189,9 @@ prod-pull:
 # What you run by hand on the box: pull, then release.
 prod-deploy: prod-pull prod-release
 
-# Dumps the prod `db` container to /var/backups/hirfaty and prunes dumps older
-# than 14 days. Scheduled by hirfaty-backup.timer; run by hand to test or to
-# take an ad-hoc backup before a risky migration.
+# Dumps the prod `db` container to /var/backups/hirfaty, keeping only the last
+# 2 dumps (KEEP=n to change). Scheduled by hirfaty-backup.timer; run by hand to
+# test or to take an ad-hoc backup before a risky migration.
 prod-backup:
 	./docker/scripts/backup-db.sh
 

@@ -27,6 +27,7 @@ use App\Http\Controllers\Buyer\WishlistController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\PayPalController;
 use App\Http\Controllers\PayzoneController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\OrderController;
@@ -66,6 +67,14 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
  */
 Route::post('/payments/payzone/callback', [PayzoneController::class, 'callback'])->name('payments.payzone.callback');
 Route::match(['get', 'post'], '/payments/payzone/return/{charge}', [PayzoneController::class, 'return'])->name('payments.payzone.return');
+
+/*
+ * PayPal, on the same terms: the webhook comes from PayPal's servers (signed,
+ * exempt from CSRF), and the return is keyed by the attempt's charge id. See
+ * PayPalController.
+ */
+Route::post('/payments/paypal/webhook', [PayPalController::class, 'webhook'])->name('payments.paypal.webhook');
+Route::get('/payments/paypal/return/{charge}', [PayPalController::class, 'return'])->name('payments.paypal.return');
 
 /*
  * Public pages, one URL per language: /fr/products, /ar/products,
@@ -208,6 +217,11 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::patch('/users/{user}/professional/approve', [Admin\UserController::class, 'approveProfessional'])->name('users.professional.approve');
         Route::patch('/users/{user}/professional/decline', [Admin\UserController::class, 'declineProfessional'])->name('users.professional.decline');
         Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');
+        // Private desk notes on an account. Scoped through User::adminNotes()
+        // (hence `{adminNote}`), so a note id from another account 404s
+        // rather than being deleted from the wrong page.
+        Route::post('/users/{user}/notes', [Admin\UserNoteController::class, 'store'])->name('users.notes.store');
+        Route::delete('/users/{user}/notes/{adminNote}', [Admin\UserNoteController::class, 'destroy'])->name('users.notes.destroy')->scopeBindings();
         Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
         Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
@@ -237,6 +251,12 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/orders/{order}', [Admin\OrderController::class, 'show'])->name('orders.show');
         Route::patch('/orders/{order}/status', [Admin\OrderController::class, 'updateStatus'])->name('orders.status');
         Route::post('/orders/{order}/notes', [Admin\OrderController::class, 'addNote'])->name('orders.notes.store');
+        // Cancel with reasons and, for an order paid online, the refund decision.
+        Route::post('/orders/{order}/cancel', [Admin\OrderController::class, 'cancel'])->name('orders.cancel');
+
+        // Invoices — one per purchase, the PDF the buyer downloads.
+        Route::get('/invoices', [Admin\InvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/{purchase}', [Admin\InvoiceController::class, 'download'])->name('invoices.download');
 
         // Reviews
         Route::get('/reviews', [Admin\ReviewController::class, 'index'])->name('reviews.index');
@@ -399,6 +419,9 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
 
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    // "Buy now" on a product page: one piece straight to checkout, cart untouched.
+    Route::post('/checkout/buy-now', [CheckoutController::class, 'startBuyNow'])->name('checkout.buy_now.start');
+    Route::get('/checkout/buy-now', [CheckoutController::class, 'buyNow'])->name('checkout.buy_now');
     Route::get('/checkout/confirmation/{purchase}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
     // Card payment for a purchase — see Buyer\PaymentController.
     Route::get('/checkout/pay/{purchase}', [BuyerPaymentController::class, 'launch'])->name('checkout.pay');

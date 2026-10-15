@@ -150,12 +150,14 @@ export default function CheckoutConfirmation({
                                     {money(purchase.total_amount)} TTC
                                 </dd>
                             </div>
-                            {/* Absent for a purchase from before card payment. */}
-                            {purchase.payment_method === 'card' && (
+                            {/* Absent for a purchase from before online payment. */}
+                            {purchase.payment_method !== 'cod' && (
                                 <div className="flex justify-between gap-4 pt-2 text-souk-brown-deep/60">
                                     <dt>{t('buyer.orders.payment')}</dt>
                                     <dd className="text-end">
-                                        {t('buyer.orders.payment_card')}
+                                        {purchase.payment_method === 'paypal'
+                                            ? t('buyer.orders.payment_paypal')
+                                            : t('buyer.orders.payment_card')}
                                     </dd>
                                 </div>
                             )}

@@ -41,8 +41,10 @@
         <x-mail.row label="رقم الطلب" :value="$reference" />
         <x-mail.row label="التاريخ" :value="$first->created_at->format('d/m/Y H:i')" />
         <x-mail.row label="عنوان التوصيل" :value="$first->shipping_address" />
-        {{-- لا يُرسل هذا البريد إلا بعد قبول الدفع بالبطاقة (PaymentService). --}}
-        <x-mail.row label="طريقة الدفع" value="مدفوع بالبطاقة البنكية" />
+        {{-- لا يُرسل هذا البريد إلا بعد قبول الدفع عبر الإنترنت (PaymentService). --}}
+        <x-mail.row label="طريقة الدفع" :value="$first->payment_method === \App\Models\Order::PAYMENT_PAYPAL
+            ? 'مدفوع عبر PayPal'
+            : 'مدفوع بالبطاقة البنكية'" />
     </x-mail.panel>
 
     {{-- بطاقة واحدة لكل ورشة، حتى يبقى الشراء من عدة بائعين مقروءاً كطلب

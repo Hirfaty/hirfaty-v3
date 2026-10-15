@@ -8,11 +8,11 @@ set -euo pipefail
 # there, so this script never has to know the credentials.
 #
 # Usage: ./docker/scripts/backup-db.sh
-# Env overrides: BACKUP_DIR, RETENTION_DAYS, CONTAINER
+# Env overrides: BACKUP_DIR, KEEP, CONTAINER
 
 CONTAINER="${CONTAINER:-hirfaty-db}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/hirfaty}"
-RETENTION_DAYS="${RETENTION_DAYS:-14}"
+KEEP="${KEEP:-2}"
 TIMESTAMP="$(date +%Y-%m-%d_%H-%M-%S)"
 DEST="${BACKUP_DIR}/hirfaty-${TIMESTAMP}.sql.gz"
 TMP_DEST="${DEST}.tmp"
@@ -24,6 +24,13 @@ fi
 
 mkdir -p "${BACKUP_DIR}"
 
+# Rotate before writing: keep only the newest KEEP-1 dumps, so the run ends
+# with exactly KEEP on disk (day 3 deletes day 1, then writes day 3). Done
+# after the container check, so a stopped database never costs a backup.
+# Timestamped names sort chronologically, newest first under `sort -r`.
+find "${BACKUP_DIR}" -maxdepth 1 -name 'hirfaty-*.sql.gz' | sort -r \
+    | tail -n "+${KEEP}" | xargs -r rm -v --
+
 # Dump to a .tmp path first and rename on success, so a crashed/killed dump
 # never leaves a truncated file behind under the real name.
 docker exec "${CONTAINER}" sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
@@ -31,6 +38,3 @@ docker exec "${CONTAINER}" sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
 mv "${TMP_DEST}" "${DEST}"
 
 echo "Backed up to ${DEST} ($(du -h "${DEST}" | cut -f1))"
-
-# Prune anything past the retention window.
-find "${BACKUP_DIR}" -maxdepth 1 -name 'hirfaty-*.sql.gz' -mtime "+${RETENTION_DAYS}" -print -delete

@@ -26,6 +26,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import ResetLinkDialog from '@/components/admin/reset-link-dialog';
 import StagingWarning from '@/components/admin/staging-warning';
+import UserNotesCard from '@/components/admin/user-notes-card';
+import type { AdminUserNote } from '@/components/admin/user-notes-card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -129,6 +131,7 @@ interface Props {
     orderStats: OrderStats;
     productStats: ProductStats;
     recentOrders: Order[];
+    notes: AdminUserNote[];
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -278,6 +281,7 @@ const ShowSeller = ({
     orderStats,
     productStats,
     recentOrders,
+    notes,
 }: Props) => {
     const { t } = useTranslation();
     const [generatingReset, setGeneratingReset] = useState(false);
@@ -661,6 +665,8 @@ const ShowSeller = ({
                             )}
                         </div>
                     </Card>
+
+                    <UserNotesCard userId={user.id} notes={notes} />
 
                     <Card
                         title="Boutique"

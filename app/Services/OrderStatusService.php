@@ -64,11 +64,16 @@ class OrderStatusService
      * reason. Re-submitting the status an order is already at records nothing
      * unless there is a note, in which case it is kept as a tracking update.
      *
+     * Cancelling an order already paid online asks the desk for a refund
+     * (flagCardRefunds) — unless `$flagRefunds` is false, which the admin
+     * cancellation uses because it settles the money itself
+     * (OrderCancellationService).
+     *
      * @param  Collection<int, Order>  $orders
      * @param  array<string, mixed>  $attributes
      * @return Collection<int, Order>
      */
-    public function transitionMany(Collection $orders, string $status, array $attributes = [], ?string $note = null): Collection
+    public function transitionMany(Collection $orders, string $status, array $attributes = [], ?string $note = null, bool $flagRefunds = true): Collection
     {
         $changedIds = [];
         $refundable = collect();
@@ -102,8 +107,8 @@ class OrderStatusService
                 if ($status === 'cancelled' && $previousStatus !== 'cancelled') {
                     $this->restoreStock($order);
 
-                    // Paid by card: the money has to go back the same way.
-                    if ($order->isPaidByCard()) {
+                    // Paid online: the money has to go back the same way.
+                    if ($order->isPaidOnline()) {
                         $refundable->push($order);
                     }
                 }
@@ -127,7 +132,7 @@ class OrderStatusService
             $this->notifyBuyer($changedIds, $status);
         }
 
-        if ($refundable->isNotEmpty()) {
+        if ($flagRefunds && $refundable->isNotEmpty()) {
             $this->flagCardRefunds($refundable);
         }
 
@@ -136,7 +141,8 @@ class OrderStatusService
 
     /**
      * Ask the desk to refund cancelled orders the buyer had already paid for
-     * by card — refunds are made from Payzone's back-office, not from here.
+     * online — refunds are made from Payzone's back-office or PayPal's
+     * dashboard, not from here.
      *
      * @param  Collection<int, Order>  $orders
      */
@@ -155,7 +161,9 @@ class OrderStatusService
             // Resolved here rather than injected: PaymentService depends on this class.
             app(PaymentService::class)->flagRefund(
                 $payment,
-                'Commande annulée après paiement par carte.',
+                $payment->isPayPal()
+                    ? 'Commande annulée après paiement PayPal.'
+                    : 'Commande annulée après paiement par carte.',
                 round((float) $group->sum(fn (Order $order) => (float) $order->total_amount + (float) $order->delivery_fee), 2),
                 $group->first()->reference,
             );

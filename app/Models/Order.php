@@ -20,12 +20,21 @@ class Order extends Model
 
     public const PAYMENT_CARD = 'card';
 
+    public const PAYMENT_PAYPAL = 'paypal';
+
     /**
-     * Name of the global scope that hides card orders nobody has paid for.
+     * The methods paid online, before anything ships: card through Payzone,
+     * or PayPal. Both hold their stock at checkout and stay hidden until the
+     * money arrives — every rule below treats them alike.
+     */
+    public const ONLINE_METHODS = [self::PAYMENT_CARD, self::PAYMENT_PAYPAL];
+
+    /**
+     * Name of the global scope that hides online orders nobody has paid for.
      *
-     * A card checkout writes its orders (and holds their stock) before the
-     * buyer reaches Payzone, but until the callback says CHARGED the purchase
-     * has not happened: the desk must not fulfil it, the seller must not see
+     * An online checkout writes its orders (and holds their stock) before the
+     * buyer reaches Payzone or PayPal, but until the provider confirms the
+     * payment the purchase has not happened: the desk must not fulfil it, the seller must not see
      * it, and the buyer's history must not list it. Hiding it here covers
      * every one of those screens at once. PaymentService, the only code that
      * deals in unpaid orders, opts out with withoutGlobalScope().
@@ -38,8 +47,8 @@ class Order extends Model
         'group_reference',
         'buyer_id', 'store_id', 'city_id',
         'tracking_number', 'status',
-        // How the purchase settles: cash to the courier, or a card through
-        // Payzone — see the payments migration.
+        // How the purchase settles: cash to the courier, a card through
+        // Payzone, or PayPal — see the payments migrations.
         'payment_method', 'payment_status',
         'total_amount', 'platform_fee', 'delivery_fee', 'seller_earnings',
         // What the buyer was reading at checkout, and the rate that was live
@@ -52,6 +61,9 @@ class Order extends Model
         // and dispatch screens actually read.
         'delivery_service_id', 'delivery_service_name',
         'shipping_address', 'shipping_phone', 'notes', 'delivered_at', 'cancellation_reason',
+        // The desk's picked reasons (codes, translated on display) and its
+        // decision on the money — see the cancellation details migration.
+        'cancellation_tags', 'cancellation_refund',
     ];
 
     protected $casts = [
@@ -61,6 +73,8 @@ class Order extends Model
         'seller_earnings' => 'decimal:2',
         'display_rate' => 'decimal:6',
         'delivered_at' => 'datetime',
+        'cancellation_tags' => 'array',
+        'cancellation_refund' => 'boolean',
     ];
 
     /**
@@ -104,10 +118,10 @@ class Order extends Model
      */
     protected static function booted(): void
     {
-        // Cash orders are always visible; card orders once paid (or refunded).
+        // Cash orders are always visible; online orders once paid (or refunded).
         static::addGlobalScope(self::SETTLED_SCOPE, function (Builder $query) {
             $query->where(fn (Builder $query) => $query
-                ->where('orders.payment_method', '!=', self::PAYMENT_CARD)
+                ->whereNotIn('orders.payment_method', self::ONLINE_METHODS)
                 ->orWhereNotIn('orders.payment_status', ['pending', 'failed']));
         });
 
@@ -234,5 +248,32 @@ class Order extends Model
     public function isPaidByCard(): bool
     {
         return $this->payment_method === self::PAYMENT_CARD && $this->payment_status === 'paid';
+    }
+
+    public function isPaidByPayPal(): bool
+    {
+        return $this->payment_method === self::PAYMENT_PAYPAL && $this->payment_status === 'paid';
+    }
+
+    /** Paid before shipping, by either provider — money to give back if cancelled. */
+    public function isPaidOnline(): bool
+    {
+        return $this->isPaidByCard() || $this->isPaidByPayPal();
+    }
+
+    /**
+     * Money was taken online for this order — still held, or given back
+     * since. What a cancellation email needs to know, read whenever the
+     * queued email renders, possibly after the refund has gone through.
+     */
+    public function wasPaidOnline(): bool
+    {
+        return $this->paysOnline() && in_array($this->payment_status, ['paid', 'refunded'], true);
+    }
+
+    /** Settled online (card or PayPal), whether or not the money has arrived. */
+    public function paysOnline(): bool
+    {
+        return in_array($this->payment_method, self::ONLINE_METHODS, true);
     }
 }

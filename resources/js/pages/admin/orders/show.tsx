@@ -10,10 +10,16 @@ import {
     StickyNote,
     Truck,
     User,
+    Wallet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import CancelOrderDialog from '@/components/admin/cancel-order-dialog';
+import type {
+    CancellationReason,
+    RefundOffer,
+} from '@/components/admin/cancel-order-dialog';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -58,12 +64,18 @@ const currency = (value: number) =>
  * to the whole purchase by default; the per-workshop checkbox is there for the
  * exception where one artisan's piece has to travel on its own.
  */
-/** The Payzone transaction behind a card purchase, as Admin\OrderController::show sends it. */
+/** The Payzone or PayPal transaction behind a purchase, as Admin\OrderController::show sends it. */
 type CardPayment = {
+    provider: 'payzone' | 'paypal';
     charge_id: string;
+    /** Payzone's transaction, or PayPal's capture id — what to search for a refund. */
     transaction_id: string | null;
     card_brand: string | null;
+    /** What the provider took, in `currency` — MAD for Payzone, EUR/USD… for PayPal. */
     amount: number;
+    currency: string;
+    /** MAD → `currency`; null when charged in MAD. */
+    exchange_rate: number | null;
     status: string;
     paid_at: string | null;
 };
@@ -71,13 +83,17 @@ type CardPayment = {
 const Show = ({
     group,
     payment,
+    cancellationReasons,
 }: {
     group: OrderGroup;
     payment: CardPayment | null;
+    cancellationReasons: CancellationReason[];
 }) => {
     const { t } = useTranslation();
-    const paidByCard =
-        group.payment_method === 'card' && group.payment_status === 'paid';
+    const paidOnline =
+        (group.payment_method === 'card' ||
+            group.payment_method === 'paypal') &&
+        group.payment_status === 'paid';
     const [tracking, setTracking] = useState(
         group.orders[0]?.tracking_number ?? '',
     );
@@ -99,6 +115,57 @@ const Show = ({
     const target = separateOrderId
         ? group.orders.find((o) => o.id === separateOrderId)
         : null;
+
+    /*
+     * "Annuler" opens a dialog instead of acting at once: the desk says why,
+     * and decides on the money (CancelOrderDialog).
+     */
+    const [cancelling, setCancelling] = useState(false);
+
+    /*
+     * What ticking "refund" would give back, in the currency the provider
+     * took: the whole payment when the whole purchase goes and nothing was
+     * refunded before, else the cancelled orders' share at the rate the
+     * attempt was priced at — the same rule as RefundService.
+     */
+    const refundOffer = ((): RefundOffer | null => {
+        const inScope = target ? [target] : group.orders;
+        const paid = inScope.filter((o) => o.payment_status === 'paid');
+
+        if (
+            !payment ||
+            payment.status !== 'paid' ||
+            paid.length === 0 ||
+            (group.payment_method !== 'card' &&
+                group.payment_method !== 'paypal')
+        ) {
+            return null;
+        }
+
+        const whole =
+            group.orders.every((o) => o.payment_status !== 'refunded') &&
+            group.orders
+                .filter((o) => o.payment_status === 'paid')
+                .every((o) => paid.includes(o));
+        const mad = paid.reduce(
+            (sum, o) => sum + o.total_amount + o.delivery_fee,
+            0,
+        );
+        const amount = whole
+            ? payment.amount
+            : Math.min(
+                  payment.amount,
+                  Math.round(mad * (payment.exchange_rate ?? 1) * 100) / 100,
+              );
+
+        return {
+            provider: payment.provider,
+            amount: new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: payment.currency,
+            }).format(amount),
+        };
+    })();
 
     const apply = (status: OrderStatus) => {
         const reference = target?.reference ?? group.primary_reference;
@@ -220,6 +287,30 @@ const Show = ({
                                 </span>
                             </div>
 
+                            {/* Why it was cancelled, and what became of the money. */}
+                            {order.status === 'cancelled' &&
+                                (order.cancellation.length > 0 ||
+                                    order.cancellation_refund !== null) && (
+                                    <div className="border-b border-border bg-rose-50/60 px-5 py-2.5 text-xs leading-relaxed text-rose-800">
+                                        {order.cancellation.length > 0 && (
+                                            <p>
+                                                Motif :{' '}
+                                                {order.cancellation.join(' · ')}
+                                            </p>
+                                        )}
+                                        {order.cancellation_refund !== null && (
+                                            <p className="mt-0.5">
+                                                {order.cancellation_refund
+                                                    ? order.payment_status ===
+                                                      'refunded'
+                                                        ? 'Remboursée'
+                                                        : 'Remboursement demandé'
+                                                    : 'Annulée sans remboursement'}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                             <ul className="divide-y divide-border">
                                 {order.items.map((item) => (
                                     <li
@@ -330,8 +421,10 @@ const Show = ({
                             </div>
                             <div className="flex justify-between border-t border-border pt-2 font-medium">
                                 <dt className="text-ink">
-                                    {paidByCard
-                                        ? 'Payé par carte'
+                                    {paidOnline
+                                        ? group.payment_method === 'paypal'
+                                            ? 'Payé avec PayPal'
+                                            : 'Payé par carte'
                                         : 'À encaisser'}
                                 </dt>
                                 <dd className="text-ink tabular-nums">
@@ -346,8 +439,56 @@ const Show = ({
                         {/*
                          * Paid online: the courier collects nothing, and a
                          * refund (after a cancellation) is made from Payzone's
-                         * back-office using the references below.
+                         * back-office or PayPal's dashboard using the
+                         * references below.
                          */}
+                        {group.payment_method === 'paypal' && (
+                            <div className="mt-3 space-y-1 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
+                                <p className="flex items-center gap-1.5 font-medium">
+                                    <Wallet className="h-3.5 w-3.5" />
+                                    {group.payment_status === 'refunded'
+                                        ? 'PayPal — remboursé'
+                                        : 'Payée avec PayPal — rien à encaisser'}
+                                </p>
+                                {payment && (
+                                    <>
+                                        <p className="tabular-nums">
+                                            Débité par PayPal :{' '}
+                                            {new Intl.NumberFormat('fr-FR', {
+                                                style: 'currency',
+                                                currency: payment.currency,
+                                            }).format(payment.amount)}
+                                        </p>
+                                        {payment.card_brand && (
+                                            <p>
+                                                Carte via PayPal :{' '}
+                                                {payment.card_brand}
+                                            </p>
+                                        )}
+                                        {payment.transaction_id && (
+                                            <p className="break-all">
+                                                Transaction PayPal :{' '}
+                                                {payment.transaction_id}
+                                            </p>
+                                        )}
+                                        {/* Sent to PayPal as its "Invoice ID"
+                                            — a payment-attempt id, not
+                                            Hirfaty's invoice number, which
+                                            is the purchase reference. */}
+                                        <p className="break-all">
+                                            Réf. paiement (« Invoice ID » chez
+                                            PayPal) : {payment.charge_id}
+                                        </p>
+                                        {payment.paid_at && (
+                                            <p>
+                                                Payée le{' '}
+                                                {formatDate(payment.paid_at)}
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
                         {group.payment_method === 'card' && (
                             <div className="mt-3 space-y-1 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
                                 <p className="flex items-center gap-1.5 font-medium">
@@ -507,7 +648,11 @@ const Show = ({
                                 <button
                                     key={action.status}
                                     type="button"
-                                    onClick={() => apply(action.status)}
+                                    onClick={() =>
+                                        action.status === 'cancelled'
+                                            ? setCancelling(true)
+                                            : apply(action.status)
+                                    }
                                     className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                                         action.status === 'cancelled'
                                             ? 'border border-rose-200 text-rose-700 hover:bg-rose-50'
@@ -531,6 +676,16 @@ const Show = ({
                     </div>
                 </div>
             </div>
+
+            <CancelOrderDialog
+                open={cancelling}
+                onOpenChange={setCancelling}
+                reference={target?.reference ?? group.primary_reference}
+                scope={target ? 'single' : 'group'}
+                appliesTo={target ? target.store.name : 'tout l’achat'}
+                reasons={cancellationReasons}
+                refund={refundOffer}
+            />
         </div>
     );
 };

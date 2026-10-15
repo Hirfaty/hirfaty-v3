@@ -232,6 +232,7 @@ class BuyerAccountService
         $events = $group
             ->flatMap(fn (Order $order) => $order->statusEvents->map(fn ($event) => [
                 'event' => $event,
+                'order' => $order,
                 'store' => $order->store?->store_name,
             ]))
             ->groupBy(fn (array $row) => implode('|', [
@@ -243,10 +244,19 @@ class BuyerAccountService
                 $event = $rows->first()['event'];
                 $stores = $rows->pluck('store')->filter()->unique()->values();
 
+                /*
+                 * A cancellation the desk gave reasons for reads them in the
+                 * buyer's language (the event itself only holds the free
+                 * text, if any).
+                 */
+                $reasons = $event->status === 'cancelled' && ! empty($rows->first()['order']->cancellation_tags)
+                    ? OrderCancellationService::describe($rows->first()['order'])
+                    : [];
+
                 return [
                     'id' => $event->id,
                     'status' => $event->status,
-                    'note' => $event->note,
+                    'note' => $reasons !== [] ? implode(' · ', $reasons) : $event->note,
                     'at' => $event->created_at,
                     // Null when it applied to the whole purchase.
                     'stores' => $group->count() > 1 && $rows->count() < $group->count()
@@ -364,8 +374,8 @@ class BuyerAccountService
                 ->reject(fn ($productId) => $productReviews->has($productId))
                 ->count(),
 
-            // `cod` or `card`; `payment_status` says whether a card was charged
-            // (`paid`) or the money went back (`refunded`).
+            // `cod`, `card` or `paypal`; `payment_status` says whether the
+            // money was taken (`paid`) or went back (`refunded`).
             'payment_method' => $first->payment_method ?? 'cod',
             'payment_status' => $first->payment_status ?? 'pending',
 

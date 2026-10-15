@@ -112,7 +112,7 @@ export type BuyerPurchase = {
     /** The carrier, as named at checkout. */
     delivery_service_name: string | null;
     /** `card` through Payzone; `cod` only on purchases from before card payment. */
-    payment_method: 'cod' | 'card';
+    payment_method: 'cod' | 'card' | 'paypal';
     /** `paid` / `refunded` for a card; always `pending` for cash on delivery. */
     payment_status: string;
     /** Every distinct tracking number across the purchase's parcels. */

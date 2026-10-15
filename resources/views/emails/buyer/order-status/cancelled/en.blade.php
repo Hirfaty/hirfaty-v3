@@ -2,6 +2,8 @@
 @php
     $first = $orders->first();
     $many = $orders->count() > 1;
+    // The desk's picked reasons in this language, then any words of its own.
+    $reasons = \App\Services\OrderCancellationService::describe($first, 'en');
 @endphp
 
 <x-mail.layout
@@ -25,7 +27,11 @@
             Hello {{ $user->first_name }}, your order {{ $reference }} from
             {{ $first->store->store_name }} has been cancelled.
         @endif
-        @if ($first->isPaidByCard())
+        @if ($first->wasPaidOnline() && $first->cancellation_refund === false)
+            This cancellation does not come with a refund.
+        @elseif ($first->wasPaidOnline() && $first->payment_method === \App\Models\Order::PAYMENT_PAYPAL)
+            What you paid with PayPal will be refunded to your PayPal account.
+        @elseif ($first->wasPaidOnline())
             What you paid by card will be refunded to the card you used.
         @else
             Nothing has been charged — you pay on delivery.
@@ -48,9 +54,11 @@
         @endforeach
     @endif
 
-    @if ($first->cancellation_reason)
+    @if ($reasons !== [])
         <x-mail.note tone="danger" title="Reason given">
-            {{ $first->cancellation_reason }}
+            @foreach ($reasons as $reason)
+                {{ $reason }}@if (! $loop->last)<br>@endif
+            @endforeach
         </x-mail.note>
     @endif
 

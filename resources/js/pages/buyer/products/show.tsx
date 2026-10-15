@@ -22,6 +22,7 @@ import {
     Store as StoreIcon,
     Truck,
     Weight,
+    Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -858,6 +859,56 @@ const ProductDetail = ({
         );
     };
 
+    /** Holds Buy now in its busy state while the server checks the piece. */
+    const [buying, setBuying] = useState(false);
+
+    /**
+     * Buy now: straight to checkout with this piece alone, the cart left
+     * exactly as it is (BuyNowService). A guest signs in first, as for the
+     * cart; the server runs the same stock, variant and minimum checks as
+     * adding to the cart, and its refusal comes back as a toast.
+     */
+    const handleBuyNow = () => {
+        if (preview) {
+            toast.info('Aperçu — l’achat est désactivé.');
+
+            return;
+        }
+
+        if (unavailable || buying) {
+            return;
+        }
+
+        if (!auth.user) {
+            router.visit(loginHref);
+
+            return;
+        }
+
+        if (needsChoice) {
+            return;
+        }
+
+        setBuying(true);
+
+        router.post(
+            route('checkout.buy_now.start'),
+            {
+                product_id: product.id,
+                variant_id: selectedVariant?.id ?? null,
+                quantity: qty,
+            },
+            {
+                onError: (errors) =>
+                    toast.error(
+                        Object.values(errors)[0] ??
+                            t('buyer.detail.buy_now_failed'),
+                    ),
+                onFinish: () => setBuying(false),
+            },
+        );
+    };
+
     const toggleWishlist = () => {
         if (preview) {
             toast.info('Aperçu — les favoris sont désactivés.');
@@ -1276,6 +1327,23 @@ const ProductDetail = ({
                                 : t('buyer.detail.wishlist_add')}
                         </button>
                     </div>
+
+                    {/*
+                     * Straight to checkout with this piece alone — the cart is
+                     * left as it is. Hidden when nobody can buy it: the button
+                     * above already says why.
+                     */}
+                    {!unavailable && (
+                        <button
+                            onClick={handleBuyNow}
+                            disabled={buying || (!!auth.user && needsChoice)}
+                            data-test="buy-now"
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-souk-title px-6 py-4 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                            {t('buyer.detail.buy_now')}
+                            <Zap className="h-4 w-4" strokeWidth={1.6} />
+                        </button>
+                    )}
 
                     {!auth.user && (
                         <p className="mt-3 text-[13px] leading-relaxed text-souk-brown-deep/70">

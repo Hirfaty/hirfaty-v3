@@ -53,7 +53,7 @@ export type OrderGroup = {
     /** Which carrier the purchase shipped by (snapshot from checkout). */
     delivery_service_name: string | null;
     /** Cash to collect (`cod`), or paid online through Payzone (`card`). */
-    payment_method: 'cod' | 'card';
+    payment_method: 'cod' | 'card' | 'paypal';
     /** For a card: `paid` or `refunded`. Always `pending` for cash. */
     payment_status: string;
     /** Null when the workshops' parcels have been moved apart. */
@@ -66,6 +66,12 @@ export type OrderGroup = {
         tracking_number: string | null;
         total_amount: number;
         delivery_fee: number;
+        /** Per order: one workshop's part may be refunded on its own. */
+        payment_status: string;
+        /** Why it was cancelled, in French — picked reasons, then free text. */
+        cancellation: string[];
+        /** The desk's refund decision; null when it never had to make one. */
+        cancellation_refund: boolean | null;
         store: { id: number | null; name: string };
         items: {
             id: number;
@@ -312,6 +318,14 @@ const Index = ({
                                                 'refunded'
                                                     ? 'Carte — remboursée'
                                                     : 'Payée par carte'}
+                                            </span>
+                                        )}
+                                        {group.payment_method === 'paypal' && (
+                                            <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                                {group.payment_status ===
+                                                'refunded'
+                                                    ? 'PayPal — remboursé'
+                                                    : 'Payée avec PayPal'}
                                             </span>
                                         )}
                                     </td>

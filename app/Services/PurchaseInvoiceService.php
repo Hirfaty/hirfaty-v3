@@ -9,7 +9,8 @@ use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The PDF invoice behind "Download invoice" on the buyer's order history.
+ * The PDF invoice behind "Download invoice" on the buyer's order history, and
+ * behind the admin invoices page (AdminInvoiceListService).
  *
  * One invoice per *purchase*, not per Order row — the same grain as the card
  * it is downloaded from. A basket split across three workshops is one thing
@@ -43,6 +44,36 @@ class PurchaseInvoiceService
          */
         $locale = app()->getLocale() === 'ar' ? 'fr' : app()->getLocale();
 
+        return $this->render($orders, $buyer, $reference, $locale);
+    }
+
+    /**
+     * The same invoice for the admin desk: any buyer's purchase, always in
+     * French, the back office's language. Null for an unknown reference.
+     */
+    public function downloadForDesk(string $reference): ?Response
+    {
+        $orders = Order::query()
+            ->where(fn ($query) => $query
+                ->where('group_reference', $reference)
+                ->orWhere(fn ($query) => $query
+                    ->whereNull('group_reference')
+                    ->where('reference', $reference)))
+            ->with(['store', 'city', 'buyer', 'items.product'])
+            ->oldest('id')
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return null;
+        }
+
+        // An account deleted since still leaves its invoice printable.
+        return $this->render($orders, $orders->first()->buyer ?? new User, $reference, 'fr');
+    }
+
+    /** @param  Collection<int, Order>  $orders */
+    private function render(Collection $orders, User $buyer, string $reference, string $locale): Response
+    {
         $pdf = Pdf::loadView('invoices.purchase', [
             'locale' => $locale,
             'reference' => $reference,

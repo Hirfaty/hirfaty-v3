@@ -28,17 +28,17 @@ export default function HeroSection() {
                 nextLabel={t('welcome.hero.next')}
                 isRTL={isRTL}
             >
-                <h1 className="font-display text-[clamp(1.75rem,4.8vw,4rem)] leading-[1.08] tracking-[0.04em] text-white uppercase rtl:tracking-normal">
+                <h1 className="mb-10 font-display text-[clamp(1.75rem,4.8vw,4rem)] leading-[1.08] font-bold tracking-[0.04em] text-white uppercase rtl:tracking-normal">
                     <Reveal delay={80}>
                         <span className="block">{t('welcome.hero.line')}</span>
                     </Reveal>
                 </h1>
 
-                <Reveal delay={280}>
+                {/* <Reveal delay={280}>
                     <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-souk-cream sm:mt-4 sm:text-xl">
                         {t('welcome.hero.lead')}
                     </p>
-                </Reveal>
+                </Reveal> */}
 
                 <Reveal delay={360}>
                     <div className="mx-auto mt-5 flex max-w-64 flex-col items-stretch gap-2.5 sm:mt-6 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">

@@ -14,24 +14,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Card payments for a purchase, from the redirect to Payzone to the end of
- * the purchase's life as "awaiting payment".
+ * Online payments for a purchase — card through Payzone, or PayPal — from the
+ * redirect to the provider to the end of the purchase's life as "awaiting
+ * payment".
  *
- * CheckoutService writes a card purchase's orders and holds their stock, but
- * leaves them unannounced and hidden (Order's settled scope). From there this
- * service is the only thing that moves them:
+ * CheckoutService writes an online purchase's orders and holds their stock,
+ * but leaves them unannounced and hidden (Order's settled scope). From there
+ * this service is the only thing that moves them:
  *
- *   - Payzone's signed notification says CHARGED → markPaid(): the orders
- *     become paid and confirmed, earnings are written, the cart lines go,
- *     and the buyer and the desk are told.
+ *   - the provider confirms the money → settle(): the orders become paid and
+ *     confirmed, earnings are written, the cart lines go, and the buyer and
+ *     the desk are told. For Payzone that is its signed CHARGED notification
+ *     (handleNotification below); for PayPal, a completed capture
+ *     (PayPalPaymentService).
  *   - the buyer gives up → cancel() hands the stock back.
  *   - nobody does anything → expireStale() (scheduled) releases it.
  *
- * Card is the only way to pay: there is no cash on delivery to fall back to.
+ * Paying online is the only way to pay: there is no cash on delivery to fall
+ * back to.
  *
- * Only Payzone's notification can mark a purchase paid. The browser coming
- * back on the success URL proves nothing, so it only ever shows a "confirming"
- * page that waits for the notification.
+ * For Payzone, only its notification can mark a purchase paid. The browser
+ * coming back on the success URL proves nothing, so it only ever shows a
+ * "confirming" page that waits for the notification.
  */
 class PaymentService
 {
@@ -55,7 +59,7 @@ class PaymentService
     }
 
     /**
-     * The orders of one of the buyer's card purchases still waiting for
+     * The orders of one of the buyer's online purchases still waiting for
      * payment — empty once it is paid or released.
      *
      * @return Collection<int, Order>
@@ -79,9 +83,24 @@ class PaymentService
     }
 
     /**
+     * How one of the buyer's open purchases is to be paid — `card` or
+     * `paypal` — or null once there is nothing left to pay.
+     */
+    public function methodOf(User $buyer, string $reference): ?string
+    {
+        return $this->openPurchase($buyer, $reference)->first()?->payment_method;
+    }
+
+    /** Whether any order of the purchase is still waiting for its money. */
+    public function isOpen(string $reference): bool
+    {
+        return $this->unsettled()->where('group_reference', $reference)->exists();
+    }
+
+    /**
      * Start a payment attempt and build the form that sends the buyer to
      * Payzone. Null when the purchase is not waiting for a card payment (paid
-     * already, released, or not this buyer's).
+     * already, released, paid with PayPal, or not this buyer's).
      *
      * @return array{url: string, payload: string, signature: string}|null
      */
@@ -89,14 +108,14 @@ class PaymentService
     {
         $orders = $this->openPurchase($buyer, $reference);
 
-        if ($orders->isEmpty()) {
+        if ($orders->isEmpty() || $orders->first()->payment_method !== Order::PAYMENT_CARD) {
             return null;
         }
 
         $payment = Payment::create([
             'group_reference' => $reference,
             'buyer_id' => $buyer->id,
-            'provider' => 'payzone',
+            'provider' => Payment::PROVIDER_PAYZONE,
             'charge_id' => Payment::newChargeId(),
             'amount' => $this->amountFor($orders),
             'currency' => 'MAD',
@@ -119,18 +138,31 @@ class PaymentService
      */
     public function handleNotification(array $data): bool
     {
-        $payment = Payment::where('charge_id', (string) ($data['id'] ?? ''))->first();
+        $payment = Payment::where('provider', Payment::PROVIDER_PAYZONE)
+            ->where('charge_id', (string) ($data['id'] ?? ''))
+            ->first();
 
         if (! $payment) {
             return false;
         }
 
         $status = strtoupper((string) ($data['status'] ?? ''));
+        $transaction = $this->approvedTransaction($data);
 
         match (true) {
-            $status === 'CHARGED' && $this->approvedTransaction($data) !== null => $this->markPaid($payment, $data),
-            in_array($status, self::FAILED_STATUSES, true) => $this->markFailed($payment, $data),
-            in_array($status, self::REFUNDED_STATUSES, true) => $this->markRefunded($payment, $data),
+            $status === 'CHARGED' && $transaction !== null => $this->settle(
+                $payment,
+                (float) ($data['lineItem']['amount'] ?? $transaction['amount'] ?? 0),
+                (string) ($data['lineItem']['currency'] ?? $transaction['currency'] ?? $payment->currency),
+                [
+                    'provider_status' => 'CHARGED',
+                    'provider_transaction_id' => $data['internalId'] ?? $transaction['gatewayProvidedId'] ?? null,
+                    'card_brand' => isset($data['paymentMethod']) ? mb_substr((string) $data['paymentMethod'], 0, 40) : null,
+                    'payload' => $data,
+                ],
+            ),
+            in_array($status, self::FAILED_STATUSES, true) => $this->fail($payment, ['provider_status' => $status, 'payload' => $data]),
+            in_array($status, self::REFUNDED_STATUSES, true) => $this->refund($payment, ['provider_status' => $status, 'payload' => $data]),
             // Pending states (CHARGE_PENDING, AUTHORIZED, ...): note it and
             // wait for the next notification.
             default => $payment->update(['provider_status' => $status ?: null, 'payload' => $data]),
@@ -140,37 +172,40 @@ class PaymentService
     }
 
     /**
-     * Place the purchase this payment was for.
+     * Place the purchase this payment was for, now the provider has taken the
+     * money.
      *
-     * @param  array<string, mixed>  $data
+     * Idempotent — providers resend, and PayPal may report one capture twice
+     * (the buyer's return, then its webhook) — so a payment already paid
+     * changes nothing. Money that no live order stands behind, or that does
+     * not match what the attempt asked for, is flagged for the desk to refund
+     * instead.
+     *
+     * @param  float  $charged  what the provider says it took, in `$currency`
+     * @param  array<string, mixed>  $attributes  the provider's facts for the payment
+     *                                            row (status, transaction id, payload…)
      */
-    private function markPaid(Payment $payment, array $data): void
+    public function settle(Payment $payment, float $charged, string $currency, array $attributes): void
     {
         $refundReason = null;
         $placed = collect();
 
-        DB::transaction(function () use ($payment, $data, &$refundReason, &$placed) {
+        DB::transaction(function () use ($payment, $charged, $currency, $attributes, &$refundReason, &$placed) {
             $payment = Payment::whereKey($payment->id)->lockForUpdate()->first();
 
             if ($payment->isPaid()) {
                 return;
             }
 
-            $transaction = $this->approvedTransaction($data);
-
             $payment->update([
                 'status' => Payment::STATUS_PAID,
-                'provider_status' => 'CHARGED',
-                'provider_transaction_id' => $data['internalId'] ?? $transaction['gatewayProvidedId'] ?? null,
-                'card_brand' => isset($data['paymentMethod']) ? mb_substr((string) $data['paymentMethod'], 0, 40) : null,
                 'paid_at' => now(),
-                'payload' => $data,
-            ]);
+            ] + $attributes);
 
-            $charged = (float) ($data['lineItem']['amount'] ?? $transaction['amount'] ?? 0);
-
-            if ($charged + 0.01 < (float) $payment->amount) {
-                $refundReason = 'Montant débité ('.number_format($charged, 2, '.', '').' MAD) inférieur au total de la commande — commande non validée.';
+            if (strtoupper($currency) !== $payment->currency || $charged + 0.01 < (float) $payment->amount) {
+                $refundReason = 'Montant débité ('.number_format($charged, 2, '.', '').' '.strtoupper($currency)
+                    .') ne couvre pas le total de la commande ('.number_format((float) $payment->amount, 2, '.', '').' '.$payment->currency
+                    .') — commande non validée.';
 
                 return;
             }
@@ -184,7 +219,7 @@ class PaymentService
                 return;
             }
 
-            if ($live->contains(fn (Order $order) => $order->isPaidByCard())) {
+            if ($live->contains(fn (Order $order) => $order->isPaidOnline())) {
                 $refundReason = 'Commande déjà payée par une autre transaction — paiement en double.';
 
                 return;
@@ -222,11 +257,11 @@ class PaymentService
      * A declined or abandoned attempt. The purchase itself stays open — the
      * buyer can try again, with the same card or another — until it expires.
      *
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $attributes  the provider's facts for the payment row
      */
-    private function markFailed(Payment $payment, array $data): void
+    public function fail(Payment $payment, array $attributes): void
     {
-        DB::transaction(function () use ($payment, $data) {
+        DB::transaction(function () use ($payment, $attributes) {
             $payment = Payment::whereKey($payment->id)->lockForUpdate()->first();
 
             // A late DECLINED for an attempt that already went through changes nothing.
@@ -234,32 +269,24 @@ class PaymentService
                 return;
             }
 
-            $payment->update([
-                'status' => Payment::STATUS_FAILED,
-                'provider_status' => strtoupper((string) ($data['status'] ?? '')),
-                'payload' => $data,
-            ]);
+            $payment->update(['status' => Payment::STATUS_FAILED] + $attributes);
         });
     }
 
     /**
-     * Money back to the buyer — done by the desk from Payzone's back-office.
-     * Recorded on the payment and the orders; the orders' own status is the
-     * desk's to change.
+     * Money back to the buyer — done by the desk from Payzone's back-office or
+     * PayPal's dashboard. Recorded on the payment and the orders; the orders'
+     * own status is the desk's to change.
      *
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $attributes  the provider's facts for the payment row
      */
-    private function markRefunded(Payment $payment, array $data): void
+    public function refund(Payment $payment, array $attributes): void
     {
-        DB::transaction(function () use ($payment, $data) {
-            $payment->update([
-                'status' => Payment::STATUS_REFUNDED,
-                'provider_status' => strtoupper((string) ($data['status'] ?? '')),
-                'payload' => $data,
-            ]);
+        DB::transaction(function () use ($payment, $attributes) {
+            $payment->update(['status' => Payment::STATUS_REFUNDED] + $attributes);
 
             $payment->orders()
-                ->where('payment_method', Order::PAYMENT_CARD)
+                ->whereIn('payment_method', Order::ONLINE_METHODS)
                 ->where('payment_status', 'paid')
                 ->update(['payment_status' => 'refunded']);
         });
@@ -286,14 +313,16 @@ class PaymentService
     }
 
     /**
-     * Where a buyer stands with a purchase they are paying by card, for the
-     * page Payzone sends them back to. Null when it is not theirs.
+     * Where a buyer stands with a purchase they are paying online, for the
+     * page Payzone or PayPal sends them back to. Null when it is not theirs.
      *
      * `state` is `placed` (paid — show the confirmation),
-     * `released` (expired or cancelled), or `awaiting` (waiting for Payzone's
-     * word, or for the buyer to try again).
+     * `released` (expired or cancelled), or `awaiting` (waiting for the
+     * provider's word, or for the buyer to try again). `method` is `card` or
+     * `paypal`; `charged` is what the latest attempt asked the provider for,
+     * when that was not dirhams (PayPal).
      *
-     * @return array{reference: string, state: string, last_attempt: string|null, amount: float}|null
+     * @return array{reference: string, method: string, state: string, last_attempt: string|null, amount: float, charged: array{amount: float, currency: string, locale: string}|null}|null
      */
     public function status(User $buyer, string $reference): ?array
     {
@@ -310,23 +339,33 @@ class PaymentService
 
         $state = match (true) {
             $live->isEmpty() => 'released',
-            // Paid (or refunded since), or an order from before card payment
+            // Paid (or refunded since), or an order from before online payment
             // existed — either way there is nothing left to pay here.
-            $live->contains(fn (Order $order) => $order->payment_method !== Order::PAYMENT_CARD
+            $live->contains(fn (Order $order) => ! $order->paysOnline()
                 || $order->payment_status !== 'pending') => 'placed',
             default => 'awaiting',
         };
 
+        $attempt = Payment::where('group_reference', $reference)->latest('id')->first();
+
         return [
             'reference' => $reference,
+            'method' => (string) $orders->first()->payment_method,
             'state' => $state,
-            'last_attempt' => Payment::where('group_reference', $reference)->latest('id')->value('status'),
+            'last_attempt' => $attempt?->status,
             'amount' => $this->amountFor($orders),
+            'charged' => $attempt && $attempt->currency !== 'MAD'
+                ? [
+                    'amount' => (float) $attempt->amount,
+                    'currency' => $attempt->currency,
+                    'locale' => (string) config("currency.supported.{$attempt->currency}.locale", 'en-US'),
+                ]
+                : null,
         ];
     }
 
     /**
-     * The buyer cancels a card purchase before paying for it.
+     * The buyer cancels an online purchase before paying for it.
      */
     public function cancel(User $buyer, string $reference): bool
     {
@@ -339,13 +378,15 @@ class PaymentService
             return false;
         }
 
-        $this->release($orders, 'Paiement par carte abandonné.');
+        $this->release($orders, $orders->first()->payment_method === Order::PAYMENT_PAYPAL
+            ? 'Paiement PayPal abandonné.'
+            : 'Paiement par carte abandonné.');
 
         return true;
     }
 
     /**
-     * Hand back whatever the buyer's earlier, unpaid card purchases are
+     * Hand back whatever the buyer's earlier, unpaid online purchases are
      * holding, before they check out again.
      *
      * Without this, a buyer who closed the payment tab and returned to
@@ -362,7 +403,7 @@ class PaymentService
     }
 
     /**
-     * Release every card purchase nobody has paid for in time.
+     * Release every online purchase nobody has paid for in time.
      *
      * Measured from the latest sign of life — the checkout, or the buyer's
      * most recent trip to the payment page — so a buyer retrying a declined
@@ -388,7 +429,7 @@ class PaymentService
                 continue;
             }
 
-            $this->release($orders, 'Paiement par carte non reçu à temps.');
+            $this->release($orders, 'Paiement en ligne non reçu à temps.');
             $released++;
         }
 
@@ -396,7 +437,7 @@ class PaymentService
     }
 
     /**
-     * Cancel an unpaid card purchase and give its stock back. Quietly: the
+     * Cancel an unpaid online purchase and give its stock back. Quietly: the
      * buyer was never told it was placed, so there is nothing to un-tell —
      * and the cart still holds what they wanted.
      *
@@ -406,8 +447,8 @@ class PaymentService
     {
         DB::transaction(function () use ($orders, $reason) {
             foreach ($orders as $order) {
-                // Re-read under lock: a CHARGED notification may have landed
-                // since the caller fetched it.
+                // Re-read under lock: a CHARGED notification (or a PayPal
+                // capture) may have landed since the caller fetched it.
                 $order = Order::withoutGlobalScope(Order::SETTLED_SCOPE)
                     ->whereKey($order->id)
                     ->lockForUpdate()
@@ -415,7 +456,7 @@ class PaymentService
 
                 if (! $order
                     || $order->status === 'cancelled'
-                    || $order->payment_method !== Order::PAYMENT_CARD
+                    || ! $order->paysOnline()
                     || $order->payment_status !== 'pending') {
                     continue;
                 }
@@ -437,15 +478,24 @@ class PaymentService
     }
 
     /**
-     * Money Payzone took that no live order stands behind — the desk has to
-     * give it back from Payzone's back-office.
+     * Money a provider took that no live order stands behind — the desk has
+     * to give it back from Payzone's back-office or PayPal's dashboard.
+     *
+     * @param  float|null  $amount  the part owed, in MAD; null for the whole
+     *                              attempt. Turned into the attempt's own
+     *                              currency, since that is what gets refunded.
      */
     public function flagRefund(Payment $payment, string $reason, ?float $amount = null, ?string $orderReference = null): void
     {
-        Log::critical('Payzone payment needs a manual refund', [
+        $owed = $amount === null
+            ? (float) $payment->amount
+            : min((float) $payment->amount, $payment->inChargedCurrency($amount));
+
+        Log::critical(ucfirst((string) $payment->provider).' payment needs a manual refund', [
             'charge_id' => $payment->charge_id,
             'purchase' => $payment->group_reference,
-            'amount' => $amount ?? (float) $payment->amount,
+            'amount' => $owed,
+            'currency' => $payment->currency,
             'reason' => $reason,
         ]);
 
@@ -453,9 +503,12 @@ class PaymentService
             $this->adminNotifications->notifyAdmins(new CardRefundNeeded(
                 purchase: $payment->group_reference,
                 chargeId: $payment->charge_id,
-                amount: $amount ?? (float) $payment->amount,
+                amount: $owed,
                 reason: $reason,
                 orderReference: $orderReference,
+                provider: (string) $payment->provider,
+                currency: (string) $payment->currency,
+                transactionId: $payment->provider_transaction_id,
             ));
         } catch (\Throwable $e) {
             Log::error('Refund alert failed: '.$e->getMessage());
@@ -463,19 +516,19 @@ class PaymentService
     }
 
     /**
-     * Card orders still waiting for their money, and not yet released.
+     * Online orders still waiting for their money, and not yet released.
      */
     private function unsettled()
     {
         return Order::withoutGlobalScope(Order::SETTLED_SCOPE)
-            ->where('payment_method', Order::PAYMENT_CARD)
+            ->whereIn('payment_method', Order::ONLINE_METHODS)
             ->where('payment_status', 'pending')
             ->where('status', '!=', 'cancelled');
     }
 
     /**
      * Take what was just bought out of the buyer's cart — and only that, since
-     * a card checkout keeps the cart open and the buyer may have added to it
+     * an online checkout keeps the cart open and the buyer may have added to it
      * while paying.
      *
      * @param  Collection<int, Order>  $orders

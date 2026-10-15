@@ -12,9 +12,9 @@ use Illuminate\Validation\ValidationException;
 /**
  * Adding to a cart, with the variant rules applied in one place.
  *
- * Both the "add to cart" button and the guest-cart merge run through here, so
- * a line that localStorage produced is held to exactly the same checks as one
- * the server just created.
+ * The "add to cart" button, the guest-cart merge and "Buy now" (which skips
+ * the cart — see BuyNowService) all run through here, so every line is held
+ * to exactly the same checks.
  */
 class CartService
 {
@@ -26,16 +26,7 @@ class CartService
      */
     public function addLine(Cart $cart, int $productId, ?int $variantId, int $quantity = 1): CartItem
     {
-        // storefront(), not a plain find: a product that is unpublished, or
-        // whose seller has been blocked, is not for sale either.
-        $product = Product::storefront()->find($productId);
-
-        if (! $product) {
-            throw ValidationException::withMessages([
-                'product_id' => 'Ce produit n\'est plus disponible.',
-            ]);
-        }
-
+        $product = $this->forSale($productId);
         $variant = $this->resolveVariant($product, $variantId);
 
         /*
@@ -68,6 +59,26 @@ class CartService
             'product_variant_id' => $variant?->id,
             'quantity' => $quantity,
         ]);
+    }
+
+    /**
+     * Check a line could be bought as it stands, without putting it in any
+     * cart — for "Buy now". The same rules as addLine(), against the quantity
+     * alone since there is no existing line to top up.
+     *
+     * @return array{0: Product, 1: ProductVariant|null}
+     *
+     * @throws ValidationException
+     */
+    public function assertBuyable(?User $buyer, int $productId, ?int $variantId, int $quantity): array
+    {
+        $product = $this->forSale($productId);
+        $variant = $this->resolveVariant($product, $variantId);
+
+        $this->assertStockFor($product, $variant, $quantity);
+        $this->assertMinimumFor($product, $buyer, $quantity);
+
+        return [$product, $variant];
     }
 
     /**
@@ -111,6 +122,25 @@ class CartService
                 'quantity' => "Commande minimum de {$minimum} pièces pour '{$product->name}' au tarif professionnel.",
             ]);
         }
+    }
+
+    /**
+     * storefront(), not a plain find: a product that is unpublished, or whose
+     * seller has been blocked, is not for sale either.
+     *
+     * @throws ValidationException
+     */
+    private function forSale(int $productId): Product
+    {
+        $product = Product::storefront()->find($productId);
+
+        if (! $product) {
+            throw ValidationException::withMessages([
+                'product_id' => 'Ce produit n\'est plus disponible.',
+            ]);
+        }
+
+        return $product;
     }
 
     /**
