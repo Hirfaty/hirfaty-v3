@@ -58,6 +58,10 @@ Route::get('/', [LocaleController::class, 'redirect'])
 // Crawler files — see SeoController for why they are routes, not static files.
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+// `{language}`, never `{locale}` — SetLocale would swallow it.
+Route::get('/feeds/google/{language}.xml', [SeoController::class, 'googleFeed'])
+    ->whereIn('language', LocaleService::SUPPORTED)
+    ->name('feeds.google');
 
 /*
  * Payzone (card payments). Outside every auth group and exempt from CSRF

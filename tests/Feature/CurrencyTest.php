@@ -66,6 +66,30 @@ test('a visitor with no choice gets the currency their country maps to', functio
         ->assertInertia(fn ($page) => $page->where('currency.code', 'EUR'));
 });
 
+test('a crawler always reads dirhams, wherever it crawls from and whatever its session says', function () {
+    // Googlebot crawls from the US: geolocation alone would show it dollars,
+    // while the JSON-LD and the Merchant Center feed say MAD.
+    $this->withHeader('CF-IPCountry', 'US')
+        ->withHeader('User-Agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')
+        ->withSession([CurrencyService::SESSION_KEY => 'EUR'])
+        ->get(route('products.index'))
+        ->assertInertia(fn ($page) => $page->where('currency.code', 'MAD'));
+
+    $this->withHeader('CF-IPCountry', 'US')
+        ->withHeader('User-Agent', 'Mozilla/5.0 (compatible; Storebot-Google/1.0) Chrome/120.0 Safari/537.36')
+        ->get(route('products.index'))
+        ->assertInertia(fn ($page) => $page->where('currency.code', 'MAD'));
+});
+
+test('an ordinary browser is not mistaken for a crawler', function () {
+    Http::fake(['open.er-api.com/*' => Http::response(['rates' => ['USD' => 0.1]])]);
+
+    $this->withHeader('CF-IPCountry', 'US')
+        ->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36')
+        ->get(route('products.index'))
+        ->assertInertia(fn ($page) => $page->where('currency.code', 'USD'));
+});
+
 test('a country with no mapping falls back to dirhams', function () {
     $this->withHeader('CF-IPCountry', 'JP')
         ->get(route('products.index'))

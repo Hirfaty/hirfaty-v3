@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
  *
  * The one place that answers "what currency are we in". Resolution order:
  *
- *   1. an explicit choice the buyer made (session), which always wins;
+ *   0. a search or shopping crawler always gets the base currency;
+ *   1. an explicit choice the buyer made (session), which wins for people;
  *   2. the country their IP resolves to;
  *   3. the base currency.
  *
@@ -25,6 +26,14 @@ class CurrencyService
 {
     public const SESSION_KEY = 'currency';
 
+    /**
+     * User agents that must always read MAD. Googlebot crawls from the US, so
+     * geolocation would show it dollars while the JSON-LD and the Merchant
+     * Center feed say dirhams — and Merchant Center disapproves a product
+     * whose landing page disagrees with its listed price.
+     */
+    private const CRAWLER_PATTERN = '/googlebot|storebot-google|adsbot-google|google-inspectiontool|googleother|mediapartners-google|bingbot|duckduckbot|yandexbot|baiduspider|applebot|facebookexternalhit/i';
+
     public function __construct(
         private ExchangeRateService $rates,
         private GeoLocationService $geo,
@@ -35,6 +44,10 @@ class CurrencyService
      */
     public function resolve(Request $request): string
     {
+        if ($this->isCrawler($request)) {
+            return $this->base();
+        }
+
         $chosen = $request->session()->get(self::SESSION_KEY);
 
         if (is_string($chosen) && $this->isSupported($chosen)) {
@@ -140,6 +153,11 @@ class CurrencyService
             strtoupper($currency),
             (array) config('currency.supported', []),
         );
+    }
+
+    public function isCrawler(Request $request): bool
+    {
+        return (bool) preg_match(self::CRAWLER_PATTERN, (string) $request->userAgent());
     }
 
     public function base(): string

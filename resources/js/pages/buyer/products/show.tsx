@@ -626,14 +626,22 @@ const ProductDetail = ({
     const groups = product.option_groups ?? [];
     const hasVariants = groups.length > 0 && variants.length > 0;
 
-    // Start on the first variant that can actually be bought, so the page
-    // opens on a valid, in-stock combination rather than a dead end.
+    // Open on the variant the link names (`?variant=`, as the Google Merchant
+    // feed links each one, so the page shows the price that was listed);
+    // otherwise on the first variant that can actually be bought, so the
+    // page opens on a valid, in-stock combination rather than a dead end.
     const [selection, setSelection] = useState<Selection>(() => {
         if (!hasVariants) {
             return {};
         }
 
-        const opening = variants.find((v) => v.in_stock) ?? variants[0];
+        const linked = Number(
+            new URL(page.url, 'http://localhost').searchParams.get('variant'),
+        );
+        const opening =
+            variants.find((v) => v.id === linked) ??
+            variants.find((v) => v.in_stock) ??
+            variants[0];
 
         return Object.fromEntries(
             opening.options.map((o) => [o.name, o.value]),
