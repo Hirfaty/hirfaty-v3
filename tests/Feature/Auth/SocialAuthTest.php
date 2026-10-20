@@ -181,8 +181,7 @@ test('a banned account cannot sign in through a provider', function () {
     fakeProvider('google', socialiteUser());
 
     $this->get(route('social.callback', ['provider' => 'google']))
-        ->assertRedirect(route('login'))
-        ->assertSessionHas('error');
+        ->assertRedirect(route('account.blocked'));
 
     $this->assertGuest();
 });

@@ -28,6 +28,7 @@ class DeliveryRateService
 {
     public function __construct(
         private readonly SpreadsheetExportService $spreadsheets,
+        private readonly CityService $cities,
     ) {}
 
     /**
@@ -110,14 +111,21 @@ class DeliveryRateService
 
     /**
      * Prices delivery to a Moroccan city. Pass an existing `$cityId`, or a
-     * `$newName` to add the city to the registry at the same time.
+     * `$newName` (French) to add the city to the registry at the same time —
+     * with `$translations` for its Arabic and English names, keyed by locale.
+     *
+     * @param  array<string, string|null>  $translations
      */
-    public function addCity(DeliveryService $service, ?int $cityId, ?string $newName, ?string $region, float $fee): DeliveryRate
+    public function addCity(DeliveryService $service, ?int $cityId, ?string $newName, ?string $region, float $fee, array $translations = []): DeliveryRate
     {
-        return DB::transaction(function () use ($service, $cityId, $newName, $region, $fee) {
+        return DB::transaction(function () use ($service, $cityId, $newName, $region, $fee, $translations) {
             $city = $cityId !== null
                 ? City::findOrFail($cityId)
-                : City::create(['name' => $newName, 'region' => $region]);
+                : City::create([
+                    'name' => $newName,
+                    'name_translations' => $this->cities->translationsFor($newName, $translations),
+                    'region' => $region,
+                ]);
 
             return DeliveryRate::create([
                 'delivery_service_id' => $service->id,

@@ -113,7 +113,7 @@ function SellerOrderDetail({
     };
 
     const buyerName = `${order.buyer.first_name} ${order.buyer.last_name}`;
-    const cityLabel = order.city?.name ?? 'Ville non precisee';
+    const cityLabel = order.city?.translated_name ?? 'Ville non precisee';
 
     return (
         <div className="mx-auto max-w-[1200px] px-6 py-8 md:px-10">

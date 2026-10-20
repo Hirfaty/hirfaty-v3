@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\City;
 use App\Models\PendingRegistration;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\CityService;
 use App\Services\PostLoginRedirectService;
 use App\Services\RegistrationCodeService;
 use Illuminate\Auth\Events\Registered;
@@ -191,7 +191,7 @@ class RegistrationController extends Controller
     /**
      * Step 3 — the details screen.
      */
-    public function showDetails(Request $request): Response|RedirectResponse
+    public function showDetails(Request $request, CityService $cities): Response|RedirectResponse
     {
         $pending = $this->codes->resolve($request);
 
@@ -221,12 +221,7 @@ class RegistrationController extends Controller
                         'id' => $category->id,
                         'name' => $category->translated_name,
                     ]),
-                'cities' => City::orderBy('name')
-                    ->get()
-                    ->map(fn (City $city) => [
-                        'id' => $city->id,
-                        'name' => $city->name,
-                    ]),
+                'cities' => $cities->options(),
                 'types' => Store::TYPES,
             ]);
         }

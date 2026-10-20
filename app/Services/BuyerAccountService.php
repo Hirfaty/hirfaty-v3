@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Http\Resources\BuyerProductResource;
 use App\Models\Address;
-use App\Models\City;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
@@ -25,6 +24,8 @@ use Illuminate\Support\Collection;
  */
 class BuyerAccountService
 {
+    public function __construct(private CityService $cityService) {}
+
     /**
      * Identity, as the header and profile form need it.
      *
@@ -105,7 +106,7 @@ class BuyerAccountService
             'recipient_phone' => $address->recipient_phone,
             'address_line' => $address->address_line,
             'city_id' => $address->city_id,
-            'city' => $address->city?->name,
+            'city' => $address->city?->translated_name,
             'is_default' => $address->is_default,
         ];
     }
@@ -338,7 +339,7 @@ class BuyerAccountService
             'delivery_fee' => $deliveryFee,
             'total_amount' => $itemsTotal + $deliveryFee,
             'shipping_address' => $first->shipping_address,
-            'city' => $first->city?->name,
+            'city' => $first->city?->translated_name,
 
             // Who placed it, as the card's byline reads — the account's name,
             // which is not necessarily the recipient on the parcel.
@@ -430,7 +431,7 @@ class BuyerAccountService
             'created_at' => $order->created_at,
             'delivered_at' => $order->delivered_at,
             'shipping_address' => $order->shipping_address,
-            'city' => $order->city?->name,
+            'city' => $order->city?->translated_name,
             'store' => [
                 'store_name' => $order->store?->store_name,
             ],
@@ -508,11 +509,11 @@ class BuyerAccountService
     }
 
     /**
-     * @return Collection<int, City>
+     * @return Collection<int, array{id: int, name: string}>
      */
     public function cities()
     {
-        return City::orderBy('name')->get(['id', 'name']);
+        return $this->cityService->options();
     }
 
     /**

@@ -151,6 +151,8 @@ const AddDestinationDialog = ({
         fee: '',
         city_id: '',
         city_name: '',
+        city_name_ar: '',
+        city_name_en: '',
         region: '',
         country_code: '',
         country_name: '',
@@ -244,7 +246,7 @@ const AddDestinationDialog = ({
                             {creatingCity && (
                                 <>
                                     <label className="grid gap-1.5 text-sm font-medium text-ink">
-                                        Nom de la ville
+                                        Nom de la ville (en français)
                                         <input
                                             value={form.data.city_name}
                                             onChange={(e) =>
@@ -264,6 +266,44 @@ const AddDestinationDialog = ({
                                             </span>
                                         )}
                                     </label>
+                                    {/*
+                                        Left blank, the server fills in the
+                                        names it knows for common Moroccan
+                                        cities; otherwise the French name
+                                        shows in every language.
+                                    */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <label className="grid gap-1.5 text-sm font-medium text-ink">
+                                            Nom en arabe
+                                            <input
+                                                value={form.data.city_name_ar}
+                                                onChange={(e) =>
+                                                    form.setData(
+                                                        'city_name_ar',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                dir="rtl"
+                                                lang="ar"
+                                                placeholder="facultatif"
+                                                className={inputClass}
+                                            />
+                                        </label>
+                                        <label className="grid gap-1.5 text-sm font-medium text-ink">
+                                            Nom en anglais
+                                            <input
+                                                value={form.data.city_name_en}
+                                                onChange={(e) =>
+                                                    form.setData(
+                                                        'city_name_en',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="facultatif"
+                                                className={inputClass}
+                                            />
+                                        </label>
+                                    </div>
                                     <label className="grid gap-1.5 text-sm font-medium text-ink">
                                         Région (facultatif)
                                         <input

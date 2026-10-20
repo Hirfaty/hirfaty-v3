@@ -4,14 +4,17 @@ namespace App\Services\Payzone;
 
 use App\Models\Payment;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 /**
  * The Payzone Paywall, as its integration kit describes it.
  *
- * Two things only: building the signed form that sends a buyer to the hosted
- * payment page, and checking that a notification really came from Payzone.
- * Nothing here touches orders — PaymentService decides what a notification
- * means for a purchase.
+ * Building the signed form that sends a buyer to the hosted payment page,
+ * checking that a notification really came from Payzone, and — through the
+ * REST API, when its caller credentials are set — refunding a charge.
+ * Nothing here touches orders — PaymentService and RefundService decide what
+ * Payzone's answers mean for a purchase.
  */
 class PayzoneClient
 {
@@ -101,6 +104,99 @@ class PayzoneClient
         $expected = hash_hmac('sha256', $rawBody, (string) config('services.payzone.notification_key'));
 
         return hash_equals($expected, strtolower(trim($signature)));
+    }
+
+    /**
+     * Whether Hirfaty can refund a card itself: the paywall is set up and
+     * Payzone has issued the API caller credentials.
+     */
+    public function canRefund(): bool
+    {
+        return $this->isConfigured()
+            && filled(config('services.payzone.api_caller_name'))
+            && filled(config('services.payzone.api_caller_password'));
+    }
+
+    /**
+     * Give back some or all of a charge (the `REFUND` command), in the
+     * charge's own currency.
+     *
+     * `$chargeId` is ours — the id the paywall was opened with, which is what
+     * Payzone's API looks charges up by. Payzone takes no idempotency key, so
+     * the caller must make sure a refund is asked for once (RefundService
+     * locks the payment around this call).
+     *
+     * @return array<string, mixed> the charge, its transactions included
+     *
+     * @throws PayzoneException
+     */
+    public function refundCharge(string $chargeId, float $amount): array
+    {
+        $path = '/api/v3/charges/'.rawurlencode($chargeId);
+        $body = (string) json_encode(['command' => 'REFUND', 'amount' => round($amount, 2)]);
+        $timestamp = time();
+
+        try {
+            $response = Http::baseUrl($this->apiUrl())
+                ->acceptJson()
+                ->connectTimeout(10)
+                ->timeout(30)
+                ->withHeaders([
+                    'X-MerchantAccount' => (string) config('services.payzone.merchant_account'),
+                    'X-CallerName' => (string) config('services.payzone.api_caller_name'),
+                    'X-HMAC-Timestamp' => (string) $timestamp,
+                    'X-HMAC-Signature' => self::apiSignature(
+                        (string) config('services.payzone.api_caller_name'),
+                        (string) config('services.payzone.merchant_account'),
+                        $timestamp,
+                        $path,
+                        $body,
+                        (string) config('services.payzone.api_caller_password'),
+                    ),
+                ])
+                // Sent byte for byte as signed.
+                ->withBody($body, 'application/json')
+                ->post($path);
+        } catch (ConnectionException $e) {
+            throw new PayzoneException('Payzone could not be reached: '.$e->getMessage());
+        }
+
+        $json = (array) ($response->json() ?? []);
+
+        if (! $response->successful()) {
+            throw new PayzoneException(
+                'Payzone answered '.$response->status().': '.($json['message'] ?? 'error'),
+                status: $response->status(),
+                errorCode: $json['errorCode'] ?? null,
+                body: $json,
+            );
+        }
+
+        return $json;
+    }
+
+    /**
+     * Payzone's API request signature: HMAC-SHA256, keyed with the caller's
+     * password, over caller name + merchant account + timestamp + request
+     * path + body, in hex (their "API authentication" section).
+     */
+    public static function apiSignature(string $callerName, string $merchantAccount, int $timestamp, string $path, string $body, string $password): string
+    {
+        return strtoupper(hash_hmac('sha256', $callerName.$merchantAccount.$timestamp.$path.$body, $password));
+    }
+
+    /** The API host: PAYZONE_API_URL, else the paywall's own host. */
+    private function apiUrl(): string
+    {
+        $configured = config('services.payzone.api_url');
+
+        if (filled($configured)) {
+            return rtrim((string) $configured, '/');
+        }
+
+        $paywall = parse_url((string) config('services.payzone.paywall_url'));
+
+        return ($paywall['scheme'] ?? 'https').'://'.($paywall['host'] ?? 'payment-sandbox.payzone.ma');
     }
 
     /**

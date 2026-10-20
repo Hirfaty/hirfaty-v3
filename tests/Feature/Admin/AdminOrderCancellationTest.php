@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\Admin\CardRefundNeeded;
 use App\Notifications\OrderCancelled;
 use App\Services\PaymentService;
+use App\Services\Payzone\PayzoneClient;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -52,6 +53,38 @@ function fakePayPalRefunds(string $refund = 'COMPLETED'): void
         }
 
         return Http::response(['name' => 'NOT_FOUND'], 404);
+    });
+}
+
+/**
+ * Payzone's API, with test caller credentials turned on. `$answer` is the
+ * refund transaction's state, or `authentication_error` for a 401.
+ */
+function fakePayzoneRefunds(string $answer = 'APPROVED'): void
+{
+    config([
+        'services.payzone.api_caller_name' => 'hirfaty_caller',
+        'services.payzone.api_caller_password' => 'caller-secret',
+    ]);
+
+    Http::fake(function (HttpRequest $request) use ($answer) {
+        if (! str_starts_with((string) parse_url($request->url(), PHP_URL_PATH), '/api/v3/charges/')) {
+            return Http::response(['errorCode' => 'entity_not_found_error'], 404);
+        }
+
+        if ($answer === 'authentication_error') {
+            return Http::response(['errorCode' => 'authentication_error', 'message' => 'HMAC Authentication failed. Invalid name or password'], 401);
+        }
+
+        return Http::response([
+            'id' => basename((string) parse_url($request->url(), PHP_URL_PATH)),
+            'status' => 'CHARGED',
+            'transactions' => [
+                ['type' => 'CHARGE', 'state' => 'APPROVED', 'resultCode' => 0],
+                // Payzone's samples pad the type with spaces.
+                ['type' => ' REFUND ', 'state' => $answer, 'amount' => $request['amount']],
+            ],
+        ]);
     });
 }
 
@@ -194,7 +227,7 @@ test('cancelling without refund keeps the money and tells the buyer so', functio
         (string) $n->toMail($purchase['buyer'])->render(), 'does not come with a refund'));
 });
 
-test('a card refund is left to the desk, with an alert to make it in Payzone', function () {
+test('without Payzone API credentials a card refund is left to the desk, with an alert to make it in Payzone', function () {
     Notification::fake();
     $purchase = paidPurchase($this, 'card');
 
@@ -205,6 +238,97 @@ test('a card refund is left to the desk, with an alert to make it in Payzone', f
     Notification::assertSentTo($purchase['admin'], CardRefundNeeded::class, fn ($n) => $n->provider === 'payzone' && $n->amount === 240.0);
     // Payzone's own REFUNDED notification will record it, not this.
     expect(Order::sole()->payment_status)->toBe('paid');
+});
+
+test('cancelling with refund gives a card buyer their money back through Payzone\'s API', function () {
+    Notification::fake();
+    fakePayzoneRefunds();
+    $purchase = paidPurchase($this, 'card');
+    $payment = Payment::sole();
+
+    cancelAs($this, $purchase['admin'], Order::sole(), ['reasons' => ['damaged'], 'refund' => true])
+        ->assertSessionHas('success', fn ($message) => str_contains($message, 'Remboursement carte de 240,00 MAD effectué'));
+
+    expect(Order::sole()->status)->toBe('cancelled')
+        ->and(Order::sole()->payment_status)->toBe('refunded')
+        ->and($payment->fresh()->status)->toBe('refunded')
+        ->and($payment->fresh()->provider_status)->toBe('REFUNDED');
+
+    // The REFUND command on our charge id, signed as Payzone's guide says.
+    Http::assertSent(function (HttpRequest $request) use ($payment) {
+        $path = '/api/v3/charges/'.$payment->charge_id;
+
+        return $request->method() === 'POST'
+            && $request->url() === 'https://payment-sandbox.payzone.ma'.$path
+            && $request['command'] === 'REFUND'
+            && (float) $request['amount'] === 240.0
+            && $request->header('X-MerchantAccount')[0] === 'hirfaty_Test'
+            && $request->header('X-CallerName')[0] === 'hirfaty_caller'
+            && $request->header('X-HMAC-Signature')[0] === PayzoneClient::apiSignature(
+                'hirfaty_caller',
+                'hirfaty_Test',
+                (int) $request->header('X-HMAC-Timestamp')[0],
+                $path,
+                $request->body(),
+                'caller-secret',
+            );
+    });
+
+    // Done automatically: no "refund to make" alert for the desk.
+    Notification::assertNotSentTo($purchase['admin'], CardRefundNeeded::class);
+
+    // Payzone's own REFUNDED notification, arriving afterwards, changes nothing.
+    app(PaymentService::class)->handleNotification(['id' => $payment->charge_id, 'status' => 'REFUNDED']);
+    expect(Order::sole()->payment_status)->toBe('refunded')
+        ->and($payment->fresh()->status)->toBe('refunded');
+});
+
+test('cancelling one workshop refunds only its share of a card purchase', function () {
+    Notification::fake();
+    fakePayzoneRefunds();
+    $purchase = paidPurchase($this, 'card', stores: 2);
+    [$first, $second] = Order::orderBy('id')->get();
+
+    // The second workshop's order: 200 MAD, no delivery, of 440.
+    cancelAs($this, $purchase['admin'], $second, ['reasons' => ['out_of_stock'], 'refund' => true, 'scope' => 'single'])
+        ->assertSessionHas('success');
+
+    Http::assertSent(fn (HttpRequest $request) => (float) $request['amount'] === 200.0);
+
+    expect($second->fresh()->payment_status)->toBe('refunded')
+        ->and($first->fresh()->payment_status)->toBe('paid')
+        ->and(Payment::sole()->status)->toBe('paid')
+        ->and(Payment::sole()->provider_status)->toBe('PARTIALLY_REFUNDED');
+});
+
+test('a card refund Payzone declines or refuses becomes an alert for the desk', function (string $answer) {
+    Notification::fake();
+    fakePayzoneRefunds($answer);
+    $purchase = paidPurchase($this, 'card');
+
+    cancelAs($this, $purchase['admin'], Order::sole(), ['reasons' => ['quality_issue'], 'refund' => true])
+        ->assertSessionHas('error', fn ($message) => str_contains($message, 'Le remboursement carte de 240,00 MAD a échoué'));
+
+    expect(Order::sole()->status)->toBe('cancelled')
+        ->and(Order::sole()->payment_status)->toBe('paid');
+    Notification::assertSentTo($purchase['admin'], CardRefundNeeded::class, fn ($n) => $n->provider === 'payzone'
+        && $n->amount === 240.0
+        && str_contains($n->reason, 'back-office Payzone'));
+})->with(['declined' => 'DECLINED', 'bad credentials' => 'authentication_error']);
+
+test('the cancel dialog knows whether a card refund is automatic', function () {
+    $purchase = paidPurchase($this, 'card');
+    $show = fn () => $this->actingAs($purchase['admin'])->get(route('admin.orders.show', Order::sole()->reference));
+
+    $show()->assertInertia(fn (Assert $page) => $page->where('payment.auto_refund', false));
+
+    fakePayzoneRefunds();
+    $show()->assertInertia(fn (Assert $page) => $page->where('payment.auto_refund', true));
+});
+
+test('the API signature matches the example in Payzone\'s guide', function () {
+    expect(PayzoneClient::apiSignature('$caller', 'MYNAME', 1633767872, '/api/v3/healthcheck', '', '123456'))
+        ->toBe('B6693ABCCB887DD65B8DD05FAC5AC19653154C63006896ED4912EAAEBF10FEB1');
 });
 
 test('a refund PayPal refuses becomes an alert for the desk', function () {

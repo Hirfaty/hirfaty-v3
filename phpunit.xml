@@ -68,6 +68,10 @@
         <env name="PAYZONE_NOTIFICATION_KEY" value="test-notify"/>
         <env name="PAYZONE_PAYWALL_URL" value="https://payment-sandbox.payzone.ma/pwv4/launch"/>
         <env name="PAYZONE_CALLBACK_BASE_URL" value=""/>
+        <!-- Card refunds through the API stay off unless a test turns them on. -->
+        <env name="PAYZONE_API_CALLER_NAME" value=""/>
+        <env name="PAYZONE_API_CALLER_PASSWORD" value=""/>
+        <env name="PAYZONE_API_URL" value=""/>
         <!--
             PayPal off, whatever the developer's .env holds, so checkout offers
             card alone unless a test switches PayPal on — and nothing ever

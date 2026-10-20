@@ -113,7 +113,14 @@ return [
     'privacy.eyebrow' => 'Your data',
     'privacy.heading' => 'What we collect, and what we do with it.',
     'privacy.lead' => 'Short version: we collect what an order needs and nothing we cannot justify. We do not sell your data.',
-    'privacy.updated' => 'Last updated: September 2026',
+    'privacy.updated' => 'Last updated: October 2026',
+
+    // Law 09-08 — translated from the company's French wording (CNDP receipt D-W-6-2026).
+    'privacy.compliance.heading' => 'Compliance & data protection (Law 09-08)',
+    'privacy.compliance.publisher' => 'The www.hirfaty.com platform is published by CREATI DIGITAL FINANCE (Trade register no. 13075, registered office: 19 Rue Om Ayad, Quartier Mly Hassan, Safi, Morocco).',
+    'privacy.compliance.declaration' => 'In accordance with Law no. 09-08 on the protection of individuals with regard to the processing of personal data, our processing of account registrations has been declared in advance to the CNDP under number D-W-6-2026 (receipt dated 06/01/2026, declaration number: D-6/2026).',
+    'privacy.compliance.rights' => 'You have the right to access, correct and object to the data concerning you by contacting us at:',
+    'privacy.compliance.logo_alt' => 'CNDP — Morocco’s national commission for the protection of personal data',
 
     'privacy.collect.heading' => 'What we collect',
     'privacy.collect.body1' => 'When you create an account: your name, email address and phone number. When you order: the delivery address and the phone number the courier should call.',

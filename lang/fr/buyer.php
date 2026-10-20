@@ -160,6 +160,10 @@ return [
     'detail.delivery' => 'Livraison en 3 à 7 jours en moyenne au Maroc, 7 à 14 jours à l\'international.',
     'detail.authentic' => 'Pièce authentique, garantie de l’atelier.',
     'detail.view_media' => 'Voir le média :n',
+    'detail.lightbox_open' => 'Agrandir la photo',
+    'detail.lightbox_close' => 'Fermer',
+    'detail.lightbox_previous' => 'Photo précédente',
+    'detail.lightbox_next' => 'Photo suivante',
 
     // Seller card
     'detail.sold_by' => 'Vendu par',

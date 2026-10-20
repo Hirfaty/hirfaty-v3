@@ -666,9 +666,8 @@ test('two-factor accounts cannot sign in with a code', function () {
 });
 
 /**
- * `is_banned` is written by Admin\UserController::ban and read nowhere else —
- * a banned account can still sign in with its password today. This pins that
- * the *new* path at least declines to be a second way through.
+ * A banned account is signed out on any request (see BlockedAccountTest), so
+ * there is no point mailing it a code it can never use.
  */
 test('banned accounts cannot sign in with a code', function () {
     $user = User::factory()->create([

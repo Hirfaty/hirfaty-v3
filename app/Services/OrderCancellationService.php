@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\Payment;
 use Illuminate\Support\Collection;
 
 /**
@@ -16,8 +17,8 @@ use Illuminate\Support\Collection;
  * in its own words goes in `cancellation_reason` and is shown as written.
  *
  * For an order paid online the desk also decides whether the buyer is
- * refunded; RefundService does it (PayPal) or raises the alert to do it
- * (Payzone).
+ * refunded; RefundService does it through PayPal's or Payzone's API, or
+ * raises the alert to do it by hand.
  */
 class OrderCancellationService
 {
@@ -129,12 +130,15 @@ class OrderCancellationService
 
         foreach ($results as $result) {
             $amount = number_format($result['amount'], 2, ',', ' ').' '.$result['currency'];
+            [$what, $who] = $result['provider'] === Payment::PROVIDER_PAYPAL
+                ? ['Remboursement PayPal', 'PayPal']
+                : ['Remboursement carte', 'Payzone'];
 
             $lines[] = match ($result['outcome']) {
-                'refunded' => "Remboursement PayPal de {$amount} effectué.",
-                'pending' => "Remboursement PayPal de {$amount} envoyé — PayPal le traite encore.",
-                'manual' => "Remboursement carte de {$amount} à faire depuis le back-office Payzone (alerte créée).",
-                default => "Le remboursement PayPal de {$amount} a échoué — alerte créée pour le faire à la main.",
+                'refunded' => "{$what} de {$amount} effectué.",
+                'pending' => "{$what} de {$amount} envoyé — {$who} le traite encore.",
+                'manual' => "{$what} de {$amount} à faire depuis le back-office Payzone (alerte créée).",
+                default => 'Le '.lcfirst($what)." de {$amount} a échoué — alerte créée pour le faire à la main.",
             };
         }
 

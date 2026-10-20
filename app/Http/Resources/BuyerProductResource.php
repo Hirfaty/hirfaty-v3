@@ -106,7 +106,7 @@ class BuyerProductResource extends JsonResource
                  */
                 'is_verified' => (bool) $this->store?->isApproved(),
                 // A store without a city must not fatal the whole listing.
-                'city_name' => $this->store?->city?->name,
+                'city_name' => $this->store?->city?->translated_name,
                 // For the storefront's seller card. Nullable — a shop that
                 // never uploaded one falls back to an initial.
                 'logo' => $this->store?->logo,

@@ -34,7 +34,8 @@ interface SellerSettingsProps {
         };
     };
     categories: Category[];
-    cities: City[];
+    /** Named in the seller's language — CityService::options(). */
+    cities: Pick<City, 'id' | 'name'>[];
 }
 
 /** The fields Store::REQUIRED_PROFILE_FIELDS asks for before a review. */

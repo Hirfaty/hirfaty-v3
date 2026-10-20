@@ -37,7 +37,7 @@ class StoreController extends Controller
             // eerie page with no products.
             ->selling()
             ->where('slug', $slug)
-            ->with(['city:id,name', 'category'])
+            ->with(['city:id,name,name_translations', 'category'])
             ->firstOrFail();
 
         $audience = Product::audienceFor($request->user());
@@ -72,7 +72,7 @@ class StoreController extends Controller
                 'type' => $store->type,
                 'logo' => $store->logo,
                 'banner' => $store->banner,
-                'city_name' => $store->city?->name,
+                'city_name' => $store->city?->translated_name,
                 // `name` is a per-locale map on the model; only the resolved
                 // string may reach the page.
                 'category_name' => $store->category?->translated_name,

@@ -7,12 +7,12 @@ use App\Http\Requests\Buyer\CheckoutRequest;
 use App\Http\Resources\CartLineResource;
 use App\Models\Address;
 use App\Models\Cart;
-use App\Models\City;
 use App\Models\Order;
 use App\Services\BuyerAccountService;
 use App\Services\BuyNowService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
+use App\Services\CityService;
 use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
 use App\Services\PaymentService;
@@ -129,18 +129,13 @@ class CheckoutController extends Controller
 
             // Only the cities the rate card serves — the admin desk closes a
             // city by removing its rate (see DeliveryRateService).
-            'cities' => City::orderBy('name')
-                ->when(
-                    ($cityIds = $deliveryFees->deliverableCityIds()) !== null,
-                    fn ($query) => $query->whereIn('id', $cityIds),
-                )
-                ->get(['id', 'name']),
+            'cities' => app(CityService::class)->options($deliveryFees->deliverableCityIds()),
 
             // The buyer's address book, default first (User::addresses orders
             // on is_default), so the page can pre-select without re-sorting.
             // Addresses in a destination the card no longer serves are left
             // out: they could not be priced.
-            'addresses' => $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name'))->get()
+            'addresses' => $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name,name_translations'))->get()
                 ->map(fn ($address) => [
                     'id' => $address->id,
                     'label' => $address->label,
@@ -148,7 +143,7 @@ class CheckoutController extends Controller
                     'recipient_phone' => $address->recipient_phone,
                     'address_line' => $address->address_line,
                     'city_id' => $address->city_id,
-                    'city_name' => $address->city?->name,
+                    'city_name' => $address->city?->translated_name,
                     'postal_code' => $address->postal_code,
                     'country' => $address->country,
                     'is_default' => $address->is_default,

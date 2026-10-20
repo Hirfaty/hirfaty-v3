@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountNotBanned;
 use App\Http\Middleware\EnsureStoreCanSell;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -45,6 +46,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             SetLocale::class,
+            // A blocked account is signed out on its next request, wherever
+            // it is on the site; see BlockedAccountService.
+            EnsureAccountNotBanned::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

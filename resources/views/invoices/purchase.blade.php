@@ -71,7 +71,7 @@
                 <div class="label">{{ $t('delivered_to') }}</div>
                 <div>{{ $first->shipping_address }}</div>
                 @if ($first->city)
-                    <div>{{ $first->city->name }}</div>
+                    <div>{{ $first->city->nameFor($locale) }}</div>
                 @endif
                 @if ($first->shipping_phone)
                     <div>{{ $first->shipping_phone }}</div>

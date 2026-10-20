@@ -1,396 +1,296 @@
-import { Head, router, useForm } from '@inertiajs/react';
-import { Edit3, MapPin, Plus, Trash2 } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { MapPin, Search, Store, Truck } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
-    Bar,
-    BarChart,
-    Cell,
-    ResponsiveContainer,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import {
     Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts';
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
-import type { City, PageProps } from '@/types';
 
-interface CityWithCounts extends City {
+/** One row of the registry — CityService::adminIndex(). */
+type CityRow = {
+    id: number;
+    /** The French name, as `cities.name` holds it. */
+    name: string;
+    region: string | null;
+    /** Null where no translation is on file: the storefront shows `name`. */
+    translations: { ar: string | null; en: string | null };
     stores_count: number;
-    orders_count: number;
+};
+
+type DistributionRow = {
+    id: number;
+    name: string;
+    stores_count: number;
+};
+
+interface Props {
+    cities: CityRow[];
+    /** The cities with the most shops, most first — already ranked and capped. */
+    distribution: DistributionRow[];
+    totalStores: number;
 }
 
-const Index = ({
-    cities,
-}: PageProps & {
-    cities: CityWithCounts[];
-}) => {
-    const { t } = useTranslation();
-    const [editingId, setEditingId] = useState<number | null>(null);
+/** Case- and accent-blind, so "fes" finds "Fès". */
+const normalize = (value: string) =>
+    value
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toLowerCase();
 
-    // ── Create form ───────────────────────────────────────────
-    const createForm = useForm({
-        name: '',
-        region: '',
-    });
+function MissingTranslation() {
+    return (
+        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+            Non traduit
+        </span>
+    );
+}
 
-    const handleCreate = () => {
-        createForm.post(route('admin.cities.store'), {
-            onSuccess: () => createForm.reset(),
-        });
-    };
-
-    // ── Edit form ─────────────────────────────────────────────
-    const editForm = useForm({
-        name: '',
-        region: '',
-    });
-
-    const startEdit = (city: City) => {
-        setEditingId(city.id);
-        editForm.setData({
-            name: city.name,
-            region: city.region ?? '',
-        });
-    };
-
-    const handleUpdate = (id: number) => {
-        editForm.patch(route('admin.cities.update', id), {
-            onSuccess: () => setEditingId(null),
-        });
-    };
-
-    const handleDelete = (id: number, name: string) => {
-        if (confirm(`Delete "${name}"? This cannot be undone.`)) {
-            router.delete(route('admin.cities.destroy', id));
-        }
-    };
-
-    // Chart Data: Top 10 cities by store count
-    const chartData = useMemo(() => {
-        return cities
-            .filter((c) => c.stores_count > 0)
-            .sort((a, b) => (b.stores_count ?? 0) - (a.stores_count ?? 0))
-            .slice(0, 10)
-            .map((c) => ({
-                name: c.name,
-                count: c.stores_count,
-            }));
-    }, [cities]);
+/**
+ * Shops per city as horizontal bars: one series, so one colour, with the
+ * count at each bar's tip. The table below is the full, exact view.
+ */
+function StoreDistribution({
+    distribution,
+    totalStores,
+    citiesWithStores,
+}: {
+    distribution: DistributionRow[];
+    totalStores: number;
+    citiesWithStores: number;
+}) {
+    const max = Math.max(...distribution.map((city) => city.stores_count), 1);
 
     return (
-        <div className="min-h-screen bg-cream/30 p-6 md:p-10">
-            <Head title={t('titles.admin.cities')} />
-
-            <div className="mx-auto max-w-7xl">
-                <header className="mb-12">
-                    <p className="font-sans text-xs font-medium tracking-[0.2em] text-ink-soft uppercase">
-                        Geographic Infrastructure
-                    </p>
-                    <h1 className="mt-2 h-editorial text-4xl text-ink md:text-5xl">
-                        Cities & <span className="italic">Regions</span>
-                    </h1>
-                </header>
-
-                {/* ── Analytics Section ── */}
-                {chartData.length > 0 && (
-                    <section className="mb-12 border border-ink/5 bg-white p-8 shadow-sm">
-                        <h2 className="font-sans text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                            Store Distribution by City
-                        </h2>
-                        <div className="mt-8 h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} layout="vertical">
-                                    <XAxis type="number" hide />
-                                    <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        width={120}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        style={{
-                                            fontSize: '12px',
-                                            fontFamily: 'var(--font-sans)',
-                                            fill: '#333',
-                                        }}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: 'transparent' }}
-                                        contentStyle={{
-                                            backgroundColor: '#121212',
-                                            border: 'none',
-                                            color: '#F9F7F2',
-                                            fontSize: '12px',
-                                        }}
-                                    />
-                                    <Bar
-                                        dataKey="count"
-                                        radius={[0, 4, 4, 0]}
-                                        barSize={20}
-                                    >
-                                        {chartData.map((_, index) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill={
-                                                    index % 2 === 0
-                                                        ? '#A84C2E'
-                                                        : '#121212'
-                                                }
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </section>
-                )}
-
-                <div className="grid grid-cols-12 items-start gap-10">
-                    {/* ── Management List ── */}
-                    <div className="col-span-12 lg:col-span-8">
-                        <div className="border border-ink/5 bg-white shadow-sm">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b border-ink/5 bg-ink/[0.02]">
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                City Label
-                                            </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                Regional Context
-                                            </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                Activity
-                                            </th>
-                                            <th className="px-6 py-4 font-sans text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-ink/5">
-                                        {cities.map((city) => (
-                                            <tr
-                                                key={city.id}
-                                                className="group transition-colors hover:bg-cream/10"
-                                            >
-                                                {editingId === city.id ? (
-                                                    <td
-                                                        colSpan={4}
-                                                        className="px-6 py-4"
-                                                    >
-                                                        <div className="flex flex-wrap items-center gap-4">
-                                                            <input
-                                                                value={
-                                                                    editForm
-                                                                        .data
-                                                                        .name
-                                                                }
-                                                                onChange={(e) =>
-                                                                    editForm.setData(
-                                                                        'name',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                className="min-w-[200px] flex-1 border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
-                                                            />
-                                                            <input
-                                                                value={
-                                                                    editForm
-                                                                        .data
-                                                                        .region
-                                                                }
-                                                                onChange={(e) =>
-                                                                    editForm.setData(
-                                                                        'region',
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder="Region"
-                                                                className="border border-ink/10 bg-cream/5 px-3 py-2 text-sm focus:border-terracotta focus:outline-none"
-                                                            />
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleUpdate(
-                                                                            city.id,
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        editForm.processing
-                                                                    }
-                                                                    className="bg-ink px-4 py-2 text-xs font-medium text-cream hover:bg-terracotta disabled:opacity-50"
-                                                                >
-                                                                    Update
-                                                                </button>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setEditingId(
-                                                                            null,
-                                                                        )
-                                                                    }
-                                                                    className="px-3 py-2 text-xs font-medium text-ink-soft hover:text-ink"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                ) : (
-                                                    <>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="flex h-8 w-8 items-center justify-center bg-cream/50 text-ink-soft">
-                                                                    <MapPin className="h-4 w-4" />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-sm font-medium text-ink">
-                                                                        {
-                                                                            city.name
-                                                                        }
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-[10px] font-semibold tracking-widest text-terracotta uppercase">
-                                                                {city.region ??
-                                                                    'Undefined'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex gap-4">
-                                                                <div className="text-center">
-                                                                    <p className="text-xs font-bold text-ink">
-                                                                        {
-                                                                            city.stores_count
-                                                                        }
-                                                                    </p>
-                                                                    <p className="text-[10px] text-ink-soft uppercase">
-                                                                        Shops
-                                                                    </p>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <p className="text-xs font-bold text-ink">
-                                                                        {
-                                                                            city.orders_count
-                                                                        }
-                                                                    </p>
-                                                                    <p className="text-[10px] text-ink-soft uppercase">
-                                                                        Orders
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        startEdit(
-                                                                            city,
-                                                                        )
-                                                                    }
-                                                                    className="p-1.5 text-ink-soft hover:bg-ink hover:text-cream"
-                                                                >
-                                                                    <Edit3 className="h-3.5 w-3.5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            city.id,
-                                                                            city.name,
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        city.stores_count >
-                                                                            0 ||
-                                                                        city.orders_count >
-                                                                            0
-                                                                    }
-                                                                    className="p-1.5 text-ink-soft hover:bg-terracotta hover:text-cream disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-soft"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ── Create Sidebar ── */}
-                    <div className="col-span-12 lg:col-span-4">
-                        <div className="sticky top-10 border border-ink/5 bg-white p-8 shadow-sm">
-                            <h3 className="mb-6 h-editorial text-2xl text-ink">
-                                New <span className="italic">City</span>
-                            </h3>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                        City Name
-                                    </label>
-                                    <input
-                                        value={createForm.data.name}
-                                        onChange={(e) =>
-                                            createForm.setData(
-                                                'name',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. Marrakech"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
-                                    />
-                                    {createForm.errors.name && (
-                                        <p className="mt-2 text-[10px] tracking-wider text-terracotta uppercase">
-                                            {createForm.errors.name}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-[10px] font-bold tracking-widest text-ink/40 uppercase">
-                                        Regional Identity
-                                    </label>
-                                    <input
-                                        value={createForm.data.region}
-                                        onChange={(e) =>
-                                            createForm.setData(
-                                                'region',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. Marrakech-Safi"
-                                        className="w-full border border-ink/10 bg-cream/5 px-4 py-3 text-sm placeholder:text-ink/20 focus:border-terracotta focus:outline-none"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={
-                                        createForm.processing ||
-                                        !createForm.data.name
-                                    }
-                                    className="group flex w-full items-center justify-center gap-2 bg-ink py-4 text-xs font-bold tracking-widest text-cream uppercase transition-colors hover:bg-terracotta disabled:opacity-50"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    {createForm.processing
-                                        ? 'Recording...'
-                                        : 'Record City'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                    <Store className="h-4 w-4 text-ink-soft" />
+                    <h2 className="text-sm font-semibold text-ink">
+                        Répartition des boutiques par ville
+                    </h2>
                 </div>
+                {citiesWithStores > distribution.length && (
+                    <span className="text-xs text-ink-soft">
+                        {distribution.length} premières villes sur{' '}
+                        {citiesWithStores}
+                    </span>
+                )}
+            </div>
+
+            {distribution.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-ink-soft">
+                    Aucune boutique n'est encore rattachée à une ville.
+                </p>
+            ) : (
+                <ul className="flex flex-col gap-0.5 p-3">
+                    {distribution.map((city) => {
+                        const share = Math.round(
+                            (city.stores_count / Math.max(totalStores, 1)) *
+                                100,
+                        );
+
+                        return (
+                            <li key={city.id}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="group grid cursor-default grid-cols-[6rem_1fr] items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40 sm:grid-cols-[9rem_1fr] sm:gap-4">
+                                            <span className="truncate text-sm text-ink">
+                                                {city.name}
+                                            </span>
+                                            {/* End padding keeps room for the
+                                                count beside the longest bar;
+                                                logical sides so the bar still
+                                                grows from the start under
+                                                `dir="rtl"`. */}
+                                            <div className="flex items-center gap-2 pe-10">
+                                                <div
+                                                    className="h-[18px] shrink-0 rounded-e-[4px] bg-terracotta transition-opacity group-hover:opacity-80"
+                                                    style={{
+                                                        width: `${(city.stores_count / max) * 100}%`,
+                                                    }}
+                                                />
+                                                <span className="text-sm font-medium text-ink tabular-nums">
+                                                    {city.stores_count}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                        {city.name} · {city.stores_count}{' '}
+                                        boutique
+                                        {city.stores_count > 1
+                                            ? 's'
+                                            : ''} · {share} % du total
+                                    </TooltipContent>
+                                </Tooltip>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+export default function CitiesIndex({
+    cities,
+    distribution,
+    totalStores,
+}: Props) {
+    const { t } = useTranslation();
+    const [search, setSearch] = useState('');
+
+    const needle = normalize(search.trim());
+    const visible = needle
+        ? cities.filter((city) =>
+              [city.name, city.translations.ar, city.translations.en]
+                  .filter((name): name is string => !!name)
+                  .some((name) => normalize(name).includes(needle)),
+          )
+        : cities;
+    const citiesWithStores = cities.filter(
+        (city) => city.stores_count > 0,
+    ).length;
+
+    return (
+        <div className="flex flex-col gap-6 p-6 md:p-8">
+            <Head title={t('titles.admin.cities')} />
+            <header className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-ink">
+                        Villes
+                    </h1>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {cities.length} ville{cities.length > 1 ? 's' : ''} ·{' '}
+                        {totalStores} boutique{totalStores > 1 ? 's' : ''}{' '}
+                        rattachée{totalStores > 1 ? 's' : ''}.
+                    </p>
+                </div>
+                {/* Cities are added along with their delivery rate. */}
+                <Link
+                    href={route('admin.delivery-rates.index')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-ink shadow-sm transition hover:border-ink/30"
+                >
+                    <Truck className="h-4 w-4" />
+                    Tarifs de livraison
+                </Link>
+            </header>
+
+            <StoreDistribution
+                distribution={distribution}
+                totalStores={totalStores}
+                citiesWithStores={citiesWithStores}
+            />
+
+            {/* ── Search ───────────────────────────────────── */}
+            <div className="relative max-w-md">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Ville, en français, arabe ou anglais…"
+                    className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                />
+            </div>
+
+            {/* ── Table ────────────────────────────────────── */}
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead>Ville</TableHead>
+                            <TableHead>Arabe</TableHead>
+                            <TableHead>Anglais</TableHead>
+                            <TableHead className="text-right">
+                                Boutiques
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {visible.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={4}
+                                    className="h-32 text-center text-ink-soft"
+                                >
+                                    Aucune ville ne correspond à cette
+                                    recherche.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            visible.map((city) => (
+                                <TableRow key={city.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-ink-soft">
+                                                <MapPin className="h-4 w-4" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-ink">
+                                                    {city.name}
+                                                </span>
+                                                {city.region && (
+                                                    <span className="text-xs text-ink-soft">
+                                                        {city.region}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        {city.translations.ar ? (
+                                            <span
+                                                dir="rtl"
+                                                lang="ar"
+                                                className="text-sm text-ink"
+                                            >
+                                                {city.translations.ar}
+                                            </span>
+                                        ) : (
+                                            <MissingTranslation />
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {city.translations.en ? (
+                                            <span className="text-sm text-ink">
+                                                {city.translations.en}
+                                            </span>
+                                        ) : (
+                                            <MissingTranslation />
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {city.stores_count > 0 ? (
+                                            <span className="inline-flex items-center gap-1.5 text-sm text-ink tabular-nums">
+                                                <Store className="h-3.5 w-3.5 text-ink-soft" />
+                                                {city.stores_count}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm text-ink-soft/60">
+                                                —
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
             </div>
         </div>
     );
-};
+}
 
-Index.layout = (page: ReactNode) => <AdminLayout children={page} />;
-export default Index;
+CitiesIndex.layout = (page: ReactNode) => <AdminLayout children={page} />;

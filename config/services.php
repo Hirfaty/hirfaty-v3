@@ -88,6 +88,15 @@ return [
         'notification_key' => env('PAYZONE_NOTIFICATION_KEY'),
         'paywall_url' => env('PAYZONE_PAYWALL_URL', 'https://payment-sandbox.payzone.ma/pwv4/launch'),
         'callback_base_url' => env('PAYZONE_CALLBACK_BASE_URL'),
+        /*
+         * The REST API (refunds), signed with the API caller credentials
+         * Payzone's account manager hands out — separate from the paywall's
+         * secret key. Without them card refunds stay manual. The host defaults
+         * to the paywall's (payment-sandbox.payzone.ma in the sandbox).
+         */
+        'api_url' => env('PAYZONE_API_URL'),
+        'api_caller_name' => env('PAYZONE_API_CALLER_NAME'),
+        'api_caller_password' => env('PAYZONE_API_CALLER_PASSWORD'),
         // How long an unpaid card purchase holds its stock before it is released.
         'expire_after_minutes' => (int) env('PAYZONE_EXPIRE_AFTER_MINUTES', 60),
     ],

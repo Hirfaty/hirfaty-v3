@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Services\AdminOrderListService;
 use App\Services\OrderCancellationService;
 use App\Services\OrderStatusService;
+use App\Services\RefundService;
 use App\Services\SpreadsheetExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -85,7 +86,7 @@ class OrderController extends Controller
      * Route-model-bound on a single order because that is what a link carries;
      * the group is reassembled from it here.
      */
-    public function show(Order $order, OrderCancellationService $cancellations)
+    public function show(Order $order, OrderCancellationService $cancellations, RefundService $refunds)
     {
         $orders = $order->groupOrders()
             ->with(['buyer', 'store', 'items.product.images', 'city'])
@@ -119,6 +120,9 @@ class OrderController extends Controller
                 'exchange_rate' => $payment->exchange_rate === null ? null : (float) $payment->exchange_rate,
                 'status' => $payment->status,
                 'paid_at' => $payment->paid_at,
+                // Whether "refund" in the cancel dialog gives the money back
+                // at once, or leaves an alert to do it by hand.
+                'auto_refund' => $refunds->isAutomatic($payment),
             ] : null,
         ]);
     }

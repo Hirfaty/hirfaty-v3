@@ -22,11 +22,9 @@ use Illuminate\Support\Facades\Hash;
  *    practice for anyone who knows the email — which is the whole population
  *    2FA exists to protect against. Those accounts get the password field and
  *    Fortify's challenge, nothing else.
- *  - **The account is banned.** Note this is the *only* place in the app that
- *    checks `is_banned` at sign-in: the column is written by
- *    Admin\UserController::ban and read nowhere else, so a banned user can
- *    still sign in with their password today. This does not fix that — it just
- *    declines to add a second way through.
+ *  - **The account is banned.** EnsureAccountNotBanned would sign them
+ *    straight back out anyway, but mailing a code to someone who can never
+ *    use it is pointless — so the option is not offered at all.
  */
 class LoginCodeService
 {

@@ -245,7 +245,7 @@ class SeoService
     public function forStore(Store $store): array
     {
         $url = route('stores.show', $store->slug);
-        $city = $store->city?->name;
+        $city = $store->city?->translated_name;
 
         $description = $store->description ?: __($city ? 'seo.store_city' : 'seo.store', [
             'store' => $store->store_name,

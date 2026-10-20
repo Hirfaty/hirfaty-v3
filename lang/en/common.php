@@ -138,6 +138,8 @@ return [
     'auth.login.phone' => 'Phone number',
     'auth.login.password_confirm' => 'Confirm password',
     'auth.login.password_hint' => 'At least 12 characters, with upper and lower case, a number and a symbol.',
+    // Law 09-08: shown under the buyer sign-up form.
+    'auth.login.cndp_notice' => 'The information collected is processed under a declaration filed with the CNDP, receipt no. D-W-6-2026. In accordance with Law 09-08, you have the right to access and correct your personal data.',
     'auth.login.password_error_rules' => 'Your password needs at least 12 characters, with upper and lower case, a number and a symbol.',
     'auth.login.password_error_mismatch' => 'The two passwords do not match.',
     'auth.login.details_title' => 'Almost',
@@ -176,6 +178,12 @@ return [
 
     'errors.back_home' => 'Back to home',
     'errors.browse_market' => 'Explore the market',
+
+    // Account blocked by an admin — pages/auth/account-blocked.tsx.
+    'account_blocked.eyebrow' => 'Account blocked',
+    'account_blocked.title' => 'You can no longer use Hirfaty',
+    'account_blocked.body' => 'Your account has been blocked and you have been signed out. To find out why, or if you believe this is a mistake, please contact the Hirfaty team.',
+    'account_blocked.contact_page' => 'Contact page',
 
     /*
      * The site footer's Arabic signature line, under the tagline paragraph.
@@ -231,13 +239,14 @@ return [
     'footer.shipping' => 'Delivery throughout Morocco.',
     'footer.payments_secure' => 'Secure 3D Secure payment by Payzone — Visa, Mastercard',
     'footer.gtc' => 'Terms and conditions of sale',
+    'footer.cndp' => 'Processing declared to the CNDP — receipt no. D-W-6-2026',
+    'footer.cndp_alt' => 'CNDP — Morocco’s national commission for the protection of personal data',
     // ── Google / Facebook sign-in ───────────────────────────────────────
     'auth.login.social_divider' => 'or',
     'auth.login.social_google' => 'Continue with Google',
     'auth.login.social_facebook' => 'Continue with Facebook',
     'auth.login.social_failed' => 'Sign-in failed. Please try again.',
     'auth.login.social_unusable' => 'That account did not give us a confirmed email address. Use your email above instead.',
-    'auth.login.social_banned' => 'This account is suspended. Contact us if you believe this is a mistake.',
 
     // ── Currency ─────────────────────────────────────────────────────────
     // Prices are stored and charged in MAD; the display currency follows the

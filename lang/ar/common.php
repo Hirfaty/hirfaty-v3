@@ -137,6 +137,8 @@ return [
     'auth.login.phone' => 'رقم الهاتف',
     'auth.login.password_confirm' => 'تأكيد كلمة المرور',
     'auth.login.password_hint' => '12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
+    // Law 09-08: shown under the buyer sign-up form.
+    'auth.login.cndp_notice' => 'المعلومات المجمعة تخضع لمعالجة مصرح بها لدى اللجنة الوطنية لمراقبة حماية المعطيات ذات الطابع الشخصي بموجب الوصل رقم D-W-6-2026. وطبقاً للقانون 09-08، تتمتعون بحق الولوج إلى معطياتكم الشخصية وتصحيحها.',
     'auth.login.password_error_rules' => 'يجب أن تتكون كلمة المرور من 12 حرفاً على الأقل، مع أحرف كبيرة وصغيرة ورقم ورمز.',
     'auth.login.password_error_mismatch' => 'كلمتا المرور غير متطابقتين.',
     'auth.login.details_title' => 'أوشكت على',
@@ -175,6 +177,12 @@ return [
     'errors.back_home' => 'العودة إلى الرئيسية',
     'errors.browse_market' => 'اكتشف السوق',
 
+    // حساب أوقفه أحد المشرفين — pages/auth/account-blocked.tsx.
+    'account_blocked.eyebrow' => 'حساب موقوف',
+    'account_blocked.title' => 'لم يعد بإمكانك استخدام حرفتي',
+    'account_blocked.body' => 'تم إيقاف حسابك وتسجيل خروجك. لمعرفة السبب، أو إن كنت ترى أن هناك خطأ، تواصل مع فريق حرفتي.',
+    'account_blocked.contact_page' => 'صفحة التواصل',
+
     // توقيع تذييل الصفحة — نفس القيمة في الملفات الثلاثة، انظر en/common.php.
     'footer.ar_line' => 'حرفتي — صنع بفخر في المغرب',
 
@@ -208,13 +216,14 @@ return [
     'footer.shipping' => 'التوصيل إلى جميع أنحاء المغرب.',
     'footer.payments_secure' => 'دفع آمن بتقنية 3D Secure عبر Payzone — Visa وMastercard',
     'footer.gtc' => 'الشروط العامة للبيع',
+    'footer.cndp' => 'معالجة مصرح بها لدى اللجنة الوطنية لمراقبة حماية المعطيات ذات الطابع الشخصي — الوصل رقم D-W-6-2026',
+    'footer.cndp_alt' => 'اللجنة الوطنية لمراقبة حماية المعطيات ذات الطابع الشخصي',
     // ── تسجيل الدخول عبر Google / Facebook ──────────────────────────────
     'auth.login.social_divider' => 'أو',
     'auth.login.social_google' => 'المتابعة عبر Google',
     'auth.login.social_facebook' => 'المتابعة عبر Facebook',
     'auth.login.social_failed' => 'تعذّر تسجيل الدخول. يرجى المحاولة مرة أخرى.',
     'auth.login.social_unusable' => 'لم يزوّدنا هذا الحساب بعنوان بريد إلكتروني مؤكَّد. استخدم بريدك أعلاه بدلاً من ذلك.',
-    'auth.login.social_banned' => 'هذا الحساب موقوف. تواصل معنا إن كنت ترى أن هناك خطأ.',
 
     // ── العملة ───────────────────────────────────────────────────────────
     // تُحفظ الأسعار وتُحتسب بالدرهم؛ أما العملة المعروضة فتتبع عنوان IP الخاص

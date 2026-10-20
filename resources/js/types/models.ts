@@ -51,7 +51,12 @@ export interface Category {
 
 export interface City {
     id: number;
+    /** The French name — what the back office shows. */
     name: string;
+    /** Arabic and English names; a missing one falls back to `name`. */
+    name_translations: Partial<Record<'ar' | 'en', string>> | null;
+    /** `name` in the visitor's language — what the storefront shows. */
+    translated_name: string;
     region: string | null;
 }
 

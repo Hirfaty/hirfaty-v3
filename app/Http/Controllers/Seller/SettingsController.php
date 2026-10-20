@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\City;
 use App\Models\Store;
+use App\Services\CityService;
 use App\Services\LocaleService;
 use App\Services\StoreImageService;
 use App\Services\StoreVerificationService;
@@ -19,14 +19,14 @@ class SettingsController extends Controller
 {
     public function __construct(private StoreVerificationService $verification) {}
 
-    public function index()
+    public function index(CityService $cities)
     {
         $user = auth()->user()->load('store');
 
         return Inertia::render('seller/settings/index', [
             'user' => $user,
             'categories' => Category::roots()->get(),
-            'cities' => City::orderBy('name')->get(),
+            'cities' => $cities->options(),
         ]);
     }
 

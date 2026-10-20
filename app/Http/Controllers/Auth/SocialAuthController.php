@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Responses\LoginResponse;
+use App\Services\BlockedAccountService;
 use App\Services\SocialAuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -27,6 +29,7 @@ class SocialAuthController extends Controller
 {
     public function __construct(
         private readonly SocialAuthService $social,
+        private readonly BlockedAccountService $blocked,
     ) {}
 
     /**
@@ -42,7 +45,7 @@ class SocialAuthController extends Controller
     /**
      * They came back. Work out who that is.
      */
-    public function callback(Request $request, string $provider): RedirectResponse
+    public function callback(Request $request, string $provider): Response
     {
         $this->guard($provider);
 
@@ -82,9 +85,10 @@ class SocialAuthController extends Controller
          * A ban has to hold on every door, and this one bypasses the password
          * screen entirely. Checked here rather than in the service so the
          * service stays a question about identity, not about permission.
+         * Same notice page as every other door (BlockedAccountService).
          */
         if ($user->is_banned) {
-            return to_route('login')->with('error', __('common.auth.login.social_banned'));
+            return $this->blocked->lockOut($request);
         }
 
         Auth::login($user, remember: true);

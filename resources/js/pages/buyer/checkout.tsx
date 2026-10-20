@@ -213,7 +213,8 @@ const Checkout = ({
     buyNow,
 }: {
     items: CheckoutLine[];
-    cities: City[];
+    /** Named in the visitor's language — CityService::options(). */
+    cities: Pick<City, 'id' | 'name'>[];
     addresses: SavedAddress[];
     customer: Customer;
     /** `card` and/or `paypal` — whichever providers are configured. */

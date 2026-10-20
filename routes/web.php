@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountKindController;
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth\AccountBlockedController;
 use App\Http\Controllers\Auth\LoginCodeController;
 use App\Http\Controllers\Auth\LoginIdentifyController;
 use App\Http\Controllers\Auth\RegistrationController;
@@ -315,11 +316,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::get('/newsletter-subscribers', [Admin\NewsletterSubscriberController::class, 'index'])->name('newsletter-subscribers.index');
         Route::get('/newsletter-subscribers/export', [Admin\NewsletterSubscriberController::class, 'export'])->name('newsletter-subscribers.export');
 
-        // Cities
+        // Cities — read-only; they are added from the delivery-rates page.
         Route::get('/cities', [Admin\CityController::class, 'index'])->name('cities.index');
-        Route::post('/cities', [Admin\CityController::class, 'store'])->name('cities.store');
-        Route::patch('/cities/{city}', [Admin\CityController::class, 'update'])->name('cities.update');
-        Route::delete('/cities/{city}', [Admin\CityController::class, 'destroy'])->name('cities.destroy');
 
         /*
          * Delivery rate cards: the desk re-prices a line and adds or removes
@@ -555,6 +553,9 @@ Route::get('/brochure/download', [BrochureController::class, 'download'])
  * per-code attempt counter in GeneratesEmailCodes is the backstop, not the
  * front line.
  */
+// Where a blocked account lands after being signed out (EnsureAccountNotBanned).
+Route::get('/account-blocked', AccountBlockedController::class)->name('account.blocked');
+
 Route::prefix('login')->name('login.')->group(function () {
     Route::post('/identify', [LoginIdentifyController::class, 'identify'])
         ->middleware('throttle:10,1')

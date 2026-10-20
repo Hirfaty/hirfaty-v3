@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Category;
-use App\Models\City;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -72,46 +71,6 @@ test('super admin can view cities', function () {
         ->get(route('admin.cities.index'));
 
     $response->assertOk();
-});
-
-test('super admin can create a city', function () {
-    $admin = User::factory()->create(['role' => 'super_admin']);
-
-    $response = $this->actingAs($admin)
-
-        ->post(route('admin.cities.store'), [
-            'name' => 'Marrakech',
-            'region' => 'Marrakech-Safi',
-        ]);
-
-    $response->assertRedirect();
-    $this->assertDatabaseHas('cities', ['name' => 'Marrakech']);
-});
-
-test('super admin can update a city', function () {
-    $admin = User::factory()->create(['role' => 'super_admin']);
-    $city = City::create(['name' => 'Old City']);
-
-    $response = $this->actingAs($admin)
-
-        ->patch(route('admin.cities.update', $city), [
-            'name' => 'New City',
-        ]);
-
-    $response->assertRedirect();
-    $this->assertDatabaseHas('cities', ['id' => $city->id, 'name' => 'New City']);
-});
-
-test('super admin can delete a city', function () {
-    $admin = User::factory()->create(['role' => 'super_admin']);
-    $city = City::create(['name' => 'To Delete']);
-
-    $response = $this->actingAs($admin)
-
-        ->delete(route('admin.cities.destroy', $city));
-
-    $response->assertRedirect();
-    $this->assertDatabaseMissing('cities', ['id' => $city->id]);
 });
 
 test('buyers cannot access taxonomy management', function () {

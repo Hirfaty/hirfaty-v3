@@ -140,6 +140,8 @@ return [
     'auth.login.phone' => 'Téléphone',
     'auth.login.password_confirm' => 'Confirmer le mot de passe',
     'auth.login.password_hint' => 'Au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
+    // Loi 09-08: shown under the buyer sign-up form, wording supplied by the company.
+    'auth.login.cndp_notice' => 'Les informations recueillies font l’objet d’un traitement déclaré auprès de la CNDP sous le récépissé N° D-W-6-2026. Conformément à la loi 09-08, vous bénéficiez d’un droit d’accès et de rectification de vos données personnelles.',
     'auth.login.password_error_rules' => 'Votre mot de passe doit contenir au moins 12 caractères, avec majuscules, minuscules, un chiffre et un symbole.',
     'auth.login.password_error_mismatch' => 'Les deux mots de passe ne correspondent pas.',
     'auth.login.details_title' => 'Presque',
@@ -178,6 +180,12 @@ return [
 
     'errors.back_home' => 'Retour à l’accueil',
     'errors.browse_market' => 'Explorer le marché',
+
+    // Compte bloqué par un administrateur — pages/auth/account-blocked.tsx.
+    'account_blocked.eyebrow' => 'Compte bloqué',
+    'account_blocked.title' => 'Vous ne pouvez plus utiliser Hirfaty',
+    'account_blocked.body' => 'Votre compte a été bloqué et vous avez été déconnecté. Pour savoir pourquoi, ou si vous pensez qu’il s’agit d’une erreur, contactez l’équipe Hirfaty.',
+    'account_blocked.contact_page' => 'Page contact',
 
     /*
      * La signature arabe du pied de page, sous le paragraphe d'accroche.
@@ -233,13 +241,14 @@ return [
     'footer.shipping' => 'Livraison dans tout le Maroc.',
     'footer.payments_secure' => 'Paiement sécurisé 3D Secure par Payzone — Visa, Mastercard',
     'footer.gtc' => 'Conditions générales de vente',
+    'footer.cndp' => 'Traitement déclaré à la CNDP — récépissé N° D-W-6-2026',
+    'footer.cndp_alt' => 'CNDP — Commission nationale de contrôle de la protection des données à caractère personnel',
     // ── Connexion via Google / Facebook ─────────────────────────────────
     'auth.login.social_divider' => 'ou',
     'auth.login.social_google' => 'Continuer avec Google',
     'auth.login.social_facebook' => 'Continuer avec Facebook',
     'auth.login.social_failed' => 'La connexion a échoué. Veuillez réessayer.',
     'auth.login.social_unusable' => 'Ce compte ne nous a pas transmis d’adresse e-mail confirmée. Utilisez votre e-mail ci-dessus.',
-    'auth.login.social_banned' => 'Ce compte est suspendu. Contactez-nous si vous pensez qu’il s’agit d’une erreur.',
 
     // ── Devise ───────────────────────────────────────────────────────────
     // Les prix sont enregistrés et facturés en MAD ; la devise affichée suit

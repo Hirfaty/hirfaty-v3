@@ -78,6 +78,8 @@ type CardPayment = {
     exchange_rate: number | null;
     status: string;
     paid_at: string | null;
+    /** Whether a refund goes through the provider's API at once, or by hand. */
+    auto_refund: boolean;
 };
 
 const Show = ({
@@ -160,6 +162,7 @@ const Show = ({
 
         return {
             provider: payment.provider,
+            automatic: payment.auto_refund,
             amount: new Intl.NumberFormat('fr-FR', {
                 style: 'currency',
                 currency: payment.currency,
@@ -437,10 +440,11 @@ const Show = ({
                         </dl>
 
                         {/*
-                         * Paid online: the courier collects nothing, and a
-                         * refund (after a cancellation) is made from Payzone's
-                         * back-office or PayPal's dashboard using the
-                         * references below.
+                         * Paid online: the courier collects nothing. A refund
+                         * (after a cancellation) goes through the provider's
+                         * API; the references below are for finding the
+                         * payment in Payzone's back-office or PayPal's
+                         * dashboard when it has to be done by hand.
                          */}
                         {group.payment_method === 'paypal' && (
                             <div className="mt-3 space-y-1 rounded-lg bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">

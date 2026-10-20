@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import ImageLightbox, { ZOOM_CURSOR } from '@/components/buyer/ImageLightbox';
 import ProductReviews, {
     RatingStars,
     reviewCountLabel,
@@ -704,6 +705,10 @@ const ProductDetail = ({
     // photos can't leave it pointing past the end (which renders nothing).
     const active = media[Math.min(activeIdx, media.length - 1)];
 
+    // Full-screen viewer: photographs only, a video plays in place.
+    const photos = media.filter((m) => m.type !== 'video');
+    const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
     // Stock and availability follow the selection: a variant product's own
     // `stock` column is always 0, so reading it here would call everything
     // sold out.
@@ -1024,14 +1029,31 @@ const ProductDetail = ({
                                 className="h-full w-full object-cover"
                             />
                         ) : active ? (
-                            <img
-                                key={active.id}
-                                src={active.url}
-                                alt={product.name}
-                                // The page's largest paint — fetch it first.
-                                fetchPriority="high"
-                                className="h-full w-full object-cover"
-                            />
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setLightboxIdx(
+                                        Math.max(
+                                            0,
+                                            photos.findIndex(
+                                                (m) => m.id === active.id,
+                                            ),
+                                        ),
+                                    )
+                                }
+                                aria-label={t('buyer.detail.lightbox_open')}
+                                style={{ cursor: ZOOM_CURSOR }}
+                                className="block h-full w-full"
+                            >
+                                <img
+                                    key={active.id}
+                                    src={active.url}
+                                    alt={product.name}
+                                    // The page's largest paint — fetch it first.
+                                    fetchPriority="high"
+                                    className="h-full w-full object-cover"
+                                />
+                            </button>
                         ) : (
                             <div className="flex h-full w-full items-center justify-center text-souk-brown/25">
                                 <ZellijStarIcon className="h-10 w-10" />
@@ -1053,6 +1075,14 @@ const ProductDetail = ({
                             </span>
                         )}
                     </div>
+
+                    <ImageLightbox
+                        images={photos}
+                        index={lightboxIdx}
+                        alt={product.name}
+                        onIndexChange={setLightboxIdx}
+                        onClose={() => setLightboxIdx(null)}
+                    />
                 </div>
 
                 {/* ── Buying column ──────────────────────────── */}

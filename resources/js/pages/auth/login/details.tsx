@@ -176,6 +176,11 @@ export default function LoginDetails() {
                                 />
                             )}
                         </button>
+
+                        {/* Loi 09-08: required under the sign-up form. */}
+                        <p className="mt-4 text-[11px] leading-relaxed text-souk-brown-deep/50">
+                            {t('common.auth.login.cndp_notice')}
+                        </p>
                     </>
                 )}
             </Form>

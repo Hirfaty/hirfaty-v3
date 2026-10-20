@@ -93,6 +93,9 @@ class DeliveryRateController extends Controller
                 'unique:cities,name',
             ],
             'region' => ['exclude_unless:type,city', 'nullable', 'string', 'max:255'],
+            // Optional: left blank, CityService fills in the names it knows.
+            'city_name_ar' => ['exclude_unless:type,city', 'nullable', 'string', 'max:255'],
+            'city_name_en' => ['exclude_unless:type,city', 'nullable', 'string', 'max:255'],
 
             // ── A foreign country: Morocco is priced per city instead ──
             'country_code' => [
@@ -122,6 +125,10 @@ class DeliveryRateController extends Controller
                 $data['city_name'] ?? null,
                 $data['region'] ?? null,
                 (float) $data['fee'],
+                [
+                    'ar' => $data['city_name_ar'] ?? null,
+                    'en' => $data['city_name_en'] ?? null,
+                ],
             );
 
             return back()->with('success', 'Ville ajoutée à la grille.');

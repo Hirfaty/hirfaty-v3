@@ -114,7 +114,14 @@ return [
     'privacy.eyebrow' => 'Vos données',
     'privacy.heading' => 'Ce que nous collectons, et ce que nous en faisons.',
     'privacy.lead' => 'En résumé : nous collectons ce qu’une commande exige, et rien que nous ne puissions justifier. Nous ne vendons pas vos données.',
-    'privacy.updated' => 'Dernière mise à jour : septembre 2026',
+    'privacy.updated' => 'Dernière mise à jour : octobre 2026',
+
+    // Loi 09-08 — wording supplied by the company, CNDP receipt D-W-6-2026.
+    'privacy.compliance.heading' => 'Conformité & protection des données (loi 09-08)',
+    'privacy.compliance.publisher' => 'La plateforme www.hirfaty.com est éditée par la société CREATI DIGITAL FINANCE (RC : 13075, siège social : 19 Rue Om Ayad, Quartier Mly Hassan, Safi).',
+    'privacy.compliance.declaration' => 'Conformément aux dispositions de la loi n° 09-08 relative à la protection des personnes physiques à l’égard du traitement des données à caractère personnel, notre traitement relatif à la gestion d’inscription a fait l’objet d’une déclaration préalable enregistrée auprès de la CNDP sous le numéro D-W-6-2026 (récépissé en date du 06/01/2026, numéro de déclaration : D-6/2026).',
+    'privacy.compliance.rights' => 'Vous disposez d’un droit d’accès, de rectification et d’opposition aux données vous concernant en nous contactant à l’adresse :',
+    'privacy.compliance.logo_alt' => 'CNDP — Commission nationale de contrôle de la protection des données à caractère personnel',
 
     'privacy.collect.heading' => 'Ce que nous collectons',
     'privacy.collect.body1' => 'À la création du compte : nom, adresse e-mail et numéro de téléphone. À la commande : l’adresse de livraison et le numéro que le livreur doit appeler.',

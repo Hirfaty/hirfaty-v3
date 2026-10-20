@@ -161,6 +161,10 @@ return [
     'detail.delivery' => 'التوصيل خلال 3 إلى 7 أيام في المتوسط داخل المغرب، و7 إلى 14 يومًا خارجه.',
     'detail.authentic' => 'قطعة أصيلة بضمان الورشة.',
     'detail.view_media' => 'عرض الوسائط :n',
+    'detail.lightbox_open' => 'تكبير الصورة',
+    'detail.lightbox_close' => 'إغلاق',
+    'detail.lightbox_previous' => 'الصورة السابقة',
+    'detail.lightbox_next' => 'الصورة التالية',
 
     // Seller card
     'detail.sold_by' => 'يُباع من طرف',

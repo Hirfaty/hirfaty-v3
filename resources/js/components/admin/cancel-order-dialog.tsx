@@ -17,6 +17,8 @@ export type CancellationReason = { code: string; label: string };
 /** What a refund would give back, when the orders were paid online. */
 export type RefundOffer = {
     provider: 'payzone' | 'paypal';
+    /** Refunded through the provider's API at once; false leaves an alert. */
+    automatic: boolean;
     /** Already written in the charged currency ("22,08 €", "240,00 MAD"). */
     amount: string;
 };
@@ -179,9 +181,11 @@ export default function CancelOrderDialog({
                             <span className="mt-1 block text-xs leading-relaxed text-ink-soft">
                                 {!giveBack
                                     ? 'L’acheteur sera informé que cette annulation ne donne pas lieu à un remboursement.'
-                                    : refund.provider === 'paypal'
-                                      ? 'Remboursé tout de suite sur son compte PayPal.'
-                                      : 'Payzone ne permet pas de rembourser depuis Hirfaty : une alerte sera créée pour le faire depuis le back-office Payzone.'}
+                                    : !refund.automatic
+                                      ? 'Remboursement à faire depuis le back-office Payzone : une alerte sera créée pour le rappeler.'
+                                      : refund.provider === 'paypal'
+                                        ? 'Remboursé tout de suite sur son compte PayPal.'
+                                        : 'Remboursé tout de suite sur sa carte, via Payzone.'}
                             </span>
                         </span>
                     </label>

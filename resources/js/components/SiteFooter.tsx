@@ -268,7 +268,7 @@ export const SiteFooter = () => {
             </div>
 
             {/*
-             * Payment badges and the terms of sale, side by side — Payzone
+             * Payment badges, the CNDP declaration and the terms of sale — Payzone
              * requires both in the footer of any site taking cards through
              * them; PayPal sits beside it as the other way to pay. On a white
              * plate so the logos keep their own colours in dark mode.
@@ -292,12 +292,32 @@ export const SiteFooter = () => {
                         className="h-[46px] w-auto rounded-md bg-white px-3 py-2.5"
                     />
                 </div>
-                <Link
-                    href={route('terms')}
-                    className="text-xs text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
-                >
-                    {t('common.footer.gtc')}
-                </Link>
+                <div className="flex flex-col items-start gap-3 md:items-end">
+                    {/* Loi 09-08: the CNDP declaration, linked to the
+                        privacy policy that carries it in full. */}
+                    <Link
+                        href={route('privacy')}
+                        className="group flex items-center gap-3"
+                    >
+                        <img
+                            src="/images/legal/cndp.png"
+                            alt={t('common.footer.cndp_alt')}
+                            loading="lazy"
+                            width={340}
+                            height={227}
+                            className="h-14 w-auto rounded-md bg-white px-2 py-1"
+                        />
+                        <span className="max-w-[16rem] text-xs leading-snug text-ink-soft transition-colors group-hover:text-ink">
+                            {t('common.footer.cndp')}
+                        </span>
+                    </Link>
+                    <Link
+                        href={route('terms')}
+                        className="text-xs text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
+                    >
+                        {t('common.footer.gtc')}
+                    </Link>
+                </div>
             </div>
 
             <div className="container flex flex-col items-start justify-between gap-4 border-t border-ink/10 pt-6 pb-10 text-xs text-ink-soft md:flex-row md:items-center">

@@ -159,6 +159,10 @@ return [
     'detail.delivery' => 'Delivery in 3 to 7 days on average in Morocco, 7 to 14 days abroad.',
     'detail.authentic' => 'Authentic piece, guaranteed by the workshop.',
     'detail.view_media' => 'View media :n',
+    'detail.lightbox_open' => 'Enlarge photo',
+    'detail.lightbox_close' => 'Close',
+    'detail.lightbox_previous' => 'Previous photo',
+    'detail.lightbox_next' => 'Next photo',
 
     // Seller card
     'detail.sold_by' => 'Sold by',
