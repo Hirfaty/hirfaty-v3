@@ -134,6 +134,7 @@ return [
     'reviews.final_notice' => 'Une note ne peut plus être modifiée une fois envoyée.',
     'reviews.submit' => 'Envoyer',
     'reviews.thanks' => 'Merci.',
+    'reviews.already_rated' => 'Vous avez déjà noté cette pièce.',
 
     // La fenêtre proposée à l’arrivée quand une livraison reste à noter.
     'reviews.prompt_title' => 'Votre commande est arrivée',
@@ -213,6 +214,8 @@ return [
     'detail.reviews_verified' => 'Achat vérifié',
     'detail.reviews_anonymous' => 'Acheteur Hirfaty',
     'detail.reviews_more' => 'Voir plus d’avis',
+    'detail.my_review_title' => 'Vous avez reçu cette pièce',
+    'detail.my_review_intro' => 'Qu’en avez-vous pensé ? Votre note aide l’artisan et les autres acheteurs.',
     'detail.handmade_note' => 'Chaque pièce est faite main : de légères variations de teinte et de motif sont possibles, et rendent la vôtre unique.',
     'detail.specs_heading' => 'Poids et dimensions (emballé)',
     'detail.specs_weight' => 'Poids',

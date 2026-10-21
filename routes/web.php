@@ -475,6 +475,8 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
      * this order's buyer and that the order actually arrived.
      */
     Route::post('/orders/{order}/reviews', [ReviewController::class, 'store'])->name('buyer.orders.reviews.store');
+    // The same rating from the product page; the order is found server-side.
+    Route::post('/products/{product}/review', [ReviewController::class, 'storeForProduct'])->name('buyer.products.review.store');
 
     /*
      * First-run tour, shown once after email verification (VerifyEmailResponse

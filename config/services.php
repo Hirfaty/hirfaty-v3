@@ -18,8 +18,14 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    /*
+    | `newsletter_segment_id` is the Resend segment every footer signup is
+    | added to (ResendContactService). Leave it — or the key — blank and the
+    | sync is skipped: the signup itself never depends on Resend.
+    */
     'resend' => [
         'key' => env('RESEND_API_KEY'),
+        'newsletter_segment_id' => env('RESEND_NEWSLETTER_SEGMENT_ID'),
     ],
 
     'ses' => [

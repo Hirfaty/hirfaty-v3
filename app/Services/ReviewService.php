@@ -70,6 +70,61 @@ class ReviewService
     }
 
     /**
+     * Where this viewer stands with rating one product, for its public page.
+     *
+     * Null when there is nothing to show — a guest, or a buyer who has never
+     * had this piece delivered. Otherwise their review if they left one
+     * (final, so it is shown rather than re-asked), or `open` when a
+     * delivered order holds it and it is still unrated.
+     *
+     * @return array{status: 'open'}|array{status: 'rated', rating: int, comment: string|null}|null
+     */
+    public function stateForProduct(?User $user, Product $product): ?array
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        $review = ProductReview::where('user_id', $user->id)
+            ->where('product_id', $product->id)
+            ->first();
+
+        if ($review) {
+            return ['status' => 'rated', 'rating' => $review->rating, 'comment' => $review->comment];
+        }
+
+        return $this->deliveredOrderFor($user, $product) ? ['status' => 'open'] : null;
+    }
+
+    /**
+     * Rate one product from its own page.
+     *
+     * Routed to a delivered order that holds the piece and handed to submit(),
+     * so ownership, delivery and one-shot are enforced exactly as they are on
+     * the order pages. No delivered order is the same 403 submit() gives.
+     *
+     * @param  array{rating: int, comment?: string|null}  $entry
+     * @return int how many ratings were actually recorded (0 or 1)
+     */
+    public function submitForProduct(User $user, Product $product, array $entry): int
+    {
+        $order = $this->deliveredOrderFor($user, $product) ?? abort(403);
+
+        return $this->submit($user, $order, [$product->id => $entry]);
+    }
+
+    /** The buyer's latest delivered order that contains this product. */
+    private function deliveredOrderFor(User $user, Product $product): ?Order
+    {
+        return Order::query()
+            ->where('buyer_id', $user->id)
+            ->where('status', 'delivered')
+            ->whereHas('items', fn ($items) => $items->where('product_id', $product->id))
+            ->latest('id')
+            ->first();
+    }
+
+    /**
      * How many delivered orders still have a piece this buyer hasn't rated.
      *
      * Feeds the prompt shown on arrival (see HandleInertiaRequests), so it runs

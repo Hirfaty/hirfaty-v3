@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
-import { BadgeCheck, Loader2, Star } from 'lucide-react';
+import { BadgeCheck, Check, Loader2, Star } from 'lucide-react';
 import { useState } from 'react';
+import StarRating from '@/components/buyer/StarRating';
 import { useTranslation } from '@/hooks/use-translation';
 import { formatDate } from '@/lib/utils';
 
@@ -25,6 +26,16 @@ export type ReviewsPagination = {
     current_page: number;
     has_more: boolean;
 };
+
+/**
+ * The viewer's own standing on this piece (ReviewService::stateForProduct):
+ * open once a delivered order holds it, rated once they have used their one
+ * shot. Null for everyone else — the block is simply not drawn.
+ */
+export type MyReview =
+    | { status: 'open' }
+    | { status: 'rated'; rating: number; comment: string | null }
+    | null;
 
 const LOCALE_TAGS: Record<string, string> = {
     fr: 'fr-MA',
@@ -91,6 +102,122 @@ export function reviewCountLabel(t: (k: string) => string, count: number) {
 }
 
 /**
+ * "You received this piece": the buyer's rating form on the product page, or
+ * — since a rating is final — what they said, once said.
+ *
+ * Posts one product's rating; the server finds the delivered order it belongs
+ * to. The reload that follows brings `myReview` back as rated, which is what
+ * closes the form, along with the refreshed summary and list.
+ */
+function MyReviewCard({
+    productId,
+    productName,
+    myReview,
+}: {
+    productId: number;
+    productName: string;
+    myReview: NonNullable<MyReview>;
+}) {
+    const { t } = useTranslation();
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const starLabel = (n: number) =>
+        t('buyer.reviews.star_label').replace(':count', String(n));
+
+    const submit = () => {
+        if (rating === 0) {
+            return;
+        }
+
+        router.post(
+            route('buyer.products.review.store', productId),
+            { rating, comment: comment.trim() || null },
+            {
+                preserveScroll: true,
+                onStart: () => setSaving(true),
+                onFinish: () => setSaving(false),
+            },
+        );
+    };
+
+    if (myReview.status === 'rated') {
+        return (
+            <div className="mt-6 rounded-2xl border border-souk-brown/15 bg-souk-peach/40 px-5 py-4">
+                <p className="text-sm font-medium text-souk-title">
+                    {t('buyer.reviews.all_rated_heading')}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                    <StarRating
+                        readOnly
+                        name={`my-review-${productId}`}
+                        label={`${t('buyer.reviews.rated')} — ${productName}`}
+                        starLabel={starLabel}
+                        value={myReview.rating}
+                        onChange={() => {}}
+                    />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                        <Check className="h-3.5 w-3.5" />
+                        {t('buyer.reviews.rated')}
+                    </span>
+                </div>
+                {myReview.comment && (
+                    <p className="mt-2 text-sm whitespace-pre-line text-souk-brown-deep/75">
+                        {myReview.comment}
+                    </p>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-6 rounded-2xl border border-souk-brown/15 bg-white px-5 py-5 shadow-sm shadow-souk-brown/5">
+            <p className="font-display text-lg text-souk-title">
+                {t('buyer.detail.my_review_title')}
+            </p>
+            <p className="mt-1 text-sm text-souk-brown-deep/65">
+                {t('buyer.detail.my_review_intro')}
+            </p>
+
+            <div className="mt-4">
+                <StarRating
+                    name={`rate-${productId}`}
+                    label={`${t('buyer.reviews.rate_product')} — ${productName}`}
+                    starLabel={starLabel}
+                    value={rating}
+                    onChange={setRating}
+                />
+            </div>
+            <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder={t('buyer.rate.comment_placeholder')}
+                aria-label={`${t('buyer.rate.comment_placeholder')} — ${productName}`}
+                className="mt-3 w-full resize-y rounded-lg border border-souk-brown/20 bg-souk-paper px-3 py-2 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/40 focus:border-souk-brown/50 focus:outline-none"
+            />
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                    type="button"
+                    onClick={submit}
+                    disabled={rating === 0 || saving}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-souk-brown px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {t('buyer.reviews.submit')}
+                </button>
+                <span className="text-xs text-souk-brown-deep/55">
+                    {t('buyer.reviews.final_notice')}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/**
  * The public reviews block on a product page: an average with its star
  * breakdown, then the reviews themselves, newest first.
  *
@@ -102,10 +229,16 @@ export default function ProductReviews({
     summary,
     reviews,
     pagination,
+    productId,
+    productName,
+    myReview = null,
 }: {
     summary: ReviewSummary;
     reviews: PublicReview[];
     pagination: ReviewsPagination;
+    productId: number;
+    productName: string;
+    myReview?: MyReview;
 }) {
     const { t, locale } = useTranslation();
     const [loadingMore, setLoadingMore] = useState(false);
@@ -129,6 +262,14 @@ export default function ProductReviews({
             <h2 className="font-display text-2xl text-souk-title">
                 {t('buyer.detail.reviews_heading')}
             </h2>
+
+            {myReview && (
+                <MyReviewCard
+                    productId={productId}
+                    productName={productName}
+                    myReview={myReview}
+                />
+            )}
 
             {summary.count === 0 ? (
                 <div className="mt-6 rounded-2xl border border-dashed border-souk-brown/20 px-6 py-10 text-center">

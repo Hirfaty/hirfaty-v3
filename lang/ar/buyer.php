@@ -135,6 +135,7 @@ return [
     'reviews.final_notice' => 'لا يمكن تعديل التقييم بعد إرساله.',
     'reviews.submit' => 'إرسال',
     'reviews.thanks' => 'شكراً لك.',
+    'reviews.already_rated' => 'لقد قمت بتقييم هذه القطعة من قبل.',
 
     // النافذة التي تظهر عند الدخول إذا بقي طلب مُسلَّم بلا تقييم.
     'reviews.prompt_title' => 'وصل طلبك',
@@ -214,6 +215,8 @@ return [
     'detail.reviews_verified' => 'شراء موثّق',
     'detail.reviews_anonymous' => 'مشتري من حرفتي',
     'detail.reviews_more' => 'عرض المزيد من التقييمات',
+    'detail.my_review_title' => 'لقد استلمت هذه القطعة',
+    'detail.my_review_intro' => 'ما رأيك فيها؟ تقييمك يساعد الحرفي والمشترين الآخرين.',
     'detail.handmade_note' => 'كل قطعة مصنوعة يدوياً، لذا قد تختلف الألوان والنقوش قليلاً، وهو ما يجعل قطعتك فريدة.',
     'detail.specs_heading' => 'الوزن والأبعاد (مع التغليف)',
     'detail.specs_weight' => 'الوزن',

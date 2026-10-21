@@ -133,6 +133,7 @@ return [
     'reviews.final_notice' => 'A rating cannot be changed once sent.',
     'reviews.submit' => 'Send',
     'reviews.thanks' => 'Thank you.',
+    'reviews.already_rated' => 'You have already rated this piece.',
 
     // The dialog a buyer meets on arrival when a delivery is still unrated.
     'reviews.prompt_title' => 'Your order has arrived',
@@ -212,6 +213,8 @@ return [
     'detail.reviews_verified' => 'Verified purchase',
     'detail.reviews_anonymous' => 'Hirfaty buyer',
     'detail.reviews_more' => 'Show more reviews',
+    'detail.my_review_title' => 'You received this piece',
+    'detail.my_review_intro' => 'How did you find it? Your rating helps the artisan and other buyers.',
     'detail.handmade_note' => 'Every piece is handmade, so slight variations in colour and pattern are possible — they are what make yours one of a kind.',
     'detail.specs_heading' => 'Weight and dimensions (packed)',
     'detail.specs_weight' => 'Weight',

@@ -32,6 +32,7 @@ import ProductReviews, {
     reviewCountLabel,
 } from '@/components/buyer/ProductReviews';
 import type {
+    MyReview,
     PublicReview,
     ReviewSummary,
     ReviewsPagination,
@@ -593,6 +594,7 @@ const ProductDetail = ({
     reviewSummary,
     reviews,
     reviewsPagination,
+    myReview = null,
     preview = null,
 }: {
     product: DetailProduct;
@@ -603,6 +605,8 @@ const ProductDetail = ({
     reviewSummary: ReviewSummary;
     reviews: PublicReview[];
     reviewsPagination: ReviewsPagination;
+    /** Storefront only — the admin preview leaves it out. */
+    myReview?: MyReview;
     preview?: PreviewInfo | null;
 }) => {
     const { t, locale } = useTranslation();
@@ -1535,6 +1539,9 @@ const ProductDetail = ({
                 summary={reviewSummary}
                 reviews={reviews}
                 pagination={reviewsPagination}
+                productId={product.id}
+                productName={product.name}
+                myReview={myReview}
             />
 
             <ProductRow

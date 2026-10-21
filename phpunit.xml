@@ -53,6 +53,13 @@
         <env name="FILESYSTEM_DISK" value="public"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!--
+            No Resend credentials, whatever .env holds, so a newsletter signup
+            in a test never adds a contact to the real "Newsletter" segment.
+            NewsletterResendSyncTest sets fake values per test.
+        -->
+        <env name="RESEND_API_KEY" value=""/>
+        <env name="RESEND_NEWSLETTER_SEGMENT_ID" value=""/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

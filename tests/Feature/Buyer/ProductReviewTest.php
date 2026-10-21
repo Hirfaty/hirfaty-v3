@@ -476,3 +476,98 @@ test('reviews are paginated and only this product\'s are shown', function () {
             ->where('reviewsPagination.has_more', false)
         );
 });
+
+/*
+ * Rating from the product page itself. Same rules as the order pages —
+ * delivered, own order, one shot — reached through the product rather than
+ * the order, so the order is found server-side.
+ */
+
+test('the product page offers the rating form once the piece was delivered', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page->where('myReview', ['status' => 'open']));
+});
+
+test('the product page offers no form before delivery, to guests or to other buyers', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product, 'shipped');
+
+    $this->actingAs($this->buyer)
+        ->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page->where('myReview', null));
+
+    $this->actingAs(User::factory()->create(['role' => 'buyer']))
+        ->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page->where('myReview', null));
+
+    auth()->logout();
+
+    $this->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page->where('myReview', null));
+});
+
+test('a buyer can rate a delivered piece from its product page', function () {
+    $product = reviewProduct($this->store);
+    $order = orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.products.review.store', $product), ['rating' => 4, 'comment' => 'Très beau.'])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $review = ProductReview::where('product_id', $product->id)->sole();
+
+    expect($review->user_id)->toBe($this->buyer->id)
+        ->and($review->order_id)->toBe($order->id)
+        ->and($review->rating)->toBe(4)
+        ->and($review->comment)->toBe('Très beau.')
+        ->and((float) $product->fresh()->average_rating)->toBe(4.0);
+
+    $this->get(route('products.show', $product->slug))
+        ->assertInertia(fn ($page) => $page->where('myReview', [
+            'status' => 'rated',
+            'rating' => 4,
+            'comment' => 'Très beau.',
+        ]));
+});
+
+test('a product page rating is final', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.products.review.store', $product), ['rating' => 5]);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.products.review.store', $product), ['rating' => 1])
+        ->assertSessionHas('error');
+
+    expect(ProductReview::where('product_id', $product->id)->sole()->rating)->toBe(5);
+});
+
+test('a product that was never delivered to the buyer cannot be rated from its page', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product, 'shipped');
+    orderFor(User::factory()->create(['role' => 'buyer']), $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.products.review.store', $product), ['rating' => 5])
+        ->assertForbidden();
+
+    expect(ProductReview::count())->toBe(0);
+});
+
+test('a product page rating must be between one and five', function () {
+    $product = reviewProduct($this->store);
+    orderFor($this->buyer, $this->store, $product);
+
+    $this->actingAs($this->buyer)
+        ->post(route('buyer.products.review.store', $product), ['rating' => 6])
+        ->assertSessionHasErrors('rating');
+
+    expect(ProductReview::count())->toBe(0);
+});

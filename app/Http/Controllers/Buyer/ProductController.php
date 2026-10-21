@@ -202,6 +202,7 @@ class ProductController extends Controller
             ...$this->details->props($product, $request),
             'inWishlist' => $inWishlist,
             'inCart' => $inCart,
+            'myReview' => $this->reviews->stateForProduct($request->user(), $product),
         ])->withViewData('seo', fn () => $this->seo->forProduct(
             $product,
             $this->reviews->summaryFor($product),

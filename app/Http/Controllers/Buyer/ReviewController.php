@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
 use App\Services\BuyerAccountService;
 use App\Services\ReviewService;
 use Illuminate\Http\Request;
@@ -51,6 +52,25 @@ class ReviewController extends Controller
         $this->reviews->submitPurchase($request->user(), $orders, $this->validated($request));
 
         return back()->with('success', __('buyer.reviews.thanks'));
+    }
+
+    /**
+     * One rating from the product's own page. Which delivered order it
+     * belongs to, and whether it is still open, is ReviewService's — see
+     * submitForProduct().
+     */
+    public function storeForProduct(Request $request, Product $product)
+    {
+        $entry = $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $written = $this->reviews->submitForProduct($request->user(), $product, $entry);
+
+        return $written > 0
+            ? back()->with('success', __('buyer.reviews.thanks'))
+            : back()->with('error', __('buyer.reviews.already_rated'));
     }
 
     /**

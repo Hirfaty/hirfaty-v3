@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SyncNewsletterSubscriberToResend;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,6 +20,7 @@ class NewsletterService
 {
     public function __construct(
         private readonly SpreadsheetExportService $spreadsheets,
+        private readonly ResendContactService $resend,
     ) {}
 
     /**
@@ -33,10 +35,22 @@ class NewsletterService
      */
     public function subscribe(string $email, ?string $locale = null): NewsletterSubscriber
     {
-        return NewsletterSubscriber::updateOrCreate(
+        $subscriber = NewsletterSubscriber::updateOrCreate(
             ['email' => $this->normalise($email)],
             ['locale' => $locale],
         );
+
+        /*
+         * Mirrored into the Resend "Newsletter" segment from the queue, so the
+         * visitor never waits on Resend. Re-sent on a repeat signup too: the
+         * sync is idempotent, and it is the visitor's way of retrying a copy
+         * that failed the first time.
+         */
+        if ($this->resend->isConfigured()) {
+            SyncNewsletterSubscriberToResend::dispatch($subscriber)->afterCommit();
+        }
+
+        return $subscriber;
     }
 
     /**
