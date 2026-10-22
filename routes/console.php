@@ -59,8 +59,10 @@ Schedule::command('payments:expire-stale')->everyFiveMinutes()->withoutOverlappi
  *
  * Downloads every stored image and flags the ones that no longer read, for
  * the admin products list's "Images cassées" filter — see MediaHealthService.
- * A broken file costs up to 10s, so this runs at night and in the background,
- * where it cannot hold up the every-minute health checks above.
+ * Lost files each stall until the read timeout (batches of 20 run in
+ * parallel), so this runs at night and in the background, where it cannot
+ * hold up the every-minute health checks above. Admins can also start it from
+ * the products list ("Vérifier maintenant"), which queues it instead.
  */
 Artisan::command('media:check', function (MediaHealthService $health) {
     $result = $health->scan(function (Media $media, bool $healthy) {

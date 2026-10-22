@@ -35,14 +35,15 @@ class AdminProductListService
     ) {}
 
     /** The query-string filters the table, its counts and the export share. */
-    public const FILTERS = ['search', 'category_id', 'status', 'images', 'price', 'stock'];
+    public const FILTERS = ['search', 'category_id', 'status', 'images', 'price', 'stock', 'variants'];
 
     /**
      * The filters and nothing else — no eager loads, no ordering — so the
      * same builder can also be counted and grouped for the status tabs.
-     * An unrecognised `images` / `price` / `stock` value filters nothing.
+     * An unrecognised `images` / `price` / `stock` / `variants` value filters
+     * nothing.
      *
-     * @param  array{search?: ?string, category_id?: int|string|null, status?: ?string, images?: ?string, price?: ?string, stock?: ?string}  $filters
+     * @param  array{search?: ?string, category_id?: int|string|null, status?: ?string, images?: ?string, price?: ?string, stock?: ?string, variants?: ?string}  $filters
      * @return Builder<Product>
      */
     public function query(array $filters): Builder
@@ -63,7 +64,9 @@ class AdminProductListService
             ->when(($filters['price'] ?? null) === 'with', fn ($query) => $query->whereNotNull('base_price'))
             ->when(($filters['price'] ?? null) === 'without', fn ($query) => $query->whereNull('base_price'))
             ->when(($filters['stock'] ?? null) === 'in', fn ($query) => $query->where($this->inStock(...)))
-            ->when(($filters['stock'] ?? null) === 'out', fn ($query) => $query->whereNot($this->inStock(...)));
+            ->when(($filters['stock'] ?? null) === 'out', fn ($query) => $query->whereNot($this->inStock(...)))
+            ->when(($filters['variants'] ?? null) === 'with', fn ($query) => $query->where('has_variants', true))
+            ->when(($filters['variants'] ?? null) === 'without', fn ($query) => $query->where('has_variants', false));
     }
 
     /**
