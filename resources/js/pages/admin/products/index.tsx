@@ -5,8 +5,10 @@ import {
     CircleX,
     Eye,
     ImageOff,
+    ImageUp,
     Loader2,
     Package,
+    RefreshCw,
     Search,
     SquareArrowOutUpRight,
     Trash2,
@@ -15,6 +17,9 @@ import type { FormEvent, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import ExportMenu from '@/components/admin/export-menu';
+import QuickPhotoDialog, {
+    hasBrokenPhoto,
+} from '@/components/admin/quick-photo-dialog';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import ProductDescription from '@/components/product-description';
@@ -34,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { WarmFill } from '@/components/WarmFill';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatRelativeTime } from '@/lib/utils';
 import type {
     Category,
     Media,
@@ -81,11 +86,14 @@ interface AdminProductsProps {
         images?: 'broken' | 'none';
         price?: 'with' | 'without';
         stock?: 'in' | 'out';
+        variants?: 'with' | 'without';
     };
     totalProducts: number;
     statusCounts: Record<ProductStatus, number>;
     /** Matches the other filters, flagged by the nightly `media:check`. */
     brokenImagesCount: number;
+    /** When any photo was last checked; null if the check never ran. */
+    imagesCheckedAt: string | null;
 }
 
 const SELECT_CLASS =
@@ -98,6 +106,7 @@ function AdminProducts({
     totalProducts,
     statusCounts,
     brokenImagesCount,
+    imagesCheckedAt,
 }: AdminProductsProps) {
     const { t } = useTranslation();
     const [rawSelectedId, setSelectedId] = useState<number | null>(null);
@@ -163,7 +172,7 @@ function AdminProducts({
     };
 
     const setFilter = (
-        key: 'category_id' | 'images' | 'price' | 'stock',
+        key: 'category_id' | 'images' | 'price' | 'stock' | 'variants',
         value: string | undefined,
     ) => {
         router.get(
@@ -176,6 +185,29 @@ function AdminProducts({
     // Clicking the active images button again clears it.
     const toggleImages = (value: 'broken' | 'none') =>
         setFilter('images', filters.images === value ? undefined : value);
+
+    const [checkingImages, setCheckingImages] = useState(false);
+
+    const checkImagesNow = () => {
+        router.post(
+            route('admin.products.check-images'),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onStart: () => setCheckingImages(true),
+                onSuccess: (page) => {
+                    const flash = (page.props as unknown as PageProps).flash;
+                    toast.success(flash?.success ?? 'Vérification lancée.');
+                },
+                onFinish: () => setCheckingImages(false),
+            },
+        );
+    };
+
+    // Kept as an id so the dialog always shows the row's latest photos.
+    const [photoProductId, setPhotoProductId] = useState<number | null>(null);
+    const photoProduct = products.data.find((p) => p.id === photoProductId);
 
     const tabs = useMemo(
         () =>
@@ -504,11 +536,21 @@ function AdminProducts({
                     <option value="in">En stock</option>
                     <option value="out">En rupture</option>
                 </select>
+                <select
+                    value={filters.variants ?? ''}
+                    onChange={(e) => setFilter('variants', e.target.value)}
+                    aria-label="Filtrer par déclinaisons"
+                    className={SELECT_CLASS}
+                >
+                    <option value="">Avec ou sans déclinaisons</option>
+                    <option value="with">Avec déclinaisons</option>
+                    <option value="without">Sans déclinaison</option>
+                </select>
                 <button
                     type="button"
                     onClick={() => toggleImages('broken')}
                     aria-pressed={filters.images === 'broken'}
-                    title="Photos introuvables lors de la dernière vérification (chaque nuit)"
+                    title="Photos introuvables lors de la dernière vérification"
                     className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium transition ${
                         filters.images === 'broken'
                             ? 'border-terracotta bg-terracotta text-white'
@@ -539,6 +581,24 @@ function AdminProducts({
                 >
                     Sans photo
                 </button>
+                <div className="flex items-center gap-2 text-xs text-ink-soft">
+                    <button
+                        type="button"
+                        onClick={checkImagesNow}
+                        disabled={checkingImages}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2.5 font-medium text-ink-soft transition hover:text-ink disabled:opacity-50"
+                    >
+                        <RefreshCw
+                            className={`h-3.5 w-3.5 ${checkingImages ? 'animate-spin' : ''}`}
+                        />
+                        Vérifier maintenant
+                    </button>
+                    <span>
+                        {imagesCheckedAt
+                            ? `Photos vérifiées ${formatRelativeTime(imagesCheckedAt)}`
+                            : 'Photos jamais vérifiées'}
+                    </span>
+                </div>
             </div>
 
             {/* ── Bulk action bar ──────────────────────────── */}
@@ -646,8 +706,14 @@ function AdminProducts({
                                                 />
                                             </td>
                                             <td className="px-5 py-3">
-                                                <p className="font-medium text-ink">
+                                                <p className="flex items-center gap-1.5 font-medium text-ink">
                                                     {p.name}
+                                                    {hasBrokenPhoto(p) && (
+                                                        <ImageOff
+                                                            className="h-3.5 w-3.5 shrink-0 text-terracotta"
+                                                            aria-label="Photo cassée"
+                                                        />
+                                                    )}
                                                 </p>
                                                 <p className="text-xs text-ink-soft">
                                                     #{p.id}
@@ -673,7 +739,18 @@ function AdminProducts({
                                                     {STATUS_LABEL[p.status]}
                                                 </span>
                                             </td>
-                                            <td className="px-5 py-3 text-right">
+                                            <td className="px-5 py-3 text-right whitespace-nowrap">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setPhotoProductId(p.id);
+                                                    }}
+                                                    aria-label={`Remplacer une photo de ${p.name}`}
+                                                    title="Remplacer une photo"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft transition hover:bg-ink hover:text-white"
+                                                >
+                                                    <ImageUp className="h-4 w-4" />
+                                                </button>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -952,6 +1029,14 @@ function AdminProducts({
                     )}
                 </aside>
             </div>
+
+            {photoProduct && (
+                <QuickPhotoDialog
+                    key={photoProduct.id}
+                    product={photoProduct}
+                    onClose={() => setPhotoProductId(null)}
+                />
+            )}
 
             {/* ── Delete confirmation (single row) ────────────── */}
             <AlertDialog open={deleteOneOpen} onOpenChange={setDeleteOneOpen}>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantOption;
@@ -22,6 +23,7 @@ use App\Services\ReviewService;
 use App\Services\SpreadsheetExportService;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -42,7 +44,9 @@ class ProductController extends Controller
         $filters = $request->only(AdminProductListService::FILTERS);
 
         $products = $list->query($filters)
-            ->with(['store', 'category', 'media'])
+            // Variant photos feed the row's broken-photo marker and the
+            // quick "Remplacer une photo" dialog.
+            ->with(['store', 'category', 'media', 'variants.media', 'variants.options'])
             ->withCount('orderItems')
             ->latest()
             ->paginate(20)
@@ -64,6 +68,10 @@ class ProductController extends Controller
             'totalProducts' => (clone $countsQuery)->count(),
             // Shown on the "Images cassées" button whether or not it is active.
             'brokenImagesCount' => $list->query([...$filters, 'images' => 'broken'])->count(),
+            // Null until the first check, so "0 cassées" is never mistaken for a clean bill.
+            'imagesCheckedAt' => ($checkedAt = Media::query()->where('type', 'image')->max('checked_at'))
+                ? Carbon::parse($checkedAt)->toIso8601String()
+                : null,
             'statusCounts' => [
                 'draft' => $statusCounts->get('draft', 0),
                 'pending_review' => $statusCounts->get('pending_review', 0),
@@ -88,6 +96,7 @@ class ProductController extends Controller
             'images' => ['nullable', Rule::in(['broken', 'none'])],
             'price' => ['nullable', Rule::in(['with', 'without'])],
             'stock' => ['nullable', Rule::in(['in', 'out'])],
+            'variants' => ['nullable', Rule::in(['with', 'without'])],
         ]);
 
         return $list->export($data['format'], $data);

@@ -19,8 +19,9 @@ class Media extends Model
     ];
 
     protected $casts = [
-        // Written only by MediaHealthService — see its migration.
+        // Written only by MediaHealthService — see their migrations.
         'broken_at' => 'datetime',
+        'checked_at' => 'datetime',
     ];
 
     public function mediable()

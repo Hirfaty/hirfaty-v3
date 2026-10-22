@@ -231,13 +231,17 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
 
         Route::get('/products', [Admin\ProductController::class, 'index'])->name('products.index');
-        // `create`, `export`, `bulk-status` and `bulk-destroy` must stay above `{product}`,
+        // `create`, `export`, `bulk-status`, `bulk-destroy`, `check-images` and
+        // `remote-image` must stay above `{product}`,
         // otherwise they're matched as an id (and Postgres then errors casting
         // the string to the bigint id column, rather than a clean 404).
         Route::get('/products/create', [Admin\ProductController::class, 'create'])->name('products.create');
         Route::get('/products/export', [Admin\ProductController::class, 'export'])->name('products.export');
         Route::patch('/products/bulk-status', [Admin\ProductController::class, 'bulkStatus'])->name('products.bulk-status');
         Route::delete('/products/bulk-destroy', [Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');
+        Route::post('/products/check-images', [Admin\ProductPhotoController::class, 'checkImages'])->name('products.check-images');
+        Route::get('/products/remote-image', [Admin\ProductPhotoController::class, 'remote'])->name('products.remote-image');
+        Route::post('/products/{product}/photos', [Admin\ProductPhotoController::class, 'store'])->name('products.photos.store');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');
         Route::post('/products/{product}', [Admin\ProductController::class, 'update'])->name('products.update');

@@ -8,6 +8,9 @@ use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\MediaHealthService;
+use App\Services\ProductPhotoService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -122,11 +125,19 @@ test('the stock filter follows active variants when a product sells through them
         ->and(listedNames(['stock' => 'out']))->toBe(['Simple épuisé', 'Variantes épuisées']);
 });
 
+test('the variants filter splits products sold through variants from simple ones', function () {
+    filterProduct('Simple');
+    filterProduct('Décliné', ['has_variants' => true]);
+
+    expect(listedNames(['variants' => 'with']))->toBe(['Décliné'])
+        ->and(listedNames(['variants' => 'without']))->toBe(['Simple']);
+});
+
 test('the export accepts the new filters', function () {
     filterProduct('À chiffrer', ['base_price' => null]);
 
     $this->actingAs($this->admin)
-        ->get(route('admin.products.export', ['format' => 'csv', 'price' => 'without', 'stock' => 'in', 'images' => 'broken']))
+        ->get(route('admin.products.export', ['format' => 'csv', 'price' => 'without', 'stock' => 'in', 'images' => 'broken', 'variants' => 'without']))
         ->assertOk();
 
     $this->actingAs($this->admin)
@@ -159,5 +170,166 @@ test('media:check flags unreadable images and clears ones that read again', func
         ->and($empty->fresh()->broken_at)->not->toBeNull()
         ->and($recovered->fresh()->broken_at)->toBeNull()
         // Keeps the date it was first found broken.
-        ->and($stillBroken->fresh()->broken_at->toDateString())->toBe('2026-10-01');
+        ->and($stillBroken->fresh()->broken_at->toDateString())->toBe('2026-10-01')
+        ->and($healthy->fresh()->checked_at)->not->toBeNull();
+});
+
+test('media:check reads S3 images in parallel and treats a stalled body as broken', function () {
+    config(['filesystems.disks.photos' => [
+        'driver' => 's3',
+        'key' => 'key',
+        'secret' => 'secret',
+        'region' => 'us-east-1',
+        'bucket' => 'hirfaty',
+        'endpoint' => 'http://s3.test',
+        'use_path_style_endpoint' => true,
+    ]]);
+
+    // What production's SeaweedFS does with a lost file is a 200 whose body
+    // never arrives — the client sees that as a failed connection.
+    Http::fake(fn ($request) => match (true) {
+        str_contains($request->url(), 'good') => Http::response('jpeg-bytes'),
+        str_contains($request->url(), 'missing') => Http::response('', 404),
+        default => Http::failedConnection(),
+    });
+
+    $product = filterProduct('Vase');
+    $make = fn (string $name) => tap(filterImage($product))->update(['disk' => 'photos', 'path' => "products/{$name}.jpg"]);
+
+    $good = $make('good');
+    $missing = $make('missing');
+    $stalled = $make('stalled');
+
+    expect(app(MediaHealthService::class)->scan())->toBe(['checked' => 3, 'broken' => 2])
+        ->and($good->fresh()->broken_at)->toBeNull()
+        ->and($missing->fresh()->broken_at)->not->toBeNull()
+        ->and($stalled->fresh()->broken_at)->not->toBeNull();
+});
+
+test('admins can start the image check from the products list', function () {
+    Storage::fake('public');
+    $image = filterImage(filterProduct('Vase'));
+
+    $this->actingAs($this->admin)
+        ->from(route('admin.products.index'))
+        ->post(route('admin.products.check-images'))
+        ->assertRedirect(route('admin.products.index'))
+        ->assertSessionHas('success');
+
+    // The queue is synchronous in tests, so the queued batches already ran.
+    expect($image->fresh()->broken_at)->not->toBeNull();
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('brokenImagesCount', 1)
+            ->where('imagesCheckedAt', fn ($at) => $at !== null));
+});
+
+test('a product photo can be replaced in place from the products list', function () {
+    Storage::fake('public');
+    $product = filterProduct('Vase');
+    $old = filterImage($product, now()->toDateTimeString());
+    Storage::disk('public')->put($old->path, 'old-bytes');
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', $product), [
+            'media_id' => $old->id,
+            'file' => UploadedFile::fake()->create('new.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Photo remplacée.');
+
+    $media = $old->fresh();
+
+    expect($media->path)->not->toBe($old->path)
+        ->and($media->path)->toStartWith("products/{$product->id}/")
+        ->and($media->broken_at)->toBeNull()
+        ->and($product->media()->count())->toBe(1);
+    Storage::disk('public')->assertExists($media->path);
+    Storage::disk('public')->assertMissing($old->path);
+});
+
+test('a variant photo is replaced inside the variant folder', function () {
+    Storage::fake('public');
+    $product = filterProduct('Tapis', ['has_variants' => true]);
+    $variant = ProductVariant::create(['product_id' => $product->id, 'stock' => 1]);
+    $old = filterImage($variant, now()->toDateTimeString());
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', $product), [
+            'media_id' => $old->id,
+            'file' => UploadedFile::fake()->create('new.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertRedirect();
+
+    expect($old->fresh()->path)->toStartWith("products/{$product->id}/variants/{$variant->id}/");
+});
+
+test('without a target the photo is added to the end of the gallery', function () {
+    Storage::fake('public');
+    $product = filterProduct('Vase');
+    filterImage($product)->update(['order' => 3]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', $product), [
+            'file' => UploadedFile::fake()->create('new.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertSessionHas('success', 'Photo ajoutée.');
+
+    expect($product->media()->count())->toBe(2)
+        ->and((int) $product->media()->max('order'))->toBe(4);
+});
+
+test('a photo of another product cannot be replaced through this one', function () {
+    Storage::fake('public');
+    $other = filterImage(filterProduct('Autre'));
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', filterProduct('Vase')), [
+            'media_id' => $other->id,
+            'file' => UploadedFile::fake()->create('new.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertNotFound();
+});
+
+test('a pasted image link is fetched and served back for cropping', function () {
+    // 1x1 transparent PNG.
+    $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+    Http::fake(['encrypted-tbn2.gstatic.com/*' => Http::response($png, 200, ['Content-Type' => 'image/png'])]);
+
+    // No DNS in tests: pretend the host resolves to a public address.
+    app()->instance(ProductPhotoService::class, new class extends ProductPhotoService
+    {
+        protected function resolve(string $host): array
+        {
+            return ['142.250.200.14'];
+        }
+    });
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.products.remote-image', ['url' => 'https://encrypted-tbn2.gstatic.com/images?q=tbn:abc']))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+});
+
+test('links to private addresses or to non-images are refused', function (string $url) {
+    Http::fake(['*' => Http::response('<html>not an image</html>')]);
+
+    $this->actingAs($this->admin)
+        ->getJson(route('admin.products.remote-image', ['url' => $url]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('url');
+})->with([
+    'loopback' => 'http://127.0.0.1/photo.jpg',
+    'private network' => 'http://10.0.0.5:8333/hirfaty/photo.jpg',
+    'not http' => 'file:///etc/passwd',
+    'not an image' => 'http://93.184.216.34/page.html',
+]);
+
+test('sellers cannot use the photo shortcuts', function () {
+    $seller = User::factory()->create(['role' => 'seller']);
+
+    $this->actingAs($seller)->post(route('admin.products.check-images'))->assertRoleDenied();
+    $this->actingAs($seller)->get(route('admin.products.remote-image', ['url' => 'https://example.com/a.jpg']))->assertRoleDenied();
 });

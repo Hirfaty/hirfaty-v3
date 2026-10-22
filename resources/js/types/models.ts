@@ -100,6 +100,9 @@ export interface Media {
     mime_type: string | null;
     size: number | null;
     order: number;
+    /** Set by the nightly `media:check` when the stored file no longer reads. */
+    broken_at?: string | null;
+    checked_at?: string | null;
     created_at: string;
     updated_at: string;
 }
