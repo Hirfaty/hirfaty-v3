@@ -39,7 +39,7 @@ class ProductController extends Controller
 
     public function index(Request $request, AdminProductListService $list)
     {
-        $filters = $request->only(['search', 'category_id', 'status']);
+        $filters = $request->only(AdminProductListService::FILTERS);
 
         $products = $list->query($filters)
             ->with(['store', 'category', 'media'])
@@ -62,6 +62,8 @@ class ProductController extends Controller
             'categories' => Category::all(),
             'filters' => $filters,
             'totalProducts' => (clone $countsQuery)->count(),
+            // Shown on the "Images cassées" button whether or not it is active.
+            'brokenImagesCount' => $list->query([...$filters, 'images' => 'broken'])->count(),
             'statusCounts' => [
                 'draft' => $statusCounts->get('draft', 0),
                 'pending_review' => $statusCounts->get('pending_review', 0),
@@ -83,6 +85,9 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer'],
             'status' => ['nullable', Rule::in(['draft', 'pending_review', 'published', 'rejected', 'archived'])],
+            'images' => ['nullable', Rule::in(['broken', 'none'])],
+            'price' => ['nullable', Rule::in(['with', 'without'])],
+            'stock' => ['nullable', Rule::in(['in', 'out'])],
         ]);
 
         return $list->export($data['format'], $data);

@@ -4,6 +4,7 @@ import {
     CircleCheck,
     CircleX,
     Eye,
+    ImageOff,
     Loader2,
     Package,
     Search,
@@ -77,10 +78,18 @@ interface AdminProductsProps {
         search?: string;
         category_id?: string;
         status?: string;
+        images?: 'broken' | 'none';
+        price?: 'with' | 'without';
+        stock?: 'in' | 'out';
     };
     totalProducts: number;
     statusCounts: Record<ProductStatus, number>;
+    /** Matches the other filters, flagged by the nightly `media:check`. */
+    brokenImagesCount: number;
 }
+
+const SELECT_CLASS =
+    'rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none';
 
 function AdminProducts({
     products,
@@ -88,6 +97,7 @@ function AdminProducts({
     filters,
     totalProducts,
     statusCounts,
+    brokenImagesCount,
 }: AdminProductsProps) {
     const { t } = useTranslation();
     const [rawSelectedId, setSelectedId] = useState<number | null>(null);
@@ -152,13 +162,20 @@ function AdminProducts({
         );
     };
 
-    const setCategory = (categoryId: string) => {
+    const setFilter = (
+        key: 'category_id' | 'images' | 'price' | 'stock',
+        value: string | undefined,
+    ) => {
         router.get(
             route('admin.products.index'),
-            { ...filters, category_id: categoryId || undefined, page: 1 },
+            { ...filters, [key]: value || undefined, page: 1 },
             { preserveState: true },
         );
     };
+
+    // Clicking the active images button again clears it.
+    const toggleImages = (value: 'broken' | 'none') =>
+        setFilter('images', filters.images === value ? undefined : value);
 
     const tabs = useMemo(
         () =>
@@ -440,9 +457,9 @@ function AdminProducts({
                 })}
             </div>
 
-            {/* ── Search & category filter ────────────────── */}
+            {/* ── Search & filters ─────────────────────────── */}
             <div className="flex flex-wrap items-center gap-3">
-                <div className="relative max-w-md flex-1">
+                <div className="relative max-w-md min-w-60 flex-1">
                     {searching ? (
                         <Loader2 className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin text-ink-soft/50" />
                     ) : (
@@ -457,8 +474,8 @@ function AdminProducts({
                 </div>
                 <select
                     value={filters.category_id ?? ''}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                    onChange={(e) => setFilter('category_id', e.target.value)}
+                    className={SELECT_CLASS}
                 >
                     <option value="">Toutes les catégories</option>
                     {categories.map((c) => (
@@ -467,6 +484,61 @@ function AdminProducts({
                         </option>
                     ))}
                 </select>
+                <select
+                    value={filters.price ?? ''}
+                    onChange={(e) => setFilter('price', e.target.value)}
+                    aria-label="Filtrer par prix"
+                    className={SELECT_CLASS}
+                >
+                    <option value="">Tous les prix</option>
+                    <option value="with">Avec prix</option>
+                    <option value="without">Sans prix</option>
+                </select>
+                <select
+                    value={filters.stock ?? ''}
+                    onChange={(e) => setFilter('stock', e.target.value)}
+                    aria-label="Filtrer par stock"
+                    className={SELECT_CLASS}
+                >
+                    <option value="">Tout le stock</option>
+                    <option value="in">En stock</option>
+                    <option value="out">En rupture</option>
+                </select>
+                <button
+                    type="button"
+                    onClick={() => toggleImages('broken')}
+                    aria-pressed={filters.images === 'broken'}
+                    title="Photos introuvables lors de la dernière vérification (chaque nuit)"
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium transition ${
+                        filters.images === 'broken'
+                            ? 'border-terracotta bg-terracotta text-white'
+                            : 'border-border bg-card text-ink-soft hover:border-terracotta/40 hover:text-terracotta'
+                    }`}
+                >
+                    <ImageOff className="h-4 w-4" />
+                    Images cassées
+                    <span
+                        className={`rounded-full px-1.5 py-0.5 text-xs ${
+                            filters.images === 'broken'
+                                ? 'bg-white/20 text-white'
+                                : 'bg-muted text-ink-soft'
+                        }`}
+                    >
+                        {brokenImagesCount}
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => toggleImages('none')}
+                    aria-pressed={filters.images === 'none'}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-medium transition ${
+                        filters.images === 'none'
+                            ? 'border-ink bg-ink text-white'
+                            : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
+                    }`}
+                >
+                    Sans photo
+                </button>
             </div>
 
             {/* ── Bulk action bar ──────────────────────────── */}

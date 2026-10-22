@@ -18,6 +18,11 @@ class Media extends Model
         'order',
     ];
 
+    protected $casts = [
+        // Written only by MediaHealthService — see its migration.
+        'broken_at' => 'datetime',
+    ];
+
     public function mediable()
     {
         return $this->morphTo();

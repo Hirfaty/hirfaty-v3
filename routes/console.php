@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Media;
+use App\Services\MediaHealthService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -51,3 +53,23 @@ Artisan::command('payments:expire-stale', function (PaymentService $payments) {
 })->purpose('Release card purchases nobody paid for in time');
 
 Schedule::command('payments:expire-stale')->everyFiveMinutes()->withoutOverlapping();
+
+/*
+ * ── Broken images ───────────────────────────────────────────────────
+ *
+ * Downloads every stored image and flags the ones that no longer read, for
+ * the admin products list's "Images cassées" filter — see MediaHealthService.
+ * A broken file costs up to 10s, so this runs at night and in the background,
+ * where it cannot hold up the every-minute health checks above.
+ */
+Artisan::command('media:check', function (MediaHealthService $health) {
+    $result = $health->scan(function (Media $media, bool $healthy) {
+        if (! $healthy) {
+            $this->line("<fg=red>broken</>  #{$media->id} {$media->path}");
+        }
+    });
+
+    $this->info("{$result['checked']} image(s) checked, {$result['broken']} broken.");
+})->purpose('Flag product images whose stored file can no longer be read');
+
+Schedule::command('media:check')->dailyAt('03:30')->withoutOverlapping()->runInBackground();

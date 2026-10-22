@@ -34,12 +34,15 @@ class AdminProductListService
         private readonly SpreadsheetExportService $spreadsheets,
     ) {}
 
+    /** The query-string filters the table, its counts and the export share. */
+    public const FILTERS = ['search', 'category_id', 'status', 'images', 'price', 'stock'];
+
     /**
-     * The search / category / status filters and nothing else — no eager
-     * loads, no ordering — so the same builder can also be counted and
-     * grouped for the status tabs.
+     * The filters and nothing else — no eager loads, no ordering — so the
+     * same builder can also be counted and grouped for the status tabs.
+     * An unrecognised `images` / `price` / `stock` value filters nothing.
      *
-     * @param  array{search?: ?string, category_id?: int|string|null, status?: ?string}  $filters
+     * @param  array{search?: ?string, category_id?: int|string|null, status?: ?string, images?: ?string, price?: ?string, stock?: ?string}  $filters
      * @return Builder<Product>
      */
     public function query(array $filters): Builder
@@ -52,7 +55,51 @@ class AdminProductListService
                     ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
             }))
             ->when($filters['category_id'] ?? null, fn ($query, $category) => $query->where('category_id', $category))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when(($filters['images'] ?? null) === 'broken', fn ($query) => $this->whereHasBrokenImages($query))
+            ->when(($filters['images'] ?? null) === 'none', fn ($query) => $query
+                ->whereDoesntHave('images')
+                ->whereDoesntHave('variants.media', fn ($q) => $q->where('type', 'image')))
+            ->when(($filters['price'] ?? null) === 'with', fn ($query) => $query->whereNotNull('base_price'))
+            ->when(($filters['price'] ?? null) === 'without', fn ($query) => $query->whereNull('base_price'))
+            ->when(($filters['stock'] ?? null) === 'in', fn ($query) => $query->where($this->inStock(...)))
+            ->when(($filters['stock'] ?? null) === 'out', fn ($query) => $query->whereNot($this->inStock(...)));
+    }
+
+    /**
+     * Products whose own photos or any variant's photos were flagged by the
+     * last `media:check` run (MediaHealthService).
+     *
+     * @param  Builder<Product>  $query
+     */
+    private function whereHasBrokenImages(Builder $query): void
+    {
+        $broken = fn ($q) => $q->where('type', 'image')->whereNotNull('broken_at');
+
+        $query->where(fn ($q) => $q
+            ->whereHas('media', $broken)
+            ->orWhereHas('variants.media', $broken));
+    }
+
+    /**
+     * The storefront's own rule (SeoService::offer): a product sold through
+     * active variants is in stock when one of them is; otherwise its own
+     * `stock` column decides.
+     *
+     * @param  Builder<Product>  $query
+     */
+    private function inStock(Builder $query): void
+    {
+        $sellsVariants = fn ($q) => $q
+            ->where('has_variants', true)
+            ->whereHas('variants', fn ($v) => $v->where('is_active', true));
+
+        $query
+            ->where(fn ($q) => $sellsVariants($q)
+                ->whereHas('variants', fn ($v) => $v->where('is_active', true)->where('stock', '>', 0)))
+            ->orWhere(fn ($q) => $q
+                ->whereNot($sellsVariants)
+                ->where('stock', '>', 0));
     }
 
     /**
