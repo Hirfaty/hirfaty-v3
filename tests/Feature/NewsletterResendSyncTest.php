@@ -35,20 +35,39 @@ it('queues the Resend sync when someone subscribes', function () {
     );
 });
 
-it('creates the contact in the configured segment', function () {
+it('creates the contact and adds it to the configured segment', function () {
     Http::fake([
         'api.resend.com/contacts' => Http::response(['object' => 'contact', 'id' => 'c-1'], 201),
+        'api.resend.com/contacts/amina%40example.com/segments/seg-newsletter' => Http::response(['id' => 'seg-newsletter']),
     ]);
+    Log::spy();
 
     $this->post('/newsletter', ['email' => 'amina@example.com'])->assertSessionHas('success');
 
-    Http::assertSentCount(1);
-    Http::assertSent(fn (Request $request) => $request->method() === 'POST'
-        && $request->url() === 'https://api.resend.com/contacts'
-        && $request->hasHeader('Authorization', 'Bearer re_test_key')
-        && $request['email'] === 'amina@example.com'
-        && $request['unsubscribed'] === false
-        && $request['segments'] === [['id' => 'seg-newsletter']]);
+    Http::assertSentCount(2);
+    Http::assertSentInOrder([
+        fn (Request $request) => $request->method() === 'POST'
+            && $request->url() === 'https://api.resend.com/contacts'
+            && $request->hasHeader('Authorization', 'Bearer re_test_key')
+            && $request['email'] === 'amina@example.com'
+            && $request['unsubscribed'] === false,
+        fn (Request $request) => $request->method() === 'POST'
+            && $request->url() === 'https://api.resend.com/contacts/amina%40example.com/segments/seg-newsletter'
+            && $request->hasHeader('Authorization', 'Bearer re_test_key'),
+    ]);
+    Log::shouldNotHaveReceived('warning');
+});
+
+it('logs a failure to add the new contact to the segment', function () {
+    Http::fake([
+        'api.resend.com/contacts' => Http::response(['object' => 'contact', 'id' => 'c-1'], 201),
+        'api.resend.com/contacts/amina%40example.com/segments/seg-newsletter' => Http::response(['message' => 'Segment not found'], 404),
+    ]);
+    Log::spy();
+
+    $this->post('/newsletter', ['email' => 'amina@example.com'])->assertSessionHas('success');
+
+    Log::shouldHaveReceived('warning')->once();
 });
 
 it('adds a contact Resend already has to the segment without failing', function () {

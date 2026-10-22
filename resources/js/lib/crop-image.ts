@@ -34,6 +34,9 @@ function toBlob(
  * react-easy-crop) out of `url` and returns it as a JPEG File that fits
  * MEDIA_LIMITS.productImage — lowering quality first, then resolution, until
  * it does. Transparent PNGs are flattened onto white, since JPEG has no alpha.
+ *
+ * `area` may reach past the photo's edges when the admin zoomed out to keep
+ * it whole: only the overlap is drawn, and the rest of the frame stays white.
  */
 export async function cropImageToFile(
     url: string,
@@ -43,6 +46,17 @@ export async function cropImageToFile(
     const img = await loadImage(url);
     const baseName = originalName.replace(/\.[^.]+$/, '') || 'image';
     let scale = Math.min(1, MAX_SIDE / Math.max(area.width, area.height));
+
+    // The part of the photo inside the frame, in source pixels. Clipped here
+    // rather than left to drawImage, which browsers have not always clipped.
+    const sx = Math.max(0, area.x);
+    const sy = Math.max(0, area.y);
+    const sw = Math.min(img.naturalWidth, area.x + area.width) - sx;
+    const sh = Math.min(img.naturalHeight, area.y + area.height) - sy;
+
+    if (sw <= 0 || sh <= 0) {
+        throw new Error("L'image est sortie du cadre.");
+    }
 
     for (let attempt = 0; attempt < 8; attempt++) {
         const width = Math.max(1, Math.round(area.width * scale));
@@ -58,18 +72,21 @@ export async function cropImageToFile(
             throw new Error('Recadrage indisponible sur ce navigateur.');
         }
 
+        const kx = width / area.width;
+        const ky = height / area.height;
+
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(
             img,
-            area.x,
-            area.y,
-            area.width,
-            area.height,
-            0,
-            0,
-            width,
-            height,
+            sx,
+            sy,
+            sw,
+            sh,
+            (sx - area.x) * kx,
+            (sy - area.y) * ky,
+            sw * kx,
+            sh * ky,
         );
 
         for (const quality of QUALITIES) {

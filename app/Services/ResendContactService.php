@@ -35,42 +35,43 @@ class ResendContactService
     /**
      * Make sure this mailbox is a subscribed contact in the newsletter segment.
      *
-     * Idempotent, like the signup it mirrors. A new address is created straight
-     * into the segment in one call. An address Resend already knows — someone
-     * who signed up twice, or whom Resend got some other way — is instead
-     * marked subscribed again (they just asked to be) and added to the segment;
-     * Resend saying it is already there counts as success.
+     * Idempotent, like the signup it mirrors. Two steps, every time:
+     *
+     *  1. the contact exists and is subscribed — created if new; if Resend
+     *     already knows the address (someone who signed up twice, or whom
+     *     Resend got some other way) it is marked subscribed again, since they
+     *     just asked to be;
+     *  2. the contact is added to the segment by email
+     *     (`POST /contacts/{email}/segments/{id}`, the SDKs'
+     *     `contacts.segments.add`). Resend saying it is already there counts
+     *     as success.
      *
      * @throws RequestException|ConnectionException when Resend refuses or cannot be reached
      */
     public function addToNewsletterSegment(string $email): void
     {
         $segmentId = (string) config('services.resend.newsletter_segment_id');
+        $contact = '/contacts/'.rawurlencode($email);
 
         $created = $this->client()->post('/contacts', [
             'email' => $email,
             'unsubscribed' => false,
-            'segments' => [['id' => $segmentId]],
         ]);
 
-        if ($created->successful()) {
-            return;
+        if ($created->failed()) {
+            /*
+             * Resend does not document how it answers a duplicate, so any
+             * client error that is not about our credentials or our rate is
+             * read as "this contact exists". If it was something else (a
+             * malformed address, say), the update below fails too and that
+             * error is the one reported.
+             */
+            if (! $created->clientError() || in_array($created->status(), [401, 403, 429], true)) {
+                $created->throw();
+            }
+
+            $this->client()->patch($contact, ['unsubscribed' => false])->throw();
         }
-
-        /*
-         * Resend does not document how it answers a duplicate, so any client
-         * error that is not about our credentials or our rate is read as
-         * "this contact exists" and handled by the path below. If it was
-         * something else (a malformed address, say), the update there fails
-         * too and that error is the one reported.
-         */
-        if (! $created->clientError() || in_array($created->status(), [401, 403, 429], true)) {
-            $created->throw();
-        }
-
-        $contact = '/contacts/'.rawurlencode($email);
-
-        $this->client()->patch($contact, ['unsubscribed' => false])->throw();
 
         $added = $this->client()->post($contact.'/segments/'.rawurlencode($segmentId));
 
