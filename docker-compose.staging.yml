@@ -26,6 +26,10 @@ services:
     image: hirfaty-staging-app:latest
     container_name: hirfaty-staging-app
     env_file: .env
+    environment:
+      # Pinned for the same reason as prod's app service: on `edge` the bare
+      # name `seaweedfs` is ambiguous, the container name never is.
+      SEAWEEDFS_ENDPOINT: http://hirfaty-staging-seaweedfs:8333
     depends_on:
       db:
         condition: service_healthy

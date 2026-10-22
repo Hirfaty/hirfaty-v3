@@ -17,6 +17,15 @@ services:
     image: hirfaty-app:latest
     container_name: hirfaty-app
     env_file: .env
+    environment:
+      # Pinned here, over whatever .env says. This container is also on the
+      # shared `edge` network, where staging's SeaweedFS answers to the bare
+      # service name `seaweedfs` — with `http://seaweedfs:8333`, Docker's DNS
+      # answered prod's uploads and /media/ reads with staging's storage
+      # (seen in October 2026, when product photos broke). The container
+      # name exists only on prod's `internal` network.
+      # entrypoint.sh points nginx's /media/ upstream at this same host.
+      SEAWEEDFS_ENDPOINT: http://hirfaty-seaweedfs:8333
     depends_on:
       db:
         condition: service_healthy
