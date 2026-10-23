@@ -48,7 +48,7 @@ EDGE_NETWORK = hirfaty-edge
 .PHONY: reset edge-network \
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
-	prod-pull prod-release prod-deploy prod-backup \
+	prod-pull prod-release prod-deploy prod-backup media-browser media-browser-stop \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
 	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup \
 	stage-pull stage-release stage-deploy \
@@ -195,6 +195,16 @@ prod-deploy: prod-pull prod-release
 # hand before anything risky (a migration, a SeaweedFS change).
 prod-backup:
 	./docker/scripts/backup.sh
+
+# The read-only photo browser (docker/media-browser): live photos plus any
+# backup's photo archive. Off unless started; see docker-compose.prod.yml.
+media-browser:
+	$(COMPOSE) --profile tools up -d --build media-browser
+	@echo "Running. From your computer: ssh -L 8090:127.0.0.1:8090 <user>@<server>, then open http://localhost:8090"
+
+# Stops it and throws away any backup copies it had opened.
+media-browser-stop:
+	$(COMPOSE) --profile tools rm -sf media-browser
 
 # ── Staging (init.hirfaty.com) ──────────────────────────────────────────
 # Same targets, against the staging stack. APP_ENV=staging in this checkout's

@@ -105,6 +105,29 @@ services:
       - internal
     restart: unless-stopped
 
+  # Read-only browser for the live photos and the photo archives in the
+  # nightly backups (docker/media-browser/server.py). Kept out of the website
+  # and off by default: the `tools` profile means `make prod-up` and deploys
+  # never start it — `make media-browser` does, `make media-browser-stop`
+  # removes it. Published on the server's loopback only; reach it through
+  # `ssh -L 8090:127.0.0.1:8090 <server>`, then http://localhost:8090.
+  media-browser:
+    build:
+      context: .
+      dockerfile: docker/media-browser/Dockerfile
+    image: hirfaty-media-browser:latest
+    container_name: hirfaty-media-browser
+    profiles: ['tools']
+    environment:
+      FILER_URL: http://hirfaty-seaweedfs:8888
+      BUCKET: ${SEAWEEDFS_BUCKET:-hirfaty}
+    volumes:
+      - /var/backups/hirfaty:/backups:ro
+    ports:
+      - '127.0.0.1:8090:8090'
+    networks:
+      - internal
+
 volumes:
   # Left unnamed so they keep the names compose already gave them
   # (hirfaty_db_data / hirfaty_seaweedfs_data) — renaming would orphan the
