@@ -48,9 +48,9 @@ EDGE_NETWORK = hirfaty-edge
 .PHONY: reset edge-network \
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
-	prod-pull prod-release prod-deploy prod-backup prod-backup-media \
+	prod-pull prod-release prod-deploy prod-backup \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
-	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup stage-backup-media \
+	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup \
 	stage-pull stage-release stage-deploy \
 	proxy-build proxy-up proxy-down proxy-restart proxy-logs proxy-reload \
 	proxy-htpasswd proxy-cert-prod proxy-cert-staging proxy-cert-renew
@@ -189,19 +189,12 @@ prod-pull:
 # What you run by hand on the box: pull, then release.
 prod-deploy: prod-pull prod-release
 
-# Dumps the prod `db` container to /var/backups/hirfaty, keeping only the last
-# 2 dumps (KEEP=n to change). Scheduled by hirfaty-backup.timer; run by hand to
-# test or to take an ad-hoc backup before a risky migration.
+# Database + every photo, together in one dated folder under
+# /var/backups/hirfaty, keeping the newest 30 (KEEP=n to change) — see
+# docker/scripts/backup.sh. Scheduled nightly by hirfaty-backup.timer; run by
+# hand before anything risky (a migration, a SeaweedFS change).
 prod-backup:
-	./docker/scripts/backup-db.sh
-
-# Same idea, for the seaweedfs_data volume — every product/store image and
-# video. Scheduled by hirfaty-backup-media.timer, same directory and
-# retention as the database dump. The volume name is compose's own
-# `hirfaty_seaweedfs_data` (see docker-compose.prod.yml's comment on why it's
-# pinned rather than left to compose to (re)choose).
-prod-backup-media:
-	VOLUME=hirfaty_seaweedfs_data ./docker/scripts/backup-media.sh
+	./docker/scripts/backup.sh
 
 # ── Staging (init.hirfaty.com) ──────────────────────────────────────────
 # Same targets, against the staging stack. APP_ENV=staging in this checkout's
@@ -248,19 +241,14 @@ stage-seed:
 stage-artisan:
 	$(COMPOSE_STAGE) exec app php artisan $(CMD)
 
-# Same script as prod-backup, pointed at the staging container and a
+# Same script as prod-backup, pointed at the staging containers and a
 # separate directory — staging is still disposable (stage-db-reset wipes it
 # without ceremony) but that's not the same as "not worth a backup you can
 # grab before trying something risky against init.hirfaty.com". Not on a
 # timer by default the way prod is; run by hand, or install
 # hirfaty-staging-backup.timer if it needs to become routine.
 stage-backup:
-	CONTAINER=hirfaty-staging-db BACKUP_DIR=/var/backups/hirfaty-staging ./docker/scripts/backup-db.sh
-
-# Same idea, for staging's seaweedfs_data volume — `hirfaty-staging_*` per
-# docker-compose.staging.yml's project name, a distinct volume from prod's.
-stage-backup-media:
-	VOLUME=hirfaty-staging_seaweedfs_data BACKUP_DIR=/var/backups/hirfaty-staging ./docker/scripts/backup-media.sh
+	DB_CONTAINER=hirfaty-staging-db VOLUME=hirfaty-staging_seaweedfs_data BACKUP_DIR=/var/backups/hirfaty-staging ./docker/scripts/backup.sh
 
 # Rebuild, migrate and restart from whatever is already checked out — the
 # deploy itself, with no git step. Split out so CI can own the git side (it

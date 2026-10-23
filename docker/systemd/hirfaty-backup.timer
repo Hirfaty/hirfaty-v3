@@ -1,9 +1,11 @@
 [Unit]
-Description=Run the Hirfaty database backup daily
+Description=Run the Hirfaty database and photos backup daily
 
 [Timer]
+# Early morning, before Moroccan traffic picks up.
 OnCalendar=*-*-* 02:30:00
 RandomizedDelaySec=15m
+# A run missed while the server was off happens at the next boot.
 Persistent=true
 
 [Install]

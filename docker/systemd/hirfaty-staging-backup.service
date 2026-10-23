@@ -3,8 +3,9 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty-staging-backup.timer
 #
-# Dumps land in /var/backups/hirfaty-staging (override BACKUP_DIR in
-# `make stage-backup` if that ever needs to move).
+# Each run writes one dated folder (database + photos) to
+# /var/backups/hirfaty-staging, keeping the newest 30 — the same script as
+# production's, see `make stage-backup`.
 # Check history with: systemctl status hirfaty-staging-backup.service
 #                      journalctl -u hirfaty-staging-backup.service
 #
@@ -15,7 +16,7 @@
 # Runs as root so it can write to /var/backups.
 
 [Unit]
-Description=Backup the Hirfaty staging database
+Description=Backup the Hirfaty staging database and photos
 # There's one hirfaty.service (docker/systemd/hirfaty.service) bringing up
 # both the prod and staging stacks together — no separate staging-only unit
 # to order after.

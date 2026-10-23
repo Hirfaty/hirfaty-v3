@@ -3,16 +3,19 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty-backup.timer
 #
-# Dumps land in /var/backups/hirfaty (override via Environment= below).
+# Each run writes one dated folder to /var/backups/hirfaty holding the
+# database dump AND the photo archive (database.sql.gz + media.tar.gz), and
+# keeps the newest 30 — see docker/scripts/backup.sh. This one unit replaced
+# the separate hirfaty-backup-media.* pair, which kept only 2 of each.
 # Check history with: systemctl status hirfaty-backup.service
 #                      journalctl -u hirfaty-backup.service
 #
-# Production only — staging is deliberately disposable (stage-db-reset wipes
-# it without ceremony), so there is nothing there worth preserving.
+# Production only — see hirfaty-staging-backup.service for staging's
+# optional counterpart.
 # Runs as root so it can write to /var/backups.
 
 [Unit]
-Description=Backup the Hirfaty production database
+Description=Backup the Hirfaty production database and photos
 After=hirfaty.service
 
 [Service]

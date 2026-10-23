@@ -1,5 +1,5 @@
 [Unit]
-Description=Run the Hirfaty staging database backup daily
+Description=Run the Hirfaty staging database and photos backup daily
 
 [Timer]
 # Offset from prod's 02:30 run (hirfaty-backup.timer) so the two dumps don't
