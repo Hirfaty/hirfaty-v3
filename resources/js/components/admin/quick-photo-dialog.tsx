@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { ImageOff, ImagePlus, Loader2, Upload } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ClipboardEvent } from 'react';
 import { toast } from 'sonner';
 import ImageCropDialog from '@/components/admin/image-crop-dialog';
@@ -9,75 +9,137 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { Media, PageProps, Product } from '@/types';
+import type { PageProps, Product } from '@/types';
 
-interface PhotoSlot {
-    media: Media;
-    /** "Galerie", or the variant's option values ("Bleu / M"). */
+/** One owner's photos, as sent by admin.products.photos.index. */
+interface PhotoGroup {
+    /** Null for the product's own gallery. */
+    variant_id: number | null;
     label: string;
+    photos: { id: number; url: string; broken: boolean }[];
 }
 
-/** Every photo of a product: its own gallery first, then each variant's. */
-export function photoSlots(product: Product): PhotoSlot[] {
-    const own = (product.media ?? [])
-        .filter((m) => m.type === 'image')
-        .map((media) => ({ media, label: 'Galerie' }));
-
-    const variants = (product.variants ?? []).flatMap((variant) =>
-        (variant.media ?? [])
-            .filter((m) => m.type === 'image')
-            .map((media) => ({
-                media,
-                label:
-                    variant.options.map((o) => o.value).join(' / ') ||
-                    `Déclinaison #${variant.id}`,
-            })),
-    );
-
-    return [...own, ...variants];
-}
+/** Replace one photo, or add a new one to a gallery (null = the product's). */
+type Target = { replace: number } | { addTo: number | null };
 
 /** Flagged by the last `media:check` — on the product or any variant. */
 export function hasBrokenPhoto(product: Product): boolean {
-    return photoSlots(product).some((slot) => slot.media.broken_at);
+    return [
+        ...(product.media ?? []),
+        ...(product.variants ?? []).flatMap((v) => v.media ?? []),
+    ].some((m) => m.type === 'image' && m.broken_at);
+}
+
+/**
+ * Where the dialog points next: the first broken photo; otherwise the
+ * gallery the admin was just adding to, so several photos go in one after
+ * another; otherwise the first variant still without a photo.
+ */
+function nextTarget(groups: PhotoGroup[], previous?: Target): Target {
+    for (const group of groups) {
+        const broken = group.photos.find((p) => p.broken);
+
+        if (broken) {
+            return { replace: broken.id };
+        }
+    }
+
+    if (
+        previous &&
+        'addTo' in previous &&
+        groups.some((g) => g.variant_id === previous.addTo)
+    ) {
+        return previous;
+    }
+
+    const empty = groups.find(
+        (g) => g.variant_id !== null && g.photos.length === 0,
+    );
+
+    return { addTo: empty?.variant_id ?? null };
+}
+
+async function fetchGroups(productId: number): Promise<PhotoGroup[]> {
+    const response = await fetch(
+        route('admin.products.photos.index', productId),
+        { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+        throw new Error('Impossible de charger les photos de ce produit.');
+    }
+
+    return ((await response.json()) as { groups: PhotoGroup[] }).groups;
 }
 
 const LINK = /^https?:\/\//i;
 
+const TILE =
+    'flex w-20 flex-col gap-1 rounded-lg border p-1 text-left transition';
+
 /**
- * The products list's shortcut for fixing a photo without opening the edit
- * screen: pick which photo to replace (a broken one is preselected), paste an
- * image link — Google Merchant Center's or Google Images' "Copier l'adresse
- * de l'image" — or the image itself, frame it in the usual crop dialog, and
- * it is saved in place.
+ * The products list's shortcut for fixing photos without opening the edit
+ * screen: pick a photo to replace (a broken one is preselected) or a gallery
+ * to add to — the product's or a variant's — paste an image link (Google
+ * Merchant Center's or Google Images' "Copier l'adresse de l'image") or the
+ * image itself, frame it in the usual crop dialog, and it is saved. The
+ * dialog stays open afterwards for the next photo.
+ *
+ * It loads its photos itself (admin.products.photos.index) instead of using
+ * the list's row: a product it just fixed may drop out of a filtered list
+ * ("Images cassées") while the dialog is still open on it.
  *
  * Links are downloaded by the server (admin.products.remote-image): Google's
  * image hosts send no CORS headers, so the browser could show such a picture
  * but never crop it.
  */
 export default function QuickPhotoDialog({
-    product,
+    productId,
+    productName,
     onClose,
 }: {
-    product: Product;
+    productId: number;
+    productName: string;
     onClose: () => void;
 }) {
-    const slots = photoSlots(product);
-    // null = add a new photo to the product's gallery.
-    const [target, setTarget] = useState<number | null>(
-        () =>
-            (slots.find((s) => s.media.broken_at) ?? slots[0])?.media.id ??
-            null,
-    );
+    const [groups, setGroups] = useState<PhotoGroup[] | null>(null);
+    const [target, setTarget] = useState<Target>({ addTo: null });
     const [link, setLink] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [crop, setCrop] = useState<{ file: File; url: string } | null>(null);
     const [aspect, setAspect] = useState(1);
     const fileInput = useRef<HTMLInputElement>(null);
+
+    const showGroups = (fresh: PhotoGroup[], previous?: Target) => {
+        setGroups(fresh);
+        setTarget(nextTarget(fresh, previous));
+    };
+
+    const showLoadError = (e: unknown) =>
+        setError(e instanceof Error ? e.message : String(e));
+
+    useEffect(() => {
+        let current = true;
+
+        fetchGroups(productId).then(
+            (fresh) => {
+                if (current) {
+                    setGroups(fresh);
+                    setTarget(nextTarget(fresh));
+                }
+            },
+            (e: Error) => current && setError(e.message),
+        );
+
+        return () => {
+            current = false;
+        };
+    }, [productId]);
 
     const startCrop = (file: File) => {
         if (!file.type.startsWith('image/')) {
@@ -170,8 +232,15 @@ export default function QuickPhotoDialog({
 
     const save = (file: File) => {
         router.post(
-            route('admin.products.photos.store', product.id),
-            { file, media_id: target ?? '' },
+            route('admin.products.photos.store', productId),
+            {
+                file,
+                media_id: 'replace' in target ? target.replace : '',
+                variant_id:
+                    'addTo' in target && target.addTo !== null
+                        ? target.addTo
+                        : '',
+            },
             {
                 forceFormData: true,
                 preserveScroll: true,
@@ -181,13 +250,19 @@ export default function QuickPhotoDialog({
 
                     toast.success(flash?.success ?? 'Photo enregistrée.');
                     endCrop();
-                    onClose();
+                    setLink('');
+                    // Stay open on the refreshed photos, ready for the next one.
+                    fetchGroups(productId).then(
+                        (fresh) => showGroups(fresh, target),
+                        showLoadError,
+                    );
                 },
                 onError: (errors) => {
                     endCrop();
                     setError(
                         errors.file ??
                             errors.media_id ??
+                            errors.variant_id ??
                             'Enregistrement impossible.',
                     );
                 },
@@ -195,73 +270,106 @@ export default function QuickPhotoDialog({
         );
     };
 
+    const isTarget = (candidate: Target) =>
+        'replace' in candidate
+            ? 'replace' in target && target.replace === candidate.replace
+            : 'addTo' in target && target.addTo === candidate.addTo;
+
+    const tileState = (candidate: Target) =>
+        isTarget(candidate)
+            ? 'border-ink ring-2 ring-ink/20'
+            : 'border-border hover:border-ink/40';
+
     return (
         <>
             <Dialog open={!crop} onOpenChange={(open) => !open && onClose()}>
-                <DialogContent className="sm:max-w-xl" onPaste={onPaste}>
+                <DialogContent
+                    className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+                    onPaste={onPaste}
+                >
                     <DialogHeader>
-                        <DialogTitle>Remplacer une photo</DialogTitle>
+                        <DialogTitle>Photos — {productName}</DialogTitle>
                         <DialogDescription>
-                            {product.name} — choisissez la photo à remplacer,
-                            puis collez le lien de la nouvelle image (ou
-                            l&apos;image elle-même). Vous pourrez la recadrer
-                            avant d&apos;enregistrer.
+                            Choisissez la photo à remplacer, ou « Ajouter » dans
+                            la galerie ou une déclinaison, puis collez le lien
+                            de l&apos;image (ou l&apos;image elle-même). La
+                            fenêtre reste ouverte pour enchaîner les photos.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
-                        {slots.map(({ media, label }) => (
-                            <button
-                                key={media.id}
-                                type="button"
-                                onClick={() => setTarget(media.id)}
-                                aria-pressed={target === media.id}
-                                className={`group flex flex-col gap-1 rounded-lg border p-1 text-left transition ${
-                                    target === media.id
-                                        ? 'border-ink ring-2 ring-ink/20'
-                                        : 'border-border hover:border-ink/40'
-                                }`}
-                            >
-                                {media.broken_at ? (
-                                    // A lost file stalls for seconds before
-                                    // failing, so it is not even requested.
-                                    <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-md bg-terracotta/10 text-terracotta">
-                                        <ImageOff className="h-5 w-5" />
-                                        <span className="text-[11px] font-medium">
-                                            Cassée
-                                        </span>
-                                    </span>
-                                ) : (
-                                    <img
-                                        src={media.url}
-                                        alt=""
-                                        loading="lazy"
-                                        className="aspect-square w-full rounded-md bg-muted object-cover"
-                                    />
-                                )}
-                                <span className="truncate text-[11px] text-ink-soft">
-                                    {label}
-                                </span>
-                            </button>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={() => setTarget(null)}
-                            aria-pressed={target === null}
-                            className={`flex flex-col gap-1 rounded-lg border p-1 text-left transition ${
-                                target === null
-                                    ? 'border-ink ring-2 ring-ink/20'
-                                    : 'border-dashed border-border hover:border-ink/40'
-                            }`}
-                        >
-                            <span className="flex aspect-square w-full items-center justify-center rounded-md bg-muted/60 text-ink-soft">
-                                <ImagePlus className="h-5 w-5" />
-                            </span>
-                            <span className="truncate text-[11px] text-ink-soft">
-                                Nouvelle photo
-                            </span>
-                        </button>
-                    </div>
+                    {groups === null ? (
+                        <div className="flex h-24 items-center justify-center text-ink-soft">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {groups.map((group) => (
+                                <div key={group.variant_id ?? 'product'}>
+                                    <p className="mb-1.5 text-xs font-medium text-ink-soft">
+                                        {group.label}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {group.photos.map((photo) => (
+                                            <button
+                                                key={photo.id}
+                                                type="button"
+                                                onClick={() =>
+                                                    setTarget({
+                                                        replace: photo.id,
+                                                    })
+                                                }
+                                                aria-pressed={isTarget({
+                                                    replace: photo.id,
+                                                })}
+                                                className={`${TILE} ${tileState({ replace: photo.id })}`}
+                                            >
+                                                {photo.broken ? (
+                                                    // A lost file stalls for
+                                                    // seconds before failing,
+                                                    // so it is not requested.
+                                                    <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-md bg-terracotta/10 text-terracotta">
+                                                        <ImageOff className="h-5 w-5" />
+                                                        <span className="text-[11px] font-medium">
+                                                            Cassée
+                                                        </span>
+                                                    </span>
+                                                ) : (
+                                                    <img
+                                                        src={photo.url}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        className="aspect-square w-full rounded-md bg-muted object-cover"
+                                                    />
+                                                )}
+                                                <span className="text-center text-[11px] text-ink-soft">
+                                                    Remplacer
+                                                </span>
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setTarget({
+                                                    addTo: group.variant_id,
+                                                })
+                                            }
+                                            aria-pressed={isTarget({
+                                                addTo: group.variant_id,
+                                            })}
+                                            className={`${TILE} border-dashed ${tileState({ addTo: group.variant_id })}`}
+                                        >
+                                            <span className="flex aspect-square w-full items-center justify-center rounded-md bg-muted/60 text-ink-soft">
+                                                <ImagePlus className="h-5 w-5" />
+                                            </span>
+                                            <span className="text-center text-[11px] text-ink-soft">
+                                                Ajouter
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <form
                         onSubmit={(e) => {
@@ -278,7 +386,10 @@ export default function QuickPhotoDialog({
                             autoFocus
                             className="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
                         />
-                        <Button type="submit" disabled={loading || !link}>
+                        <Button
+                            type="submit"
+                            disabled={loading || !link || groups === null}
+                        >
                             {loading && (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             )}
@@ -290,7 +401,8 @@ export default function QuickPhotoDialog({
                         <button
                             type="button"
                             onClick={() => fileInput.current?.click()}
-                            className="inline-flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink"
+                            disabled={groups === null}
+                            className="inline-flex items-center gap-2 text-sm text-ink-soft transition hover:text-ink disabled:opacity-50"
                         >
                             <Upload className="h-4 w-4" />
                             ou choisir un fichier
@@ -318,6 +430,16 @@ export default function QuickPhotoDialog({
                         de copier son adresse — les miniatures (encrypted-tbn…)
                         sont de petite taille.
                     </p>
+
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                        >
+                            Terminé
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

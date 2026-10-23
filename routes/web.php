@@ -241,6 +241,7 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::delete('/products/bulk-destroy', [Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');
         Route::post('/products/check-images', [Admin\ProductPhotoController::class, 'checkImages'])->name('products.check-images');
         Route::get('/products/remote-image', [Admin\ProductPhotoController::class, 'remote'])->name('products.remote-image');
+        Route::get('/products/{product}/photos', [Admin\ProductPhotoController::class, 'index'])->name('products.photos.index');
         Route::post('/products/{product}/photos', [Admin\ProductPhotoController::class, 'store'])->name('products.photos.store');
         Route::post('/products', [Admin\ProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [Admin\ProductController::class, 'edit'])->name('products.edit');

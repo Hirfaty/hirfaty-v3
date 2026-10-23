@@ -281,6 +281,58 @@ test('without a target the photo is added to the end of the gallery', function (
         ->and((int) $product->media()->max('order'))->toBe(4);
 });
 
+test('the photos dialog lists the gallery and every variant, empty ones included', function () {
+    $product = filterProduct('Tapis', ['has_variants' => true]);
+    $own = filterImage($product, now()->toDateTimeString());
+    $withPhoto = ProductVariant::create(['product_id' => $product->id, 'stock' => 1]);
+    $variantPhoto = filterImage($withPhoto);
+    $empty = ProductVariant::create(['product_id' => $product->id, 'stock' => 1]);
+
+    $this->actingAs($this->admin)
+        ->getJson(route('admin.products.photos.index', $product))
+        ->assertOk()
+        ->assertJsonCount(3, 'groups')
+        ->assertJsonPath('groups.0.variant_id', null)
+        ->assertJsonPath('groups.0.photos.0.id', $own->id)
+        ->assertJsonPath('groups.0.photos.0.broken', true)
+        ->assertJsonPath('groups.1.variant_id', $withPhoto->id)
+        ->assertJsonPath('groups.1.photos.0.id', $variantPhoto->id)
+        ->assertJsonPath('groups.1.photos.0.broken', false)
+        ->assertJsonPath('groups.2.variant_id', $empty->id)
+        ->assertJsonPath('groups.2.photos', []);
+});
+
+test('a photo can be added to a variant that has none yet', function () {
+    Storage::fake('public');
+    $product = filterProduct('Tapis', ['has_variants' => true]);
+    $variant = ProductVariant::create(['product_id' => $product->id, 'stock' => 1]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', $product), [
+            'variant_id' => $variant->id,
+            'file' => UploadedFile::fake()->create('bleu.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertSessionHas('success', 'Photo ajoutée.');
+
+    $media = $variant->media()->sole();
+
+    expect($media->path)->toStartWith("products/{$product->id}/variants/{$variant->id}/")
+        ->and($media->order)->toBe(0)
+        ->and($product->media()->count())->toBe(0);
+});
+
+test('a variant of another product cannot receive photos through this one', function () {
+    Storage::fake('public');
+    $other = ProductVariant::create(['product_id' => filterProduct('Autre', ['has_variants' => true])->id, 'stock' => 1]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.products.photos.store', filterProduct('Vase')), [
+            'variant_id' => $other->id,
+            'file' => UploadedFile::fake()->create('new.jpg', 40, 'image/jpeg'),
+        ])
+        ->assertNotFound();
+});
+
 test('a photo of another product cannot be replaced through this one', function () {
     Storage::fake('public');
     $other = filterImage(filterProduct('Autre'));

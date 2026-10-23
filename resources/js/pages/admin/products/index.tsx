@@ -205,9 +205,12 @@ function AdminProducts({
         );
     };
 
-    // Kept as an id so the dialog always shows the row's latest photos.
-    const [photoProductId, setPhotoProductId] = useState<number | null>(null);
-    const photoProduct = products.data.find((p) => p.id === photoProductId);
+    // Only what the dialog needs to open: it loads the photos itself, so it
+    // stays open when a fixed product drops out of a filtered list.
+    const [photoProduct, setPhotoProduct] = useState<{
+        id: number;
+        name: string;
+    } | null>(null);
 
     const tabs = useMemo(
         () =>
@@ -743,10 +746,13 @@ function AdminProducts({
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setPhotoProductId(p.id);
+                                                        setPhotoProduct({
+                                                            id: p.id,
+                                                            name: p.name,
+                                                        });
                                                     }}
-                                                    aria-label={`Remplacer une photo de ${p.name}`}
-                                                    title="Remplacer une photo"
+                                                    aria-label={`Photos de ${p.name}`}
+                                                    title="Remplacer ou ajouter des photos"
                                                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft transition hover:bg-ink hover:text-white"
                                                 >
                                                     <ImageUp className="h-4 w-4" />
@@ -1033,8 +1039,9 @@ function AdminProducts({
             {photoProduct && (
                 <QuickPhotoDialog
                     key={photoProduct.id}
-                    product={photoProduct}
-                    onClose={() => setPhotoProductId(null)}
+                    productId={photoProduct.id}
+                    productName={photoProduct.name}
+                    onClose={() => setPhotoProduct(null)}
                 />
             )}
 

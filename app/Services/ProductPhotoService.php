@@ -14,9 +14,9 @@ use Psr\Http\Message\UriInterface;
 use Throwable;
 
 /**
- * The admin products list's quick "Remplacer une photo" dialog: swap one
- * product or variant photo for a new file in place, or add one to the
- * product's gallery, without opening the edit screen.
+ * The admin products list's quick photos dialog: swap one product or variant
+ * photo for a new file in place, or add one to the product's gallery or a
+ * variant's, without opening the edit screen.
  *
  * Also fetches a pasted image link server-side (fetchRemote), so the browser
  * can crop pictures from hosts that send no CORS headers — Google Merchant
@@ -26,6 +26,40 @@ class ProductPhotoService
 {
     /** Bigger than any product photo worth recovering, small enough to hold in memory. */
     private const REMOTE_MAX_BYTES = 10 * 1024 * 1024;
+
+    /**
+     * The dialog's picture of a product: its own gallery first, then each
+     * variant's, every group listed even when it has no photo yet so one can
+     * be added to it.
+     *
+     * @return list<array{variant_id: int|null, label: string, photos: list<array{id: int, url: string, broken: bool}>}>
+     */
+    public function groups(Product $product): array
+    {
+        $product->load(['images', 'variants.options', 'variants.media']);
+
+        $photos = fn ($media) => $media
+            ->where('type', 'image')
+            ->sortBy('order')
+            ->map(fn (Media $m) => ['id' => $m->id, 'url' => $m->url, 'broken' => $m->broken_at !== null])
+            ->values()
+            ->all();
+
+        return [
+            ['variant_id' => null, 'label' => 'Galerie du produit', 'photos' => $photos($product->images)],
+            ...$product->variants->map(fn (ProductVariant $variant) => [
+                'variant_id' => $variant->id,
+                'label' => $variant->label() ?: "Déclinaison #{$variant->id}",
+                'photos' => $photos($variant->media),
+            ])->all(),
+        ];
+    }
+
+    /** One of this product's variants, or null when the id belongs elsewhere. */
+    public function variant(Product $product, int $variantId): ?ProductVariant
+    {
+        return $product->variants()->whereKey($variantId)->first();
+    }
 
     /**
      * The photo with this id on the product itself or on one of its variants.
@@ -74,14 +108,17 @@ class ProductPhotoService
         return $media;
     }
 
-    /** Append `$file` to the end of the product's own gallery. */
-    public function add(Product $product, UploadedFile $file): Media
+    /** Append `$file` to the end of the product's own gallery, or of one variant's. */
+    public function add(Product $product, UploadedFile $file, ?ProductVariant $variant = null): Media
     {
-        $disk = config('filesystems.default');
-        $path = $file->store("products/{$product->id}", ['disk' => $disk, 'visibility' => 'public']);
-        $highest = $product->media()->max('order');
+        $owner = $variant ?? $product;
+        $folder = $variant ? "products/{$product->id}/variants/{$variant->id}" : "products/{$product->id}";
 
-        return $product->media()->create([
+        $disk = config('filesystems.default');
+        $path = $file->store($folder, ['disk' => $disk, 'visibility' => 'public']);
+        $highest = $owner->media()->max('order');
+
+        return $owner->media()->create([
             'type' => 'image',
             'path' => $path,
             'url' => Storage::disk($disk)->url($path),
@@ -89,6 +126,8 @@ class ProductPhotoService
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
             'order' => $highest === null ? 0 : (int) $highest + 1,
+            // Read just now, from the upload itself.
+            'checked_at' => now(),
         ]);
     }
 

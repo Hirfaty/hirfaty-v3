@@ -7,6 +7,8 @@ import {
     MapPin,
     Newspaper,
     Package,
+    PanelLeftClose,
+    PanelLeftOpen,
     Receipt,
     ShieldCheck,
     ShoppingBag,
@@ -26,6 +28,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarRail,
     useSidebar,
 } from '@/components/ui/sidebar';
 import type { PageProps } from '@/types';
@@ -143,6 +146,8 @@ function NavGroup({
                                 <SidebarMenuButton
                                     asChild
                                     isActive={active}
+                                    // Shown only while collapsed to icons.
+                                    tooltip={item.title}
                                     className="rounded-lg"
                                 >
                                     <Link
@@ -152,9 +157,16 @@ function NavGroup({
                                         <item.icon
                                             className={`h-4 w-4 ${active ? 'text-sidebar-primary' : ''}`}
                                         />
-                                        {!collapsed && (
-                                            <span>{item.title}</span>
-                                        )}
+                                        {/* Kept for screen readers when collapsed. */}
+                                        <span
+                                            className={
+                                                collapsed
+                                                    ? 'sr-only'
+                                                    : undefined
+                                            }
+                                        >
+                                            {item.title}
+                                        </span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -167,7 +179,7 @@ function NavGroup({
 }
 
 export function AdminSidebar() {
-    const { state } = useSidebar();
+    const { state, isMobile, toggleSidebar } = useSidebar();
     const collapsed = state === 'collapsed';
     const { url, props } = usePage<PageProps>();
     const { auth } = props;
@@ -258,17 +270,48 @@ export function AdminSidebar() {
                     </div>
                 )}
                 <SidebarMenu>
+                    {/* On phones the sidebar is a drawer, closed by tapping outside. */}
+                    {!isMobile && (
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                onClick={toggleSidebar}
+                                tooltip="Agrandir le menu"
+                                className="rounded-lg text-sidebar-foreground/70"
+                            >
+                                {collapsed ? (
+                                    <PanelLeftOpen className="h-4 w-4" />
+                                ) : (
+                                    <PanelLeftClose className="h-4 w-4" />
+                                )}
+                                <span
+                                    className={
+                                        collapsed ? 'sr-only' : undefined
+                                    }
+                                >
+                                    {collapsed
+                                        ? 'Agrandir le menu'
+                                        : 'Réduire le menu'}
+                                </span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    )}
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             onClick={handleLogout}
+                            tooltip="Déconnexion"
                             className="rounded-lg text-red-300 hover:bg-red-500/10 hover:text-red-300"
                         >
                             <LogOut className="h-4 w-4" />
-                            {!collapsed && <span>Déconnexion</span>}
+                            <span className={collapsed ? 'sr-only' : undefined}>
+                                Déconnexion
+                            </span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
+
+            {/* Clicking the sidebar's edge toggles it too. */}
+            <SidebarRail />
         </Sidebar>
     );
 }
