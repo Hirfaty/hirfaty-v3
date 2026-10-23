@@ -123,6 +123,8 @@ services:
       BUCKET: ${SEAWEEDFS_BUCKET:-hirfaty}
     volumes:
       - /var/backups/hirfaty:/backups:ro
+      # Archives sent through its page; kept until deleted there.
+      - media_browser_uploads:/uploads
     ports:
       - '127.0.0.1:8090:8090'
     networks:
@@ -134,6 +136,7 @@ volumes:
   # existing production data.
   db_data:
   seaweedfs_data:
+  media_browser_uploads:
 
 networks:
   internal:

@@ -11,7 +11,9 @@ Two kinds of source, browsed the same way:
                on that copy, bound to 127.0.0.1 inside this container, so its
                photos can be listed, viewed and downloaded; "Fermer" stops it
                and deletes the copy. The archive itself is mounted read-only
-               and never modified.
+               and never modified. An archive kept elsewhere (on someone's
+               computer) can be uploaded from the home page into /uploads
+               and is then opened the same way.
 
 Nothing here can write to production storage: the live filer is only ever
 sent GET requests.
@@ -38,6 +40,10 @@ FILER_URL = os.environ.get("FILER_URL", "http://seaweedfs:8888").rstrip("/")
 BUCKET = os.environ.get("BUCKET", "hirfaty")
 BACKUPS_DIR = os.environ.get("BACKUPS_DIR", "/backups")
 WORK_DIR = os.environ.get("WORK_DIR", "/work")
+# Archives sent from the browser (a backup kept on someone's computer, say).
+UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
+UPLOAD_PREFIX = "envoi-"
+MAX_UPLOAD = 5 * 1024 ** 3
 WEED = os.environ.get("WEED", "/usr/bin/weed")
 PORT = int(os.environ.get("PORT", "8090"))
 
@@ -55,25 +61,78 @@ _opened: dict = {}
 # ── Sources ────────────────────────────────────────────────────────────────
 
 def backups() -> list:
-    """Every media archive under BACKUPS_DIR, newest first."""
+    """Every media archive — the server's backups, then uploaded ones — newest first."""
     found = []
-    if not os.path.isdir(BACKUPS_DIR):
-        return found
+    if os.path.isdir(BACKUPS_DIR):
+        for entry in os.scandir(BACKUPS_DIR):
+            # New layout: one dated folder per run holding media.tar.gz.
+            if entry.is_dir() and os.path.isfile(os.path.join(entry.path, "media.tar.gz")):
+                found.append((entry.name, os.path.join(entry.path, "media.tar.gz"), False))
+            # Older flat archives from before the combined backup.
+            elif entry.is_file() and entry.name.startswith("hirfaty-media-") and entry.name.endswith(".tar.gz"):
+                found.append((entry.name[: -len(".tar.gz")], entry.path, False))
 
-    for entry in os.scandir(BACKUPS_DIR):
-        # New layout: one dated folder per run holding media.tar.gz.
-        if entry.is_dir() and os.path.isfile(os.path.join(entry.path, "media.tar.gz")):
-            archive = os.path.join(entry.path, "media.tar.gz")
-            found.append((entry.name, archive))
-        # Older flat archives from before the combined backup.
-        elif entry.is_file() and entry.name.startswith("hirfaty-media-") and entry.name.endswith(".tar.gz"):
-            found.append((entry.name[: -len(".tar.gz")], entry.path))
+    if os.path.isdir(UPLOADS_DIR):
+        for entry in os.scandir(UPLOADS_DIR):
+            if entry.is_file() and entry.name.endswith(".tar.gz"):
+                found.append((UPLOAD_PREFIX + entry.name[: -len(".tar.gz")], entry.path, True))
 
     return [
-        {"name": name, "archive": path, "size": os.path.getsize(path), "open": name in _opened}
-        # Both layouts carry the same timestamp format; sort on it alone.
-        for name, path in sorted(found, key=lambda b: b[0].removeprefix("hirfaty-media-"), reverse=True)
+        {"name": name, "archive": path, "size": os.path.getsize(path), "open": name in _opened, "uploaded": uploaded}
+        # Every name carries the same timestamp format; sort on it alone.
+        for name, path, uploaded in sorted(
+            found,
+            key=lambda b: (not b[2], b[0].removeprefix(UPLOAD_PREFIX).removeprefix("hirfaty-media-")),
+            reverse=True,
+        )
     ]
+
+
+def save_upload(stream, length: int, filename: str) -> str:
+    """Stream an uploaded archive to UPLOADS_DIR, check it is one, and name it."""
+    if not filename.lower().endswith((".tar.gz", ".tgz")):
+        raise ValueError("Envoyez une archive .tar.gz (le fichier media.tar.gz d'une sauvegarde).")
+    if length <= 0 or length > MAX_UPLOAD:
+        raise ValueError(f"Archive vide ou trop grosse (maximum {size_label(MAX_UPLOAD)}).")
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    if shutil.disk_usage(UPLOADS_DIR).free < length * 3:  # the archive plus its extracted copy
+        raise ValueError("Pas assez d'espace disque sur le serveur pour cette archive.")
+
+    stem = os.path.basename(filename).rsplit(".tar.gz", 1)[0].rsplit(".tgz", 1)[0]
+    stem = "".join(c if c.isalnum() or c in "-_" else "-" for c in stem)[:60] or "archive"
+    name = f"{time.strftime('%Y-%m-%d_%H-%M-%S')}_{stem}"
+    final = os.path.join(UPLOADS_DIR, f"{name}.tar.gz")
+    partial = f"{final}.partial"
+
+    try:
+        with open(partial, "wb") as out:
+            remaining = length
+            while remaining:
+                chunk = stream.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    raise ValueError("Envoi interrompu.")
+                out.write(chunk)
+                remaining -= len(chunk)
+        with tarfile.open(partial, "r:gz") as tar:
+            if tar.next() is None:
+                raise ValueError("Cette archive est vide.")
+    except (tarfile.TarError, OSError, EOFError):
+        os.remove(partial)
+        raise ValueError("Ce fichier n'est pas une archive .tar.gz valide.")
+    except ValueError:
+        os.remove(partial)
+        raise
+
+    os.rename(partial, final)
+    return UPLOAD_PREFIX + name
+
+
+def delete_upload(name: str) -> None:
+    upload = next((b for b in backups() if b["name"] == name and b["uploaded"]), None)
+    if upload is None:
+        raise LookupError("Seules les archives envoyées ici peuvent être supprimées.")
+    close_backup(name)
+    os.remove(upload["archive"])
 
 
 def filer_for(source: str) -> str:
@@ -338,6 +397,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_json(self, data: dict, status: int = 200):
+        body = json.dumps(data).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def redirect(self, to: str):
         self.send_response(303)
         self.send_header("Location", to)
@@ -367,7 +434,24 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         route = urllib.parse.urlparse(self.path).path
         name = self.params().get("name", "")
+
+        # Sent by the home page's script as the raw file body, not a form:
+        # no multipart parsing, and a 150 MB archive goes straight to disk.
+        if route == "/upload":
+            try:
+                saved = save_upload(
+                    self.rfile,
+                    int(self.headers.get("Content-Length") or 0),
+                    self.params().get("filename", ""),
+                )
+            except (ValueError, OSError) as e:
+                return self.send_json({"error": str(e)}, 400)
+            return self.send_json({"name": saved})
+
         try:
+            if route == "/delete":
+                delete_upload(name)
+                return self.redirect("/")
             if route == "/open":
                 open_backup(name)
                 return self.redirect(f"/browse?{urllib.parse.urlencode({'src': name})}")
@@ -391,9 +475,40 @@ class Handler(BaseHTTPRequestHandler):
                 "onsubmit=\"this.querySelector('button').textContent='Ouverture… (1 min)'\">"
                 "<button>Ouvrir</button></form>"
             )
+            + (
+                f" <form method=post action='{link('/delete', name=b['name'])}' style='display:inline' "
+                "onsubmit=\"return confirm('Supprimer cette archive envoyée ?')\">"
+                "<button class='btn light'>Supprimer</button></form>"
+                if b["uploaded"] else ""
+            )
             + "</td></tr>"
             for b in backups()
         ) or "<tr><td colspan=3 class=muted>Aucune sauvegarde trouvée dans /var/backups/hirfaty.</td></tr>"
+
+        upload = (
+            "<h1 style='margin-top:28px'>Envoyer une archive</h1>"
+            "<p class=muted>Une sauvegarde gardée sur votre ordinateur : choisissez son fichier "
+            "<code>media.tar.gz</code> (ou un ancien <code>hirfaty-media-….tar.gz</code>). "
+            "Elle apparaît ensuite dans la liste ci-dessus, prête à être ouverte.</p>"
+            "<p><input type=file id=archive accept='.gz,.tgz,application/gzip'> "
+            "<button id=send>Envoyer</button> <span id=progress class=muted></span></p>"
+            "<script>"
+            "document.getElementById('send').onclick = () => {"
+            " const file = document.getElementById('archive').files[0];"
+            " const out = document.getElementById('progress');"
+            " if (!file) { out.textContent = 'Choisissez d’abord un fichier.'; return; }"
+            " const xhr = new XMLHttpRequest();"
+            " xhr.open('POST', '/upload?filename=' + encodeURIComponent(file.name));"
+            " xhr.upload.onprogress = e => out.textContent = 'Envoi… ' + Math.round(100 * e.loaded / e.total) + ' %';"
+            " xhr.onload = () => { const r = JSON.parse(xhr.responseText || '{}');"
+            "  if (xhr.status === 200) { location.reload(); } else { out.textContent = r.error || 'Échec de l’envoi.'; out.className = 'bad'; } };"
+            " xhr.onerror = () => { out.textContent = 'Connexion perdue pendant l’envoi.'; out.className = 'bad'; };"
+            " document.getElementById('send').disabled = true;"
+            " xhr.onloadend = () => document.getElementById('send').disabled = false;"
+            " xhr.send(file);"
+            "};"
+            "</script>"
+        )
 
         body = (
             "<h1>Photos de la plateforme</h1>"
@@ -404,6 +519,7 @@ class Handler(BaseHTTPRequestHandler):
             "<p class=muted>« Ouvrir » extrait une copie temporaire de la sauvegarde pour en voir les photos ; "
             "« Fermer » la supprime. L'archive elle-même n'est jamais modifiée.</p>"
             f"<table><tr><th>Sauvegarde</th><th>Photos</th><th></th></tr>{rows}</table>"
+            f"{upload}"
         )
         self.send_html(page("Accueil", body))
 
