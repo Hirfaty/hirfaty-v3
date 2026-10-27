@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import {
+    ChevronDown,
     FileText,
     LayoutDashboard,
     LogOut,
@@ -17,6 +18,12 @@ import {
     Truck,
     Users,
 } from 'lucide-react';
+import { useState } from 'react';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Sidebar,
     SidebarContent,
@@ -121,60 +128,138 @@ const settingsItems: NavItem[] = [
     },
 ];
 
-/** One collapsible group of nav links, sharing the active-state logic below. */
+interface NavSection {
+    label: string;
+    items: NavItem[];
+}
+
+/** The sections that fold; "Tableau" holds one link and always stays open. */
+const sections: NavSection[] = [
+    { label: 'Catalogue', items: catalogItems },
+    { label: 'Contenu', items: contentItems },
+    { label: 'Communauté', items: communityItems },
+    { label: 'Configuration', items: settingsItems },
+];
+
+/**
+ * Labels of the sections the admin folded. A per-browser convenience, so
+ * localStorage rather than a cookie: it never needs to reach the server, and
+ * without SSR the first render can read it directly — no flash of every
+ * section opening and then folding again on each page.
+ */
+const FOLDED_KEY = 'hirfaty_admin_nav_folded';
+
+function readFolded(): string[] {
+    try {
+        const parsed: unknown = JSON.parse(
+            localStorage.getItem(FOLDED_KEY) ?? '[]',
+        );
+
+        return Array.isArray(parsed)
+            ? parsed.filter((label) => typeof label === 'string')
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeFolded(labels: string[]) {
+    try {
+        localStorage.setItem(FOLDED_KEY, JSON.stringify(labels));
+    } catch {
+        // Private mode or blocked storage: folding still works for this page.
+    }
+}
+
+/**
+ * One group of nav links, sharing the active-state logic below. Given
+ * `open`/`onOpenChange` its label becomes a toggle that folds the links away;
+ * without them it is a plain, always-open group.
+ */
 function NavGroup({
     label,
     items,
     isActive,
     collapsed,
+    open,
+    onOpenChange,
 }: {
     label: string;
     items: NavItem[];
     isActive: (path: string) => boolean;
     collapsed: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }) {
-    return (
-        <SidebarGroup>
-            <SidebarGroupLabel>{label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-                <SidebarMenu>
-                    {items.map((item) => {
-                        const active = isActive(item.url);
+    const menu = (
+        <SidebarGroupContent>
+            <SidebarMenu>
+                {items.map((item) => {
+                    const active = isActive(item.url);
 
-                        return (
-                            <SidebarMenuItem key={item.url}>
-                                <SidebarMenuButton
-                                    asChild
-                                    isActive={active}
-                                    // Shown only while collapsed to icons.
-                                    tooltip={item.title}
-                                    className="rounded-lg"
+                    return (
+                        <SidebarMenuItem key={item.url}>
+                            <SidebarMenuButton
+                                asChild
+                                isActive={active}
+                                // Shown only while collapsed to icons.
+                                tooltip={item.title}
+                                className="rounded-lg"
+                            >
+                                <Link
+                                    href={item.url}
+                                    className="flex items-center gap-2.5"
                                 >
-                                    <Link
-                                        href={item.url}
-                                        className="flex items-center gap-2.5"
+                                    <item.icon
+                                        className={`h-4 w-4 ${active ? 'text-sidebar-primary' : ''}`}
+                                    />
+                                    {/* Kept for screen readers when collapsed. */}
+                                    <span
+                                        className={
+                                            collapsed ? 'sr-only' : undefined
+                                        }
                                     >
-                                        <item.icon
-                                            className={`h-4 w-4 ${active ? 'text-sidebar-primary' : ''}`}
-                                        />
-                                        {/* Kept for screen readers when collapsed. */}
-                                        <span
-                                            className={
-                                                collapsed
-                                                    ? 'sr-only'
-                                                    : undefined
-                                            }
-                                        >
-                                            {item.title}
-                                        </span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        );
-                    })}
-                </SidebarMenu>
-            </SidebarGroupContent>
-        </SidebarGroup>
+                                        {item.title}
+                                    </span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    );
+                })}
+            </SidebarMenu>
+        </SidebarGroupContent>
+    );
+
+    if (open === undefined || !onOpenChange) {
+        return (
+            <SidebarGroup>
+                <SidebarGroupLabel>{label}</SidebarGroupLabel>
+                {menu}
+            </SidebarGroup>
+        );
+    }
+
+    return (
+        // Collapsed to icons the labels are hidden, so a folded section could
+        // not be reopened — show every section's icons there instead.
+        <Collapsible
+            open={collapsed || open}
+            onOpenChange={onOpenChange}
+            className="group/collapsible"
+        >
+            <SidebarGroup>
+                <SidebarGroupLabel
+                    asChild
+                    className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                    <CollapsibleTrigger className="w-full">
+                        {label}
+                        <ChevronDown className="ms-auto transition-transform group-data-[state=closed]/collapsible:-rotate-90" />
+                    </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent>{menu}</CollapsibleContent>
+            </SidebarGroup>
+        </Collapsible>
     );
 }
 
@@ -193,6 +278,25 @@ export function AdminSidebar() {
         return path === dashboardUrl
             ? current === path
             : current === path || current.startsWith(`${path}/`);
+    };
+
+    // The page remounts this on every visit, so the section holding the
+    // current page reopens each time you land in it, even if folded before.
+    const [folded, setFolded] = useState(() => {
+        const current = sections.find((section) =>
+            section.items.some((item) => isActive(item.url)),
+        );
+
+        return readFolded().filter((label) => label !== current?.label);
+    });
+
+    const setSectionOpen = (label: string, open: boolean) => {
+        const next = open
+            ? folded.filter((l) => l !== label)
+            : [...folded.filter((l) => l !== label), label];
+
+        setFolded(next);
+        writeFolded(next);
     };
 
     const handleLogout = () => {
@@ -226,30 +330,19 @@ export function AdminSidebar() {
                     isActive={isActive}
                     collapsed={collapsed}
                 />
-                <NavGroup
-                    label="Catalogue"
-                    items={catalogItems}
-                    isActive={isActive}
-                    collapsed={collapsed}
-                />
-                <NavGroup
-                    label="Contenu"
-                    items={contentItems}
-                    isActive={isActive}
-                    collapsed={collapsed}
-                />
-                <NavGroup
-                    label="Communauté"
-                    items={communityItems}
-                    isActive={isActive}
-                    collapsed={collapsed}
-                />
-                <NavGroup
-                    label="Configuration"
-                    items={settingsItems}
-                    isActive={isActive}
-                    collapsed={collapsed}
-                />
+                {sections.map((section) => (
+                    <NavGroup
+                        key={section.label}
+                        label={section.label}
+                        items={section.items}
+                        isActive={isActive}
+                        collapsed={collapsed}
+                        open={!folded.includes(section.label)}
+                        onOpenChange={(open) =>
+                            setSectionOpen(section.label, open)
+                        }
+                    />
+                ))}
             </SidebarContent>
 
             <SidebarFooter className="border-t border-sidebar-border">

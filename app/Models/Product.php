@@ -90,7 +90,10 @@ class Product extends Model
 
     public function variants()
     {
-        return $this->hasMany(ProductVariant::class)->orderBy('position');
+        // chaperone() hands each loaded variant this product as its `product`.
+        // A variant without its own price falls back to the parent's, and
+        // without it every such variant re-queried the product it came from.
+        return $this->hasMany(ProductVariant::class)->orderBy('position')->chaperone();
     }
 
     public function wishlists()
