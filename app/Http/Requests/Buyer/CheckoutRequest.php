@@ -99,11 +99,12 @@ class CheckoutRequest extends FormRequest
             ],
             'postal_code' => ['required_without:address_id', 'nullable', 'string', 'max:20'],
             /*
-             * Whitelisted against the rate card's own countries rather than
-             * being free text or a hardcoded constant: a destination with no
-             * rate on file is one we have no price for and therefore do not
-             * ship to, so opening a new country is a data change (see
-             * DeliveryRateSeeder) rather than a code change.
+             * Whitelisted against the rate cards' own countries — every active
+             * carrier's together — rather than being free text or a hardcoded
+             * constant: a destination with no rate on file is one we have no
+             * price for and therefore do not ship to, so opening a new country
+             * is a data change (see the delivery rate seeders) rather than a
+             * code change.
              */
             'country' => [
                 'required_without:address_id',
@@ -114,11 +115,14 @@ class CheckoutRequest extends FormRequest
             'payment_method' => ['required', Rule::in(self::paymentMethods())],
 
             /*
-             * Which carrier ships the basket. Optional and defaulted to Amana
-             * server-side (CheckoutService): older clients that never sent the
-             * field must keep billing the historical way. When it is present
-             * it must name one of the services the page actually offers —
-             * otherwise a crafted id could pick a deactivated carrier.
+             * Which carrier ships the basket. Optional: without it the
+             * service that ships to the destination is used (Amana in
+             * Morocco, DHL abroad — DeliveryFeeService::serviceFor), so older
+             * clients that never sent the field keep working. When it is
+             * present it must name an active service — otherwise a crafted id
+             * could pick a deactivated carrier — and one that ships to the
+             * destination, which CheckoutService checks once the destination
+             * is known (a saved address carries its own).
              */
             'delivery_service_id' => [
                 'nullable',

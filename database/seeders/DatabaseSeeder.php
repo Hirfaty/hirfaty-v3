@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             // Amana service row, and the Moroccan rates hang off city rows.
             DeliveryServiceSeeder::class,
             DeliveryRateSeeder::class,
+            DhlDeliveryRateSeeder::class,
         ]);
     }
 }

@@ -150,7 +150,7 @@ return [
     'shipping.morocco.body' => 'A flat 40 MAD per order, wherever in the country you are — one delivery charge for the whole basket, even when it comes from several workshops. Delivery usually takes 3 to 7 days.',
 
     'shipping.abroad.heading' => 'Outside Morocco',
-    'shipping.abroad.body' => 'We ship to Europe, North America and the Gulf. The charge depends on the destination and is shown at checkout before you confirm — nothing is added afterwards.',
+    'shipping.abroad.body' => 'We ship worldwide with DHL Express. The charge depends on the country and the parcel’s weight, and is shown at checkout before you confirm — nothing is added afterwards. Any customs duties and import taxes in the destination country are paid by the recipient.',
 
     'shipping.payment.heading' => 'Paying',
     'shipping.payment.body' => 'Orders are paid online, by bank card (Visa, Mastercard), through Payzone’s secure platform (3D Secure), when you place them. There is nothing to pay the courier. The amount is charged in dirhams: if the site is showing prices in another currency, that is a guide.',

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Validation\Rule;
@@ -40,9 +41,11 @@ class ProductShippingService
     /**
      * Validation rules for the shipping fields of the admin product form.
      *
-     * All optional, drafts or not: the catalogue predates these fields, and
-     * nothing ships by weight until the DHL integration lands. The admin show
-     * page flags a product whose profile is incomplete instead.
+     * All optional, drafts or not: the catalogue predates these fields. DHL
+     * prices a piece with no weight at its service's default weight
+     * (WeightPricingService), so a blank never blocks a sale abroad — but it
+     * can under-quote a heavy piece, which is why the admin show page flags a
+     * product whose profile is incomplete.
      *
      * @return array<string, array<int, mixed>>
      */
@@ -167,6 +170,41 @@ class ProductShippingService
             / self::VOLUMETRIC_DIVISOR;
 
         return max($actual, $volumetric);
+    }
+
+    /**
+     * A basket as the pieces a carrier weighs and measures: one per unit, so
+     * three bowls are three pieces. Each piece keeps its actual weight and
+     * dimensions (null where unknown) beside the chargeable weight.
+     *
+     * One unit per piece is how a large piece ships anyway, and for small
+     * ones it can only over-state the volume of a box the desk packs several
+     * into — never under-bill the basket.
+     *
+     * @param  iterable<CartItem>  $lines
+     * @return array<int, array{weight: float|null, chargeable: float|null, dimensions: array{length: float, width: float, height: float}|null}>
+     */
+    public function pieces(iterable $lines): array
+    {
+        $pieces = [];
+
+        foreach ($lines as $line) {
+            if (! $line->product) {
+                continue;
+            }
+
+            $piece = [
+                'weight' => $this->weightKg($line->product, $line->variant),
+                'chargeable' => $this->chargeableWeightKg($line->product, $line->variant),
+                'dimensions' => $this->dimensionsCm($line->product, $line->variant),
+            ];
+
+            for ($unit = 0; $unit < max(1, (int) $line->quantity); $unit++) {
+                $pieces[] = $piece;
+            }
+        }
+
+        return $pieces;
     }
 
     /** The product's own HS code, else its category's. */

@@ -106,15 +106,15 @@ class CheckoutController extends Controller
 
         /*
          * The carriers the buyer can check out with, plus each one's rate
-         * card. Delivery is priced per Moroccan city and per foreign country,
-         * so the page needs the figures to move the total the moment the
-         * destination changes — asking the server on every change would put a
-         * round-trip between picking a city and seeing what it costs.
-         * CheckoutService re-resolves the same fee against the chosen service
-         * when the order is placed, so what is here is a quote and never the
-         * bill.
+         * card. Delivery is priced per Moroccan city and per foreign country —
+         * abroad, by this basket's weight too — so the page needs the figures
+         * to move the total the moment the destination changes; asking the
+         * server on every change would put a round-trip between picking a
+         * country and seeing what it costs. CheckoutService re-resolves the
+         * same fee against the chosen service when the order is placed, so
+         * what is here is a quote and never the bill.
          */
-        $delivery = $deliveryFees->cards();
+        $delivery = $deliveryFees->cards($cart->items);
 
         $methods = CheckoutRequest::paymentMethods();
 
@@ -127,7 +127,7 @@ class CheckoutController extends Controller
              */
             'items' => CartLineResource::collection($cart->items)->resolve($request),
 
-            // Only the cities the rate card serves — the admin desk closes a
+            // Only the cities a rate card serves — the admin desk closes a
             // city by removing its rate (see DeliveryRateService).
             'cities' => app(CityService::class)->options($deliveryFees->deliverableCityIds()),
 
@@ -286,6 +286,10 @@ class CheckoutController extends Controller
 
         // Card or PayPal — validated against what is on offer right now.
         $destination['payment_method'] = $request->validated('payment_method');
+
+        // The carrier picked on the page, if any — CheckoutService checks it
+        // ships to the destination.
+        $destination['delivery_service_id'] = $request->validated('delivery_service_id');
 
         // An online purchase this buyer left unpaid is still holding its
         // stock; this checkout replaces it.

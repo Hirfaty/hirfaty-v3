@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\DeliveryService;
 use App\Models\Earning;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -178,24 +177,28 @@ class CheckoutService
 
             /*
              * Which carrier bills this basket, resolved once for the whole
-             * checkout: whatever the buyer picked on the page, or Amana when
-             * the field was never sent (the historical carrier — see
-             * DeliveryFeeService::defaultService).
+             * checkout: whatever the buyer picked on the page, as long as it
+             * ships to this destination, or else the one that does — Amana in
+             * Morocco, DHL abroad. A pick that cannot ship there is refused
+             * (DeliveryFeeService::serviceFor).
              */
-            $service = isset($checkoutData['delivery_service_id'])
-                ? DeliveryService::find((int) $checkoutData['delivery_service_id'])
-                : null;
-            $service ??= $this->deliveryFees->defaultService();
+            $service = $this->deliveryFees->serviceFor(
+                $checkoutData['country'] ?? null,
+                $checkoutData['city_id'] ?? null,
+                isset($checkoutData['delivery_service_id']) ? (int) $checkoutData['delivery_service_id'] : null,
+            );
 
             /*
-             * What that service charges for *this* destination, resolved once
-             * for the whole basket. Quoted to the buyer by the same service on
-             * the checkout page, so the summary and the bill agree.
+             * What that service charges for *this* destination and, for DHL,
+             * this basket's weight — resolved once for the whole basket.
+             * Quoted to the buyer the same way on the checkout page, so the
+             * summary and the bill agree.
              */
             $deliveryFee = $this->deliveryFees->resolve(
                 $checkoutData['country'] ?? null,
                 $checkoutData['city_id'] ?? null,
                 $service,
+                $cart->items,
             );
 
             /*

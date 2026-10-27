@@ -52,7 +52,10 @@ type DeliveryServiceOption = {
     description: string | null;
 };
 
-/** One service's rate card, as the checkout page consumes it. */
+/**
+ * One service's rate card, as the checkout page consumes it. A weight-priced
+ * carrier's (DHL's) country fees arrive already priced for this basket.
+ */
 type RateCard = {
     countries: { code: string; name: string; fee: number | null }[];
     /** Per Moroccan city, keyed by city id. */
@@ -60,14 +63,34 @@ type RateCard = {
 };
 
 /**
- * Every active service's card, keyed by service slug. The page picks the
- * selected service's card for the quote, so adding a carrier later is purely
- * a data change — the third carrier shows up here with no frontend edit.
+ * Every active service's card, keyed by service slug. Together they are the
+ * destinations checkout offers, and each destination is quoted by the
+ * services whose card prices it — so adding a carrier later is purely a data
+ * change, with no frontend edit.
  */
 type DeliveryRatesMap = Record<string, RateCard>;
 
 /** The empty card a service with no rates on file falls back to. */
 const EMPTY_CARD: RateCard = { countries: [], cityFees: {} };
+
+/**
+ * What a card charges for a destination, or null when it does not ship
+ * there. Mirrors DeliveryFeeService: the city's own rate first (Morocco),
+ * then the whole country's.
+ */
+function feeFor(
+    card: RateCard,
+    country: string,
+    cityId: number | null,
+): number | null {
+    const cityFee = cityId === null ? undefined : card.cityFees[String(cityId)];
+
+    if (cityFee !== undefined) {
+        return cityFee;
+    }
+
+    return card.countries.find((c) => c.code === country)?.fee ?? null;
+}
 
 /**
  * Shared by every control on this page.
@@ -245,31 +268,37 @@ const Checkout = ({
     // is closed then.
     const canPay = paymentMethods.length > 0;
 
-    const { data, setData, post, processing, errors } = useForm<CheckoutForm>({
-        /*
-         * Pre-filled from the account where it knows, blank where it does not.
-         * Signup asks only for a password now, so an empty name here is the
-         * normal case rather than an edge one — and whatever is typed is
-         * written back to the account if it had none, so this is the last time
-         * they fill it in. See CheckoutDestinationService::backfillProfile.
-         */
-        first_name: customer.first_name ?? '',
-        last_name: customer.last_name ?? '',
-        shipping_phone: preselected?.recipient_phone ?? customer.phone ?? '',
-        address_id: preselected?.id ?? null,
-        shipping_address: '',
-        city_id: cities[0]?.id ?? null,
-        postal_code: '',
-        country: defaultCountry,
-        // Card through Payzone when it is on offer, else PayPal.
-        payment_method: paymentMethods[0] ?? 'card',
-        buy_now: buyNow !== null,
-        // The first carrier in display order (Amana today) is pre-selected.
-        delivery_service_id: deliveryServices[0]?.id ?? null,
-        save_address: false,
-        address_label: '',
-        notes: '',
-    });
+    const { data, setData, post, transform, processing, errors } =
+        useForm<CheckoutForm>({
+            /*
+             * Pre-filled from the account where it knows, blank where it does not.
+             * Signup asks only for a password now, so an empty name here is the
+             * normal case rather than an edge one — and whatever is typed is
+             * written back to the account if it had none, so this is the last time
+             * they fill it in. See CheckoutDestinationService::backfillProfile.
+             */
+            first_name: customer.first_name ?? '',
+            last_name: customer.last_name ?? '',
+            shipping_phone:
+                preselected?.recipient_phone ?? customer.phone ?? '',
+            address_id: preselected?.id ?? null,
+            shipping_address: '',
+            city_id: cities[0]?.id ?? null,
+            postal_code: '',
+            country: defaultCountry,
+            // Card through Payzone when it is on offer, else PayPal.
+            payment_method: paymentMethods[0] ?? 'card',
+            buy_now: buyNow !== null,
+            /*
+             * The buyer's pick, when they make one. Until then the first carrier
+             * that ships to the destination is used (see `selectedService`), and
+             * that is what is posted.
+             */
+            delivery_service_id: null,
+            save_address: false,
+            address_label: '',
+            notes: '',
+        });
 
     /*
      * The discount code is its own form, posted to its own endpoint and
@@ -330,6 +359,19 @@ const Checkout = ({
     const isDomestic = data.country === defaultCountry;
 
     /*
+     * Every country some carrier ships to: Morocco on Amana's card, the rest
+     * of the world on DHL's. Named in French on the cards, so sorted with
+     * French collation — "États-Unis" under E, not after "Zimbabwe".
+     */
+    const countries = Object.values(deliveryRates)
+        .flatMap((card) => card.countries)
+        .filter(
+            (country, index, all) =>
+                all.findIndex((c) => c.code === country.code) === index,
+        )
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+    /*
      * Switching to a country with no city list would otherwise leave the
      * previously selected Moroccan city attached, which the server rejects
      * (see CheckoutRequest) and which would quote the wrong fee.
@@ -343,45 +385,63 @@ const Checkout = ({
     };
 
     /*
-     * The carrier the buyer picked decides which rate card the quote reads
-     * off. CheckoutService re-resolves the same service server-side when the
-     * order is placed, so a stale pick here can only under-quote, never
-     * under-bill — and the server ignores unknown ids.
+     * Where the parcel goes: the saved address picked, or the one being
+     * typed. Saved addresses carry their own country and city, and the quote
+     * has to follow them — a buyer whose default address is in Lyon is
+     * quoted for France, whatever the hidden new-address form holds.
      */
-    const selectedService =
-        deliveryServices.find((s) => s.id === data.delivery_service_id) ??
-        deliveryServices[0];
+    const savedChoice =
+        choice === NEW_ADDRESS
+            ? undefined
+            : addresses.find((a) => a.id === choice);
+    const destinationCountry = savedChoice
+        ? savedChoice.country || defaultCountry
+        : data.country;
+    const destinationCityId = savedChoice ? savedChoice.city_id : data.city_id;
 
-    const rates = selectedService
-        ? (deliveryRates[selectedService.slug] ?? EMPTY_CARD)
-        : EMPTY_CARD;
+    /*
+     * The carriers that ship to that destination, in display order, each
+     * with its price for this basket: Amana in Morocco, DHL abroad.
+     */
+    const servingServices = deliveryServices
+        .map((service) => ({
+            service,
+            fee: feeFor(
+                deliveryRates[service.slug] ?? EMPTY_CARD,
+                destinationCountry,
+                destinationCityId,
+            ),
+        }))
+        .filter(
+            (
+                option,
+            ): option is { service: DeliveryServiceOption; fee: number } =>
+                option.fee !== null,
+        );
+
+    /*
+     * The buyer's pick while it ships there, otherwise the first carrier
+     * that does — what gets posted. CheckoutService resolves the same service
+     * and fee server-side, and refuses a pick that cannot ship to the
+     * destination, so this is only the quote.
+     */
+    const selected =
+        servingServices.find(
+            (option) => option.service.id === data.delivery_service_id,
+        ) ?? servingServices[0];
 
     /*
      * Checkout still splits the basket into one order per workshop for
      * fulfilment, but delivery is one job to one address, so the fee is
-     * charged once and follows the destination rather than the basket.
-     * CheckoutService resolves this same figure server-side when the order is
-     * placed — this is only the quote.
+     * charged once and follows the destination — and abroad, the basket's
+     * weight — rather than the number of workshops.
      */
     const subtotal = items.reduce(
         (sum, line) => sum + (line.line_total ?? 0),
         0,
     );
 
-    const deliveryTotal = (() => {
-        if (isDomestic) {
-            const cityFee =
-                data.city_id === null
-                    ? undefined
-                    : rates.cityFees[String(data.city_id)];
-
-            return cityFee ?? FALLBACK_DELIVERY_FEE;
-        }
-
-        const country = rates.countries.find((c) => c.code === data.country);
-
-        return country?.fee ?? FALLBACK_DELIVERY_FEE;
-    })();
+    const deliveryTotal = selected?.fee ?? FALLBACK_DELIVERY_FEE;
 
     const grandTotal = subtotal + deliveryTotal;
 
@@ -389,6 +449,11 @@ const Checkout = ({
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
+        transform((current) => ({
+            ...current,
+            delivery_service_id:
+                selected?.service.id ?? current.delivery_service_id,
+        }));
         post(route('checkout.store'));
     };
 
@@ -740,12 +805,12 @@ const Checkout = ({
                                         </div>
 
                                         {/*
-                                         * Every destination the selected
-                                         * service quotes for. Picking one
-                                         * moves the delivery line in the
-                                         * summary immediately, which is why the
-                                         * rate card is a prop rather than a
-                                         * lookup on the server.
+                                         * Every destination a carrier quotes
+                                         * for. Picking one moves the delivery
+                                         * line in the summary immediately,
+                                         * which is why the rate cards are a
+                                         * prop rather than a lookup on the
+                                         * server.
                                          */}
                                         <div>
                                             <FieldLabel
@@ -764,16 +829,14 @@ const Checkout = ({
                                                 }
                                                 className={FIELD}
                                             >
-                                                {rates.countries.map(
-                                                    (country) => (
-                                                        <option
-                                                            key={country.code}
-                                                            value={country.code}
-                                                        >
-                                                            {country.name}
-                                                        </option>
-                                                    ),
-                                                )}
+                                                {countries.map((country) => (
+                                                    <option
+                                                        key={country.code}
+                                                        value={country.code}
+                                                    >
+                                                        {country.name}
+                                                    </option>
+                                                ))}
                                             </select>
                                             <FieldError
                                                 message={errors.country}
@@ -890,95 +953,112 @@ const Checkout = ({
 
                         {/*
                          * ── Delivery method ──────────────────────
-                         * Only offered once there is a choice to make. With a
-                         * single carrier the form already holds its id (the
-                         * first in display order) and the buyer is never shown
-                         * the carrier's name; a second one — DHL, say — brings
-                         * the picker back with no page change. Picking a
-                         * service swaps which rate card the summary quotes,
-                         * and the server whitelists the same list
-                         * (CheckoutRequest rules on delivery_service_id).
+                         * Shown once Hirfaty has more than one carrier: the
+                         * buyer sees who ships their parcel (Amana in
+                         * Morocco, DHL abroad) and what it costs. Lists only
+                         * the carriers that ship to the destination; with
+                         * one, there is nothing to pick and no radio dot,
+                         * like a lone payment method. The server refuses a
+                         * carrier that cannot ship there
+                         * (DeliveryFeeService::serviceFor).
                          */}
-                        {deliveryServices.length > 1 && (
-                            <div className="mt-10">
-                                <h2
-                                    id="delivery-service-heading"
-                                    className="font-display text-lg text-souk-title"
-                                >
-                                    {t(
-                                        'buyer.checkout.delivery_service_heading',
-                                    )}
-                                </h2>
+                        {deliveryServices.length > 1 &&
+                            servingServices.length > 0 && (
+                                <div className="mt-10">
+                                    <h2
+                                        id="delivery-service-heading"
+                                        className="font-display text-lg text-souk-title"
+                                    >
+                                        {t(
+                                            'buyer.checkout.delivery_service_heading',
+                                        )}
+                                    </h2>
 
-                                <fieldset
-                                    className="mt-4 space-y-2"
-                                    aria-labelledby="delivery-service-heading"
-                                >
-                                    {deliveryServices.map((service) => {
-                                        const active =
-                                            data.delivery_service_id ===
-                                            service.id;
+                                    <fieldset
+                                        className="mt-4 space-y-2"
+                                        aria-labelledby="delivery-service-heading"
+                                    >
+                                        {servingServices.map(
+                                            ({ service, fee }) => {
+                                                const active =
+                                                    selected?.service.id ===
+                                                    service.id;
 
-                                        return (
-                                            <label
-                                                key={service.id}
-                                                className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
-                                                    active
-                                                        ? 'border-souk-brown bg-souk-brown/[0.04]'
-                                                        : 'border-souk-brown/15 hover:border-souk-brown/40'
-                                                }`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="delivery_service"
-                                                    value={service.id}
-                                                    checked={active}
-                                                    onChange={() =>
-                                                        setData(
-                                                            'delivery_service_id',
-                                                            service.id,
-                                                        )
-                                                    }
-                                                    className="sr-only"
-                                                />
-                                                <span
-                                                    aria-hidden
-                                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                                                        active
-                                                            ? 'border-souk-brown bg-souk-brown text-souk-cream'
-                                                            : 'border-souk-brown/30'
-                                                    }`}
-                                                >
-                                                    {active && (
-                                                        <Check
-                                                            className="h-2.5 w-2.5"
-                                                            strokeWidth={3}
-                                                        />
-                                                    )}
-                                                </span>
-
-                                                <span className="min-w-0 flex-1 text-sm">
-                                                    <span className="flex items-center gap-2 font-medium text-souk-title">
-                                                        <Truck
-                                                            className="h-4 w-4 shrink-0 text-souk-brown"
-                                                            strokeWidth={1.6}
-                                                        />
-                                                        {service.name}
-                                                    </span>
-                                                    {service.description && (
-                                                        <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
-                                                            {
-                                                                service.description
+                                                return (
+                                                    <label
+                                                        key={service.id}
+                                                        className={`${LABEL_RESET} flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ${
+                                                            active
+                                                                ? 'border-souk-brown bg-souk-brown/[0.04]'
+                                                                : 'border-souk-brown/15 hover:border-souk-brown/40'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name="delivery_service"
+                                                            value={service.id}
+                                                            checked={active}
+                                                            onChange={() =>
+                                                                setData(
+                                                                    'delivery_service_id',
+                                                                    service.id,
+                                                                )
                                                             }
+                                                            className="sr-only"
+                                                        />
+                                                        {servingServices.length >
+                                                            1 && (
+                                                            <span
+                                                                aria-hidden
+                                                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                                    active
+                                                                        ? 'border-souk-brown bg-souk-brown text-souk-cream'
+                                                                        : 'border-souk-brown/30'
+                                                                }`}
+                                                            >
+                                                                {active && (
+                                                                    <Check
+                                                                        className="h-2.5 w-2.5"
+                                                                        strokeWidth={
+                                                                            3
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </span>
+                                                        )}
+
+                                                        <span className="min-w-0 flex-1 text-sm">
+                                                            <span className="flex items-center gap-2 font-medium text-souk-title">
+                                                                <Truck
+                                                                    className="h-4 w-4 shrink-0 text-souk-brown"
+                                                                    strokeWidth={
+                                                                        1.6
+                                                                    }
+                                                                />
+                                                                {service.name}
+                                                                <span className="ms-auto shrink-0 font-normal">
+                                                                    {money(fee)}{' '}
+                                                                    TTC
+                                                                </span>
+                                                            </span>
+                                                            {service.description && (
+                                                                <span className="mt-1 block text-[13px] leading-relaxed text-souk-brown-deep/70">
+                                                                    {
+                                                                        service.description
+                                                                    }
+                                                                </span>
+                                                            )}
                                                         </span>
-                                                    )}
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
-                                </fieldset>
-                            </div>
-                        )}
+                                                    </label>
+                                                );
+                                            },
+                                        )}
+                                    </fieldset>
+                                    <FieldError
+                                        message={errors.delivery_service_id}
+                                    />
+                                </div>
+                            )}
 
                         {/* ── Payment method ────────────────────── */}
                         <div className="mt-10">

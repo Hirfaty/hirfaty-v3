@@ -24,7 +24,7 @@ return [
     'how_it_works.step2.title' => 'You order',
     'how_it_works.step2.description' => 'directly from the artisan, without a middleman taking half.',
     'how_it_works.step3.title' => 'Amana delivers',
-    'how_it_works.step3.description' => 'to your door, across Morocco. International soon.',
+    'how_it_works.step3.description' => 'to your door, across Morocco — and DHL Express worldwide.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',
     'seller_cta.title' => "You're an artisan?",

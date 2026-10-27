@@ -207,9 +207,22 @@ test('the delivery rates export is the rate card, cities and countries alike', f
         ->assertDownload('tarifs-livraison-hirfaty-'.now()->format('Y-m-d').'.csv');
 
     expect(listExportCsv($response))->toBe([
-        ['Transporteur', 'Code pays', 'Pays', 'Ville', 'Région', 'Tarif (MAD)'],
-        ['Amana', 'FR', 'France', '', '', '120'],
-        ['Amana', 'MA', 'Maroc', 'Casablanca', 'Casablanca-Settat', '40'],
+        ['Transporteur', 'Code pays', 'Pays', 'Ville', 'Région', 'Zone', 'Tarif (MAD)'],
+        ['Amana', 'FR', 'France', '', '', '', '120'],
+        ['Amana', 'MA', 'Maroc', 'Casablanca', 'Casablanca-Settat', '', '40'],
+    ]);
+});
+
+test('a weight-priced card exports each country’s zone and no fee of its own', function () {
+    $dhl = DeliveryService::create(['slug' => 'dhl', 'name' => 'DHL Express', 'pricing' => DeliveryService::PRICING_WEIGHT, 'sort_order' => 2]);
+    DeliveryRate::create(['delivery_service_id' => $dhl->id, 'country_code' => 'FR', 'country_name' => 'France', 'city_id' => null, 'zone' => 1, 'fee' => null]);
+
+    $response = $this->actingAs($this->admin)
+        ->get(route('admin.delivery-rates.export', ['format' => 'csv', 'service' => 'dhl']));
+
+    expect(listExportCsv($response))->toBe([
+        ['Transporteur', 'Code pays', 'Pays', 'Ville', 'Région', 'Zone', 'Tarif (MAD)'],
+        ['DHL Express', 'FR', 'France', '', '', '1', ''],
     ]);
 });
 

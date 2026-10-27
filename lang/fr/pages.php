@@ -152,7 +152,7 @@ return [
     'shipping.morocco.body' => '40 MAD forfaitaires par commande, où que vous soyez dans le pays — un seul frais de livraison pour tout le panier, même s’il vient de plusieurs ateliers. La livraison prend en général 3 à 7 jours.',
 
     'shipping.abroad.heading' => 'À l’international',
-    'shipping.abroad.body' => 'Nous livrons en Europe, en Amérique du Nord et dans le Golfe. Le montant dépend de la destination et s’affiche au moment de payer, avant confirmation — rien n’est ajouté ensuite.',
+    'shipping.abroad.body' => 'Nous livrons dans le monde entier avec DHL Express. Le montant dépend du pays et du poids du colis, et s’affiche au moment de payer, avant confirmation — rien n’est ajouté ensuite. Les droits de douane et taxes d’importation éventuels du pays de destination restent à la charge du destinataire.',
 
     'shipping.payment.heading' => 'Le paiement',
     'shipping.payment.body' => 'Les commandes se paient en ligne, par carte bancaire (Visa, Mastercard), via la plateforme sécurisée Payzone (3D Secure), au moment de commander. Rien n’est à régler au livreur. Le montant est débité en dirhams : si le site vous affiche des prix dans une autre devise, c’est à titre indicatif.',

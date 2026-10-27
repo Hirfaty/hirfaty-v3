@@ -118,6 +118,9 @@ services:
     image: hirfaty-media-browser:latest
     container_name: hirfaty-media-browser
     profiles: ['tools']
+    # /var/backups/hirfaty is root-only (0700, see backup.sh); pinned so an
+    # unprivileged default user in the seaweedfs base image can't lock it out.
+    user: root
     environment:
       FILER_URL: http://hirfaty-seaweedfs:8888
       BUCKET: ${SEAWEEDFS_BUCKET:-hirfaty}

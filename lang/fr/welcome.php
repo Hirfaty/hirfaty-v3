@@ -25,7 +25,7 @@ return [
     'how_it_works.step2.title' => 'Vous commandez',
     'how_it_works.step2.description' => 'directement à l\'artisan, sans intermédiaire qui prend la moitié.',
     'how_it_works.step3.title' => 'Amana livre',
-    'how_it_works.step3.description' => 'à votre porte, partout au Maroc. À l\'international bientôt.',
+    'how_it_works.step3.description' => 'à votre porte, partout au Maroc — et DHL Express dans le monde entier.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',
     'seller_cta.title' => 'Vous êtes artisan ?',

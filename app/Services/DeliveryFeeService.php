@@ -3,33 +3,41 @@
 namespace App\Services;
 
 use App\Models\Address;
+use App\Models\CartItem;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * What a delivery service charges to deliver one basket to a given
  * destination — one price card per service.
  *
- * The single place that turns a (service, country, city) triple into money.
+ * The single place that turns a (service, country, city, basket) into money.
  * Checkout quotes through it and `CheckoutService` bills through it, so the
  * figure on the summary and the figure on the order cannot disagree.
  *
- * Every call resolves against one service (Amana today, DHL etc. later). A
- * service can price per destination in either of the two shapes the
- * `delivery_rates` table allows: per Moroccan city (Amana domestic) or per
- * whole country (`city_id` null — every international row, and the shape DHL
- * will use).
+ * A service prices in one of two ways (`DeliveryService::pricing`):
+ *  - per destination (Amana): the fee on the `delivery_rates` row — per
+ *    Moroccan city, or per whole country (`city_id` null);
+ *  - by weight (DHL Express): the row only gives the country's zone, and
+ *    WeightPricingService prices the basket's weight on that zone's grid.
+ *
+ * Every carrier's card together is the list of destinations: checkout offers
+ * a country if any active service has a row for it, and bills it with the
+ * service that does — Amana in Morocco, DHL abroad.
  */
 class DeliveryFeeService
 {
     /**
-     * The carrier a checkout falls back on when no service is chosen.
+     * The carrier a checkout falls back on when nothing on file serves the
+     * destination.
      *
      * The platform shipped every basket with Amana before services existed,
-     * so a checkout with no selected service keeps billing exactly the way it
-     * always did. `defaultService()` drops through to the first active service
-     * if Amana is ever deactivated.
+     * so a database with no card at all (a fresh install, most tests) keeps
+     * billing exactly the way it always did. `defaultService()` drops through
+     * to the first active service if Amana is ever deactivated.
      */
     public const DEFAULT_SERVICE_SLUG = 'amana';
 
@@ -37,100 +45,129 @@ class DeliveryFeeService
      * Charged when a destination has no rate on file at all.
      *
      * Only reachable if a country slipped past CheckoutRequest's validation
-     * (which whitelists destinations straight out of the rate card) or if a
+     * (which whitelists destinations straight out of the rate cards) or if a
      * rate row was deleted between quoting and billing. Falling back to the
      * Moroccan city rate bills something defensible rather than shipping for
      * free.
      */
     public const FALLBACK_FEE = 40.00;
 
+    public function __construct(
+        private readonly WeightPricingService $weightPricing,
+        private readonly ProductShippingService $shipping,
+    ) {}
+
     /**
      * @param  int|null  $cityId  Only meaningful for Morocco, which is priced per city.
+     * @param  iterable<CartItem>  $lines  The basket — read only by a weight-priced service.
      */
-    public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null): float
+    public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null, iterable $lines = []): float
     {
         if (! $countryCode) {
             return self::FALLBACK_FEE;
         }
 
-        $serviceId = ($service ?? $this->defaultService())?->id;
+        $service ??= $this->defaultService();
 
         // Service row gone (fresh DB, a seeder that never ran) — no card to
         // quote from, so fall back like a destination with no rate.
-        if ($serviceId === null) {
+        if ($service === null) {
             return self::FALLBACK_FEE;
+        }
+
+        $rate = $this->rateFor($service, $countryCode, $cityId);
+
+        if ($rate === null) {
+            return self::FALLBACK_FEE;
+        }
+
+        if ($service->isWeightPriced()) {
+            $quote = $rate->zone === null
+                ? null
+                : $this->weightPricing->quoteForZone($service, $rate->zone, $this->shipping->pieces($lines));
+
+            return $quote ?? self::FALLBACK_FEE;
+        }
+
+        return $rate->fee !== null ? (float) $rate->fee : self::FALLBACK_FEE;
+    }
+
+    /**
+     * Which carrier bills a destination.
+     *
+     * The one the buyer picked, when it ships there; with none picked, the
+     * first active service in display order that does (Amana in Morocco, DHL
+     * abroad). A pick that cannot ship there is refused rather than swapped:
+     * a buyer who chose one carrier's price must not be billed another's
+     * behind their back.
+     *
+     * When nothing on file ships there at all — a database with no card, as
+     * in most tests — the pick (or Amana) bills at the fallback fee, as
+     * checkout always has.
+     *
+     * @throws ValidationException
+     */
+    public function serviceFor(?string $countryCode, ?int $cityId, ?int $requestedId = null): ?DeliveryService
+    {
+        $serving = $this->servicesServing($countryCode, $cityId);
+
+        if ($serving->isEmpty()) {
+            return ($requestedId !== null ? DeliveryService::find($requestedId) : null)
+                ?? $this->defaultService();
+        }
+
+        if ($requestedId === null) {
+            return $serving->first();
+        }
+
+        return $serving->firstWhere('id', $requestedId)
+            ?? throw ValidationException::withMessages([
+                'delivery_service_id' => __('buyer.checkout.err_delivery_service'),
+            ]);
+    }
+
+    /**
+     * Active services, in display order, with a rate for the destination: a
+     * row for the city, or one for the whole country.
+     *
+     * @return Collection<int, DeliveryService>
+     */
+    public function servicesServing(?string $countryCode, ?int $cityId): Collection
+    {
+        if (! $countryCode) {
+            return collect();
         }
 
         $country = strtoupper($countryCode);
 
-        /*
-         * City first, then the country-level row. Morocco has a row per city
-         * and no country-level fallback; everywhere else is the reverse. One
-         * lookup order covers both, and an unknown Moroccan city degrades to
-         * the fallback rather than to some other city's price.
-         */
-        if ($cityId !== null) {
-            $cityRate = DeliveryRate::query()
-                ->where('delivery_service_id', $serviceId)
+        return DeliveryService::query()
+            ->where('is_active', true)
+            ->whereHas('rates', fn ($rates) => $rates
                 ->where('country_code', $country)
-                ->where('city_id', $cityId)
-                ->value('fee');
-
-            if ($cityRate !== null) {
-                return (float) $cityRate;
-            }
-        }
-
-        $countryRate = DeliveryRate::query()
-            ->where('delivery_service_id', $serviceId)
-            ->where('country_code', $country)
-            ->whereNull('city_id')
-            ->value('fee');
-
-        return $countryRate !== null ? (float) $countryRate : self::FALLBACK_FEE;
+                ->where(fn ($row) => $row
+                    ->whereNull('city_id')
+                    ->when($cityId !== null, fn ($row) => $row->orWhere('city_id', $cityId))))
+            ->orderBy('sort_order')
+            ->get();
     }
 
     /**
-     * One service's whole rate card, shaped for the checkout page.
-     *
-     * Small enough (a few dozen rows) to hand over wholesale rather than
-     * making the page ask the server every time the destination changes —
-     * which would put a network round-trip between picking a city and seeing
-     * the total move.
-     *
-     * @return array{countries: array<int, array{code: string, name: string, fee: float|null}>, cityFees: array<int, float>}
-     */
-    public function rateCard(?DeliveryService $service = null): array
-    {
-        $serviceId = ($service ?? $this->defaultService())?->id;
-
-        if ($serviceId === null) {
-            return ['countries' => [], 'cityFees' => []];
-        }
-
-        return $this->cardFrom(
-            DeliveryRate::query()
-                ->where('delivery_service_id', $serviceId)
-                ->orderBy('country_name')
-                ->get(),
-        );
-    }
-
-    /**
-     * Every active service with its rate card, keyed by slug.
+     * Every active service with its rate card for this basket, keyed by slug.
      *
      * What CheckoutController hands the checkout page: the list of carriers
-     * the buyer can pick plus, for each, the figures needed to move the
-     * delivery line the moment the destination changes. One round-trip free —
-     * the whole card is a few dozen rows even with several services.
+     * plus, for each, the figures needed to move the delivery line the moment
+     * the destination changes. A weight-priced service's countries arrive
+     * already priced for the basket on the page — the basket cannot change
+     * there, only the destination — so the page never asks the server again.
      *
      * `rates` is keyed by service slug, and `services` is ordered by
      * `sort_order` (the order the page should offer them in), not by slug, so
      * the two must not be assumed to line up by index.
      *
+     * @param  iterable<CartItem>  $lines
      * @return array{services: array<int, array{id: int, slug: string, name: string, description: string|null}>, rates: array<string, array{countries: array<int, array{code: string, name: string, fee: float|null}>, cityFees: array<int, float>}>}
      */
-    public function cards(): array
+    public function cards(iterable $lines = []): array
     {
         $services = DeliveryService::query()
             ->where('is_active', true)
@@ -138,14 +175,25 @@ class DeliveryFeeService
             ->get();
 
         $ratesByService = DeliveryRate::query()
+            ->whereIn('delivery_service_id', $services->pluck('id'))
             ->orderBy('country_name')
             ->get()
             ->groupBy('delivery_service_id');
 
+        $pieces = null;
         $rates = [];
+
         foreach ($services as $service) {
+            $zoneFees = null;
+
+            if ($service->isWeightPriced()) {
+                $pieces ??= $this->shipping->pieces($lines);
+                $zoneFees = $this->weightPricing->quotesByZone($service, $pieces);
+            }
+
             $rates[$service->slug] = $this->cardFrom(
                 $ratesByService->get($service->id) ?? collect(),
+                $zoneFees,
             );
         }
 
@@ -161,12 +209,11 @@ class DeliveryFeeService
     }
 
     /**
-     * The carrier checkout pre-selects when the buyer never picks one.
+     * The carrier billed when nothing on file serves a destination.
      *
      * Amana is the historical carrier, so its row wins when it exists; a
      * fresh/future database where it has been retired falls through to the
-     * first active service in display order, which is what the checkout page
-     * would have shown anyway.
+     * first active service in display order.
      */
     public function defaultService(): ?DeliveryService
     {
@@ -180,27 +227,20 @@ class DeliveryFeeService
     }
 
     /**
-     * ISO codes a given service currently ships to — drives checkout validation.
+     * ISO codes checkout ships to — drives checkout validation. One service's
+     * card when given, otherwise every active service's together.
      *
-     * Falls back to Morocco alone when its rate card is empty (a fresh
-     * database, a test that never ran DeliveryRateSeeder). Without that, an
-     * empty card makes `Rule::in([])` reject *every* country and quietly
-     * closes checkout altogether — much worse than shipping domestic only at
-     * the fallback fee, which is what the platform did before rates existed
-     * anyway.
+     * Falls back to Morocco alone when the card is empty (a fresh database, a
+     * test that never ran DeliveryRateSeeder). Without that, an empty card
+     * makes `Rule::in([])` reject *every* country and quietly closes checkout
+     * altogether — much worse than shipping domestic only at the fallback
+     * fee, which is what the platform did before rates existed anyway.
      *
      * @return array<int, string>
      */
     public function shippableCountryCodes(?DeliveryService $service = null): array
     {
-        $serviceId = ($service ?? $this->defaultService())?->id;
-
-        if ($serviceId === null) {
-            return [Address::DEFAULT_COUNTRY];
-        }
-
-        $codes = DeliveryRate::query()
-            ->where('delivery_service_id', $serviceId)
+        $codes = $this->cardRows($service)
             ->distinct()
             ->pluck('country_code')
             ->all();
@@ -209,9 +249,10 @@ class DeliveryFeeService
     }
 
     /**
-     * The Moroccan cities a service has a rate for — the ones checkout offers.
+     * The Moroccan cities with a rate — the ones checkout offers. One
+     * service's card when given, otherwise every active service's together.
      *
-     * Null (no restriction) when the card has no city rows at all: a fresh
+     * Null (no restriction) when there are no city rows at all: a fresh
      * database or a test that never ran DeliveryRateSeeder, where every city
      * in the registry has to stay selectable at the fallback fee. Once the
      * card has even one city, only the cities on it are deliverable, which is
@@ -221,16 +262,10 @@ class DeliveryFeeService
      */
     public function deliverableCityIds(?DeliveryService $service = null): ?array
     {
-        $serviceId = ($service ?? $this->defaultService())?->id;
-
-        if ($serviceId === null) {
-            return null;
-        }
-
-        $ids = DeliveryRate::query()
-            ->where('delivery_service_id', $serviceId)
+        $ids = $this->cardRows($service)
             ->where('country_code', Address::DEFAULT_COUNTRY)
             ->whereNotNull('city_id')
+            ->distinct()
             ->pluck('city_id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -239,8 +274,8 @@ class DeliveryFeeService
     }
 
     /**
-     * Narrows an `addresses` query to destinations the card still serves: a
-     * country on the card and, for Morocco, a city on the card.
+     * Narrows an `addresses` query to destinations the cards still serve: a
+     * country on a card and, for Morocco, a city on one.
      *
      * Takes either an Eloquent or a query builder, since it is used both to
      * list the buyer's saved addresses and inside an `exists` validation rule.
@@ -276,29 +311,78 @@ class DeliveryFeeService
         return $query;
     }
 
+    /** The row that prices a destination: the city's, else the whole country's. */
+    private function rateFor(DeliveryService $service, string $countryCode, ?int $cityId): ?DeliveryRate
+    {
+        $rows = DeliveryRate::query()
+            ->where('delivery_service_id', $service->id)
+            ->where('country_code', strtoupper($countryCode));
+
+        /*
+         * City first, then the country-level row. Morocco has a row per city
+         * and no country-level fallback; everywhere else is the reverse. One
+         * lookup order covers both, and an unknown Moroccan city degrades to
+         * the fallback rather than to some other city's price.
+         */
+        if ($cityId !== null) {
+            $cityRate = (clone $rows)->where('city_id', $cityId)->first();
+
+            if ($cityRate !== null) {
+                return $cityRate;
+            }
+        }
+
+        return $rows->whereNull('city_id')->first();
+    }
+
+    /** One service's rows, or every active service's. */
+    private function cardRows(?DeliveryService $service)
+    {
+        return DeliveryRate::query()->when(
+            $service,
+            fn ($rows) => $rows->where('delivery_service_id', $service->id),
+            fn ($rows) => $rows->whereIn(
+                'delivery_service_id',
+                DeliveryService::query()->where('is_active', true)->select('id'),
+            ),
+        );
+    }
+
     /**
      * Turn a service's rate rows into the two shapes the checkout page uses.
      *
      * @param  Collection<int, DeliveryRate>  $rates
+     * @param  array<int, float>|null  $zoneFees  This basket's price per zone, for a weight-priced service.
      * @return array{countries: array<int, array{code: string, name: string, fee: float|null}>, cityFees: array<int, float>}
      */
-    private function cardFrom(Collection $rates): array
+    private function cardFrom(Collection $rates, ?array $zoneFees = null): array
     {
         $countries = $rates
             ->groupBy('country_code')
-            ->map(fn ($group, $code) => [
-                'code' => (string) $code,
-                'name' => $group->first()->country_name,
-                // Null for Morocco, which has no country-level row: its fee
-                // only exists once a city is chosen.
-                'fee' => ($flat = $group->firstWhere('city_id', null)) ? (float) $flat->fee : null,
-            ])
-            ->sortBy('name')
+            ->map(function ($group, $code) use ($zoneFees) {
+                $flat = $group->firstWhere('city_id', null);
+
+                return [
+                    'code' => (string) $code,
+                    'name' => $group->first()->country_name,
+                    // Null for Morocco, which has no country-level row: its
+                    // fee only exists once a city is chosen. Null too for a
+                    // zone with no grid — a country that cannot be priced.
+                    'fee' => match (true) {
+                        $flat === null => null,
+                        $zoneFees !== null => $flat->zone !== null ? ($zoneFees[$flat->zone] ?? null) : null,
+                        default => $flat->fee !== null ? (float) $flat->fee : null,
+                    },
+                ];
+            })
+            // Accents folded, or "Égypte" and "États-Unis" sort after "Zimbabwe".
+            ->sortBy(fn (array $country) => Str::lower(Str::ascii($country['name'])))
             ->values()
             ->all();
 
         $cityFees = $rates
             ->whereNotNull('city_id')
+            ->whereNotNull('fee')
             ->mapWithKeys(fn ($rate) => [(int) $rate->city_id => (float) $rate->fee])
             ->all();
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The dumps hold every buyer's name, address, phone and password hash: owner
+# only, never the default world-readable 0644.
+umask 077
+
 # One backup = one dated folder holding both halves of the site, so a restore
 # always pairs a database with the photos it points to:
 #
@@ -52,6 +56,8 @@ if ! docker volume inspect "${VOLUME}" >/dev/null 2>&1; then
 fi
 
 mkdir -p "${BACKUP_DIR}"
+# Also closes off the backups written before the umask, left 0644 inside.
+chmod 700 "${BACKUP_DIR}"
 
 free_mb="$(df -Pm "${BACKUP_DIR}" | awk 'NR == 2 { print $4 }')"
 if [ "${free_mb}" -lt "${MIN_FREE_MB}" ]; then

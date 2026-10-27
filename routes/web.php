@@ -326,13 +326,16 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
 
         /*
          * Delivery rate cards: the desk re-prices a line and adds or removes
-         * a city or country. See Admin\DeliveryRateController.
+         * a city or country — and on DHL's weight-priced card, edits the
+         * weight grid and the fees around it. See Admin\DeliveryRateController.
          */
         Route::get('/delivery-rates', [Admin\DeliveryRateController::class, 'index'])->name('delivery-rates.index');
         Route::get('/delivery-rates/export', [Admin\DeliveryRateController::class, 'export'])->name('delivery-rates.export');
         Route::post('/delivery-rates', [Admin\DeliveryRateController::class, 'store'])->name('delivery-rates.store');
         Route::patch('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'update'])->name('delivery-rates.update');
         Route::delete('/delivery-rates/{rate}', [Admin\DeliveryRateController::class, 'destroy'])->name('delivery-rates.destroy');
+        Route::patch('/delivery-weight-bands/{band}', [Admin\DeliveryRateController::class, 'updateBand'])->name('delivery-weight-bands.update');
+        Route::patch('/delivery-services/{service}/pricing', [Admin\DeliveryRateController::class, 'updatePricing'])->name('delivery-services.pricing.update');
     });
 
 /*

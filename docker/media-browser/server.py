@@ -19,7 +19,10 @@ Nothing here can write to production storage: the live filer is only ever
 sent GET requests.
 
 Started on demand (`make media-browser`) and published on the server's
-loopback only — reach it through an SSH tunnel.
+loopback only — reach it through an SSH tunnel. Loopback keeps the internet
+out, not the other tabs of the browser holding the tunnel: requests must name
+localhost as their Host (no DNS rebinding) and POSTs must come from this
+page's own origin (no cross-site uploads, opens or deletes).
 """
 
 import html
@@ -28,6 +31,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import tarfile
 import threading
 import time
@@ -52,6 +56,12 @@ ROOT = f"/buckets/{BUCKET}"
 READ_TIMEOUT = 15
 DIR_MODE = 1 << 31  # Go's os.ModeDir, as the filer reports it.
 MAX_RECURSIVE = 5000
+# An opened copy must leave this much free on the disk Postgres and SeaweedFS
+# also write to — the same margin docker/scripts/backup.sh keeps.
+MIN_FREE = 2 * 1024 ** 3
+# A SeaweedFS volume is a handful of .dat/.idx files plus the filer's index.
+MAX_MEMBERS = 100_000
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 _lock = threading.Lock()
 # backup name -> {"proc": Popen, "filer": "http://127.0.0.1:port", "dir": path}
@@ -150,23 +160,50 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
+def safe_extraction() -> bool:
+    """Whether this Python's tarfile "data" filter actually holds: it could be
+    bypassed to write outside the target (CVE-2025-4517 and kin) until
+    3.12.11 / 3.13.4."""
+    return sys.version_info >= (3, 13, 4) or (3, 12, 11) <= sys.version_info < (3, 13)
+
+
+def check_extractable(tar: tarfile.TarFile) -> None:
+    """Refuse an archive whose contents would not fit, before writing any of it.
+
+    The upload check only sees the compressed size, and gzip can expand a
+    thousandfold; filling this disk would take the site down with it."""
+    budget = shutil.disk_usage(WORK_DIR).free - MIN_FREE
+    total = count = 0
+    for member in tar:
+        count += 1
+        total += member.size
+        if count > MAX_MEMBERS:
+            raise RuntimeError(f"Archive refusée : plus de {MAX_MEMBERS} fichiers.")
+        if total > budget:
+            raise RuntimeError("Archive refusée : une fois extraite, elle ne tiendrait pas sur le disque du serveur.")
+
+
 def open_backup(name: str) -> None:
     archive = next((b["archive"] for b in backups() if b["name"] == name), None)
     if archive is None:
         raise LookupError(f"Sauvegarde « {name} » introuvable.")
+    if not safe_extraction():
+        raise RuntimeError(f"Python {sys.version.split()[0]} ne sait pas extraire une archive sans risque ; reconstruisez l'image.")
 
     with _lock:
         if name in _opened:
             return
 
         target = os.path.join(WORK_DIR, name)
-        shutil.rmtree(target, ignore_errors=True)
-        os.makedirs(target)
         with tarfile.open(archive, "r:gz") as tar:
+            check_extractable(tar)
+            shutil.rmtree(target, ignore_errors=True)
+            os.makedirs(target)
             try:
                 tar.extractall(target, filter="data")
-            except TypeError:  # Python < 3.12 has no extraction filters.
-                tar.extractall(target)
+            except BaseException:
+                shutil.rmtree(target, ignore_errors=True)
+                raise
 
         # gRPC listens on port + 10000, so keep the HTTP ports low enough.
         while True:
@@ -413,7 +450,22 @@ class Handler(BaseHTTPRequestHandler):
     def fail(self, message: str, status: int = 500):
         self.send_html(page("Erreur", f"<p class=err>{esc(message)}</p><p><a href='/'>Retour</a></p>"), status)
 
+    def local_host(self) -> bool:
+        """The Host names loopback — anything else is a site whose DNS was
+        rebound to 127.0.0.1 to read these pages."""
+        try:
+            return urllib.parse.urlsplit(f"//{self.headers.get('Host', '')}").hostname in LOCAL_HOSTS
+        except ValueError:
+            return False
+
+    def same_origin(self) -> bool:
+        """The POST came from one of these pages, not another tab's site."""
+        sender = self.headers.get("Origin") or self.headers.get("Referer") or ""
+        return urllib.parse.urlsplit(sender).netloc == self.headers.get("Host")
+
     def do_GET(self):
+        if not self.local_host():
+            return self.fail("Ouvrez ce navigateur par http://localhost (tunnel SSH).", 403)
         route = urllib.parse.urlparse(self.path).path
         p = self.params()
         try:
@@ -434,6 +486,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         route = urllib.parse.urlparse(self.path).path
         name = self.params().get("name", "")
+
+        if not (self.local_host() and self.same_origin()):
+            if route == "/upload":
+                return self.send_json({"error": "Requête refusée : envoyez depuis cette page."}, 403)
+            return self.fail("Requête refusée : elle ne vient pas de cette page.", 403)
 
         # Sent by the home page's script as the raw file body, not a form:
         # no multipart parsing, and a 150 MB archive goes straight to disk.

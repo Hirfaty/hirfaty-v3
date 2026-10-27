@@ -24,7 +24,7 @@ return [
     'how_it_works.step2.title' => 'تطلب',
     'how_it_works.step2.description' => 'مباشرة من الحرفي، بدون وسيط يأخذ نصف السعر.',
     'how_it_works.step3.title' => 'أمانة توصل',
-    'how_it_works.step3.description' => 'إلى باب منزلك، في جميع أنحاء المغرب. دوليًا قريبًا.',
+    'how_it_works.step3.description' => 'إلى باب منزلك، في جميع أنحاء المغرب — وDHL Express إلى العالم كله.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',
     'seller_cta.title' => 'هل أنت حرفي؟',
