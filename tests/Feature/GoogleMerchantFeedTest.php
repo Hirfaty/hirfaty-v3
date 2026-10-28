@@ -1,15 +1,21 @@
 <?php
 
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\City;
+use App\Models\DeliveryRate;
+use App\Models\DeliveryService;
 use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantOption;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\DeliveryFeeService;
+use Database\Seeders\DhlDeliveryRateSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -93,9 +99,10 @@ function feedVariant(Product $product, array $attributes, array $options): Produ
 
 /**
  * Every <item>, keyed by its `g:id`, each field without the `g:` prefix.
- * Repeated fields (additional_image_link) come back as a list.
+ * Repeated fields (additional_image_link) come back as a list; `shipping`
+ * always does, keyed by country, each entry its sub-fields.
  *
- * @return array<string, array<string, string|array<int, string>>>
+ * @return array<string, array<string, mixed>>
  */
 function feedItems(string $xml): array
 {
@@ -106,6 +113,18 @@ function feedItems(string $xml): array
         $fields = [];
 
         foreach ($item->children('http://base.google.com/ns/1.0') as $name => $value) {
+            if ($name === 'shipping') {
+                $entry = [];
+
+                foreach ($value->children('http://base.google.com/ns/1.0') as $sub => $subValue) {
+                    $entry[$sub] = (string) $subValue;
+                }
+
+                $fields['shipping'][$entry['country']] = $entry;
+
+                continue;
+            }
+
             $fields[$name] = isset($fields[$name])
                 ? [...(array) $fields[$name], (string) $value]
                 : (string) $value;
@@ -217,4 +236,100 @@ test('each language has its own feed, linking to that language', function () {
     expect(app()->getLocale())->not->toBe('ar');
 
     $this->get('/feeds/google/de.xml')->assertNotFound();
+});
+
+/** Amana in two Moroccan cities, DHL Express abroad — the live cards. */
+function feedCarriers(): DeliveryService
+{
+    $amana = DeliveryService::create(['slug' => 'amana', 'name' => 'Amana', 'sort_order' => 1]);
+
+    foreach (['Casablanca' => 40, 'Dakhla' => 65] as $city => $fee) {
+        DeliveryRate::create([
+            'delivery_service_id' => $amana->id,
+            'country_code' => 'MA',
+            'country_name' => 'Maroc',
+            'city_id' => City::create(['name' => $city])->id,
+            'fee' => $fee,
+        ]);
+    }
+
+    (new DhlDeliveryRateSeeder)->run();
+
+    return DeliveryService::where('slug', DhlDeliveryRateSeeder::SLUG)->firstOrFail();
+}
+
+/** What checkout bills to ship one unit to `$country`, as the feed writes money. */
+function checkoutQuote(DeliveryService $service, string $country, Product $product, ?ProductVariant $variant = null): string
+{
+    $line = (new CartItem(['quantity' => 1]))
+        ->setRelation('product', $product)
+        ->setRelation('variant', $variant);
+
+    return number_format(app(DeliveryFeeService::class)->resolve($country, null, $service, [$line]), 2, '.', '').' MAD';
+}
+
+test('each item carries its delivery price per target country, at what checkout bills', function () {
+    $dhl = feedCarriers();
+    $dhl->update(['fuel_surcharge_percent' => 27.5]);
+    config(['hirfaty.google_feed_shipping_countries' => ['ma', 'FR', 'US', 'XX']]);
+
+    $light = feedProduct($this->store, ['name' => 'Bol', 'weight' => 850, 'weight_unit' => 'g']);
+    $heavy = feedProduct($this->store, ['name' => 'Jarre', 'weight' => 12, 'weight_unit' => 'kg']);
+
+    $items = feedItems($this->get('/feeds/google/fr.xml')->getContent());
+    $shipping = $items[(string) $light->id]['shipping'];
+
+    // Nothing ships to XX, so it is left out rather than quoted at the fallback.
+    expect(array_keys($shipping))->toBe(['MA', 'FR', 'US'])
+        // Morocco is priced per city: its dearest, so Google never under-quotes.
+        ->and($shipping['MA'])->toBe(['country' => 'MA', 'service' => 'Amana', 'price' => '65.00 MAD'])
+        ->and($shipping['FR'])->toBe(['country' => 'FR', 'service' => $dhl->name, 'price' => checkoutQuote($dhl, 'FR', $light)])
+        ->and($shipping['US']['price'])->toBe(checkoutQuote($dhl, 'US', $light))
+        ->and($items[(string) $heavy->id]['shipping']['FR']['price'])->toBe(checkoutQuote($dhl, 'FR', $heavy))
+        ->and(checkoutQuote($dhl, 'FR', $heavy))->not->toBe(checkoutQuote($dhl, 'FR', $light));
+});
+
+test('a variant is priced on its own weight', function () {
+    $dhl = feedCarriers();
+    config(['hirfaty.google_feed_shipping_countries' => ['FR']]);
+
+    $product = feedProduct($this->store, ['name' => 'Tapis', 'has_variants' => true, 'weight' => 2, 'weight_unit' => 'kg']);
+    $small = feedVariant($product, [], ['dimension' => '1x1 m']);
+    $large = feedVariant($product, ['weight' => 9], ['dimension' => '3x4 m']);
+
+    $items = feedItems($this->get('/feeds/google/fr.xml')->getContent());
+
+    expect($items["{$product->id}-{$small->id}"]['shipping']['FR']['price'])->toBe(checkoutQuote($dhl, 'FR', $product, $small))
+        ->and($items["{$product->id}-{$large->id}"]['shipping']['FR']['price'])->toBe(checkoutQuote($dhl, 'FR', $product, $large))
+        ->and(checkoutQuote($dhl, 'FR', $product, $large))->not->toBe(checkoutQuote($dhl, 'FR', $product, $small));
+});
+
+test('with no carrier on file the feed carries no shipping', function () {
+    $product = feedProduct($this->store);
+
+    expect(feedItems($this->get('/feeds/google/fr.xml')->getContent())[(string) $product->id])
+        ->not->toHaveKey('shipping');
+});
+
+test('pricing delivery costs no query per item', function () {
+    feedCarriers();
+
+    $queries = function () {
+        Cache::flush();
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get('/feeds/google/fr.xml')->assertOk();
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
+    };
+
+    feedProduct($this->store, ['name' => 'Un']);
+    $one = $queries();
+
+    foreach (['Deux', 'Trois', 'Quatre'] as $name) {
+        feedProduct($this->store, ['name' => $name, 'weight' => 3, 'weight_unit' => 'kg']);
+    }
+
+    expect($queries())->toBe($one);
 });

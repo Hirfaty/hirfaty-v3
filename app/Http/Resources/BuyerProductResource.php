@@ -113,7 +113,9 @@ class BuyerProductResource extends JsonResource
             ],
 
             'images' => $this->images,
-            'videos' => $this->videos,
+            // Only the detail page plays videos, and it eager-loads them. A
+            // card reading this lazily fired one media query per product.
+            'videos' => $this->relationLoaded('videos') ? $this->videos : [],
 
             /*
              * Own images plus every variant's, folded into one deduplicated

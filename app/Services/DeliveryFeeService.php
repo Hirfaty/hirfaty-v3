@@ -6,6 +6,7 @@ use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -206,6 +207,86 @@ class DeliveryFeeService
             ])->values()->all(),
             'rates' => $rates,
         ];
+    }
+
+    /**
+     * Prices baskets for a fixed list of countries, ISO code ⇒ carrier name
+     * and price: the carrier checkout preselects there (the first active one in display
+     * order with a rate, as serviceFor()) at what it would bill.
+     *
+     * Built for the Google Merchant feed, which prices every item of the
+     * catalogue: the cards and grids are read once here, and the returned
+     * closure only does arithmetic, so the feed costs no query per item.
+     *
+     * A feed can only say one price per country, and Morocco is priced per
+     * city, so a per-destination card gives its dearest rate there: a listing
+     * may overstate delivery, never understate it. A country nothing ships
+     * to, or that cannot be priced (no zone, no grid), is left out rather
+     * than quoted at the fallback fee.
+     *
+     * @param  array<int, string>  $countryCodes
+     * @return Closure(iterable<CartItem>): array<string, array{service: string, price: float}>
+     */
+    public function countryQuoter(array $countryCodes): Closure
+    {
+        $codes = array_values(array_unique(array_map('strtoupper', $countryCodes)));
+
+        $services = DeliveryService::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->with([
+                'rates' => fn ($rates) => $rates->whereIn('country_code', $codes),
+                'weightBands',
+            ])
+            ->get();
+
+        // country ⇒ how to price it: a flat fee, or a weight-priced service and zone grid.
+        $plans = [];
+
+        foreach ($codes as $code) {
+            $service = $services->first(fn (DeliveryService $service) => $service->rates->contains('country_code', $code));
+
+            if ($service === null) {
+                continue;
+            }
+
+            $rows = $service->rates->where('country_code', $code);
+
+            if (! $service->isWeightPriced()) {
+                $fee = $rows->whereNotNull('fee')->max(fn (DeliveryRate $rate) => (float) $rate->fee);
+
+                if ($fee !== null) {
+                    $plans[$code] = ['service' => $service, 'fee' => (float) $fee];
+                }
+
+                continue;
+            }
+
+            $zone = $rows->firstWhere('city_id', null)?->zone;
+            $bands = $zone !== null ? $service->weightBands->where('zone', $zone)->values() : collect();
+
+            if ($bands->isNotEmpty()) {
+                $plans[$code] = ['service' => $service, 'bands' => $bands];
+            }
+        }
+
+        return function (iterable $lines) use ($plans): array {
+            $pieces = null;
+            $quotes = [];
+
+            foreach ($plans as $code => $plan) {
+                if (isset($plan['fee'])) {
+                    $price = $plan['fee'];
+                } else {
+                    $pieces ??= $this->shipping->pieces($lines);
+                    $price = $this->weightPricing->quote($plan['service'], $plan['bands'], $pieces);
+                }
+
+                $quotes[$code] = ['service' => $plan['service']->name, 'price' => $price];
+            }
+
+            return $quotes;
+        };
     }
 
     /**

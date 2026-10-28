@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\CartItem;
 use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -30,6 +32,12 @@ use XMLWriter;
  * Handmade pieces have no barcode, hence `identifier_exists=no` on every item
  * and the shop as `brand`.
  *
+ * Delivery is priced on each item (`g:shipping`, one per country in
+ * `hirfaty.google_feed_shipping_countries`) by DeliveryFeeService at what
+ * checkout bills for one unit, so Merchant Center needs no shipping table of
+ * its own, and the price Google shows follows the cards — the DHL fuel % the
+ * desk edits weekly included — within the hour.
+ *
  * Cached for an hour, like the sitemap: Merchant Center fetches it daily.
  */
 class GoogleMerchantFeedService
@@ -53,7 +61,10 @@ class GoogleMerchantFeedService
         'pattern' => 'g:pattern',
     ];
 
-    public function __construct(private ProductShippingService $shipping) {}
+    public function __construct(
+        private ProductShippingService $shipping,
+        private DeliveryFeeService $delivery,
+    ) {}
 
     public function xml(string $language): string
     {
@@ -80,8 +91,10 @@ class GoogleMerchantFeedService
             $xml->writeElement('link', route('home', ['locale' => $language]));
             $xml->writeElement('description', __('seo.default'));
 
+            $quote = $this->delivery->countryQuoter(config('hirfaty.google_feed_shipping_countries', []));
+
             foreach ($this->products() as $product) {
-                foreach ($this->items($product, $language) as $item) {
+                foreach ($this->items($product, $language, $quote) as $item) {
                     $this->writeItem($xml, $item);
                 }
             }
@@ -112,9 +125,10 @@ class GoogleMerchantFeedService
      * product with no photo is left out: Merchant Center rejects an item
      * without `image_link` anyway.
      *
-     * @return array<int, array<string, string|array<int, string>>>
+     * @param  Closure(iterable<CartItem>): array<string, array{service: string, price: float}>  $quote
+     * @return array<int, array<string, string|array<int, string|array<string, string>>>>
      */
-    private function items(Product $product, string $language): array
+    private function items(Product $product, string $language, Closure $quote): array
     {
         $images = $this->imageUrls($product->images);
 
@@ -151,10 +165,11 @@ class GoogleMerchantFeedService
                 ...$this->priceFields($base, $sale),
                 ...$shared,
                 'g:shipping_weight' => $this->weight($product),
+                ...$this->shippingFields($quote, $product),
             ])];
         }
 
-        return $variants->map(function (ProductVariant $variant) use ($product, $images, $base, $sale, $language, $shared) {
+        return $variants->map(function (ProductVariant $variant) use ($product, $images, $base, $sale, $language, $shared, $quote) {
             $own = $this->imageUrls($variant->media->where('type', 'image'));
             $gallery = array_values(array_unique([...$own, ...$images]));
 
@@ -182,18 +197,36 @@ class GoogleMerchantFeedService
                 ...$shared,
                 ...$this->variantAttributes($variant),
                 'g:shipping_weight' => $this->weight($product, $variant),
+                ...$this->shippingFields($quote, $product, $variant),
             ]);
         })->filter()->values()->all();
     }
 
-    /** @param  array<string, string|array<int, string>>  $item */
+    /**
+     * A list repeats the field; a list entry that is itself keyed (a
+     * `g:shipping`) is written as a group of sub-fields.
+     *
+     * @param  array<string, string|array<int, string|array<string, string>>>  $item
+     */
     private function writeItem(XMLWriter $xml, array $item): void
     {
         $xml->startElement('item');
 
         foreach ($item as $field => $value) {
             foreach ((array) $value as $one) {
-                $xml->writeElement($field, $one);
+                if (! is_array($one)) {
+                    $xml->writeElement($field, $one);
+
+                    continue;
+                }
+
+                $xml->startElement($field);
+
+                foreach ($one as $subField => $subValue) {
+                    $xml->writeElement($subField, $subValue);
+                }
+
+                $xml->endElement();
             }
         }
 
@@ -269,6 +302,32 @@ class GoogleMerchantFeedService
         $kg = $this->shipping->weightKg($product, $variant);
 
         return $kg !== null && $kg > 0 ? number_format($kg, 3, '.', '').' kg' : null;
+    }
+
+    /**
+     * One `g:shipping` per country the item can be delivered to, at what
+     * checkout bills for one unit of it.
+     *
+     * @param  Closure(iterable<CartItem>): array<string, array{service: string, price: float}>  $quote
+     * @return array<string, array<int, array<string, string>>>
+     */
+    private function shippingFields(Closure $quote, Product $product, ?ProductVariant $variant = null): array
+    {
+        $line = (new CartItem(['quantity' => 1]))
+            ->setRelation('product', $product)
+            ->setRelation('variant', $variant);
+
+        $entries = [];
+
+        foreach ($quote([$line]) as $country => ['service' => $service, 'price' => $price]) {
+            $entries[] = [
+                'g:country' => $country,
+                'g:service' => $service,
+                'g:price' => $this->money($price),
+            ];
+        }
+
+        return $entries === [] ? [] : ['g:shipping' => $entries];
     }
 
     private function money(float $amount): string

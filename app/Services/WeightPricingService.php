@@ -150,10 +150,13 @@ class WeightPricingService
     }
 
     /**
+     * The quote on one zone's grid, for a caller that already holds the bands
+     * (DeliveryFeeService pricing a whole catalogue reads them only once).
+     *
      * @param  Collection<int, DeliveryWeightBand>  $bands  One zone's.
      * @param  array<int, array{weight: float|null, chargeable: float|null, dimensions: array{length: float, width: float, height: float}|null}>  $pieces
      */
-    private function quote(DeliveryService $service, Collection $bands, array $pieces): float
+    public function quote(DeliveryService $service, Collection $bands, array $pieces): float
     {
         $transport = $this->gridPrice($bands, $this->billedWeight($service, $pieces))
             + $this->pieceSurcharges($service, $pieces);

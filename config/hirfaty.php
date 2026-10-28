@@ -63,4 +63,24 @@ return [
 
     'indexable' => (bool) env('SEO_INDEXABLE', env('APP_ENV') === 'production'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Merchant Center shipping
+    |--------------------------------------------------------------------------
+    |
+    | The countries the Google feed prices delivery for, as ISO codes: each
+    | item carries one `g:shipping` per country, at what checkout bills for
+    | one unit, so nothing has to be keyed into Merchant Center's shipping
+    | settings by hand. List the countries the Merchant Center account targets
+    | — Google caps how many shipping entries one item may carry, so this is
+    | not every country on the DHL card. A country no carrier ships to is
+    | skipped. Comma-separated in GOOGLE_FEED_SHIPPING_COUNTRIES.
+    |
+    */
+
+    'google_feed_shipping_countries' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('GOOGLE_FEED_SHIPPING_COUNTRIES', 'MA,FR,BE,CH,ES,IT,DE,NL,GB,US,CA,AE,SA,QA')),
+    ))),
+
 ];
