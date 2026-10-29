@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * A carrier Hirfaty can ship with — Amana in Morocco, DHL Express abroad.
+ * A carrier Hirfaty can ship with — Cathedis in Morocco, DHL Express abroad
+ * (Amana, which carried Morocco before Cathedis, is kept switched off).
  *
  * Priced one of two ways (`pricing`): a flat fee per destination, read
- * straight off the `delivery_rates` row (Amana), or by the basket's weight on
+ * straight off the `delivery_rates` row (Cathedis), or by the basket's weight on
  * a zone grid (DHL — see WeightPricingService). The money columns below only
  * mean something for a weight-priced service.
  *

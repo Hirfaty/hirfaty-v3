@@ -36,7 +36,7 @@ return [
                 ],
                 [
                     'title' => 'Commandez en confiance',
-                    'body' => 'Livraison Amana sécurisée partout au Maroc.',
+                    'body' => 'Livraison Cathedis sécurisée partout au Maroc.',
                 ],
                 [
                     'title' => 'Suivez vos commandes',
@@ -63,7 +63,7 @@ return [
                 ],
                 [
                     'title' => 'Commencez à vendre',
-                    'body' => 'Recevez des commandes, expédiez via Amana et suivez vos revenus.',
+                    'body' => 'Recevez des commandes, expédiez via Cathedis et suivez vos revenus.',
                 ],
             ],
         ],

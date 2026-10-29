@@ -20,7 +20,7 @@ return [
     'how.step1.body' => 'Chaque atelier a sa propre boutique. Parcourez par catégorie ou par ville, et arrêtez-vous où votre regard s’arrête — comme dans une vraie médina.',
     'how.step2.title' => 'Commandez directement',
     'how.step2.body' => 'Votre commande part chez l’artisan qui a façonné la pièce. Il la prépare lui-même, et l’essentiel du prix lui revient.',
-    'how.step3.title' => 'Amana livre',
+    'how.step3.title' => 'Cathedis livre',
     'how.step3.body' => 'Livraison suivie jusqu’à votre porte, partout au Maroc. Vous suivez la commande depuis votre compte, du premier jour à la réception.',
 
     'how.sellers.heading' => 'Vous êtes artisan ?',

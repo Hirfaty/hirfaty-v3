@@ -31,7 +31,7 @@ return [
                 ],
                 [
                     'title' => 'Order with confidence',
-                    'body' => 'Secure Amana delivery anywhere in Morocco.',
+                    'body' => 'Secure Cathedis delivery anywhere in Morocco.',
                 ],
                 [
                     'title' => 'Follow your orders',
@@ -58,7 +58,7 @@ return [
                 ],
                 [
                     'title' => 'Start selling',
-                    'body' => 'Take orders, ship through Amana and track your earnings.',
+                    'body' => 'Take orders, ship through Cathedis and track your earnings.',
                 ],
             ],
         ],

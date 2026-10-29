@@ -359,7 +359,7 @@ const Checkout = ({
     const isDomestic = data.country === defaultCountry;
 
     /*
-     * Every country some carrier ships to: Morocco on Amana's card, the rest
+     * Every country some carrier ships to: Morocco on Cathedis's card, the rest
      * of the world on DHL's. Named in French on the cards, so sorted with
      * French collation — "États-Unis" under E, not after "Zimbabwe".
      */
@@ -401,7 +401,7 @@ const Checkout = ({
 
     /*
      * The carriers that ship to that destination, in display order, each
-     * with its price for this basket: Amana in Morocco, DHL abroad.
+     * with its price for this basket: Cathedis in Morocco, DHL abroad.
      */
     const servingServices = deliveryServices
         .map((service) => ({
@@ -954,7 +954,7 @@ const Checkout = ({
                         {/*
                          * ── Delivery method ──────────────────────
                          * Shown once Hirfaty has more than one carrier: the
-                         * buyer sees who ships their parcel (Amana in
+                         * buyer sees who ships their parcel (Cathedis in
                          * Morocco, DHL abroad) and what it costs. Lists only
                          * the carriers that ship to the destination; with
                          * one, there is nothing to pick and no radio dot,

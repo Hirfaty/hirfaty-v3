@@ -23,7 +23,7 @@ return [
     'how_it_works.step1.description' => 'في السوق — مثل المدينة، تتوقف حيث يلفت انتباهك ما تراه.',
     'how_it_works.step2.title' => 'تطلب',
     'how_it_works.step2.description' => 'مباشرة من الحرفي، بدون وسيط يأخذ نصف السعر.',
-    'how_it_works.step3.title' => 'أمانة توصل',
+    'how_it_works.step3.title' => 'كاتيديس توصل',
     'how_it_works.step3.description' => 'إلى باب منزلك، في جميع أنحاء المغرب — وDHL Express إلى العالم كله.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',

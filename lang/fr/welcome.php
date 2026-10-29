@@ -24,7 +24,7 @@ return [
     'how_it_works.step1.description' => 'dans le marché — comme dans une médina, on s\'arrête où l\'œil s\'arrête.',
     'how_it_works.step2.title' => 'Vous commandez',
     'how_it_works.step2.description' => 'directement à l\'artisan, sans intermédiaire qui prend la moitié.',
-    'how_it_works.step3.title' => 'Amana livre',
+    'how_it_works.step3.title' => 'Cathedis livre',
     'how_it_works.step3.description' => 'à votre porte, partout au Maroc — et DHL Express dans le monde entier.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',

@@ -779,7 +779,7 @@ const AddDestinationDialog = ({
  * The desk re-prices any line in place, and adds or removes a Moroccan city or
  * a foreign country. Checkout offers exactly the destinations on the cards,
  * so a row here is a destination buyers can pick. Each carrier has its own
- * card: Amana's prices Moroccan cities one by one; DHL's puts each country in
+ * card: Cathedis's prices Moroccan cities one by one; DHL's puts each country in
  * a zone and prices the parcel's weight on that zone's grid, edited below the
  * list together with the fees around it.
  */

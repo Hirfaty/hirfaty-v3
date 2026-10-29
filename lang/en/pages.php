@@ -19,7 +19,7 @@ return [
     'how.step1.body' => 'Every workshop has its own shop. Browse by category or by city, and stop wherever your eye stops — the way you would in a real medina.',
     'how.step2.title' => 'Order directly',
     'how.step2.body' => 'Your order goes to the artisan who made the piece. They prepare it themselves, and most of the price goes to them.',
-    'how.step3.title' => 'Amana delivers',
+    'how.step3.title' => 'Cathedis delivers',
     'how.step3.body' => 'Tracked delivery to your door, anywhere in Morocco. You follow the order from your account, from the first day to the day it arrives.',
 
     'how.sellers.heading' => 'Are you an artisan?',

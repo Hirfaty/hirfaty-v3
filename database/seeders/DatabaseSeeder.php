@@ -24,10 +24,9 @@ class DatabaseSeeder extends Seeder
             CitySeeder::class,
             CategorySeeder::class,
             SuperAdminSeeder::class,
-            // After SuperAdminSeeder / CitySeeder: the rate card hangs off the
-            // Amana service row, and the Moroccan rates hang off city rows.
-            DeliveryServiceSeeder::class,
-            DeliveryRateSeeder::class,
+            // After CitySeeder: Cathedis's Moroccan rates hang off city rows
+            // (it adds the localities CitySeeder does not have).
+            CathedisDeliveryRateSeeder::class,
             DhlDeliveryRateSeeder::class,
         ]);
     }

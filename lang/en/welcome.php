@@ -23,7 +23,7 @@ return [
     'how_it_works.step1.description' => 'through the market — like in a medina, stop where your eye stops.',
     'how_it_works.step2.title' => 'You order',
     'how_it_works.step2.description' => 'directly from the artisan, without a middleman taking half.',
-    'how_it_works.step3.title' => 'Amana delivers',
+    'how_it_works.step3.title' => 'Cathedis delivers',
     'how_it_works.step3.description' => 'to your door, across Morocco — and DHL Express worldwide.',
 
     'seller_cta.ar_line' => 'هل أنت حرفي؟ افتح متجرك اليوم.',

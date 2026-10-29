@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *
  * Removing a Moroccan city's row removes it from the card only. The `cities`
  * registry stays as it is: stores, orders and saved addresses point at those
- * rows, and a city that Amana does not serve any more is still a real place.
+ * rows, and a city no carrier serves any more is still a real place.
  */
 class DeliveryRateService
 {

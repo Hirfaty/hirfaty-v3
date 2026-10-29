@@ -110,7 +110,7 @@ const CartPage = ({
 
     /*
      * The delivery charge is a flat, checkout-only line (see
-     * CheckoutService::AMANA_FEE) — the cart only ever sells products, so its
+     * DeliveryFeeService) — the cart only ever sells products, so its
      * total is the products' total, full stop.
      */
     const total = subtotal;

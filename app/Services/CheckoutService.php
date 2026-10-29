@@ -178,7 +178,7 @@ class CheckoutService
             /*
              * Which carrier bills this basket, resolved once for the whole
              * checkout: whatever the buyer picked on the page, as long as it
-             * ships to this destination, or else the one that does — Amana in
+             * ships to this destination, or else the one that does — Cathedis in
              * Morocco, DHL abroad. A pick that cannot ship there is refused
              * (DeliveryFeeService::serviceFor).
              */

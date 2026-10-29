@@ -71,7 +71,7 @@ class AddressController extends Controller
             'label' => ['nullable', 'string', 'max:60'],
             'recipient_name' => ['nullable', 'string', 'max:255'],
             /*
-             * Required, though the column stays nullable: Amana rings the
+             * Required, though the column stays nullable: the courier rings the
              * buyer to deliver, so an address with no number is one nobody can
              * ship to. Leaving the column nullable keeps the addresses saved
              * before this rule readable — checkout asks for the number again

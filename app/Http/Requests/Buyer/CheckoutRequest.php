@@ -86,7 +86,7 @@ class CheckoutRequest extends FormRequest
             'shipping_address' => ['required_without:address_id', 'nullable', 'string', 'max:500'],
             /*
              * Required for Morocco, where delivery is priced city by city and
-             * `cities` is the list Amana quotes against — and meaningless
+             * `cities` is the list Cathedis quotes against — and meaningless
              * anywhere else, since that table holds Moroccan cities only. An
              * international town rides in the free-text `shipping_address`.
              */
@@ -116,7 +116,7 @@ class CheckoutRequest extends FormRequest
 
             /*
              * Which carrier ships the basket. Optional: without it the
-             * service that ships to the destination is used (Amana in
+             * service that ships to the destination is used (Cathedis in
              * Morocco, DHL abroad — DeliveryFeeService::serviceFor), so older
              * clients that never sent the field keep working. When it is
              * present it must name an active service — otherwise a crafted id

@@ -29,7 +29,10 @@ class DeliveryRateController extends Controller
 {
     public function index(Request $request, DeliveryRateService $rates)
     {
+        // Active carriers only: a switched-off one (Amana, since Cathedis took
+        // Morocco over) bills nothing, so its card would only mislead the desk.
         $services = DeliveryService::query()
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();
 
@@ -68,7 +71,7 @@ class DeliveryRateController extends Controller
         ]);
 
         $serviceId = DeliveryService::where('slug', $data['service'] ?? null)->value('id')
-            ?? DeliveryService::orderBy('sort_order')->value('id');
+            ?? DeliveryService::where('is_active', true)->orderBy('sort_order')->value('id');
 
         return $rates->export($data['format'], $serviceId);
     }

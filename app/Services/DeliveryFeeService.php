@@ -20,14 +20,14 @@ use Illuminate\Validation\ValidationException;
  * figure on the summary and the figure on the order cannot disagree.
  *
  * A service prices in one of two ways (`DeliveryService::pricing`):
- *  - per destination (Amana): the fee on the `delivery_rates` row — per
+ *  - per destination (Cathedis): the fee on the `delivery_rates` row — per
  *    Moroccan city, or per whole country (`city_id` null);
  *  - by weight (DHL Express): the row only gives the country's zone, and
  *    WeightPricingService prices the basket's weight on that zone's grid.
  *
  * Every carrier's card together is the list of destinations: checkout offers
  * a country if any active service has a row for it, and bills it with the
- * service that does — Amana in Morocco, DHL abroad.
+ * service that does — Cathedis in Morocco, DHL abroad.
  */
 class DeliveryFeeService
 {
@@ -35,12 +35,12 @@ class DeliveryFeeService
      * The carrier a checkout falls back on when nothing on file serves the
      * destination.
      *
-     * The platform shipped every basket with Amana before services existed,
-     * so a database with no card at all (a fresh install, most tests) keeps
-     * billing exactly the way it always did. `defaultService()` drops through
-     * to the first active service if Amana is ever deactivated.
+     * Cathedis carries Morocco, the destination a basket with no other match
+     * is assumed to be going to. `defaultService()` drops through to the
+     * first active service if Cathedis is missing or deactivated (Amana, its
+     * predecessor, is kept on file switched off).
      */
-    public const DEFAULT_SERVICE_SLUG = 'amana';
+    public const DEFAULT_SERVICE_SLUG = 'cathedis';
 
     /**
      * Charged when a destination has no rate on file at all.
@@ -97,13 +97,13 @@ class DeliveryFeeService
      * Which carrier bills a destination.
      *
      * The one the buyer picked, when it ships there; with none picked, the
-     * first active service in display order that does (Amana in Morocco, DHL
-     * abroad). A pick that cannot ship there is refused rather than swapped:
+     * first active service in display order that does (Cathedis in Morocco,
+     * DHL abroad). A pick that cannot ship there is refused rather than swapped:
      * a buyer who chose one carrier's price must not be billed another's
      * behind their back.
      *
      * When nothing on file ships there at all — a database with no card, as
-     * in most tests — the pick (or Amana) bills at the fallback fee, as
+     * in most tests — the pick (or the default) bills at the fallback fee, as
      * checkout always has.
      *
      * @throws ValidationException
@@ -292,14 +292,14 @@ class DeliveryFeeService
     /**
      * The carrier billed when nothing on file serves a destination.
      *
-     * Amana is the historical carrier, so its row wins when it exists; a
-     * fresh/future database where it has been retired falls through to the
+     * Cathedis, the Moroccan carrier, while it is active; otherwise the
      * first active service in display order.
      */
     public function defaultService(): ?DeliveryService
     {
         return DeliveryService::query()
             ->where('slug', self::DEFAULT_SERVICE_SLUG)
+            ->where('is_active', true)
             ->first()
             ?? DeliveryService::query()
                 ->where('is_active', true)
@@ -312,7 +312,7 @@ class DeliveryFeeService
      * card when given, otherwise every active service's together.
      *
      * Falls back to Morocco alone when the card is empty (a fresh database, a
-     * test that never ran DeliveryRateSeeder). Without that, an empty card
+     * test that never ran CathedisDeliveryRateSeeder). Without that, an empty card
      * makes `Rule::in([])` reject *every* country and quietly closes checkout
      * altogether — much worse than shipping domestic only at the fallback
      * fee, which is what the platform did before rates existed anyway.
@@ -334,7 +334,7 @@ class DeliveryFeeService
      * service's card when given, otherwise every active service's together.
      *
      * Null (no restriction) when there are no city rows at all: a fresh
-     * database or a test that never ran DeliveryRateSeeder, where every city
+     * database or a test that never ran CathedisDeliveryRateSeeder, where every city
      * in the registry has to stay selectable at the fallback fee. Once the
      * card has even one city, only the cities on it are deliverable, which is
      * how the admin desk closes a city.
