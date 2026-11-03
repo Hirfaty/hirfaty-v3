@@ -1,8 +1,9 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import { switchLocale } from '@/lib/locale';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -51,9 +52,6 @@ export default function SellerAuthShell({
     wide?: boolean;
 }) {
     const { t, locale } = useTranslation();
-
-    const switchLocale = (code: string) =>
-        router.post(route('locale.switch', code), {}, { preserveScroll: true });
 
     return (
         <>

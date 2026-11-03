@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Check } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
@@ -7,6 +7,7 @@ import exploreLantern from '@/images/categories/lantern.jpeg';
 import explorePottery from '@/images/categories/pottery.jpeg';
 import exploreTextile from '@/images/categories/textile.jpeg';
 import logo from '@/images/logo.png';
+import { switchLocale } from '@/lib/locale';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -106,9 +107,6 @@ export default function AuthShell({
           : 'max-w-md';
 
     const currentIndex = step === null ? -1 : STEPS.indexOf(step);
-
-    const switchLocale = (code: string) =>
-        router.post(route('locale.switch', code), {}, { preserveScroll: true });
 
     return (
         <>

@@ -264,6 +264,13 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // Cancel with reasons and, for an order paid online, the refund decision.
         Route::post('/orders/{order}/cancel', [Admin\OrderController::class, 'cancel'])->name('orders.cancel');
 
+        // Cathedis: the purchase's parcel, its slip, its status, and pickups.
+        Route::post('/orders/{order}/cathedis', [Admin\CathedisShipmentController::class, 'store'])->name('orders.cathedis.store');
+        Route::get('/orders/{order}/cathedis/label', [Admin\CathedisShipmentController::class, 'label'])->name('orders.cathedis.label');
+        Route::post('/orders/{order}/cathedis/refresh', [Admin\CathedisShipmentController::class, 'refresh'])->name('orders.cathedis.refresh');
+        Route::post('/cathedis/pickup', [Admin\CathedisShipmentController::class, 'pickup'])->name('cathedis.pickup');
+        Route::get('/cathedis/cities', [Admin\CathedisShipmentController::class, 'cities'])->name('cathedis.cities');
+
         // Invoices — one per purchase, the PDF the buyer downloads.
         Route::get('/invoices', [Admin\InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{purchase}', [Admin\InvoiceController::class, 'download'])->name('invoices.download');

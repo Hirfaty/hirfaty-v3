@@ -156,6 +156,39 @@ test('search ignores case', function () {
     }
 });
 
+test('search ignores accents, whichever side carries them', function () {
+    listed(['name' => 'Tajine émaillé']);
+    listed(['name' => 'Coeur de cèdre']);
+    listed(['name' => 'ÉTAGÈRE ANCIENNE']);
+    listed(['name' => "Cafe\u{0301} marocain"]);
+
+    foreach ([
+        'emaille' => 'Tajine émaillé',
+        'EMAILLÉ' => 'Tajine émaillé',
+        'Tâjïne' => 'Tajine émaillé',
+        'cœur de cedre' => 'Coeur de cèdre',
+        'etagere' => 'ÉTAGÈRE ANCIENNE',
+        'étagère' => 'ÉTAGÈRE ANCIENNE',
+        'cafe' => "Cafe\u{0301} marocain",
+    ] as $needle => $name) {
+        $this->get(route('products.index', ['search' => $needle]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('products', 1)
+                ->where('products.0.name', $name));
+    }
+});
+
+test('search reaches the description and the shop without their accents', function () {
+    listed(['name' => 'Autre chose', 'description' => 'Une pièce décorée à la main']);
+
+    $this->get(route('products.index', ['search' => 'decoree']))
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
+
+    // The shop in this file is "Atelier Fès".
+    $this->get(route('products.index', ['search' => 'atelier fes']))
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
+});
+
 test('search matches the product name, its description and its shop', function () {
     listed(['name' => 'Tajine émaillé']);
     listed(['name' => 'Autre chose', 'description' => 'Un tajine décrit ici']);

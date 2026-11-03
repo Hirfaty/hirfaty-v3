@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
+import { switchLocale } from '@/lib/locale';
 
 const LOCALES = [
     { code: 'fr', label: 'Français' },
@@ -104,7 +105,10 @@ export default function RegionMenu({ light = false }: { light?: boolean }) {
                             key={l.code}
                             label={l.label}
                             active={locale === l.code}
-                            onSelect={() => go('locale.switch', l.code)}
+                            onSelect={() => {
+                                setOpen(false);
+                                switchLocale(l.code);
+                            }}
                         />
                     ))}
                 </div>

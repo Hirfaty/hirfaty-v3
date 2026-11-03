@@ -32,6 +32,7 @@ class AdminProductListService
 
     public function __construct(
         private readonly SpreadsheetExportService $spreadsheets,
+        private readonly ProductSearchService $search,
     ) {}
 
     /** The query-string filters the table, its counts and the export share. */
@@ -50,10 +51,12 @@ class AdminProductListService
     {
         return Product::query()
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('sku', 'like', "%{$search}%")
-                    ->orWhereHas('variants', fn ($q) => $q->where('sku', 'like', "%{$search}%"))
-                    ->orWhereHas('store', fn ($q) => $q->where('store_name', 'like', "%{$search}%"));
+                $needle = $this->search->needle($search);
+
+                $q->whereRaw($this->search->foldedLike('products.name'), [$needle])
+                    ->orWhereRaw($this->search->foldedLike('products.sku'), [$needle])
+                    ->orWhereHas('variants', fn ($q) => $q->whereRaw($this->search->foldedLike('product_variants.sku'), [$needle]))
+                    ->orWhereHas('store', fn ($q) => $q->whereRaw($this->search->foldedLike('stores.store_name'), [$needle]));
             }))
             ->when($filters['category_id'] ?? null, fn ($query, $category) => $query->where('category_id', $category))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))

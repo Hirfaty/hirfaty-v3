@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\Admin\CardRefundNeeded;
+use App\Notifications\Admin\CathedisDeliveryIssue;
 use App\Notifications\Admin\NewPurchaseAlert;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Notifications\DatabaseNotification;
@@ -143,6 +144,7 @@ class AdminNotificationService
         [$title, $body, $url] = match ($notification->type) {
             NewPurchaseAlert::KIND => $this->presentPurchase($data),
             CardRefundNeeded::KIND => $this->presentRefund($data),
+            CathedisDeliveryIssue::KIND => $this->presentCathedisIssue($data),
             default => ['Notification', '', route('admin.notifications.index')],
         };
 
@@ -213,6 +215,23 @@ class AdminNotificationService
                     default => null,
                 },
             ])),
+            $url,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function presentCathedisIssue(array $data): array
+    {
+        $url = ! empty($data['order_reference'])
+            ? route('admin.orders.show', $data['order_reference'])
+            : route('admin.orders.index');
+
+        return [
+            trim('Livraison Cathedis à traiter — '.($data['reference'] ?? '')),
+            implode(' · ', array_filter([$data['status'] ?? null, $data['code'] ?? null])),
             $url,
         ];
     }

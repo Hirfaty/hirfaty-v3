@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
+import { switchLocale } from '@/lib/locale';
 import { Section } from './form';
 
 const LOCALES = [
@@ -71,7 +72,7 @@ export default function PreferencesSection() {
                                 key={l.code}
                                 label={l.label}
                                 active={locale === l.code}
-                                onSelect={() => go('locale.switch', l.code)}
+                                onSelect={() => switchLocale(l.code)}
                             />
                         ))}
                     </div>

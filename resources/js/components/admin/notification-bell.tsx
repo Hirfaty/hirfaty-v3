@@ -1,5 +1,5 @@
 import { Link, router, usePage, usePoll } from '@inertiajs/react';
-import { Bell, CheckCheck, CreditCard, ShoppingBag } from 'lucide-react';
+import { Bell, CheckCheck, CreditCard, ShoppingBag, Truck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
     DropdownMenu,
@@ -14,6 +14,7 @@ import type { AdminNotification, PageProps } from '@/types';
 const KIND_ICON: Record<string, LucideIcon> = {
     'purchase.placed': ShoppingBag,
     'payment.refund_needed': CreditCard,
+    'cathedis.delivery_issue': Truck,
 };
 
 export function notificationIcon(kind: string): LucideIcon {

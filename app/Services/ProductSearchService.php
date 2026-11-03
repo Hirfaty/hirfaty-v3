@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class ProductSearchService
 {
@@ -12,12 +13,24 @@ class ProductSearchService
     public const MIN_TERM_LENGTH = 2;
 
     /**
+     * What each accented letter is searched as. The last row is the same
+     * accents stored as a separate combining mark, as text pasted from a Mac
+     * can be.
+     */
+    private const FOLDS = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
+        'ç' => 'c',
+        'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ñ' => 'n',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'œ' => 'oe',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ý' => 'y', 'ÿ' => 'y',
+        "\u{0300}" => '', "\u{0301}" => '', "\u{0302}" => '', "\u{0303}" => '', "\u{0308}" => '', "\u{0327}" => '',
+    ];
+
+    /**
      * Narrow a product query to rows matching a free-text term.
-     *
-     * Case-folded on both sides rather than a bare LIKE: Postgres — which this
-     * app runs — treats LIKE as case-sensitive, so a shopper typing "tajine"
-     * matched nothing against "Tajine". LOWER() is understood by Postgres,
-     * MySQL and the SQLite used in tests alike, unlike ILIKE.
      *
      * Shared by the listing and the header's live suggestions so the two can
      * never disagree about what a search means.
@@ -27,16 +40,58 @@ class ProductSearchService
      */
     public function applyTerm(Builder $query, string $term): Builder
     {
-        $needle = '%'.mb_strtolower($term).'%';
+        $needle = $this->needle($term);
 
         return $query->where(function (Builder $q) use ($needle) {
-            $q->whereRaw('LOWER(products.name) LIKE ?', [$needle])
-                ->orWhereRaw('LOWER(products.description) LIKE ?', [$needle])
+            $q->whereRaw($this->foldedLike('products.name'), [$needle])
+                ->orWhereRaw($this->foldedLike('products.description'), [$needle])
                 ->orWhereHas(
                     'store',
-                    fn ($s) => $s->whereRaw('LOWER(stores.store_name) LIKE ?', [$needle])
+                    fn ($s) => $s->whereRaw($this->foldedLike('stores.store_name'), [$needle])
                 );
         });
+    }
+
+    /**
+     * The LIKE pattern for a term, to bind to foldedLike(): lower case and
+     * without accents, so "EMAILLE" and "émaillé" search for the same thing.
+     */
+    public function needle(string $term): string
+    {
+        return '%'.strtr(mb_strtolower($term), self::FOLDS).'%';
+    }
+
+    /**
+     * A `column LIKE ?` that ignores case and accents in the column.
+     *
+     * Folded on both sides rather than a bare LIKE: Postgres — which this app
+     * runs — treats LIKE as case- and accent-sensitive, so a shopper typing
+     * "tajine emaille" matched nothing against "Tajine émaillé".
+     *
+     * Postgres uses its unaccent extension: the REPLACE() chain below took six
+     * times as long over 5,000 products, too slow for suggestions fired as the
+     * shopper types. The chain is for the SQLite used locally and in tests,
+     * whose LOWER() leaves non-ASCII letters alone — hence the capitals.
+     *
+     * `$column` goes into the SQL as written: never pass it user input.
+     */
+    public function foldedLike(string $column): string
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            return "unaccent(LOWER({$column})) LIKE unaccent(?)";
+        }
+
+        $sql = "LOWER({$column})";
+
+        foreach (self::FOLDS as $accented => $plain) {
+            $sql = "REPLACE({$sql}, '{$accented}', '{$plain}')";
+
+            if (($capital = mb_strtoupper($accented)) !== $accented) {
+                $sql = "REPLACE({$sql}, '{$capital}', '{$plain}')";
+            }
+        }
+
+        return "{$sql} LIKE ?";
     }
 
     /**
@@ -72,8 +127,8 @@ class ProductSearchService
              * mentions one. `id` breaks ties so the list is stable between
              * keystrokes rather than reshuffling under the cursor.
              */
-            ->orderByRaw('CASE WHEN LOWER(products.name) LIKE ? THEN 0 ELSE 1 END', [
-                '%'.mb_strtolower($term).'%',
+            ->orderByRaw('CASE WHEN '.$this->foldedLike('products.name').' THEN 0 ELSE 1 END', [
+                $this->needle($term),
             ])
             ->orderByDesc('id')
             ->limit($limit)

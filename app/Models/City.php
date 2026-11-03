@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property array<string, string>|null $name_translations Arabic and English names, keyed by locale.
  * @property-read string $translated_name
  * @property string|null $region
+ * @property int|null $cathedis_city_id
+ * @property int|null $cathedis_sector_id
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Collection<int, User> $users
@@ -41,7 +43,7 @@ class City extends Model
     /** The languages `name_translations` holds a name for. */
     public const TRANSLATED_LOCALES = ['ar', 'en'];
 
-    protected $fillable = ['name', 'name_translations', 'region'];
+    protected $fillable = ['name', 'name_translations', 'region', 'cathedis_city_id', 'cathedis_sector_id'];
 
     /**
      * Always expose the name in the visitor's language, so any serialised City
@@ -91,5 +93,16 @@ class City extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    /** The city Cathedis knows this one by — linked by `cathedis:sync-cities`. */
+    public function cathedisCity()
+    {
+        return $this->belongsTo(CathedisCity::class);
+    }
+
+    public function cathedisSector()
+    {
+        return $this->belongsTo(CathedisSector::class);
     }
 }

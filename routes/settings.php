@@ -5,7 +5,9 @@ use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', '/settings/profile');
+    // A plain GET rather than Route::redirect(): that one answers every verb,
+    // QUERY included, and Wayfinder's generated types reject the QUERY method.
+    Route::get('settings', fn () => redirect('/settings/profile'));
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');

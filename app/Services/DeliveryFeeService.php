@@ -8,7 +8,6 @@ use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
 use Closure;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -56,6 +55,7 @@ class DeliveryFeeService
     public function __construct(
         private readonly WeightPricingService $weightPricing,
         private readonly ProductShippingService $shipping,
+        private readonly CountryService $countries,
     ) {}
 
     /**
@@ -177,7 +177,6 @@ class DeliveryFeeService
 
         $ratesByService = DeliveryRate::query()
             ->whereIn('delivery_service_id', $services->pluck('id'))
-            ->orderBy('country_name')
             ->get()
             ->groupBy('delivery_service_id');
 
@@ -432,20 +431,24 @@ class DeliveryFeeService
     /**
      * Turn a service's rate rows into the two shapes the checkout page uses.
      *
+     * Countries are named and sorted in the visitor's language: the French
+     * `country_name` on the row, Arabic and English by ISO code
+     * (CountryService).
+     *
      * @param  Collection<int, DeliveryRate>  $rates
      * @param  array<int, float>|null  $zoneFees  This basket's price per zone, for a weight-priced service.
      * @return array{countries: array<int, array{code: string, name: string, fee: float|null}>, cityFees: array<int, float>}
      */
     private function cardFrom(Collection $rates, ?array $zoneFees = null): array
     {
-        $countries = $rates
+        $countries = $this->countries->sortByName($rates
             ->groupBy('country_code')
             ->map(function ($group, $code) use ($zoneFees) {
                 $flat = $group->firstWhere('city_id', null);
 
                 return [
                     'code' => (string) $code,
-                    'name' => $group->first()->country_name,
+                    'name' => $this->countries->name((string) $code, stored: $group->first()->country_name),
                     // Null for Morocco, which has no country-level row: its
                     // fee only exists once a city is chosen. Null too for a
                     // zone with no grid — a country that cannot be priced.
@@ -456,9 +459,7 @@ class DeliveryFeeService
                     },
                 ];
             })
-            // Accents folded, or "Égypte" and "États-Unis" sort after "Zimbabwe".
-            ->sortBy(fn (array $country) => Str::lower(Str::ascii($country['name'])))
-            ->values()
+            ->values())
             ->all();
 
         $cityFees = $rates

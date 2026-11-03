@@ -136,6 +136,39 @@ test('search matches the product sku or one of its variant skus', function () {
         );
 });
 
+test('search ignores case and accents in the name, the sku and the shop', function () {
+    makeProduct('Tapis Berbère', 'published', $this->store->id, $this->tapis->id)
+        ->update(['sku' => 'TAP-001']);
+    $babouches = makeProduct('Babouches', 'published', $this->store->id, $this->tapis->id);
+    ProductVariant::create(['product_id' => $babouches->id, 'sku' => 'BAB-RED-40', 'stock' => 1]);
+
+    $otherSeller = User::factory()->create(['role' => 'seller']);
+    $otherStore = Store::create([
+        'user_id' => $otherSeller->id,
+        'store_name' => 'Atelier Zellidjé',
+        'slug' => 'atelier-zellidje',
+        'category_id' => $this->potterie->id,
+        'city_id' => City::create(['name' => 'Marrakech'])->id,
+    ]);
+    makeProduct('Plateau', 'published', $otherStore->id, $this->potterie->id);
+
+    foreach ([
+        'tapis berbere' => 'Tapis Berbère',
+        'TAPIS BERBÉRÉ' => 'Tapis Berbère',
+        'tap-001' => 'Tapis Berbère',
+        'bab-red' => 'Babouches',
+        'zellidje' => 'Plateau',
+    ] as $needle => $name) {
+        $this->actingAs($this->admin)
+            ->get(route('admin.products.index', ['search' => $needle]))
+            ->assertInertia(
+                fn ($page) => $page
+                    ->has('products.data', 1)
+                    ->where('products.data.0.name', $name)
+            );
+    }
+});
+
 test('category filter and status counts compose together', function () {
     makeProduct('Tapis pending', 'pending_review', $this->store->id, $this->tapis->id);
     makeProduct('Vase pending', 'pending_review', $this->store->id, $this->potterie->id);

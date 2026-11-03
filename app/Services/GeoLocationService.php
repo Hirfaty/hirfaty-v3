@@ -10,12 +10,14 @@ use Illuminate\Support\Facades\Log;
 /**
  * Which country a request came from, as a two-letter code.
  *
- * Used only to pick a default display currency, so every failure path here
- * returns null and lets the caller fall back to the base currency. Nothing
- * about access, pricing correctness or money depends on this being right —
- * which is just as well, because IP geolocation routinely is not (VPNs,
- * travellers, mobile carriers routing through another country). That is why
- * the buyer can always override it from the header.
+ * Used only to pick defaults — the display currency, and the country a new
+ * checkout address opens on (CountryService) — so every failure path here
+ * returns null and lets the caller fall back to the base currency or Morocco.
+ * Nothing about access, pricing correctness or money depends on this being
+ * right — which is just as well, because IP geolocation routinely is not
+ * (VPNs, travellers, mobile carriers routing through another country). That
+ * is why the buyer can always override it: from the header, or the country
+ * field.
  */
 class GeoLocationService
 {

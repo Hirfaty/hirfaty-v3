@@ -93,6 +93,16 @@ test('suggestions ignore case and match the shop name too', function () {
         ->assertJsonCount(2, 'products');
 });
 
+test('suggestions ignore accents and still rank a name match first', function () {
+    suggestable(['name' => 'Autre chose', 'description' => 'Un tajine émaillé décrit ici']);
+    suggestable(['name' => 'Tajine émaillé']);
+
+    $this->getJson(route('search.suggestions', ['q' => 'EMAILLE']))
+        ->assertJsonCount(2, 'products')
+        ->assertJsonPath('products.0.name', 'Tajine émaillé')
+        ->assertJsonPath('total', 2);
+});
+
 test('a name match is listed above a description-only match', function () {
     // Someone typing "tajine" wants the tajines, not every blurb that
     // mentions one.

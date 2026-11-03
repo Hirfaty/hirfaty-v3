@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Media;
+use App\Services\Cathedis\CathedisShipmentService;
 use App\Services\MediaHealthService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Inspiring;
@@ -40,6 +41,33 @@ Schedule::command(DispatchQueueCheckJobsCommand::class)->everyMinute();
  * figures are indicative, and prices settle in MAD regardless.
  */
 Schedule::command('currency:refresh-rates')->dailyAt('04:30');
+
+/*
+ * ── Cathedis cities ─────────────────────────────────────────────────
+ *
+ * Cathedis adds localities and sectors to its list every few weeks; this
+ * picks them up and links any locality of our card still waiting for one
+ * (CathedisCitySyncService). Weekly is plenty, and a failed run only leaves
+ * last week's list in place.
+ */
+Schedule::command('cathedis:sync-cities')->weeklyOn(1, '04:45');
+
+/*
+ * ── Cathedis parcels ────────────────────────────────────────────────
+ *
+ * Reads every parcel still on its way and carries its status onto the
+ * orders: "shipped" once Cathedis has collected it, "delivered" once it is
+ * delivered (the buyer is emailed both times), tracking notes in between, and
+ * an alert in the admin bell when it is refused or cancelled at the door —
+ * see CathedisShipmentService::refreshOpen. Cathedis offers no webhook.
+ */
+Artisan::command('cathedis:refresh-deliveries', function (CathedisShipmentService $shipments) {
+    $result = $shipments->refreshOpen();
+
+    $this->info("{$result['checked']} Cathedis parcel(s) checked, {$result['changed']} moved, {$result['failed']} failed.");
+})->purpose("Read Cathedis parcels' statuses and carry them onto the orders");
+
+Schedule::command('cathedis:refresh-deliveries')->everyThirtyMinutes()->withoutOverlapping();
 
 /*
  * ── Unpaid card purchases ───────────────────────────────────────────

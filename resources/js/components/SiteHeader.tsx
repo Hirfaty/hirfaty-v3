@@ -26,6 +26,7 @@ import { useCartSummary } from '@/hooks/use-cart-summary';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import { switchLocale } from '@/lib/locale';
 
 const locales = [
     { code: 'fr', label: 'FR' },
@@ -149,9 +150,9 @@ export const SiteHeader = ({
         );
     };
 
-    const switchLocale = (code: string) => {
+    const chooseLocale = (code: string) => {
         setMenuOpen(false);
-        router.post(route('locale.switch', code), {}, { preserveScroll: true });
+        switchLocale(code);
     };
 
     const switchCurrency = (code: string) => {
@@ -803,7 +804,7 @@ export const SiteHeader = ({
                                                 <button
                                                     key={l.code}
                                                     onClick={() =>
-                                                        switchLocale(l.code)
+                                                        chooseLocale(l.code)
                                                     }
                                                     aria-current={
                                                         locale === l.code

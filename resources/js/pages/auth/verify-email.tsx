@@ -1,10 +1,11 @@
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Check, LogOut, Mail } from 'lucide-react';
 import VaseIcon from '@/components/home/VaseIcon';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
 import zellij from '@/images/zellij-pattern.jpg';
+import { switchLocale } from '@/lib/locale';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 import type { PageProps } from '@/types';
@@ -20,9 +21,6 @@ export default function VerifyEmail({ status }: { status?: string }) {
     const { auth } = usePage<PageProps>().props;
 
     const isLinkSent = status === 'verification-link-sent';
-
-    const switchLocale = (code: string) =>
-        router.post(route('locale.switch', code), {}, { preserveScroll: true });
 
     return (
         <>

@@ -12,6 +12,12 @@ test('profile page is displayed', function () {
     $response->assertOk();
 });
 
+test('the settings root sends you to the profile page', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/settings')
+        ->assertRedirect('/settings/profile');
+});
+
 test('profile information can be updated', function () {
     $user = User::factory()->create();
 

@@ -1,3 +1,14 @@
+# ── Local development ──────────────────────────────────────────────
+# `make dev`: a Cloudflare tunnel (its URL written into .env as
+# PAYZONE_CALLBACK_BASE_URL) plus `composer dev`. Ctrl+C stops both.
+# `make tunnel`: the tunnel alone, when `composer dev` is already running.
+# See scripts/dev-tunnel.ps1. Windows / PowerShell only.
+dev:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tunnel.ps1
+
+tunnel:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tunnel.ps1 -TunnelOnly
+
 reset:
 	php artisan migrate:fresh
 	php artisan db:seed
@@ -45,7 +56,7 @@ STAGING_DOMAIN ?= init.hirfaty.com
 CERT_EMAIL ?= creati.maroc@gmail.com
 EDGE_NETWORK = hirfaty-edge
 
-.PHONY: reset edge-network \
+.PHONY: dev tunnel reset edge-network \
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
 	prod-pull prod-release prod-deploy prod-backup media-browser media-browser-stop \

@@ -142,6 +142,8 @@ type SavedAddress = {
     city_name: string | null;
     postal_code: string | null;
     country: string;
+    /** In the visitor's language — CountryService::name(). */
+    country_name: string;
     is_default: boolean;
 };
 
@@ -231,6 +233,7 @@ const Checkout = ({
     paymentMethods,
     paypalCharge,
     defaultCountry,
+    initialCountry,
     deliveryServices,
     deliveryRates,
     buyNow,
@@ -250,11 +253,17 @@ const Checkout = ({
      * is left as it is.
      */
     buyNow: { product_slug: string | null } | null;
+    /** Morocco — the destination priced per city. */
     defaultCountry: string;
+    /**
+     * What a new address opens on: the visitor's own country when a carrier
+     * ships there, else Morocco (CountryService::preselectFor).
+     */
+    initialCountry: string;
     deliveryServices: DeliveryServiceOption[];
     deliveryRates: DeliveryRatesMap;
 }) => {
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
 
     // Default first (the query orders on is_default), so a buyer with a book
     // lands on their usual address rather than an empty form.
@@ -283,9 +292,13 @@ const Checkout = ({
                 preselected?.recipient_phone ?? customer.phone ?? '',
             address_id: preselected?.id ?? null,
             shipping_address: '',
-            city_id: cities[0]?.id ?? null,
+            // Abroad has no Moroccan city — see chooseCountry.
+            city_id:
+                initialCountry === defaultCountry
+                    ? (cities[0]?.id ?? null)
+                    : null,
             postal_code: '',
-            country: defaultCountry,
+            country: initialCountry,
             // Card through Payzone when it is on offer, else PayPal.
             payment_method: paymentMethods[0] ?? 'card',
             buy_now: buyNow !== null,
@@ -360,8 +373,9 @@ const Checkout = ({
 
     /*
      * Every country some carrier ships to: Morocco on Cathedis's card, the rest
-     * of the world on DHL's. Named in French on the cards, so sorted with
-     * French collation — "États-Unis" under E, not after "Zimbabwe".
+     * of the world on DHL's. Named in the visitor's language on the cards,
+     * so sorted with that language's collation — "États-Unis" under E, not
+     * after "Zimbabwe".
      */
     const countries = Object.values(deliveryRates)
         .flatMap((card) => card.countries)
@@ -369,7 +383,7 @@ const Checkout = ({
             (country, index, all) =>
                 all.findIndex((c) => c.code === country.code) === index,
         )
-        .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        .sort((a, b) => a.name.localeCompare(b.name, locale as string));
 
     /*
      * Switching to a country with no city list would otherwise leave the
@@ -677,7 +691,8 @@ const Checkout = ({
                                                         <span className="flex flex-wrap items-center gap-2">
                                                             <span className="font-medium text-souk-title">
                                                                 {address.label ||
-                                                                    address.city_name}
+                                                                    address.city_name ||
+                                                                    address.country_name}
                                                             </span>
                                                             {address.is_default && (
                                                                 <span className="rounded-full bg-olive/12 px-2 py-0.5 text-[10px] font-medium text-olive">
@@ -696,6 +711,10 @@ const Checkout = ({
                                                                 `, ${address.city_name}`}
                                                             {address.postal_code &&
                                                                 ` ${address.postal_code}`}
+                                                            {(address.country ||
+                                                                defaultCountry) !==
+                                                                defaultCountry &&
+                                                                `, ${address.country_name}`}
                                                         </span>
                                                     </span>
                                                 </label>

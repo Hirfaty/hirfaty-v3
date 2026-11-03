@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Buyer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Buyer\CheckoutRequest;
 use App\Http\Resources\CartLineResource;
+use App\Http\Resources\SavedAddressResource;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Order;
@@ -13,6 +14,7 @@ use App\Services\BuyNowService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CityService;
+use App\Services\CountryService;
 use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
 use App\Services\PaymentService;
@@ -135,19 +137,9 @@ class CheckoutController extends Controller
             // on is_default), so the page can pre-select without re-sorting.
             // Addresses in a destination the card no longer serves are left
             // out: they could not be priced.
-            'addresses' => $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name,name_translations'))->get()
-                ->map(fn ($address) => [
-                    'id' => $address->id,
-                    'label' => $address->label,
-                    'recipient_name' => $address->recipient_name,
-                    'recipient_phone' => $address->recipient_phone,
-                    'address_line' => $address->address_line,
-                    'city_id' => $address->city_id,
-                    'city_name' => $address->city?->translated_name,
-                    'postal_code' => $address->postal_code,
-                    'country' => $address->country,
-                    'is_default' => $address->is_default,
-                ]),
+            'addresses' => SavedAddressResource::collection(
+                $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name,name_translations'))->get(),
+            )->resolve($request),
 
             /*
              * What the account already knows, so the form opens part-filled.
@@ -185,7 +177,12 @@ class CheckoutController extends Controller
                 ? $paypal->quoteFor($currencies->resolve($request))
                 : null,
 
+            // Morocco: the destination priced per city.
             'defaultCountry' => Address::DEFAULT_COUNTRY,
+
+            // What a new address opens on: the visitor's own country when a
+            // carrier ships there, else Morocco. A saved address keeps its own.
+            'initialCountry' => app(CountryService::class)->preselectFor($request, $deliveryFees->shippableCountryCodes()),
 
             /*
              * `services` is ordered by sort_order — the order the page offers

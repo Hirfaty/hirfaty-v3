@@ -20,6 +20,8 @@ import type {
     CancellationReason,
     RefundOffer,
 } from '@/components/admin/cancel-order-dialog';
+import CathedisPanel from '@/components/admin/cathedis-panel';
+import type { CathedisPanelData } from '@/components/admin/cathedis-panel';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -86,10 +88,13 @@ const Show = ({
     group,
     payment,
     cancellationReasons,
+    cathedis,
 }: {
     group: OrderGroup;
     payment: CardPayment | null;
     cancellationReasons: CancellationReason[];
+    /** Null when the purchase does not ship with Cathedis. */
+    cathedis: CathedisPanelData | null;
 }) => {
     const { t } = useTranslation();
     const paidOnline =
@@ -556,6 +561,13 @@ const Show = ({
                                 </p>
                             )}
                     </div>
+
+                    {cathedis && (
+                        <CathedisPanel
+                            reference={group.primary_reference}
+                            data={cathedis}
+                        />
+                    )}
 
                     {/* ── Fulfilment ──────────────────────────── */}
                     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">

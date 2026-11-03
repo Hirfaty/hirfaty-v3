@@ -151,4 +151,27 @@ return [
         'measurement_id' => env('GOOGLE_ANALYTICS_ID', 'G-GJ98MN1C4R'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cathedis (delivery in Morocco)
+    |--------------------------------------------------------------------------
+    |
+    | The tracker API behind Cathedis's client space. The city list
+    | (`cathedis:sync-cities`) is public and needs no credentials; creating
+    | deliveries logs in with the client account Cathedis opened for Hirfaty.
+    | api.cathedis.delivery and app.cathedis.delivery answer the same.
+    |
+    | The pickup point is optional: without it a pickup request goes to the
+    | account's own address; with it (an id from Cathedis's client space),
+    | Cathedis is sent to that point.
+    |
+    */
+
+    'cathedis' => [
+        'url' => env('CATHEDIS_API_URL', 'https://api.cathedis.delivery'),
+        'username' => env('CATHEDIS_USERNAME'),
+        'password' => env('CATHEDIS_PASSWORD'),
+        'pickup_point_id' => env('CATHEDIS_PICKUP_POINT_ID'),
+    ],
+
 ];

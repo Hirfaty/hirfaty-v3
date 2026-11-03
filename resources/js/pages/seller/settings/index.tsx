@@ -470,8 +470,11 @@ export default function SellerSettings({
                             <form
                                 onSubmit={(event) => {
                                     event.preventDefault();
+                                    // Remounts, so the page's links rebuild in
+                                    // the new language — see lib/locale.ts.
                                     localeForm.patch(
                                         route('seller.settings.locale.update'),
+                                        { preserveState: 'errors' },
                                     );
                                 }}
                                 className="space-y-4"

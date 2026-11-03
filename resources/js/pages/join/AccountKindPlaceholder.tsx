@@ -1,8 +1,9 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import { switchLocale } from '@/lib/locale';
 import { login } from '@/routes';
 
 const locales = [
@@ -36,9 +37,6 @@ export default function AccountKindPlaceholder({
     Icon: LucideIcon;
 }) {
     const { t, locale } = useTranslation();
-
-    const switchLocale = (code: string) =>
-        router.post(route('locale.switch', code), {}, { preserveScroll: true });
 
     return (
         <>

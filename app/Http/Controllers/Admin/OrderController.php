@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\AdminOrderListService;
+use App\Services\Cathedis\CathedisShipmentService;
 use App\Services\OrderCancellationService;
 use App\Services\OrderStatusService;
 use App\Services\RefundService;
@@ -86,7 +87,7 @@ class OrderController extends Controller
      * Route-model-bound on a single order because that is what a link carries;
      * the group is reassembled from it here.
      */
-    public function show(Order $order, OrderCancellationService $cancellations, RefundService $refunds)
+    public function show(Order $order, OrderCancellationService $cancellations, RefundService $refunds, CathedisShipmentService $cathedis)
     {
         $orders = $order->groupOrders()
             ->with(['buyer', 'store', 'items.product.images', 'city'])
@@ -108,6 +109,8 @@ class OrderController extends Controller
             ),
             // The reasons the cancel dialog offers, labelled in French.
             'cancellationReasons' => $cancellations->options(),
+            // The Cathedis parcel, or why it cannot be created yet; null off Cathedis.
+            'cathedis' => $cathedis->panel($orders),
             'payment' => $payment ? [
                 'provider' => $payment->provider,
                 'charge_id' => $payment->charge_id,
