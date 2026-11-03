@@ -195,6 +195,20 @@ test('the workshops export lists shops with their owner, under the status tab', 
         ->and(end($rows[1]))->toContain('/stores/atelier-fes');
 });
 
+test('the workshops export follows the category filter', function () {
+    exportStore('Atelier Fès');
+    $leather = Category::create(['slug' => 'cuir', 'name' => ['fr' => 'Cuir', 'ar' => 'جلد', 'en' => 'Leather']]);
+    exportStore('Tannerie Safi')->update(['category_id' => $leather->id]);
+
+    $rows = listExportCsv(
+        $this->actingAs($this->admin)
+            ->get(route('admin.stores.export', ['format' => 'csv', 'category_id' => $leather->id]))
+    );
+
+    expect($rows)->toHaveCount(2)
+        ->and($rows[1][1])->toBe('Tannerie Safi');
+});
+
 // ── Delivery rates ──────────────────────────────────────────────────────────
 
 test('the delivery rates export is the rate card, cities and countries alike', function () {

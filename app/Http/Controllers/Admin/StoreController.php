@@ -19,8 +19,9 @@ class StoreController extends Controller
     {
         $search = $request->string('search')->trim()->value() ?: null;
         $status = $request->input('status') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
 
-        $query = $list->query(['search' => $search, 'status' => $status])
+        $query = $list->query(['search' => $search, 'status' => $status, 'category_id' => $categoryId])
             ->with(['user', 'category', 'city'])
             ->withCount('products');
 
@@ -33,8 +34,8 @@ class StoreController extends Controller
             ->withQueryString();
 
         // Counts ignore the active status filter — otherwise every tab but the
-        // selected one reads 0 — while still respecting the search.
-        $counts = $list->query(['search' => $search])
+        // selected one reads 0 — while still respecting the search and category.
+        $counts = $list->query(['search' => $search, 'category_id' => $categoryId])
             ->selectRaw('verification_status, count(*) as count')
             ->groupBy('verification_status')
             ->pluck('count', 'verification_status');
@@ -67,7 +68,9 @@ class StoreController extends Controller
             'filters' => [
                 'search' => $search ?? '',
                 'status' => $status ?? '',
+                'category_id' => $categoryId ?? '',
             ],
+            'categories' => $list->categoryOptions(),
             'statusCounts' => $counts,
             'statuses' => Store::VERIFICATION_STATUSES,
         ]);
@@ -75,7 +78,7 @@ class StoreController extends Controller
 
     /**
      * Download the workshops the admin is looking at — every page, under the
-     * current search and status tab — as CSV or Excel.
+     * current search, status tab and category — as CSV or Excel.
      */
     public function export(Request $request, AdminStoreListService $list)
     {
@@ -83,6 +86,7 @@ class StoreController extends Controller
             'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::in(Store::VERIFICATION_STATUSES)],
+            'category_id' => ['nullable', 'integer'],
         ]);
 
         return $list->export($data['format'], $data);

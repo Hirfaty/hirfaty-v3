@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ChevronRight,
     Edit3,
@@ -90,6 +90,15 @@ const isComplete = (cat: Category, locales: CategoryLocale[]) =>
     locales.every((loc) => cat.name?.[loc]?.trim());
 
 /**
+ * The name this page calls a category by: French whatever language the admin
+ * last browsed the site in — `translated_name` follows the session, and the
+ * panel is French. Falls back for a row whose French is still missing, which
+ * the "Incomplet" badge is already flagging.
+ */
+const frenchName = (cat: Category) =>
+    cat.name?.fr?.trim() || cat.translated_name;
+
+/**
  * The parent picker. A checkbox list rather than a `<select multiple>`: a
  * subcategory can be filed under several crafts at once, and a native
  * multi-select hides that behind a ctrl-click nobody discovers.
@@ -132,11 +141,37 @@ function ParentPicker({
                             onChange={() => toggle(p.id)}
                             className="h-4 w-4 shrink-0 rounded border-border accent-ink"
                         />
-                        {p.translated_name}
+                        {frenchName(p)}
                     </label>
                 ))
             )}
         </div>
+    );
+}
+
+/** A count that opens the matching list; a zero has nothing to open. */
+function CountLink({
+    count,
+    href,
+    label,
+}: {
+    count: number;
+    href: string;
+    label: string;
+}) {
+    if (count === 0) {
+        return <span className="text-ink-soft/60">0</span>;
+    }
+
+    return (
+        <Link
+            href={href}
+            title={label}
+            aria-label={`${label} (${count})`}
+            className="font-medium text-ink underline decoration-ink/25 underline-offset-4 transition hover:decoration-ink"
+        >
+            {count}
+        </Link>
     );
 }
 
@@ -213,7 +248,7 @@ const CategoryRow = ({
                             <p
                                 className={`text-sm ${depth === 0 ? 'font-semibold text-ink' : 'font-medium text-ink'}`}
                             >
-                                {cat.translated_name}
+                                {frenchName(cat)}
                             </p>
                             {depth === 0 && childCount > 0 && (
                                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
@@ -275,10 +310,22 @@ const CategoryRow = ({
             </td>
 
             <td className="px-5 py-3 text-right text-sm text-ink">
-                {cat.products_count}
+                <CountLink
+                    count={cat.products_count}
+                    href={route('admin.products.index', {
+                        category_id: cat.id,
+                    })}
+                    label={`Voir les produits de ${frenchName(cat)}`}
+                />
             </td>
             <td className="px-5 py-3 text-right text-sm text-ink">
-                {cat.stores_count}
+                <CountLink
+                    count={cat.stores_count}
+                    href={route('admin.stores.index', {
+                        category_id: cat.id,
+                    })}
+                    label={`Voir les ateliers de ${frenchName(cat)}`}
+                />
             </td>
 
             <td className="px-5 py-3">
@@ -288,7 +335,7 @@ const CategoryRow = ({
                         size="icon"
                         className="h-8 w-8"
                         onClick={onEdit}
-                        aria-label={`Modifier ${cat.translated_name}`}
+                        aria-label={`Modifier ${frenchName(cat)}`}
                     >
                         <Edit3 className="h-3.5 w-3.5" />
                     </Button>
@@ -303,7 +350,7 @@ const CategoryRow = ({
                                 ? 'Des produits ou boutiques y sont rattachés'
                                 : undefined
                         }
-                        aria-label={`Supprimer ${cat.translated_name}`}
+                        aria-label={`Supprimer ${frenchName(cat)}`}
                     >
                         <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -746,7 +793,8 @@ const Index = ({
                 <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>
-                            Modifier «&nbsp;{editTarget?.translated_name}
+                            Modifier «&nbsp;
+                            {editTarget && frenchName(editTarget)}
                             &nbsp;»
                         </DialogTitle>
                         <DialogDescription>
@@ -877,7 +925,8 @@ const Index = ({
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>
-                            Supprimer «&nbsp;{deleteTarget?.translated_name}
+                            Supprimer «&nbsp;
+                            {deleteTarget && frenchName(deleteTarget)}
                             &nbsp;» ?
                         </AlertDialogTitle>
                         <AlertDialogDescription>

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Category;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -40,14 +42,31 @@ class AdminStoreListService
     /**
      * The filters and nothing else — no eager loads, no ordering.
      *
-     * @param  array{search?: ?string, status?: ?string}  $filters
+     * @param  array{search?: ?string, status?: ?string, category_id?: ?int}  $filters
      * @return Builder<Store>
      */
     public function query(array $filters): Builder
     {
         return Store::query()
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('store_name', 'like', "%{$search}%"))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('verification_status', $status));
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('verification_status', $status))
+            ->when($filters['category_id'] ?? null, fn ($query, $category) => $query->where('category_id', $category));
+    }
+
+    /**
+     * The page's category filter, named in French like the rest of the panel.
+     *
+     * @return Collection<int, array{id: int, name: string}>
+     */
+    public function categoryOptions(): Collection
+    {
+        return Category::all()
+            ->map(fn (Category $category) => [
+                'id' => $category->id,
+                'name' => $category->nameFor(Category::FALLBACK_LOCALE),
+            ])
+            ->sortBy('name')
+            ->values();
     }
 
     /**

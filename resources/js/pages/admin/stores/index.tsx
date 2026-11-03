@@ -84,16 +84,19 @@ const FIELD_LABELS: Record<string, string> = {
 interface Filters {
     search: string;
     status: string;
+    category_id: number | '';
 }
 
 const Index = ({
     stores,
     filters,
+    categories,
     statusCounts,
     statuses,
 }: PageProps & {
     stores: PaginatedData<StoreRow>;
     filters: Filters;
+    categories: { id: number; name: string }[];
     statusCounts: Record<string, number>;
     statuses: VerificationStatus[];
 }) => {
@@ -113,7 +116,11 @@ const Index = ({
         const timer = setTimeout(() => {
             router.get(
                 route('admin.stores.index'),
-                { status: filters.status, search: search || undefined },
+                {
+                    status: filters.status,
+                    category_id: filters.category_id || undefined,
+                    search: search || undefined,
+                },
                 {
                     preserveState: true,
                     replace: true,
@@ -129,7 +136,23 @@ const Index = ({
     const setStatus = (status: string) => {
         router.get(
             route('admin.stores.index'),
-            { search: search || undefined, status: status || undefined },
+            {
+                search: search || undefined,
+                status: status || undefined,
+                category_id: filters.category_id || undefined,
+            },
+            { preserveState: true },
+        );
+    };
+
+    const setCategory = (categoryId: string) => {
+        router.get(
+            route('admin.stores.index'),
+            {
+                search: search || undefined,
+                status: filters.status || undefined,
+                category_id: categoryId || undefined,
+            },
             { preserveState: true },
         );
     };
@@ -270,19 +293,34 @@ const Index = ({
                 })}
             </div>
 
-            {/* ── Search ───────────────────────────────────── */}
-            <div className="relative max-w-md">
-                {searching ? (
-                    <Loader2 className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin text-ink-soft/50" />
-                ) : (
-                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
-                )}
-                <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Rechercher un atelier…"
-                    className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
-                />
+            {/* ── Search & filters ─────────────────────────── */}
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="relative max-w-md min-w-60 flex-1">
+                    {searching ? (
+                        <Loader2 className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 animate-spin text-ink-soft/50" />
+                    ) : (
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft/50" />
+                    )}
+                    <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Rechercher un atelier…"
+                        className="w-full rounded-lg border border-border bg-card py-2.5 pr-3 pl-9 text-sm text-ink shadow-sm transition placeholder:text-ink-soft/60 focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                    />
+                </div>
+                <select
+                    value={filters.category_id}
+                    onChange={(e) => setCategory(e.target.value)}
+                    aria-label="Filtrer par catégorie"
+                    className="rounded-lg border border-border bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition focus:border-ink focus:ring-2 focus:ring-ink/10 focus:outline-none"
+                >
+                    <option value="">Toutes les catégories</option>
+                    {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                            {c.name}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* ── Table ────────────────────────────────────── */}
