@@ -59,9 +59,11 @@ EDGE_NETWORK = hirfaty-edge
 .PHONY: dev tunnel reset edge-network \
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
-	prod-pull prod-release prod-deploy prod-backup media-browser media-browser-stop \
+	prod-pull prod-release prod-deploy prod-backup prod-backup-list prod-backup-check \
+	media-browser media-browser-stop \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
-	stage-migrate stage-db-reset stage-seed stage-artisan stage-backup \
+	stage-migrate stage-db-reset stage-seed stage-artisan \
+	stage-backup stage-backup-list stage-backup-check \
 	stage-pull stage-release stage-deploy \
 	proxy-build proxy-up proxy-down proxy-restart proxy-logs proxy-reload \
 	proxy-htpasswd proxy-cert-prod proxy-cert-staging proxy-cert-renew
@@ -200,20 +202,34 @@ prod-pull:
 # What you run by hand on the box: pull, then release.
 prod-deploy: prod-pull prod-release
 
-# Database + every photo, together in one dated folder under
-# /var/backups/hirfaty, keeping the newest 30 (KEEP=n to change) — see
+# Database, every photo and this checkout's untracked config, encrypted here
+# and streamed to one dated folder in Cloudflare R2 (prod/ in the bucket) — see
 # docker/scripts/backup.sh. Scheduled nightly by hirfaty-backup.timer; run by
-# hand before anything risky (a migration, a SeaweedFS change).
+# hand before anything risky (a migration, a SeaweedFS change). All the backup
+# targets need sudo: the settings in /etc/hirfaty/backup.env are root-only.
 prod-backup:
-	./docker/scripts/backup.sh
+	BACKUP_ENV=prod ./docker/scripts/backup.sh
+
+# Every backup in R2, newest first. A folder without _complete shows as FAILED.
+prod-backup-list:
+	./docker/scripts/restore.sh list prod
+
+# Proves a backup restores, touching nothing live: asks for the private key,
+# loads the dump into a throwaway Postgres, prints row counts, lists the media
+# archive, removes everything. Newest complete backup, or BACKUP=<name>. A real
+# restore is described at the top of docker/scripts/restore.sh.
+prod-backup-check:
+	./docker/scripts/restore.sh check prod $(BACKUP)
 
 # The read-only photo browser (docker/media-browser): live photos plus any
-# backup's photo archive. Off unless started; see docker-compose.prod.yml.
+# photo archive uploaded through its page. Off unless started; see
+# docker-compose.prod.yml.
 media-browser:
 	$(COMPOSE) --profile tools up -d --build media-browser
 	@echo "Running. From your computer: ssh -L 8090:127.0.0.1:8090 <user>@<server>, then open http://localhost:8090"
 
-# Stops it and throws away any backup copies it had opened.
+# Stops it and throws away any archive copies it had opened. Archives uploaded
+# through its page stay until deleted there.
 media-browser-stop:
 	$(COMPOSE) --profile tools rm -sf media-browser
 
@@ -263,13 +279,19 @@ stage-artisan:
 	$(COMPOSE_STAGE) exec app php artisan $(CMD)
 
 # Same script as prod-backup, pointed at the staging containers and a
-# separate directory — staging is still disposable (stage-db-reset wipes it
-# without ceremony) but that's not the same as "not worth a backup you can
-# grab before trying something risky against init.hirfaty.com". Not on a
-# timer by default the way prod is; run by hand, or install
-# hirfaty-staging-backup.timer if it needs to become routine.
+# separate prefix (staging/ in the same bucket) — staging is still disposable
+# (stage-db-reset wipes it without ceremony) but that's not the same as "not
+# worth a backup you can grab before trying something risky against
+# init.hirfaty.com". Not on a timer by default the way prod is; run by hand, or
+# install hirfaty-staging-backup.timer if it needs to become routine.
 stage-backup:
-	DB_CONTAINER=hirfaty-staging-db VOLUME=hirfaty-staging_seaweedfs_data BACKUP_DIR=/var/backups/hirfaty-staging ./docker/scripts/backup.sh
+	BACKUP_ENV=staging ./docker/scripts/backup.sh
+
+stage-backup-list:
+	./docker/scripts/restore.sh list staging
+
+stage-backup-check:
+	./docker/scripts/restore.sh check staging $(BACKUP)
 
 # Rebuild, migrate and restart from whatever is already checked out — the
 # deploy itself, with no git step. Split out so CI can own the git side (it

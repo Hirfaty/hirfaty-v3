@@ -3,8 +3,8 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty-staging-backup.timer
 #
-# Each run writes one dated folder (database + photos) to
-# /var/backups/hirfaty-staging, keeping the newest 30 — the same script as
+# Each run encrypts database, photos and config and streams them to one dated
+# folder in Cloudflare R2, under staging/ — the same script and bucket as
 # production's, see `make stage-backup`.
 # Check history with: systemctl status hirfaty-staging-backup.service
 #                      journalctl -u hirfaty-staging-backup.service
@@ -13,7 +13,7 @@
 # ceremony) so this timer is not installed by default the way prod's is.
 # Install it if staging starts holding anything worth not losing between
 # resets (a demo seeded by hand, data a client is reviewing, etc).
-# Runs as root so it can write to /var/backups.
+# Runs as root so it can read /etc/hirfaty/backup.env.
 
 [Unit]
 Description=Backup the Hirfaty staging database and photos
@@ -26,3 +26,5 @@ After=hirfaty.service
 Type=oneshot
 WorkingDirectory=/home/hirfaty/staging-hirfaty
 ExecStart=/usr/bin/make stage-backup
+# See hirfaty-backup.service.
+TimeoutStartSec=6h

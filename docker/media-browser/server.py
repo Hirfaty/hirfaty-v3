@@ -6,14 +6,16 @@ Two kinds of source, browsed the same way:
 
   * "live"     production's SeaweedFS, read through its filer HTTP API
                (FILER_URL) — the files the site serves right now.
-  * a backup   any media.tar.gz under /backups (docker/scripts/backup.sh).
+  * a backup   a media.tar.gz uploaded from the home page into /uploads.
                "Ouvrir" extracts it into /work and starts a private SeaweedFS
                on that copy, bound to 127.0.0.1 inside this container, so its
                photos can be listed, viewed and downloaded; "Fermer" stops it
-               and deletes the copy. The archive itself is mounted read-only
-               and never modified. An archive kept elsewhere (on someone's
-               computer) can be uploaded from the home page into /uploads
-               and is then opened the same way.
+               and deletes the copy. The archive itself is never modified.
+
+The nightly backups (docker/scripts/backup.sh) sit encrypted in Cloudflare R2,
+and this server holds no key to open them, on purpose: if it could read them,
+so could anyone who broke into it. To look inside one, download its
+media.tar.gz.age, decrypt it on your own computer and upload the result here.
 
 Nothing here can write to production storage: the live filer is only ever
 sent GET requests.
@@ -42,9 +44,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 FILER_URL = os.environ.get("FILER_URL", "http://seaweedfs:8888").rstrip("/")
 BUCKET = os.environ.get("BUCKET", "hirfaty")
-BACKUPS_DIR = os.environ.get("BACKUPS_DIR", "/backups")
 WORK_DIR = os.environ.get("WORK_DIR", "/work")
-# Archives sent from the browser (a backup kept on someone's computer, say).
+# Archives sent from the browser: a backup, decrypted on someone's computer.
 UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "/uploads")
 UPLOAD_PREFIX = "envoi-"
 MAX_UPLOAD = 5 * 1024 ** 3
@@ -57,7 +58,7 @@ READ_TIMEOUT = 15
 DIR_MODE = 1 << 31  # Go's os.ModeDir, as the filer reports it.
 MAX_RECURSIVE = 5000
 # An opened copy must leave this much free on the disk Postgres and SeaweedFS
-# also write to — the same margin docker/scripts/backup.sh keeps.
+# also write to.
 MIN_FREE = 2 * 1024 ** 3
 # A SeaweedFS volume is a handful of .dat/.idx files plus the filer's index.
 MAX_MEMBERS = 100_000
@@ -71,37 +72,25 @@ _opened: dict = {}
 # ── Sources ────────────────────────────────────────────────────────────────
 
 def backups() -> list:
-    """Every media archive — the server's backups, then uploaded ones — newest first."""
+    """Every uploaded archive, newest first (their names start with the upload's date)."""
     found = []
-    if os.path.isdir(BACKUPS_DIR):
-        for entry in os.scandir(BACKUPS_DIR):
-            # New layout: one dated folder per run holding media.tar.gz.
-            if entry.is_dir() and os.path.isfile(os.path.join(entry.path, "media.tar.gz")):
-                found.append((entry.name, os.path.join(entry.path, "media.tar.gz"), False))
-            # Older flat archives from before the combined backup.
-            elif entry.is_file() and entry.name.startswith("hirfaty-media-") and entry.name.endswith(".tar.gz"):
-                found.append((entry.name[: -len(".tar.gz")], entry.path, False))
-
     if os.path.isdir(UPLOADS_DIR):
         for entry in os.scandir(UPLOADS_DIR):
             if entry.is_file() and entry.name.endswith(".tar.gz"):
-                found.append((UPLOAD_PREFIX + entry.name[: -len(".tar.gz")], entry.path, True))
+                found.append((UPLOAD_PREFIX + entry.name[: -len(".tar.gz")], entry.path))
 
     return [
-        {"name": name, "archive": path, "size": os.path.getsize(path), "open": name in _opened, "uploaded": uploaded}
-        # Every name carries the same timestamp format; sort on it alone.
-        for name, path, uploaded in sorted(
-            found,
-            key=lambda b: (not b[2], b[0].removeprefix(UPLOAD_PREFIX).removeprefix("hirfaty-media-")),
-            reverse=True,
-        )
+        {"name": name, "archive": path, "size": os.path.getsize(path), "open": name in _opened}
+        for name, path in sorted(found, reverse=True)
     ]
 
 
 def save_upload(stream, length: int, filename: str) -> str:
     """Stream an uploaded archive to UPLOADS_DIR, check it is one, and name it."""
+    if filename.lower().endswith(".age"):
+        raise ValueError("Ce fichier est encore chiffré : déchiffrez-le d'abord sur votre ordinateur (voir les étapes sur cette page).")
     if not filename.lower().endswith((".tar.gz", ".tgz")):
-        raise ValueError("Envoyez une archive .tar.gz (le fichier media.tar.gz d'une sauvegarde).")
+        raise ValueError("Envoyez une archive .tar.gz (le fichier media.tar.gz d'une sauvegarde, déchiffré).")
     if length <= 0 or length > MAX_UPLOAD:
         raise ValueError(f"Archive vide ou trop grosse (maximum {size_label(MAX_UPLOAD)}).")
     os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -138,9 +127,9 @@ def save_upload(stream, length: int, filename: str) -> str:
 
 
 def delete_upload(name: str) -> None:
-    upload = next((b for b in backups() if b["name"] == name and b["uploaded"]), None)
+    upload = next((b for b in backups() if b["name"] == name), None)
     if upload is None:
-        raise LookupError("Seules les archives envoyées ici peuvent être supprimées.")
+        raise LookupError(f"Archive « {name} » introuvable.")
     close_backup(name)
     os.remove(upload["archive"])
 
@@ -186,7 +175,7 @@ def check_extractable(tar: tarfile.TarFile) -> None:
 def open_backup(name: str) -> None:
     archive = next((b["archive"] for b in backups() if b["name"] == name), None)
     if archive is None:
-        raise LookupError(f"Sauvegarde « {name} » introuvable.")
+        raise LookupError(f"Archive « {name} » introuvable.")
     if not safe_extraction():
         raise RuntimeError(f"Python {sys.version.split()[0]} ne sait pas extraire une archive sans risque ; reconstruisez l'image.")
 
@@ -221,6 +210,10 @@ def open_backup(name: str) -> None:
                 "-filer", f"-filer.port={filer}",
                 "-master.volumeSizeLimitMB=1024",
             ],
+            # The image's filer.toml pins the filer's index to /data/filerldb2,
+            # whatever -dir says; without this it reads an empty one and the
+            # copy's photos can't be found.
+            env={**os.environ, "WEED_LEVELDB2_DIR": os.path.join(target, "filerldb2")},
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -536,17 +529,25 @@ class Handler(BaseHTTPRequestHandler):
                 f" <form method=post action='{link('/delete', name=b['name'])}' style='display:inline' "
                 "onsubmit=\"return confirm('Supprimer cette archive envoyée ?')\">"
                 "<button class='btn light'>Supprimer</button></form>"
-                if b["uploaded"] else ""
             )
             + "</td></tr>"
             for b in backups()
-        ) or "<tr><td colspan=3 class=muted>Aucune sauvegarde trouvée dans /var/backups/hirfaty.</td></tr>"
+        ) or "<tr><td colspan=3 class=muted>Aucune archive envoyée pour l'instant.</td></tr>"
 
         upload = (
             "<h1 style='margin-top:28px'>Envoyer une archive</h1>"
-            "<p class=muted>Une sauvegarde gardée sur votre ordinateur : choisissez son fichier "
-            "<code>media.tar.gz</code> (ou un ancien <code>hirfaty-media-….tar.gz</code>). "
-            "Elle apparaît ensuite dans la liste ci-dessus, prête à être ouverte.</p>"
+            "<p class=muted>Les sauvegardes sont chiffrées dans Cloudflare R2 et ce serveur ne détient aucune clé pour les "
+            "ouvrir : c'est voulu, un pirate ne peut donc pas les lire non plus. Pour regarder les photos d'une sauvegarde :</p>"
+            "<ol class=muted>"
+            "<li>Téléchargez son fichier <code>media.tar.gz.age</code> depuis R2 "
+            "(dossier <code>prod/&lt;date&gt;/</code> du bucket).</li>"
+            "<li>Déchiffrez-le sur votre ordinateur, avec la clé privée gardée hors ligne : "
+            "<code>age -d -i cle-privee.txt -o media.tar.gz media.tar.gz.age</code></li>"
+            "<li>Envoyez ici le fichier <code>media.tar.gz</code> obtenu "
+            f"(maximum {size_label(MAX_UPLOAD)}). Il apparaît ci-dessus, prêt à être ouvert.</li>"
+            "</ol>"
+            "<p class=muted>Seulement l'archive des photos : n'envoyez jamais ici la base de données ni la configuration. "
+            "Une archive reste sur le serveur tant qu'elle n'est pas supprimée : supprimez-la après usage.</p>"
             "<p><input type=file id=archive accept='.gz,.tgz,application/gzip'> "
             "<button id=send>Envoyer</button> <span id=progress class=muted></span></p>"
             "<script>"
@@ -572,10 +573,10 @@ class Handler(BaseHTTPRequestHandler):
             "<p class=muted>Lecture seule. Rien ici ne peut modifier le stockage de production.</p>"
             f"<p><a class=btn href='{link('/browse', src='live')}'>Parcourir la production (en direct)</a> "
             f"<a class='btn light' href='{link('/all', src='live')}'>Toutes les photos</a></p>"
-            "<h1 style='margin-top:28px'>Sauvegardes</h1>"
-            "<p class=muted>« Ouvrir » extrait une copie temporaire de la sauvegarde pour en voir les photos ; "
+            "<h1 style='margin-top:28px'>Archives envoyées</h1>"
+            "<p class=muted>« Ouvrir » extrait une copie temporaire de l'archive pour en voir les photos ; "
             "« Fermer » la supprime. L'archive elle-même n'est jamais modifiée.</p>"
-            f"<table><tr><th>Sauvegarde</th><th>Photos</th><th></th></tr>{rows}</table>"
+            f"<table><tr><th>Archive</th><th>Taille</th><th></th></tr>{rows}</table>"
             f"{upload}"
         )
         self.send_html(page("Accueil", body))

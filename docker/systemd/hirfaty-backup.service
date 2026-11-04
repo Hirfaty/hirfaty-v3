@@ -3,16 +3,17 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now hirfaty-backup.timer
 #
-# Each run writes one dated folder to /var/backups/hirfaty holding the
-# database dump AND the photo archive (database.sql.gz + media.tar.gz), and
-# keeps the newest 30 — see docker/scripts/backup.sh. This one unit replaced
-# the separate hirfaty-backup-media.* pair, which kept only 2 of each.
+# Each run encrypts the database dump, the photo archive and the checkout's
+# untracked config on this machine and streams them to one dated folder in
+# Cloudflare R2, under prod/ — see docker/scripts/backup.sh, which needs
+# /etc/hirfaty/backup.env (docker/scripts/backup.env.example). Retention is the
+# bucket's: a 30-day lock and a lifecycle rule deleting at 35 days.
 # Check history with: systemctl status hirfaty-backup.service
 #                      journalctl -u hirfaty-backup.service
 #
 # Production only — see hirfaty-staging-backup.service for staging's
 # optional counterpart.
-# Runs as root so it can write to /var/backups.
+# Runs as root so it can read /etc/hirfaty/backup.env.
 
 [Unit]
 Description=Backup the Hirfaty production database and photos
@@ -22,3 +23,6 @@ After=hirfaty.service
 Type=oneshot
 WorkingDirectory=/home/hirfaty/prod-hirfaty
 ExecStart=/usr/bin/make prod-backup
+# A oneshot left hanging would stop every later night from starting. Being killed
+# counts as a failure, which the script reports.
+TimeoutStartSec=6h

@@ -1,6 +1,6 @@
-# Read-only browser for production's photos and for the photo archives in
-# the nightly backups — see server.py. Built on the SeaweedFS image so the
-# same `weed` binary that wrote a backup can be started on a copy of it.
+# Read-only browser for production's photos and for photo archives uploaded
+# through its page — see server.py. Built on the SeaweedFS image so the same
+# `weed` binary that wrote a backup can be started on a copy of it.
 FROM chrislusf/seaweedfs
 
 RUN apk add --no-cache python3

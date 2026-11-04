@@ -61,6 +61,10 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 - `Product` belongs to a `Store` (a seller has one `Store`) and a `Category`. Images/videos are **polymorphic** via `Media` (`morphMany 'mediable'`, ordered by `order`; `images()`/`videos()` filter by `type`).
 - Products move through a moderation lifecycle by `status` string: `pending_review` → `published` / `rejected` / `archived` (helpers `isPendingReview()` etc.). Admins approve/reject/archive via `Admin\ProductController`; rejection stores `rejection_reason` and notifies the seller (`ProductApproved`/`ProductRejected`).
 
+## Backups
+
+`docker/scripts/backup.sh` (`make prod-backup`, nightly through `hirfaty-backup.timer`) streams the database, the SeaweedFS volume and the checkout's untracked config, encrypted with `age` on the server, to one dated folder per run in Cloudflare R2 (`prod/` or `staging/`). The server holds only the public key; the private key is kept offline, so nothing on the server can read a backup, and that includes `media-browser`. A folder without `_complete` is a failed backup, even if its objects look fine. Retention is the bucket's (30-day lock, lifecycle delete at 35 days), not the script's. Settings live in the root-only `/etc/hirfaty/backup.env`, never in the app's `.env`, which is injected into the containers. `docker/scripts/restore.sh` lists backups, proves one restores in a throwaway Postgres (`make prod-backup-check`), and holds the real-restore steps. Never untar media over a SeaweedFS volume in use.
+
 ## Conventions to follow
 
 - **API responses:** shape data for the frontend with `App\Http\Resources\*` (`BuyerProductResource`, etc.) rather than passing raw models into Inertia props.
