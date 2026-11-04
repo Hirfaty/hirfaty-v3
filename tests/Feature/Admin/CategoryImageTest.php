@@ -43,7 +43,7 @@ test('a top-level category stores its uploaded image', function () use ($names) 
     Storage::disk(config('filesystems.default'))->assertExists($category->image);
 });
 
-test('a subcategory never stores an image', function () use ($names) {
+test('a subcategory stores its uploaded image', function () use ($names) {
     $parent = Category::create(['slug' => 'artisanat', 'name' => $names]);
 
     $this->actingAs($this->admin)
@@ -52,10 +52,48 @@ test('a subcategory never stores an image', function () use ($names) {
             'parent_ids' => [$parent->id],
             'image' => categoryImageUpload('tajine.png'),
         ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $category = Category::firstWhere('slug', 'tajines');
+
+    expect($category->image)->not->toBeNull();
+    Storage::disk(config('filesystems.default'))->assertExists($category->image);
+});
+
+test('an existing subcategory can be given an image and have it removed', function () use ($names) {
+    $disk = Storage::disk(config('filesystems.default'));
+    $parent = Category::create(['slug' => 'artisanat', 'name' => $names]);
+    $childNames = ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'];
+    $child = Category::create(['slug' => 'tajines', 'name' => $childNames]);
+    $child->parents()->attach($parent);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.categories.update', $child), [
+            '_method' => 'patch',
+            'name' => $childNames,
+            'parent_ids' => [$parent->id],
+            'image' => categoryImageUpload('tajine.png'),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $path = $child->refresh()->image;
+
+    expect($path)->not->toBeNull();
+    $disk->assertExists($path);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.categories.update', $child), [
+            '_method' => 'patch',
+            'name' => $childNames,
+            'parent_ids' => [$parent->id],
+            'remove_image' => true,
+        ])
         ->assertRedirect();
 
-    expect(Category::firstWhere('slug', 'tajines')->image)->toBeNull();
-    expect(Storage::disk(config('filesystems.default'))->allFiles())->toBeEmpty();
+    expect($child->refresh()->image)->toBeNull();
+    $disk->assertMissing($path);
 });
 
 test('replacing an image deletes the previous file', function () use ($names) {
@@ -95,7 +133,29 @@ test('an image can be removed without uploading a new one', function () use ($na
     $disk->assertMissing($path);
 });
 
-test('moving a category under a parent drops its image', function () use ($names) {
+test('a new image survives removing the old one in the same edit', function () use ($names) {
+    $disk = Storage::disk(config('filesystems.default'));
+    $old = categoryImageUpload('old.png')->store('categories', config('filesystems.default'));
+    $category = Category::create(['slug' => 'poterie', 'name' => $names, 'image' => $old]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.categories.update', $category), [
+            '_method' => 'patch',
+            'name' => $names,
+            'remove_image' => true,
+            'image' => categoryImageUpload('new.png'),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $category->refresh();
+
+    expect($category->image)->not->toBeNull();
+    $disk->assertMissing($old);
+    $disk->assertExists($category->image);
+});
+
+test('moving a category under a parent keeps its image', function () use ($names) {
     $disk = Storage::disk(config('filesystems.default'));
     $parent = Category::create(['slug' => 'artisanat', 'name' => ['fr' => 'Artisanat', 'ar' => 'حرف', 'en' => 'Crafts']]);
     $path = categoryImageUpload('a.png')->store('categories', config('filesystems.default'));
@@ -109,8 +169,8 @@ test('moving a category under a parent drops its image', function () use ($names
         ])
         ->assertRedirect();
 
-    expect($category->refresh()->image)->toBeNull();
-    $disk->assertMissing($path);
+    expect($category->refresh()->image)->toBe($path);
+    $disk->assertExists($path);
 });
 
 test('deleting a category deletes its image', function () use ($names) {

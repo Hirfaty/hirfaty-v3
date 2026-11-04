@@ -9,9 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Admin-side category management. Only top-level categories carry a picture
- * (it is what the homepage tiles show); a subcategory never stores one, and a
- * category given a parent loses the one it had.
+ * Admin-side category management. Any category can carry a picture, top-level
+ * or not; a category keeps its picture when it moves in or out of a parent.
  *
  * Parentage is a many-to-many: a subcategory can be filed under several crafts
  * at once, and one with no parents at all is a root.
@@ -59,7 +58,7 @@ class CategoryService
             // The slug is the URL key, so it is derived once from the French
             // name and never changes per locale.
             'slug' => $this->uniqueSlug($data['name'][Category::FALLBACK_LOCALE]),
-            'image' => $image && $parentIds === [] ? $this->storeImage($image) : null,
+            'image' => $image ? $this->storeImage($image) : null,
             'hs_code' => $this->hsCode($data),
         ]);
 
@@ -80,12 +79,14 @@ class CategoryService
 
         $attributes = ['name' => $data['name'], 'hs_code' => $this->hsCode($data)];
 
-        if ($parentIds !== [] || $removeImage) {
-            $this->deleteImage($category->image);
-            $attributes['image'] = null;
-        } elseif ($image) {
+        // The new file wins: the form still sends `remove_image` when the admin
+        // removed the old picture and then picked another.
+        if ($image) {
             $this->deleteImage($category->image);
             $attributes['image'] = $this->storeImage($image);
+        } elseif ($removeImage) {
+            $this->deleteImage($category->image);
+            $attributes['image'] = null;
         }
 
         $category->update($attributes);

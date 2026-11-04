@@ -119,6 +119,43 @@ test('the products export lists the catalogue under the active filters', functio
         ->and(end($draft))->toBe('');
 });
 
+test('the products export names categories in french whatever the session language', function () {
+    $category = Category::create(['slug' => 'poterie', 'name' => ['fr' => 'Poterie', 'ar' => 'فخار', 'en' => 'Pottery']]);
+    $store = Store::create([
+        'user_id' => User::factory()->create(['role' => 'seller'])->id,
+        'store_name' => 'Atelier Fès',
+        'slug' => 'atelier-fes',
+        'category_id' => $category->id,
+        'city_id' => City::create(['name' => 'Fès'])->id,
+    ]);
+
+    Product::create(['store_id' => $store->id, 'category_id' => $category->id, 'name' => 'Tajine bleu', 'slug' => 'tajine-bleu', 'base_price' => 250, 'stock' => 4, 'status' => 'published']);
+
+    $rows = listExportCsv(
+        $this->actingAs($this->admin)
+            ->withSession(['locale' => 'en'])
+            ->get(route('admin.products.export', ['format' => 'csv']))
+    );
+
+    expect($rows[1])->toContain('Poterie')->not->toContain('Pottery');
+});
+
+test('the admin product pages receive the french name of every category', function () {
+    $category = Category::create(['slug' => 'poterie', 'name' => ['fr' => 'Poterie', 'ar' => 'فخار', 'en' => 'Pottery']]);
+    Category::create(['slug' => 'tajines', 'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines']])
+        ->parents()->attach($category);
+
+    $this->actingAs($this->admin)
+        ->withSession(['locale' => 'en'])
+        ->get(route('admin.products.index'))
+        ->assertInertia(fn ($page) => $page->where('categories.0.name.fr', 'Poterie'));
+
+    $this->get(route('admin.products.create'))
+        ->assertInertia(fn ($page) => $page
+            ->where('categories.0.name.fr', 'Poterie')
+            ->where('categories.0.children.0.name.fr', 'Tajines'));
+});
+
 // ── Orders ──────────────────────────────────────────────────────────────────
 
 /** A workshop with one seller, for the orders and stores exports. */

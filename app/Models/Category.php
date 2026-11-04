@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read string $translated_name
  * @property string $slug
  * @property string|null $hs_code Customs tariff code inherited by its products.
- * @property string|null $image Storage path on the default disk; top-level categories only.
+ * @property string|null $image Storage path on the default disk.
  * @property-read string|null $image_url
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at

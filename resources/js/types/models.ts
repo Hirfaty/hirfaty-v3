@@ -40,7 +40,7 @@ export interface Category {
     parent_ids?: number[];
     /** Customs tariff code its products inherit; admin screens only. */
     hs_code?: string | null;
-    /** Public URL of the picture; only top-level categories have one. */
+    /** Public URL of the picture, if one has been set. */
     image_url: string | null;
     /**
      * Subcategories, when eager-loaded on a top-level category. The same

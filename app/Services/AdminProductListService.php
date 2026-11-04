@@ -156,7 +156,8 @@ class AdminProductListService
             $product->name,
             $product->sku ?? '',
             $product->store?->store_name ?? '',
-            $product->category?->translated_name ?? '',
+            // French whatever language the admin last browsed the site in.
+            $product->category?->nameFor('fr') ?? '',
             self::STATUS_LABELS[$product->status] ?? $product->status,
             $this->money($product->base_price),
             $this->money($product->sale_price),

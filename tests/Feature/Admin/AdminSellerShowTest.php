@@ -50,6 +50,19 @@ function sellerProduct(Store $store, Category $category, string $name): Product
     ]);
 }
 
+test('the admin user pages receive the french name of the category', function () {
+    $this->actingAs($this->admin)
+        ->withSession(['locale' => 'en'])
+        ->get(route('admin.users.show', $this->seller))
+        ->assertInertia(fn (Assert $page) => $page->where('user.store.category.name.fr', 'Poterie'));
+
+    $this->get(route('admin.users.create'))
+        ->assertInertia(fn (Assert $page) => $page->where('categories.0.name.fr', 'Poterie'));
+
+    $this->get(route('admin.users.edit', $this->seller))
+        ->assertInertia(fn (Assert $page) => $page->where('categories.0.name.fr', 'Poterie'));
+});
+
 test('the seller page carries an order count per product', function () {
     $untouched = sellerProduct($this->store, $this->category, 'Vase libre');
     $ordered = sellerProduct($this->store, $this->category, 'Vase vendu');

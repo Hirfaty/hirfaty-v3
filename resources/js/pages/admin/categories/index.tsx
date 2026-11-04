@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import type { Category, CategoryLocale, PageProps } from '@/types';
 
 interface CategoryWithCounts extends Category {
@@ -89,14 +90,11 @@ function Field({
 const isComplete = (cat: Category, locales: CategoryLocale[]) =>
     locales.every((loc) => cat.name?.[loc]?.trim());
 
-/**
- * The name this page calls a category by: French whatever language the admin
- * last browsed the site in — `translated_name` follows the session, and the
- * panel is French. Falls back for a row whose French is still missing, which
- * the "Incomplet" badge is already flagging.
- */
-const frenchName = (cat: Category) =>
-    cat.name?.fr?.trim() || cat.translated_name;
+/** What the picture is for depends on where the category sits in the tree. */
+const imageHint = (parentIds: number[]) =>
+    parentIds.length === 0
+        ? 'Affichée sur la page d’accueil.'
+        : 'Vignette de la sous-catégorie.';
 
 /**
  * The parent picker. A checkbox list rather than a `<select multiple>`: a
@@ -228,20 +226,17 @@ const CategoryRow = ({
                         )}
                     </div>
 
-                    {/* Only top-level categories carry a picture. */}
-                    {depth === 0 && (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                            {cat.image_url ? (
-                                <img
-                                    src={cat.image_url}
-                                    alt=""
-                                    className="h-full w-full object-cover"
-                                />
-                            ) : (
-                                <Layers className="h-4 w-4 text-ink-soft/40" />
-                            )}
-                        </div>
-                    )}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                        {cat.image_url ? (
+                            <img
+                                src={cat.image_url}
+                                alt=""
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <Layers className="h-4 w-4 text-ink-soft/40" />
+                        )}
+                    </div>
 
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -748,18 +743,16 @@ const Index = ({
                             />
                         </Field>
 
-                        {createForm.data.parent_ids.length === 0 && (
-                            <SingleImageInput
-                                label="Image (optionnel)"
-                                hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
-                                aspect="square"
-                                value={createForm.data.image}
-                                onChange={(file) =>
-                                    createForm.setData('image', file)
-                                }
-                                error={createForm.errors.image}
-                            />
-                        )}
+                        <SingleImageInput
+                            label="Image (optionnel)"
+                            hint={imageHint(createForm.data.parent_ids)}
+                            aspect="square"
+                            value={createForm.data.image}
+                            onChange={(file) =>
+                                createForm.setData('image', file)
+                            }
+                            error={createForm.errors.image}
+                        />
                     </div>
 
                     <DialogFooter>
@@ -870,33 +863,22 @@ const Index = ({
                             />
                         </Field>
 
-                        {editForm.data.parent_ids.length === 0 ? (
-                            <SingleImageInput
-                                label="Image (optionnel)"
-                                hint="Affichée sur la page d’accueil. Réservée aux catégories principales."
-                                aspect="square"
-                                value={editForm.data.image}
-                                onChange={(file) =>
-                                    editForm.setData('image', file)
-                                }
-                                current={
-                                    editForm.data.remove_image
-                                        ? null
-                                        : (editTarget?.image_url ?? null)
-                                }
-                                onRemoveCurrent={() =>
-                                    editForm.setData('remove_image', true)
-                                }
-                                error={editForm.errors.image}
-                            />
-                        ) : (
-                            editTarget?.image_url && (
-                                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                                    Une sous-catégorie n’a pas d’image : celle
-                                    de cette catégorie sera supprimée.
-                                </p>
-                            )
-                        )}
+                        <SingleImageInput
+                            label="Image (optionnel)"
+                            hint={imageHint(editForm.data.parent_ids)}
+                            aspect="square"
+                            value={editForm.data.image}
+                            onChange={(file) => editForm.setData('image', file)}
+                            current={
+                                editForm.data.remove_image
+                                    ? null
+                                    : (editTarget?.image_url ?? null)
+                            }
+                            onRemoveCurrent={() =>
+                                editForm.setData('remove_image', true)
+                            }
+                            error={editForm.errors.image}
+                        />
                     </div>
 
                     <DialogFooter>

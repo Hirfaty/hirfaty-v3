@@ -39,6 +39,7 @@ import { Label } from '@/components/ui/label';
 import { WarmFill } from '@/components/WarmFill';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import type {
     Category,
@@ -515,7 +516,7 @@ function AdminProducts({
                     <option value="">Toutes les catégories</option>
                     {categories.map((c) => (
                         <option key={c.id} value={c.id}>
-                            {c.translated_name}
+                            {frenchName(c)}
                         </option>
                     ))}
                 </select>
@@ -726,8 +727,9 @@ function AdminProducts({
                                                 {p.sku ?? '—'}
                                             </td>
                                             <td className="px-5 py-3 text-ink-soft">
-                                                {p.category?.translated_name ??
-                                                    '—'}
+                                                {p.category
+                                                    ? frenchName(p.category)
+                                                    : '—'}
                                             </td>
                                             <td className="px-5 py-3 text-ink-soft">
                                                 {p.store.store_name}

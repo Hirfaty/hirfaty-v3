@@ -56,8 +56,10 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import { formatDate } from '@/lib/utils';
 import type {
+    Category,
     Order,
     PageProps,
     Product,
@@ -119,9 +121,7 @@ interface Props {
             logo: string | null;
             banner: string | null;
             city: { name: string };
-            // Category names are stored per locale; the resolved display string
-            // is appended server-side as translated_name.
-            category: { translated_name: string };
+            category: Category | null;
             // `order_items_count` decides whether Delete is offered: a product
             // that has ever been ordered can only be archived, never removed.
             products: (Product & { order_items_count?: number })[];
@@ -722,8 +722,9 @@ const ShowSeller = ({
 
                             <div className="flex flex-wrap gap-1.5">
                                 <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-ink-soft">
-                                    {user.store?.category?.translated_name ||
-                                        'Artisanat'}
+                                    {user.store?.category
+                                        ? frenchName(user.store.category)
+                                        : 'Artisanat'}
                                 </span>
                                 <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-ink-soft">
                                     {user.store?.type

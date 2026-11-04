@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 import SingleImageInput from '@/components/admin/single-image-input';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import type { Category, City, PageProps, StoreType } from '@/types';
 
 type Role = 'seller' | 'buyer' | 'professional_buyer';
@@ -318,9 +319,10 @@ const Create = ({
     const cityName = cities.find(
         (c) => String(c.id) === String(data.city_id),
     )?.name;
-    const categoryName = categories.find(
+    const selectedCategory = categories.find(
         (c) => String(c.id) === String(data.category_id),
-    )?.translated_name;
+    );
+    const categoryName = selectedCategory && frenchName(selectedCategory);
     const roleLabel = ROLES.find((r) => r.value === data.role)?.label;
     const storeTypeLabel = STORE_TYPES.find(
         (t) => t.value === data.store_type,
@@ -737,8 +739,7 @@ const Create = ({
                                                         key={c.id}
                                                         value={c.id}
                                                     >
-                                                        {/* name is a per-locale object; never render it raw */}
-                                                        {c.translated_name}
+                                                        {frenchName(c)}
                                                     </option>
                                                 ))}
                                             </select>

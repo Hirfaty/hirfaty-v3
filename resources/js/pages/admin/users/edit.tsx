@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import type { Category, City, Store, StoreType, User, UserRole } from '@/types';
 
 const INPUT =
@@ -430,8 +431,7 @@ export default function EditUser({
                                         >
                                             {categories.map((c) => (
                                                 <option key={c.id} value={c.id}>
-                                                    {c.translated_name ??
-                                                        String(c.name)}
+                                                    {frenchName(c)}
                                                 </option>
                                             ))}
                                         </select>

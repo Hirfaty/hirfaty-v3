@@ -12,6 +12,7 @@ import type {
 import VariantBuilder from '@/components/admin/variant-builder';
 import type { VariantDraft } from '@/components/admin/variant-builder';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { frenchName } from '@/lib/category';
 import { cn } from '@/lib/utils';
 import type {
     Category,
@@ -464,7 +465,7 @@ export default function ProductForm({
                                 >
                                     {categories.map((c) => (
                                         <option key={c.id} value={c.id}>
-                                            {c.translated_name}
+                                            {frenchName(c)}
                                         </option>
                                     ))}
                                 </select>
@@ -485,7 +486,7 @@ export default function ProductForm({
                                         <option value="">— Aucune —</option>
                                         {subCategories.map((c) => (
                                             <option key={c.id} value={c.id}>
-                                                {c.translated_name}
+                                                {frenchName(c)}
                                             </option>
                                         ))}
                                     </select>

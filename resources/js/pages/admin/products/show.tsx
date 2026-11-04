@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import AdminLayout from '@/layouts/admin/layout';
+import { frenchName } from '@/lib/category';
 import { formatDate } from '@/lib/utils';
 import type {
     Category,
@@ -386,8 +387,9 @@ function AdminProductShow({
                                     </span>
                                 </Field>
                                 <Field label="Catégorie">
-                                    {product.category?.translated_name ||
-                                        'Non catégorisé'}
+                                    {product.category
+                                        ? frenchName(product.category)
+                                        : 'Non catégorisé'}
                                 </Field>
                                 <Field label="Stock">
                                     {product.has_variants ? (
