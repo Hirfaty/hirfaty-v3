@@ -51,7 +51,7 @@ class OnboardingController extends Controller
             // Top-level crafts only: the tour offers a handful of broad
             // choices, not the full taxonomy.
             'categories' => Category::roots()
-                ->orderBy('id')
+                ->ordered()
                 ->get()
                 ->map(fn (Category $c) => [
                     'id' => $c->id,

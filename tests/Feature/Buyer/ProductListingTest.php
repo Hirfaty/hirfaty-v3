@@ -230,7 +230,26 @@ test('a buyer sees their own wishlisted pieces on this page marked', function ()
         );
 });
 
-test('choosing a root category also matches its child categories', function () {
+test('a main category opens on its first subcategory, keeping the search but not the page', function () {
+    $second = Category::create([
+        'slug' => 'tajines',
+        'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'],
+    ]);
+    $first = Category::create([
+        'slug' => 'bols',
+        'name' => ['fr' => 'Bols', 'ar' => 'أوعية', 'en' => 'Bowls'],
+    ]);
+    // Placed against id order, so this proves the admin's order decides.
+    $this->category->children()->attach([
+        $second->id => ['sort_order' => 2],
+        $first->id => ['sort_order' => 1],
+    ]);
+
+    $this->get(route('products.index', ['category_id' => $this->category->id, 'search' => 'bol', 'page' => 3]))
+        ->assertRedirect(route('products.index', ['category_id' => $first->id, 'search' => 'bol']));
+});
+
+test('a subcategory lists only its own products', function () {
     $child = Category::create([
         'slug' => 'tajines',
         'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'],
@@ -240,8 +259,29 @@ test('choosing a root category also matches its child categories', function () {
     listed(['name' => 'Dans la racine']);
     listed(['name' => 'Dans l enfant', 'category_id' => $child->id]);
 
+    $this->get(route('products.index', ['category_id' => $child->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products', 1)
+            ->where('products.0.name', 'Dans l enfant')
+            ->where('filters.category_id', (string) $child->id)
+        );
+});
+
+test('a main category with no subcategories still lists its own products', function () {
+    listed(['name' => 'Dans la racine']);
+
     $this->get(route('products.index', ['category_id' => $this->category->id]))
-        ->assertInertia(fn (Assert $page) => $page->has('products', 2));
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
+});
+
+test('an unknown category lists nothing instead of redirecting', function () {
+    listed(['name' => 'Ailleurs']);
+
+    $this->get(route('products.index', ['category_id' => 999999]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('products', 0));
 });
 
 test('a subcategory shared by two crafts is reachable from either of them', function () {
@@ -258,9 +298,12 @@ test('a subcategory shared by two crafts is reachable from either of them', func
     listed(['name' => 'Partagé', 'category_id' => $child->id]);
 
     $this->get(route('products.index', ['category_id' => $other->id]))
-        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
+        ->assertRedirect(route('products.index', ['category_id' => $child->id]));
 
     $this->get(route('products.index', ['category_id' => $this->category->id]))
+        ->assertRedirect(route('products.index', ['category_id' => $child->id]));
+
+    $this->get(route('products.index', ['category_id' => $child->id]))
         ->assertInertia(fn (Assert $page) => $page->has('products', 1));
 });
 

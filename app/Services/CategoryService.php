@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Category;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -23,13 +24,16 @@ class CategoryService
      * any number of parents, so the page assembles the tree from `parent_ids`
      * rather than being handed the same row once per parent.
      *
+     * Rows come in main-category order and `child_ids` in each parent's own
+     * order, so the page shows exactly what the storefront will.
+     *
      * @return Collection<int, array<string, mixed>>
      */
     public function listForAdmin(): Collection
     {
         return Category::withCount(['products', 'stores'])
-            ->with('parents')
-            ->latest()
+            ->with(['parents', 'children'])
+            ->ordered()
             ->get()
             ->map(fn (Category $category) => [
                 'id' => $category->id,
@@ -43,7 +47,43 @@ class CategoryService
                 'products_count' => $category->products_count,
                 'stores_count' => $category->stores_count,
                 'parent_ids' => $category->parents->pluck('id')->all(),
+                'child_ids' => $category->children->pluck('id')->all(),
             ]);
+    }
+
+    /**
+     * Puts one list of siblings in the given order: the main categories when
+     * `$parent` is null, otherwise that parent's subcategories. Moving a
+     * subcategory under one parent leaves its place under any other alone.
+     *
+     * Tolerates a stale page: ids that are not (or no longer) siblings are
+     * ignored, and siblings the page did not know about keep their relative
+     * order after the ones it did.
+     *
+     * @param  array<int, int|string>  $ids
+     */
+    public function reorder(?Category $parent, array $ids): void
+    {
+        $requested = collect($ids)->map(fn ($id) => (int) $id)->unique();
+        $siblings = ($parent ? $parent->children() : Category::roots()->ordered())
+            ->pluck('categories.id')
+            ->map(fn ($id) => (int) $id);
+
+        $ordered = $requested->intersect($siblings)
+            ->merge($siblings->diff($requested))
+            ->values();
+
+        DB::transaction(function () use ($parent, $ordered) {
+            foreach ($ordered as $index => $id) {
+                $parent
+                    ? $parent->children()->updateExistingPivot($id, ['sort_order' => $index + 1])
+                    : Category::whereKey($id)->update(['sort_order' => $index + 1]);
+            }
+        });
+
+        // Neither write above fires a model event, so the header menu has to
+        // be told, or it would keep the old order for up to an hour.
+        Category::forgetNavCache();
     }
 
     /**
@@ -60,6 +100,7 @@ class CategoryService
             'slug' => $this->uniqueSlug($data['name'][Category::FALLBACK_LOCALE]),
             'image' => $image ? $this->storeImage($image) : null,
             'hs_code' => $this->hsCode($data),
+            'sort_order' => $this->nextRootPosition(),
         ]);
 
         $this->syncParents($category, $parentIds);
@@ -104,18 +145,46 @@ class CategoryService
             return false;
         }
 
+        $childIds = $category->children()->pluck('categories.id');
+
         $this->deleteImage($category->image);
         $category->delete();
+
+        // The cascade removed their pivot rows, so any child with no other
+        // parent is a main category now, with a position that meant nothing.
+        Category::roots()
+            ->whereIn('id', $childIds)
+            ->orderBy('id')
+            ->get()
+            ->each(fn (Category $orphan) => $orphan->update(['sort_order' => $this->nextRootPosition()]));
 
         return true;
     }
 
     /**
+     * A parent it already had keeps its place in that parent's list; a new one
+     * takes it at the end. Empty attributes are what tell `sync` to leave an
+     * existing row alone.
+     *
      * @param  array<int, int>  $parentIds
      */
     private function syncParents(Category $category, array $parentIds): void
     {
-        $changes = $category->parents()->sync($parentIds);
+        $current = $category->parents()->pluck('categories.id');
+
+        $changes = $category->parents()->sync(
+            collect($parentIds)
+                ->mapWithKeys(fn (int $id) => [
+                    $id => $current->contains($id) ? [] : ['sort_order' => $this->nextChildPosition($id)],
+                ])
+                ->all(),
+        );
+
+        // Losing its last parent makes it a main category, and the position
+        // it carried from before means nothing in that list.
+        if ($parentIds === [] && $current->isNotEmpty()) {
+            $category->update(['sort_order' => $this->nextRootPosition()]);
+        }
 
         /*
          * Writing to the pivot touches no category row, so none of the model
@@ -145,6 +214,16 @@ class CategoryService
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function nextRootPosition(): int
+    {
+        return (int) Category::roots()->max('sort_order') + 1;
+    }
+
+    private function nextChildPosition(int $parentId): int
+    {
+        return (int) DB::table('category_parent')->where('parent_id', $parentId)->max('sort_order') + 1;
     }
 
     private function storeImage(UploadedFile $file): string

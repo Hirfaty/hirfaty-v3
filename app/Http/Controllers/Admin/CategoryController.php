@@ -20,9 +20,30 @@ class CategoryController extends Controller
             'categories' => $this->categories->listForAdmin(),
             // Only roots are offered as parents: the storefront renders the
             // tree two levels deep, so a third would never be shown.
-            'parents' => Category::roots()->get(),
+            'parents' => Category::roots()->ordered()->get(),
             'locales' => Category::LOCALES,
         ]);
+    }
+
+    /**
+     * Saves the order of one list of siblings. No flash: the page has already
+     * moved the row, and a toast on every drag would only be noise.
+     */
+    public function reorder(Request $request)
+    {
+        $data = $request->validate([
+            // Null means the main categories themselves.
+            'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $this->categories->reorder(
+            isset($data['parent_id']) ? Category::find($data['parent_id']) : null,
+            $data['ids'],
+        );
+
+        return back();
     }
 
     public function store(Request $request)

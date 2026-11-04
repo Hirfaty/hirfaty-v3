@@ -296,6 +296,8 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // Categories
         Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories.index');
         Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
+        // Before `{category}`, which would otherwise take "reorder" for an id.
+        Route::patch('/categories/reorder', [Admin\CategoryController::class, 'reorder'])->name('categories.reorder');
         Route::patch('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');
 

@@ -215,7 +215,7 @@ class RegistrationController extends Controller
         if ($pending->isSeller()) {
             return Inertia::render('auth/seller/details', [
                 'categories' => Category::roots()
-                    ->orderBy('id')
+                    ->ordered()
                     ->get()
                     ->map(fn (Category $category) => [
                         'id' => $category->id,

@@ -59,6 +59,7 @@ Note: `resources/js/app.tsx` sets Inertia's `layout` to `null` — pages import 
 ## Products, media, moderation
 
 - `Product` belongs to a `Store` (a seller has one `Store`) and a `Category`. Images/videos are **polymorphic** via `Media` (`morphMany 'mediable'`, ordered by `order`; `images()`/`videos()` filter by `type`).
+- **Categories are being narrowed to their subcategories.** A main category with children has no listing of its own: storefront links go straight to its first subcategory (`landingCategoryId()` in `resources/js/lib/category.ts`), `Buyer\ProductController` 302s anything else that asks for the parent (`Category::landing()`), and the sitemap leaves such parents out. The order is the admin's (`CategoryService::reorder()`): `categories.sort_order` among main categories, `category_parent.sort_order` per parent, because a subcategory can sit under several crafts and hold a different place under each. `children()` is ordered on the relation, and main-category lists use `Category::roots()->ordered()`; both are ordered queries, so never call `->count()` on them — Postgres refuses it, and SQLite (the test database) does not.
 - Products move through a moderation lifecycle by `status` string: `pending_review` → `published` / `rejected` / `archived` (helpers `isPendingReview()` etc.). Admins approve/reject/archive via `Admin\ProductController`; rejection stores `rejection_reason` and notifies the seller (`ProductApproved`/`ProductRejected`).
 
 ## Backups

@@ -19,12 +19,14 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $hs_code Customs tariff code inherited by its products.
  * @property string|null $image Storage path on the default disk.
  * @property-read string|null $image_url
+ * @property int $sort_order Place among the main categories; a subcategory's place is on the pivot.
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Category ordered()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category roots()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Category whereId($value)
@@ -34,7 +36,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * @mixin \Eloquent
  */
-#[Fillable(['name', 'slug', 'image', 'hs_code'])]
+#[Fillable(['name', 'slug', 'image', 'hs_code', 'sort_order'])]
 class Category extends Model
 {
     /**
@@ -146,10 +148,17 @@ class Category extends Model
      * The other side of the same pivot. A child listed here may well be listed
      * under another root too, so treat this as "what to show beneath me", not
      * as an exclusive set.
+     *
+     * In the order the admin set for this parent, so every reader gets it. The
+     * id breaks ties for rows that were never placed. Postgres refuses a bare
+     * aggregate over an ordered query, so count through `withCount` or the
+     * loaded collection rather than `children()->count()`.
      */
     public function children(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'category_parent', 'parent_id', 'category_id');
+        return $this->belongsToMany(self::class, 'category_parent', 'parent_id', 'category_id')
+            ->orderByPivot('sort_order')
+            ->orderBy('categories.id');
     }
 
     /**
@@ -160,5 +169,25 @@ class Category extends Model
     public function scopeRoots(Builder $query): Builder
     {
         return $query->whereDoesntHave('parents');
+    }
+
+    /**
+     * Main categories in the order the admin set. A separate scope rather than
+     * part of `roots()`, because Postgres refuses `roots()->count()` once the
+     * query carries an ORDER BY.
+     */
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * The category a shopper actually browses when they pick this one. Main
+     * categories are being phased out in favour of their subcategories, so one
+     * with children opens on the first of them; anything else is itself.
+     */
+    public function landing(): self
+    {
+        return $this->children()->first() ?? $this;
     }
 }

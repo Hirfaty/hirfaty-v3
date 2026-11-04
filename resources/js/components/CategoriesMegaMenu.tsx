@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import { WarmFill } from '@/components/WarmFill';
 import { useTranslation } from '@/hooks/use-translation';
+import { landingCategoryId } from '@/lib/category';
 
 type NavCategory = {
     id: number;
@@ -117,7 +118,7 @@ export default function CategoriesMegaMenu({
                 {categories.map((category) => (
                     <Link
                         key={category.id}
-                        href={categoryHref(category.id)}
+                        href={categoryHref(landingCategoryId(category))}
                         onClick={onNavigate}
                         onMouseEnter={() => setHoveredId(category.id)}
                         onFocus={() => setHoveredId(category.id)}
@@ -162,9 +163,6 @@ export default function CategoriesMegaMenu({
                     key={active.id}
                     className="grid animate-in grid-cols-2 gap-x-6 gap-y-1 py-2 duration-300 fade-in slide-in-from-bottom-1"
                 >
-                    {/* Nothing rendered when a craft has no subcategories
-                        yet — the "browse everything in this craft" link
-                        below is already the whole offer in that case. */}
                     {active.children.map((child) => (
                         <Link
                             key={child.id}
@@ -182,20 +180,25 @@ export default function CategoriesMegaMenu({
                     ))}
                 </div>
 
-                <Link
-                    href={categoryHref(active.id)}
-                    onClick={onNavigate}
-                    className="mt-3 mb-2 inline-flex items-center gap-1.5 border-t border-ink/10 pt-3 text-sm font-medium text-ink-soft transition-colors hover:text-ink"
-                >
-                    {t('header.view_all_in').replace(
-                        ':category',
-                        active.translated_name,
-                    )}
-                    <ChevronRight
-                        aria-hidden
-                        className="h-3.5 w-3.5 rtl:rotate-180"
-                    />
-                </Link>
+                {/* Only for a craft with no subcategories, where it is the
+                    whole offer. One that has them no longer has a listing of
+                    its own, so "view all" would promise more than it opens. */}
+                {active.children.length === 0 && (
+                    <Link
+                        href={categoryHref(active.id)}
+                        onClick={onNavigate}
+                        className="mt-3 mb-2 inline-flex items-center gap-1.5 border-t border-ink/10 pt-3 text-sm font-medium text-ink-soft transition-colors hover:text-ink"
+                    >
+                        {t('header.view_all_in').replace(
+                            ':category',
+                            active.translated_name,
+                        )}
+                        <ChevronRight
+                            aria-hidden
+                            className="h-3.5 w-3.5 rtl:rotate-180"
+                        />
+                    </Link>
+                )}
             </div>
         </div>
     );

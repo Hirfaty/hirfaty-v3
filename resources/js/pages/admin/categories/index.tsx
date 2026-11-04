@@ -1,8 +1,11 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    ArrowDown,
+    ArrowUp,
     ChevronRight,
     Edit3,
     FolderTree,
+    GripVertical,
     Layers,
     Plus,
     Search,
@@ -10,7 +13,7 @@ import {
     Trash2,
     TriangleAlert,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { DragEvent, ReactNode } from 'react';
 import { Fragment, useState } from 'react';
 import SingleImageInput from '@/components/admin/single-image-input';
 import {
@@ -42,7 +45,27 @@ interface CategoryWithCounts extends Category {
     stores_count: number;
     /** Always sent by CategoryService::listForAdmin; empty means a root. */
     parent_ids: number[];
+    /** Its subcategories, in the order the storefront shows them. */
+    child_ids: number[];
 }
+
+/**
+ * A list that can be reordered: one parent's subcategories, or `null` for the
+ * main categories themselves.
+ */
+type ListId = number | null;
+
+/** The same list with `ids` in their new order. Pure: Inertia replays it. */
+const withOrder = (
+    rows: CategoryWithCounts[],
+    list: ListId,
+    ids: number[],
+): CategoryWithCounts[] =>
+    list === null
+        ? [...rows].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
+        : rows.map((row) =>
+              row.id === list ? { ...row, child_ids: ids } : row,
+          );
 
 /** Labels for the per-locale name inputs. */
 const LOCALE_LABELS: Record<CategoryLocale, string> = {
@@ -183,7 +206,23 @@ interface RowProps {
     onToggle: () => void;
     onEdit: () => void;
     onDelete: () => void;
+    /** False while a filter hides part of the list it would reorder. */
+    reorderable: boolean;
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    onDragStart: (event: DragEvent<HTMLElement>) => void;
+    onDragEnd: () => void;
+    onDragOver: (event: DragEvent<HTMLTableRowElement>) => void;
+    /** Dimmed: this row, or the main category it belongs to, is being moved. */
+    dragging: boolean;
+    /** Where the drop line sits on this row, if the drop would land here. */
+    dropEdge: 'top' | 'bottom' | null;
 }
+
+/** Why the arrows are unavailable, shown as their tooltip. */
+const FILTERED_HINT = 'Effacez les filtres pour réordonner';
 
 const CategoryRow = ({
     cat,
@@ -194,17 +233,53 @@ const CategoryRow = ({
     onToggle,
     onEdit,
     onDelete,
+    reorderable,
+    canMoveUp,
+    canMoveDown,
+    onMoveUp,
+    onMoveDown,
+    onDragStart,
+    onDragEnd,
+    onDragOver,
+    dragging,
+    dropEdge,
 }: RowProps) => {
     const locked = cat.products_count > 0 || cat.stores_count > 0;
     const incomplete = !isComplete(cat, locales);
 
     return (
-        <tr className="transition hover:bg-muted/30">
+        <tr
+            onDragOver={onDragOver}
+            className={`transition-colors hover:bg-muted/30 ${dragging ? 'opacity-40' : ''} ${
+                dropEdge === 'top'
+                    ? 'shadow-[inset_0_2px_0_0_var(--color-ink)]'
+                    : dropEdge === 'bottom'
+                      ? 'shadow-[inset_0_-2px_0_0_var(--color-ink)]'
+                      : ''
+            }`}
+        >
             <td
                 className="px-5 py-3"
                 style={{ paddingInlineStart: `${1.25 + depth * 1.5}rem` }}
             >
                 <div className="flex items-center gap-3">
+                    {/* Only the handle is draggable, so the row's text can
+                        still be selected and its links still work. The slot
+                        stays when reordering is off, to hold the alignment. */}
+                    <div className="w-4 shrink-0">
+                        {reorderable && (
+                            <span
+                                draggable
+                                onDragStart={onDragStart}
+                                onDragEnd={onDragEnd}
+                                title="Glisser pour réordonner"
+                                className="block cursor-grab text-ink-soft/50 transition hover:text-ink active:cursor-grabbing"
+                            >
+                                <GripVertical className="h-4 w-4" />
+                            </span>
+                        )}
+                    </div>
+
                     {/* Disclosure — only roots with children get a control,
                         but the slot is always reserved so every row stays
                         aligned. */}
@@ -325,6 +400,30 @@ const CategoryRow = ({
 
             <td className="px-5 py-3">
                 <div className="flex items-center justify-end gap-1">
+                    {/* Dragging needs a mouse; these also serve touch screens
+                        and the keyboard. */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={onMoveUp}
+                        disabled={!reorderable || !canMoveUp}
+                        title={reorderable ? undefined : FILTERED_HINT}
+                        aria-label={`Monter ${frenchName(cat)}`}
+                    >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={onMoveDown}
+                        disabled={!reorderable || !canMoveDown}
+                        title={reorderable ? undefined : FILTERED_HINT}
+                        aria-label={`Descendre ${frenchName(cat)}`}
+                    >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                         variant="ghost"
                         size="icon"
@@ -480,7 +579,9 @@ const Index = ({
     // so one row here can produce several rows in the table.
     const roots = categories.filter((c) => c.parent_ids.length === 0);
     const childrenOf = (id: number) =>
-        categories.filter((c) => c.parent_ids.includes(id));
+        (categories.find((c) => c.id === id)?.child_ids ?? []).flatMap(
+            (childId) => categories.filter((c) => c.id === childId),
+        );
 
     const incompleteCount = categories.filter(
         (c) => !isComplete(c, locales),
@@ -509,6 +610,127 @@ const Index = ({
         .filter(({ kids, rootHit }) => rootHit || kids.length > 0);
 
     const isEmpty = visibleRoots.length === 0;
+
+    // ── Reordering ────────────────────────────────────────────
+    // Off while filtering: only part of a list is on screen then, and saving
+    // that part would push everything hidden to the end of it.
+    const reorderable = !q && !incompleteOnly;
+
+    const [drag, setDrag] = useState<{ list: ListId; id: number } | null>(null);
+    const [dropTarget, setDropTarget] = useState<{
+        id: number;
+        edge: 'before' | 'after';
+    } | null>(null);
+
+    const idsIn = (list: ListId) =>
+        (list === null ? roots : childrenOf(list)).map((c) => c.id);
+
+    // Optimistic so the row stays where it was put; Inertia puts it back if
+    // the save fails. Each save carries the whole list, so a quick run of
+    // moves ends on the last one.
+    const saveOrder = (list: ListId, ids: number[]) => {
+        router
+            .optimistic<{ categories: CategoryWithCounts[] }>((props) => ({
+                categories: withOrder(props.categories, list, ids),
+            }))
+            .patch(
+                route('admin.categories.reorder'),
+                { parent_id: list, ids },
+                { preserveScroll: true },
+            );
+    };
+
+    const moveBy = (list: ListId, id: number, offset: number) => {
+        const ids = idsIn(list);
+        const to = ids.indexOf(id) + offset;
+
+        ids.splice(ids.indexOf(id), 1);
+        ids.splice(to, 0, id);
+
+        saveOrder(list, ids);
+    };
+
+    const startDrag = (
+        event: DragEvent<HTMLElement>,
+        list: ListId,
+        id: number,
+    ) => {
+        const row = event.currentTarget.closest('tr');
+
+        event.dataTransfer.effectAllowed = 'move';
+        // Firefox will not start a drag that carries no data.
+        event.dataTransfer.setData('text/plain', String(id));
+
+        // Show the whole row under the pointer, not just the small handle.
+        if (row) {
+            event.dataTransfer.setDragImage(row, 16, 16);
+        }
+
+        setDrag({ list, id });
+    };
+
+    const endDrag = () => {
+        setDrag(null);
+        setDropTarget(null);
+    };
+
+    /**
+     * A row only accepts a drop from its own list, so a subcategory cannot
+     * leave its parent this way; that stays the edit dialog's job.
+     *
+     * `index`/`size` place the row within the block being dropped around: a
+     * main category moves with its open subcategories, so over any of those
+     * rows the drop lands before or after the whole block, on whichever side
+     * of its middle the pointer is.
+     */
+    const dragOverRow = (
+        event: DragEvent<HTMLTableRowElement>,
+        list: ListId,
+        id: number,
+        index = 0,
+        size = 1,
+    ) => {
+        if (!drag || drag.list !== list || drag.id === id) {
+            setDropTarget(null);
+
+            return;
+        }
+
+        // Without this the browser refuses the drop.
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+
+        const box = event.currentTarget.getBoundingClientRect();
+        const within = (event.clientY - box.top) / box.height;
+        const edge = (index + within) / size < 0.5 ? 'before' : 'after';
+
+        setDropTarget((current) =>
+            current?.id === id && current.edge === edge
+                ? current
+                : { id, edge },
+        );
+    };
+
+    const drop = (event: DragEvent<HTMLElement>) => {
+        event.preventDefault();
+
+        if (drag && dropTarget) {
+            const current = idsIn(drag.list);
+            const ids = current.filter((id) => id !== drag.id);
+            const at =
+                ids.indexOf(dropTarget.id) +
+                (dropTarget.edge === 'after' ? 1 : 0);
+
+            ids.splice(at, 0, drag.id);
+
+            // Dropped back where it started: nothing to save.
+            if (ids.join() !== current.join()) {
+                saveOrder(drag.list, ids);
+            }
+        }
+
+        endDrag();
+    };
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">
@@ -590,6 +812,12 @@ const Index = ({
                 </button>
             </div>
 
+            <p className="-mt-3 text-xs text-ink-soft">
+                {reorderable
+                    ? 'Glissez une ligne ou utilisez les flèches : la boutique suit cet ordre. Un clic sur une catégorie principale ouvre sa première sous-catégorie.'
+                    : `${FILTERED_HINT}.`}
+            </p>
+
             {/* ── Table ────────────────────────────────────── */}
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                 {isEmpty ? (
@@ -618,44 +846,224 @@ const Index = ({
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
-                                {visibleRoots.map(({ root, kids }) => (
-                                    <Fragment key={root.id}>
-                                        <CategoryRow
-                                            cat={root}
-                                            locales={locales}
-                                            depth={0}
-                                            childCount={
-                                                childrenOf(root.id).length
-                                            }
-                                            collapsed={collapsed.has(root.id)}
-                                            onToggle={() => toggle(root.id)}
-                                            onEdit={() => openEdit(root)}
-                                            onDelete={() => askDelete(root)}
-                                        />
-                                        {!collapsed.has(root.id) &&
-                                            kids.map((kid) => (
+                            <tbody
+                                className="divide-y divide-border"
+                                onDrop={drop}
+                                onDragLeave={(event) => {
+                                    // Fires between rows too; only clear once
+                                    // the pointer has left the table's body.
+                                    if (
+                                        !event.currentTarget.contains(
+                                            event.relatedTarget as Node | null,
+                                        )
+                                    ) {
+                                        setDropTarget(null);
+                                    }
+                                }}
+                            >
+                                {visibleRoots.map(
+                                    ({ root, kids }, rootIndex) => {
+                                        const shownKids = collapsed.has(root.id)
+                                            ? []
+                                            : kids;
+                                        const blockSize = shownKids.length + 1;
+                                        const movingRoot =
+                                            drag?.list === null &&
+                                            drag.id === root.id;
+                                        const rootEdge =
+                                            drag?.list === null &&
+                                            dropTarget?.id === root.id
+                                                ? dropTarget.edge
+                                                : null;
+
+                                        return (
+                                            <Fragment key={root.id}>
                                                 <CategoryRow
-                                                    // Keyed by the pair: a
-                                                    // shared subcategory is
-                                                    // rendered once under each
-                                                    // parent, so its own id is
-                                                    // not unique in the table.
-                                                    key={`${root.id}-${kid.id}`}
-                                                    cat={kid}
+                                                    cat={root}
                                                     locales={locales}
-                                                    depth={1}
-                                                    childCount={0}
-                                                    collapsed={false}
-                                                    onToggle={() => {}}
-                                                    onEdit={() => openEdit(kid)}
+                                                    depth={0}
+                                                    childCount={
+                                                        childrenOf(root.id)
+                                                            .length
+                                                    }
+                                                    collapsed={collapsed.has(
+                                                        root.id,
+                                                    )}
+                                                    onToggle={() =>
+                                                        toggle(root.id)
+                                                    }
+                                                    onEdit={() =>
+                                                        openEdit(root)
+                                                    }
                                                     onDelete={() =>
-                                                        askDelete(kid)
+                                                        askDelete(root)
+                                                    }
+                                                    reorderable={reorderable}
+                                                    canMoveUp={rootIndex > 0}
+                                                    canMoveDown={
+                                                        rootIndex <
+                                                        visibleRoots.length - 1
+                                                    }
+                                                    onMoveUp={() =>
+                                                        moveBy(
+                                                            null,
+                                                            root.id,
+                                                            -1,
+                                                        )
+                                                    }
+                                                    onMoveDown={() =>
+                                                        moveBy(null, root.id, 1)
+                                                    }
+                                                    onDragStart={(event) =>
+                                                        startDrag(
+                                                            event,
+                                                            null,
+                                                            root.id,
+                                                        )
+                                                    }
+                                                    onDragEnd={endDrag}
+                                                    onDragOver={(event) =>
+                                                        dragOverRow(
+                                                            event,
+                                                            null,
+                                                            root.id,
+                                                            0,
+                                                            blockSize,
+                                                        )
+                                                    }
+                                                    dragging={movingRoot}
+                                                    dropEdge={
+                                                        rootEdge === 'before'
+                                                            ? 'top'
+                                                            : rootEdge ===
+                                                                    'after' &&
+                                                                blockSize === 1
+                                                              ? 'bottom'
+                                                              : null
                                                     }
                                                 />
-                                            ))}
-                                    </Fragment>
-                                ))}
+                                                {shownKids.map(
+                                                    (kid, kidIndex) => {
+                                                        const kidTargeted =
+                                                            drag?.list ===
+                                                                root.id &&
+                                                            dropTarget?.id ===
+                                                                kid.id;
+
+                                                        return (
+                                                            <CategoryRow
+                                                                // Keyed by the pair: a
+                                                                // shared subcategory is
+                                                                // rendered once under
+                                                                // each parent, so its
+                                                                // own id is not unique
+                                                                // in the table.
+                                                                key={`${root.id}-${kid.id}`}
+                                                                cat={kid}
+                                                                locales={
+                                                                    locales
+                                                                }
+                                                                depth={1}
+                                                                childCount={0}
+                                                                collapsed={
+                                                                    false
+                                                                }
+                                                                onToggle={() => {}}
+                                                                onEdit={() =>
+                                                                    openEdit(
+                                                                        kid,
+                                                                    )
+                                                                }
+                                                                onDelete={() =>
+                                                                    askDelete(
+                                                                        kid,
+                                                                    )
+                                                                }
+                                                                reorderable={
+                                                                    reorderable
+                                                                }
+                                                                canMoveUp={
+                                                                    kidIndex > 0
+                                                                }
+                                                                canMoveDown={
+                                                                    kidIndex <
+                                                                    shownKids.length -
+                                                                        1
+                                                                }
+                                                                onMoveUp={() =>
+                                                                    moveBy(
+                                                                        root.id,
+                                                                        kid.id,
+                                                                        -1,
+                                                                    )
+                                                                }
+                                                                onMoveDown={() =>
+                                                                    moveBy(
+                                                                        root.id,
+                                                                        kid.id,
+                                                                        1,
+                                                                    )
+                                                                }
+                                                                onDragStart={(
+                                                                    event,
+                                                                ) =>
+                                                                    startDrag(
+                                                                        event,
+                                                                        root.id,
+                                                                        kid.id,
+                                                                    )
+                                                                }
+                                                                onDragEnd={
+                                                                    endDrag
+                                                                }
+                                                                onDragOver={(
+                                                                    event,
+                                                                ) =>
+                                                                    drag?.list ===
+                                                                    null
+                                                                        ? dragOverRow(
+                                                                              event,
+                                                                              null,
+                                                                              root.id,
+                                                                              kidIndex +
+                                                                                  1,
+                                                                              blockSize,
+                                                                          )
+                                                                        : dragOverRow(
+                                                                              event,
+                                                                              root.id,
+                                                                              kid.id,
+                                                                          )
+                                                                }
+                                                                dragging={
+                                                                    movingRoot ||
+                                                                    (drag?.list ===
+                                                                        root.id &&
+                                                                        drag.id ===
+                                                                            kid.id)
+                                                                }
+                                                                dropEdge={
+                                                                    kidTargeted
+                                                                        ? dropTarget.edge ===
+                                                                          'before'
+                                                                            ? 'top'
+                                                                            : 'bottom'
+                                                                        : rootEdge ===
+                                                                                'after' &&
+                                                                            kidIndex ===
+                                                                                shownKids.length -
+                                                                                    1
+                                                                          ? 'bottom'
+                                                                          : null
+                                                                }
+                                                            />
+                                                        );
+                                                    },
+                                                )}
+                                            </Fragment>
+                                        );
+                                    },
+                                )}
                             </tbody>
                         </table>
                     </div>

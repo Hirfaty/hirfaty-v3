@@ -25,7 +25,7 @@ class SettingsController extends Controller
 
         return Inertia::render('seller/settings/index', [
             'user' => $user,
-            'categories' => Category::roots()->get(),
+            'categories' => Category::roots()->ordered()->get(),
             'cities' => $cities->options(),
         ]);
     }

@@ -26,6 +26,7 @@ import { useCartSummary } from '@/hooks/use-cart-summary';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import logo from '@/images/logo.png';
+import { landingCategoryId } from '@/lib/category';
 import { switchLocale } from '@/lib/locale';
 
 const locales = [
@@ -700,7 +701,9 @@ export const SiteHeader = ({
                                                 >
                                                     <Link
                                                         href={categoryHref(
-                                                            category.id,
+                                                            landingCategoryId(
+                                                                category,
+                                                            ),
                                                         )}
                                                         onClick={() =>
                                                             setMenuOpen(false)

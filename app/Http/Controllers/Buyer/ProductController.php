@@ -58,24 +58,23 @@ class ProductController extends Controller
 
         if ($catId = $request->input('category_id')) {
             $activeCategory = Category::find($catId);
+            $landing = $activeCategory?->landing();
 
             /*
-             * Selecting a root category should also surface its children,
-             * otherwise the top-level pills match almost nothing — and a
-             * subcategory filed under several crafts is reachable from each
-             * of them.
-             *
-             * Resolved to a plain id list rather than a nested `whereHas` on
-             * `category.parents`: that relation is self-referencing, so an
-             * existence subquery aliases the related `categories` table and a
-             * `categories.id` condition inside it silently binds to the wrong
-             * end of the join. The taxonomy is a handful of rows, so the extra
-             * lookup costs nothing.
+             * A main category with subcategories is no longer a listing of its
+             * own: it opens on the first of them. The storefront links there
+             * directly, so this is for what it cannot rewrite — bookmarks,
+             * search results, links in old emails. Temporary, because which
+             * subcategory comes first is the admin's to change.
              */
-            $query->whereIn('category_id', [
-                (int) $catId,
-                ...$activeCategory?->children->pluck('id')->all() ?? [],
-            ]);
+            if ($landing?->isNot($activeCategory)) {
+                return redirect()->route('products.index', [
+                    ...$request->except('page'),
+                    'category_id' => $landing->id,
+                ]);
+            }
+
+            $query->where('category_id', (int) $catId);
         }
 
         $paginator = $this->scoring->apply($query)->paginate(12)->withQueryString();
@@ -105,8 +104,8 @@ class ProductController extends Controller
             // be rendered raw; the same shape (minus `image_url`) as the
             // header's `navCategories`.
             'categories' => Category::roots()
-                ->orderBy('id')
-                ->with(['children' => fn ($query) => $query->orderBy('categories.id')])
+                ->ordered()
+                ->with('children')
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,

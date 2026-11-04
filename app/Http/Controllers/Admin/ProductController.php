@@ -116,8 +116,8 @@ class ProductController extends Controller
             // picker under whichever main category is selected, mirroring
             // the buyer-facing filter rail (Buyer\ProductController).
             'categories' => Category::roots()
-                ->orderBy('id')
-                ->with(['children' => fn ($query) => $query->orderBy('categories.id')])
+                ->ordered()
+                ->with('children')
                 ->get(),
             'store' => $store,
             // The admin can file a product under any seller, so offer them all
@@ -194,8 +194,8 @@ class ProductController extends Controller
         return Inertia::render('admin/products/edit', [
             'product' => $product,
             'categories' => Category::roots()
-                ->orderBy('id')
-                ->with(['children' => fn ($query) => $query->orderBy('categories.id')])
+                ->ordered()
+                ->with('children')
                 ->get(),
         ]);
     }
