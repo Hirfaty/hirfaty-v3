@@ -319,27 +319,13 @@ test('the sitemap lists only what a guest can open', function () {
     expect(simplexml_load_string($xml))->not->toBeFalse();
 });
 
-test('the sitemap lists a subcategory rather than the main category that redirects to it', function () {
+test('the sitemap lists a main category whose products are all in its subcategories', function () {
     $child = Category::create(['slug' => 'bols', 'name' => ['fr' => 'Bols', 'ar' => 'أوعية', 'en' => 'Bowls']]);
     $child->parents()->attach($this->category);
 
     seoProduct($this->store, ['name' => 'Bol', 'category_id' => $child->id]);
-    seoProduct($this->store, ['name' => 'Filed on the parent']);
 
     expect($this->get('/sitemap.xml')->assertOk()->getContent())
         ->toContain('<loc>'.e(route('products.index', ['category_id' => $child->id])).'</loc>')
-        ->not->toContain('category_id='.$this->category->id.'<');
-});
-
-test('a product breadcrumb points at where its main category actually opens', function () {
-    $child = Category::create(['slug' => 'bols', 'name' => ['fr' => 'Bols', 'ar' => 'أوعية', 'en' => 'Bowls']]);
-    $child->parents()->attach($this->category);
-
-    $product = seoProduct($this->store, ['name' => 'Filed on the parent']);
-
-    $html = $this->get(route('products.show', $product->slug))->getContent();
-    $crumb = schemaOfType($html, 'BreadcrumbList')['itemListElement'][2];
-
-    expect($crumb['name'])->toBe('Poterie')
-        ->and($crumb['item'])->toBe(route('products.index', ['category_id' => $child->id]));
+        ->toContain('<loc>'.e(route('products.index', ['category_id' => $this->category->id])).'</loc>');
 });

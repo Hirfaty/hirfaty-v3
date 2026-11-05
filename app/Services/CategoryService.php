@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +51,41 @@ class CategoryService
                 'parent_ids' => $category->parents->pluck('id')->all(),
                 'child_ids' => $category->children->pluck('id')->all(),
             ]);
+    }
+
+    /**
+     * Narrows a product listing to one category and returns it, or null when
+     * there is no such category (which simply lists nothing).
+     *
+     * A main category lists every subcategory's products, one subcategory at a
+     * time in the admin's order: all of A, then all of B, then all of C. This
+     * sort comes first, so whatever the listing orders by afterwards only
+     * ranks products within a subcategory. Pieces filed directly on the main
+     * category come last.
+     *
+     * Resolved to a plain id list rather than a nested `whereHas` on
+     * `category.parents`: that relation is self-referencing, so an existence
+     * subquery aliases the related `categories` table and a `categories.id`
+     * condition inside it silently binds to the wrong end of the join.
+     *
+     * @param  Builder<Product>  $query
+     */
+    public function filterListing(Builder $query, int $categoryId): ?Category
+    {
+        $category = Category::find($categoryId);
+        $ids = [...$category?->children->pluck('id')->all() ?? [], $categoryId];
+
+        $query->whereIn('products.category_id', $ids);
+
+        if (count($ids) > 1) {
+            // The ranks are written into the SQL, not bound: Postgres cannot
+            // tell the type of a bound THEN value and would sort them as text.
+            $ranks = collect($ids)->keys()->map(fn (int $rank) => "WHEN ? THEN {$rank}")->implode(' ');
+
+            $query->orderByRaw("CASE products.category_id {$ranks} END", $ids);
+        }
+
+        return $category;
     }
 
     /**

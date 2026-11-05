@@ -230,23 +230,92 @@ test('a buyer sees their own wishlisted pieces on this page marked', function ()
         );
 });
 
-test('a main category opens on its first subcategory, keeping the search but not the page', function () {
-    $second = Category::create([
-        'slug' => 'tajines',
-        'name' => ['fr' => 'Tajines', 'ar' => 'طواجن', 'en' => 'Tagines'],
-    ]);
-    $first = Category::create([
-        'slug' => 'bols',
-        'name' => ['fr' => 'Bols', 'ar' => 'أوعية', 'en' => 'Bowls'],
-    ]);
-    // Placed against id order, so this proves the admin's order decides.
-    $this->category->children()->attach([
-        $second->id => ['sort_order' => 2],
+/**
+ * Three subcategories under the test's main category, placed against id order
+ * so a passing test proves the admin's order decides, not the id.
+ *
+ * @return array<int, Category> [first, second, third] in the admin's order
+ */
+function orderedSubcategories(): array
+{
+    $third = Category::create(['slug' => 'c', 'name' => ['fr' => 'C', 'ar' => 'C', 'en' => 'C']]);
+    $first = Category::create(['slug' => 'a', 'name' => ['fr' => 'A', 'ar' => 'A', 'en' => 'A']]);
+    $second = Category::create(['slug' => 'b', 'name' => ['fr' => 'B', 'ar' => 'B', 'en' => 'B']]);
+
+    test()->category->children()->attach([
+        $third->id => ['sort_order' => 3],
         $first->id => ['sort_order' => 1],
+        $second->id => ['sort_order' => 2],
     ]);
 
-    $this->get(route('products.index', ['category_id' => $this->category->id, 'search' => 'bol', 'page' => 3]))
-        ->assertRedirect(route('products.index', ['category_id' => $first->id, 'search' => 'bol']));
+    return [$first, $second, $third];
+}
+
+/** @return array<int, string> Product names in the order the listing returned them. */
+function listingOrder(array $query): array
+{
+    return collect(test()->get(route('products.index', $query))->assertOk()->viewData('page')['props']['products'])
+        ->pluck('name')
+        ->all();
+}
+
+test('a main category lists all its subcategories, one after another in the admin order', function () {
+    [$a, $b, $c] = orderedSubcategories();
+
+    // Created against the expected order, so insertion order cannot pass this.
+    listed(['name' => 'In C', 'category_id' => $c->id]);
+    listed(['name' => 'In B', 'category_id' => $b->id]);
+    listed(['name' => 'In A', 'category_id' => $a->id]);
+
+    expect(listingOrder(['category_id' => $this->category->id]))->toBe(['In A', 'In B', 'In C']);
+});
+
+test('the subcategory order outranks the demand score, which only ranks within a subcategory', function () {
+    [$a, $b] = orderedSubcategories();
+
+    listed(['name' => 'B star', 'category_id' => $b->id])->forceFill(['average_rating' => 5])->save();
+    listed(['name' => 'A plain', 'category_id' => $a->id]);
+    listed(['name' => 'A star', 'category_id' => $a->id])->forceFill(['average_rating' => 5])->save();
+
+    expect(listingOrder(['category_id' => $this->category->id]))->toBe(['A star', 'A plain', 'B star']);
+});
+
+test('products filed directly on the main category come after its subcategories', function () {
+    [$a] = orderedSubcategories();
+
+    listed(['name' => 'On the parent']);
+    listed(['name' => 'In A', 'category_id' => $a->id]);
+
+    expect(listingOrder(['category_id' => $this->category->id]))->toBe(['In A', 'On the parent']);
+});
+
+test('the subcategory order carries across pages', function () {
+    [$a, $b] = orderedSubcategories();
+
+    foreach (range(1, 12) as $n) {
+        listed(['name' => "B {$n}", 'category_id' => $b->id]);
+    }
+    listed(['name' => 'Only A', 'category_id' => $a->id]);
+    listed(['name' => 'Last B', 'category_id' => $b->id]);
+
+    $firstPage = listingOrder(['category_id' => $this->category->id]);
+    $secondPage = listingOrder(['category_id' => $this->category->id, 'page' => 2]);
+
+    expect($firstPage)->toHaveCount(12)
+        ->and($firstPage[0])->toBe('Only A')
+        ->and($secondPage)->toHaveCount(2)
+        ->and(array_intersect($firstPage, $secondPage))->toBe([]);
+});
+
+test('searching inside a main category keeps the subcategory order', function () {
+    [$a, $b] = orderedSubcategories();
+
+    listed(['name' => 'Tajine in B', 'category_id' => $b->id]);
+    listed(['name' => 'Tajine in A', 'category_id' => $a->id]);
+    listed(['name' => 'Bol in A', 'category_id' => $a->id]);
+
+    expect(listingOrder(['category_id' => $this->category->id, 'search' => 'tajine']))
+        ->toBe(['Tajine in A', 'Tajine in B']);
 });
 
 test('a subcategory lists only its own products', function () {
@@ -276,7 +345,7 @@ test('a main category with no subcategories still lists its own products', funct
         ->assertInertia(fn (Assert $page) => $page->has('products', 1));
 });
 
-test('an unknown category lists nothing instead of redirecting', function () {
+test('an unknown category lists nothing', function () {
     listed(['name' => 'Ailleurs']);
 
     $this->get(route('products.index', ['category_id' => 999999]))
@@ -298,12 +367,9 @@ test('a subcategory shared by two crafts is reachable from either of them', func
     listed(['name' => 'Partagé', 'category_id' => $child->id]);
 
     $this->get(route('products.index', ['category_id' => $other->id]))
-        ->assertRedirect(route('products.index', ['category_id' => $child->id]));
+        ->assertInertia(fn (Assert $page) => $page->has('products', 1));
 
     $this->get(route('products.index', ['category_id' => $this->category->id]))
-        ->assertRedirect(route('products.index', ['category_id' => $child->id]));
-
-    $this->get(route('products.index', ['category_id' => $child->id]))
         ->assertInertia(fn (Assert $page) => $page->has('products', 1));
 });
 

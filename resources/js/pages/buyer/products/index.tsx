@@ -15,7 +15,6 @@ import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
-import { landingCategoryId } from '@/lib/category';
 
 type Filters = {
     search: string;
@@ -80,10 +79,6 @@ export default function ProductsIndex({
      * rail. Seeded from the server's current filter so the active branch is
      * already open on first paint; afterwards the rail owns the state, because
      * applyFilters() preserves component state across visits.
-     *
-     * Every parent holding the active category opens, not just the first: a
-     * shared subcategory can be where a click on any of them landed, and only
-     * the first would leave the craft the shopper chose still folded.
      */
     const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
         if (!filters.category_id) {
@@ -91,18 +86,13 @@ export default function ProductsIndex({
         }
 
         const activeId = Number(filters.category_id);
-
-        return Object.fromEntries(
-            categories
-                .filter(
-                    (category) =>
-                        category.id === activeId ||
-                        category.children.some(
-                            (child) => child.id === activeId,
-                        ),
-                )
-                .map((category) => [category.id, true]),
+        const parent = categories.find(
+            (category) =>
+                category.id === activeId ||
+                category.children.some((child) => child.id === activeId),
         );
+
+        return parent ? { [parent.id]: true } : {};
     });
 
     const toggleExpanded = (id: number) =>
@@ -317,8 +307,10 @@ export default function ProductsIndex({
                                     const isOpen = Boolean(
                                         expanded[category.id],
                                     );
+                                    const isActive =
+                                        filters.category_id === categoryId;
                                     const containsActive =
-                                        filters.category_id === categoryId ||
+                                        isActive ||
                                         category.children.some(
                                             (child) =>
                                                 filters.category_id ===
@@ -332,20 +324,15 @@ export default function ProductsIndex({
                                                     type="button"
                                                     onClick={() => {
                                                         applyFilters({
-                                                            category_id: String(
-                                                                landingCategoryId(
-                                                                    category,
-                                                                ),
-                                                            ),
+                                                            category_id:
+                                                                categoryId,
                                                         });
                                                         setExpanded((prev) => ({
                                                             ...prev,
                                                             [category.id]: true,
                                                         }));
                                                     }}
-                                                    aria-pressed={
-                                                        containsActive
-                                                    }
+                                                    aria-pressed={isActive}
                                                     className={`min-w-0 flex-1 cursor-pointer truncate rounded-sm px-3 py-2 text-start text-sm transition-colors ${
                                                         containsActive
                                                             ? 'font-semibold text-souk-brown'

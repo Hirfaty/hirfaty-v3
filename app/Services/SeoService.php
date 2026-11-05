@@ -220,9 +220,7 @@ class SeoService
         ];
 
         if ($product->category) {
-            // Through landing(): a product filed directly under a main category
-            // would otherwise give the crumb a URL that only redirects.
-            $crumbs[] = [$product->category->translated_name, $this->categoryUrl($product->category->landing())];
+            $crumbs[] = [$product->category->translated_name, $this->categoryUrl($product->category)];
         }
 
         $crumbs[] = [$product->name, $url];

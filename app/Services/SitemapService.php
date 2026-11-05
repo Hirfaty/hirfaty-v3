@@ -174,17 +174,20 @@ class SitemapService
     }
 
     /**
-     * Categories whose listing is not empty. A parent with subcategories is
-     * left out whatever it holds: its URL only redirects to the first of them
-     * (see Buyer\ProductController::index), and a sitemap should list where a
-     * page lives, not a detour to it.
+     * Categories whose listing is not empty. A parent counts when any of its
+     * children has a product, since selecting a parent lists its children's
+     * pieces too (see CategoryService::filterListing).
      */
     private function categories()
     {
+        $withProducts = $this->publicProducts()->distinct()->pluck('category_id')->filter();
+
         return Category::query()
-            ->whereDoesntHave('children')
-            ->whereIn('id', $this->publicProducts()->distinct()->pluck('category_id')->filter())
+            ->with('children')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->filter(fn (Category $category) => $withProducts->contains($category->id)
+                || $category->children->pluck('id')->intersect($withProducts)->isNotEmpty())
+            ->values();
     }
 }

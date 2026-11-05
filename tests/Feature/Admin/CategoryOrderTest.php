@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -123,12 +125,35 @@ test('the admin page, the header and the storefront all follow the order', funct
         );
 });
 
-test('reordering sends a main category to its new first subcategory', function () {
+test('reordering subcategories reorders the products of their main category', function () {
     $bols = orderCategory('bols', [$this->poterie->id]);
     $tajines = orderCategory('tajines', [$this->poterie->id]);
 
+    $store = Store::create([
+        'user_id' => User::factory()->create(['role' => 'seller'])->id,
+        'store_name' => 'Atelier',
+        'slug' => 'atelier',
+        'category_id' => $this->poterie->id,
+    ]);
+
+    foreach (['bol' => $bols, 'tajine' => $tajines] as $name => $category) {
+        Product::create([
+            'store_id' => $store->id,
+            'category_id' => $category->id,
+            'name' => $name,
+            'slug' => $name,
+            'base_price' => 100,
+            'stock' => 1,
+            'status' => 'published',
+            'visibility' => 'both',
+        ]);
+    }
+
     $this->get(route('products.index', ['category_id' => $this->poterie->id]))
-        ->assertRedirect(route('products.index', ['category_id' => $bols->id]));
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.0.name', 'bol')
+            ->where('products.1.name', 'tajine')
+        );
 
     $this->patch(route('admin.categories.reorder'), [
         'parent_id' => $this->poterie->id,
@@ -136,7 +161,10 @@ test('reordering sends a main category to its new first subcategory', function (
     ]);
 
     $this->get(route('products.index', ['category_id' => $this->poterie->id]))
-        ->assertRedirect(route('products.index', ['category_id' => $tajines->id]));
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.0.name', 'tajine')
+            ->where('products.1.name', 'bol')
+        );
 });
 
 test('a stale page cannot drop or invent siblings', function () {

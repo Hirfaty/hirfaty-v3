@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductView;
 use App\Models\Wishlist;
+use App\Services\CategoryService;
 use App\Services\NewArrivalsService;
 use App\Services\ProductDetailService;
 use App\Services\ProductScoringService;
@@ -29,6 +30,7 @@ class ProductController extends Controller
         private ReviewService $reviews,
         private SeoService $seo,
         private ProductDetailService $details,
+        private CategoryService $categories,
     ) {}
 
     public function index(Request $request)
@@ -57,24 +59,7 @@ class ProductController extends Controller
         $activeCategory = null;
 
         if ($catId = $request->input('category_id')) {
-            $activeCategory = Category::find($catId);
-            $landing = $activeCategory?->landing();
-
-            /*
-             * A main category with subcategories is no longer a listing of its
-             * own: it opens on the first of them. The storefront links there
-             * directly, so this is for what it cannot rewrite — bookmarks,
-             * search results, links in old emails. Temporary, because which
-             * subcategory comes first is the admin's to change.
-             */
-            if ($landing?->isNot($activeCategory)) {
-                return redirect()->route('products.index', [
-                    ...$request->except('page'),
-                    'category_id' => $landing->id,
-                ]);
-            }
-
-            $query->where('category_id', (int) $catId);
+            $activeCategory = $this->categories->filterListing($query, (int) $catId);
         }
 
         $paginator = $this->scoring->apply($query)->paginate(12)->withQueryString();

@@ -814,7 +814,7 @@ const Index = ({
 
             <p className="-mt-3 text-xs text-ink-soft">
                 {reorderable
-                    ? 'Glissez une ligne ou utilisez les flèches : la boutique suit cet ordre. Un clic sur une catégorie principale ouvre sa première sous-catégorie.'
+                    ? 'Glissez une ligne ou utilisez les flèches : la boutique suit cet ordre. Un clic sur une catégorie principale affiche les produits de ses sous-catégories dans cet ordre.'
                     : `${FILTERED_HINT}.`}
             </p>
 

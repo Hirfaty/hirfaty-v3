@@ -180,14 +180,4 @@ class Category extends Model
     {
         return $query->orderBy('sort_order')->orderBy('id');
     }
-
-    /**
-     * The category a shopper actually browses when they pick this one. Main
-     * categories are being phased out in favour of their subcategories, so one
-     * with children opens on the first of them; anything else is itself.
-     */
-    public function landing(): self
-    {
-        return $this->children()->first() ?? $this;
-    }
 }

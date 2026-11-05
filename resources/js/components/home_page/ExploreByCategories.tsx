@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import { WarmFill } from '@/components/WarmFill';
-import { landingCategoryId } from '@/lib/category';
 
 type CategoryTile = {
     key: number;
@@ -128,7 +127,6 @@ export default function ExploreByCategories() {
             id: number;
             translated_name: string;
             image_url: string | null;
-            children: Array<{ id: number }>;
         }>;
     }>().props;
 
@@ -145,9 +143,7 @@ export default function ExploreByCategories() {
         (category) => ({
             key: category.id,
             image: category.image_url,
-            href: route('products.index', {
-                category_id: landingCategoryId(category),
-            }),
+            href: route('products.index', { category_id: category.id }),
             label: category.translated_name,
         }),
     );
