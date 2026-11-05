@@ -77,8 +77,22 @@ class ProductSearchService
      */
     public function foldedLike(string $column): string
     {
+        $pattern = DB::getDriverName() === 'pgsql' ? 'unaccent(?)' : '?';
+
+        return $this->folded($column)." LIKE {$pattern}";
+    }
+
+    /**
+     * A column in lower case and without accents: what foldedLike() matches
+     * on, and what an alphabetical sort orders by, so "Éventail" files among
+     * the E rather than after the Z.
+     *
+     * `$column` goes into the SQL as written: never pass it user input.
+     */
+    public function folded(string $column): string
+    {
         if (DB::getDriverName() === 'pgsql') {
-            return "unaccent(LOWER({$column})) LIKE unaccent(?)";
+            return "unaccent(LOWER({$column}))";
         }
 
         $sql = "LOWER({$column})";
@@ -91,7 +105,7 @@ class ProductSearchService
             }
         }
 
-        return "{$sql} LIKE ?";
+        return $sql;
     }
 
     /**

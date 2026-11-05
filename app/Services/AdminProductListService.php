@@ -35,8 +35,69 @@ class AdminProductListService
         private readonly ProductSearchService $search,
     ) {}
 
-    /** The query-string filters the table, its counts and the export share. */
-    public const FILTERS = ['search', 'category_id', 'status', 'images', 'price', 'stock', 'variants'];
+    /**
+     * The query string the table, its counts and the export share. `sort` only
+     * orders the rows; it travels with the filters so that changing a filter,
+     * turning a page or exporting keeps it.
+     */
+    public const FILTERS = ['search', 'category_id', 'status', 'images', 'price', 'stock', 'variants', 'sort'];
+
+    /** The orders listing() knows; anything else lists newest first. */
+    public const SORTS = [
+        'newest', 'oldest', 'updated',
+        'name_asc', 'name_desc',
+        'price_asc', 'price_desc',
+        'stock_asc', 'stock_desc',
+        'sales',
+    ];
+
+    /** What a retail buyer pays (Product::priceFor); null until priced. */
+    private const PRICE_SQL = 'COALESCE(products.sale_price, products.base_price)';
+
+    /**
+     * The stock inStock() judges, as a figure: the total of a product's active
+     * variants when it sells through them, otherwise its own column. The
+     * subquery sums nothing, hence NULL, for a product with no active variant.
+     */
+    private const STOCK_SQL = 'COALESCE((
+        SELECT SUM(product_variants.stock)
+        FROM product_variants
+        WHERE product_variants.product_id = products.id
+            AND product_variants.is_active = true
+            AND products.has_variants = true
+    ), products.stock)';
+
+    /**
+     * The filtered products in the order the admin picked: the table and its
+     * download both read this, so the file follows the screen.
+     *
+     * @param  array{sort?: ?string}  $filters  plus whatever query() takes
+     * @return Builder<Product>
+     */
+    public function listing(array $filters): Builder
+    {
+        $query = $this->query($filters)
+            ->withCount('orderItems')
+            ->selectRaw(self::STOCK_SQL.' as listed_stock');
+
+        match ($filters['sort'] ?? null) {
+            'oldest' => $query->oldest(),
+            'updated' => $query->latest('updated_at'),
+            'name_asc' => $query->orderByRaw($this->search->folded('products.name').' ASC'),
+            'name_desc' => $query->orderByRaw($this->search->folded('products.name').' DESC'),
+            // Unpriced pieces go last either way: no price is neither cheap nor dear.
+            'price_asc' => $query->orderByRaw(self::PRICE_SQL.' ASC NULLS LAST'),
+            'price_desc' => $query->orderByRaw(self::PRICE_SQL.' DESC NULLS LAST'),
+            'stock_asc' => $query->orderBy('listed_stock'),
+            'stock_desc' => $query->orderByDesc('listed_stock'),
+            'sales' => $query->orderByDesc('order_items_count'),
+            default => $query->latest(),
+        };
+
+        // Ties (a batch saved in one second, every unsold piece) would otherwise
+        // be free to swap between pages, showing one row twice and losing another.
+        return $query->orderByDesc('products.id');
+    }
 
     /**
      * The filters and nothing else — no eager loads, no ordering — so the
@@ -109,7 +170,7 @@ class AdminProductListService
     }
 
     /**
-     * Every product the filters match, newest first, as CSV or Excel.
+     * Every product the filters match, in the table's order, as CSV or Excel.
      *
      * @param  'csv'|'xlsx'  $format
      */
@@ -139,11 +200,10 @@ class AdminProductListService
                 'Créé le',
                 'Lien public',
             ],
-            fn () => $this->query($filters)
+            fn () => $this->listing($filters)
                 ->with(['store:id,store_name', 'category'])
-                ->withCount('orderItems')
                 ->withSum('variants', 'stock')
-                ->lazyByIdDesc(500)
+                ->lazy(500)
                 ->map(fn (Product $product) => $this->row($product)),
         );
     }

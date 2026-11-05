@@ -77,8 +77,82 @@ export const REJECTION_REASONS = [
     'Autre',
 ] as const;
 
+type ListedProduct = Product & {
+    media: Media[];
+    category: Category;
+    order_items_count: number;
+    /** Active variants' total, or the product's own stock without any. */
+    listed_stock: number;
+};
+
+/** The values are AdminProductListService::SORTS; empty is its default. */
+const SORT_GROUPS = [
+    {
+        label: 'Date',
+        options: [
+            { value: '', label: 'Plus récents' },
+            { value: 'oldest', label: 'Plus anciens' },
+            { value: 'updated', label: 'Modifiés récemment' },
+        ],
+    },
+    {
+        label: 'Nom',
+        options: [
+            { value: 'name_asc', label: 'De A à Z' },
+            { value: 'name_desc', label: 'De Z à A' },
+        ],
+    },
+    {
+        label: 'Prix',
+        options: [
+            { value: 'price_asc', label: 'Prix croissant' },
+            { value: 'price_desc', label: 'Prix décroissant' },
+        ],
+    },
+    {
+        label: 'Stock',
+        options: [
+            { value: 'stock_asc', label: 'Stock le plus bas' },
+            { value: 'stock_desc', label: 'Stock le plus haut' },
+        ],
+    },
+    {
+        label: 'Ventes',
+        options: [{ value: 'sales', label: 'Plus vendus' }],
+    },
+];
+
+interface SortFigure {
+    label: string;
+    value: (product: ListedProduct) => string | number;
+}
+
+const PRICE_FIGURE: SortFigure = {
+    label: 'Prix',
+    value: (p) => {
+        const price = p.sale_price ?? p.base_price;
+
+        return price === null ? 'À définir' : `${price} MAD`;
+    },
+};
+
+const STOCK_FIGURE: SortFigure = {
+    label: 'Stock',
+    value: (p) => p.listed_stock,
+};
+
+// The table has no room for these all the time, but a list ordered by a figure
+// nobody can see looks random, so sorting on one brings its column in.
+const SORT_FIGURES: Partial<Record<string, SortFigure>> = {
+    price_asc: PRICE_FIGURE,
+    price_desc: PRICE_FIGURE,
+    stock_asc: STOCK_FIGURE,
+    stock_desc: STOCK_FIGURE,
+    sales: { label: 'Ventes', value: (p) => p.order_items_count },
+};
+
 interface AdminProductsProps {
-    products: PaginatedData<Product & { media: Media[]; category: Category }>;
+    products: PaginatedData<ListedProduct>;
     categories: Category[];
     filters: {
         search?: string;
@@ -88,6 +162,7 @@ interface AdminProductsProps {
         price?: 'with' | 'without';
         stock?: 'in' | 'out';
         variants?: 'with' | 'without';
+        sort?: string;
     };
     totalProducts: number;
     statusCounts: Record<ProductStatus, number>;
@@ -173,7 +248,7 @@ function AdminProducts({
     };
 
     const setFilter = (
-        key: 'category_id' | 'images' | 'price' | 'stock' | 'variants',
+        key: 'category_id' | 'images' | 'price' | 'stock' | 'variants' | 'sort',
         value: string | undefined,
     ) => {
         router.get(
@@ -182,6 +257,10 @@ function AdminProducts({
             { preserveState: true },
         );
     };
+
+    const sortFigure = SORT_FIGURES[filters.sort ?? ''];
+    // The date beside each row is the one it is ordered by.
+    const showsUpdatedDate = filters.sort === 'updated';
 
     // Clicking the active images button again clears it.
     const toggleImages = (value: 'broken' | 'none') =>
@@ -550,6 +629,28 @@ function AdminProducts({
                     <option value="with">Avec déclinaisons</option>
                     <option value="without">Sans déclinaison</option>
                 </select>
+                <div className="flex items-center gap-2 text-sm text-ink-soft">
+                    <span>Trier par</span>
+                    <select
+                        value={filters.sort ?? ''}
+                        onChange={(e) => setFilter('sort', e.target.value)}
+                        aria-label="Trier les produits"
+                        className={SELECT_CLASS}
+                    >
+                        {SORT_GROUPS.map((group) => (
+                            <optgroup key={group.label} label={group.label}>
+                                {group.options.map((option) => (
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        ))}
+                    </select>
+                </div>
                 <button
                     type="button"
                     onClick={() => toggleImages('broken')}
@@ -677,7 +778,16 @@ function AdminProducts({
                                     <th className="px-5 py-3">SKU</th>
                                     <th className="px-5 py-3">Catégorie</th>
                                     <th className="px-5 py-3">Boutique</th>
-                                    <th className="px-5 py-3">Date</th>
+                                    {sortFigure && (
+                                        <th className="px-5 py-3">
+                                            {sortFigure.label}
+                                        </th>
+                                    )}
+                                    <th className="px-5 py-3">
+                                        {showsUpdatedDate
+                                            ? 'Modifié le'
+                                            : 'Créé le'}
+                                    </th>
                                     <th className="px-5 py-3">Statut</th>
                                     <th className="px-5 py-3 text-right">
                                         Actions
@@ -734,8 +844,17 @@ function AdminProducts({
                                             <td className="px-5 py-3 text-ink-soft">
                                                 {p.store.store_name}
                                             </td>
+                                            {sortFigure && (
+                                                <td className="px-5 py-3 font-medium whitespace-nowrap text-ink">
+                                                    {sortFigure.value(p)}
+                                                </td>
+                                            )}
                                             <td className="px-5 py-3 text-ink-soft">
-                                                {formatDate(p.updated_at)}
+                                                {formatDate(
+                                                    showsUpdatedDate
+                                                        ? p.updated_at
+                                                        : p.created_at,
+                                                )}
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span
@@ -776,7 +895,7 @@ function AdminProducts({
                                 {products.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={8}
+                                            colSpan={sortFigure ? 9 : 8}
                                             className="px-5 py-10 text-center text-ink-soft"
                                         >
                                             Aucun produit trouvé.

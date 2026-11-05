@@ -43,12 +43,10 @@ class ProductController extends Controller
     {
         $filters = $request->only(AdminProductListService::FILTERS);
 
-        $products = $list->query($filters)
+        $products = $list->listing($filters)
             // Variant photos feed the row's broken-photo marker and the
             // quick "Remplacer une photo" dialog.
             ->with(['store', 'category', 'media', 'variants.media', 'variants.options'])
-            ->withCount('orderItems')
-            ->latest()
             ->paginate(20)
             ->withQueryString();
 
@@ -64,7 +62,9 @@ class ProductController extends Controller
         return Inertia::render('admin/products/index', [
             'products' => $products,
             'categories' => Category::all(),
-            'filters' => $filters,
+            // An object even when empty: sent as [], `filters.sort` on the page
+            // would read the array's own sort() method instead of nothing.
+            'filters' => (object) $filters,
             'totalProducts' => (clone $countsQuery)->count(),
             // Shown on the "Images cassées" button whether or not it is active.
             'brokenImagesCount' => $list->query([...$filters, 'images' => 'broken'])->count(),
@@ -97,6 +97,7 @@ class ProductController extends Controller
             'price' => ['nullable', Rule::in(['with', 'without'])],
             'stock' => ['nullable', Rule::in(['in', 'out'])],
             'variants' => ['nullable', Rule::in(['with', 'without'])],
+            'sort' => ['nullable', Rule::in(AdminProductListService::SORTS)],
         ]);
 
         return $list->export($data['format'], $data);
