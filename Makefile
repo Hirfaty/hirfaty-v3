@@ -60,7 +60,6 @@ EDGE_NETWORK = hirfaty-edge
 	prod-build prod-up prod-down prod-restart prod-logs prod-ps \
 	prod-migrate prod-db-reset prod-seed prod-artisan prod-key-generate \
 	prod-pull prod-release prod-deploy prod-backup prod-backup-list prod-backup-check \
-	media-browser media-browser-stop \
 	stage-build stage-key-generate stage-up stage-down stage-restart stage-logs stage-ps \
 	stage-migrate stage-db-reset stage-seed stage-artisan \
 	stage-backup stage-backup-list stage-backup-check \
@@ -221,17 +220,9 @@ prod-backup-list:
 prod-backup-check:
 	./docker/scripts/restore.sh check prod $(BACKUP)
 
-# The read-only photo browser (docker/media-browser): live photos plus any
-# photo archive uploaded through its page. Off unless started; see
-# docker-compose.prod.yml.
-media-browser:
-	$(COMPOSE) --profile tools up -d --build media-browser
-	@echo "Running. From your computer: ssh -L 8090:127.0.0.1:8090 <user>@<server>, then open http://localhost:8090"
-
-# Stops it and throws away any archive copies it had opened. Archives uploaded
-# through its page stay until deleted there.
-media-browser-stop:
-	$(COMPOSE) --profile tools rm -sf media-browser
+# To look inside a backup — photos, products, any table — use the
+# hirfaty-backups-viewer project on your own computer, never anything on this
+# server.
 
 # ── Staging (init.hirfaty.com) ──────────────────────────────────────────
 # Same targets, against the staging stack. APP_ENV=staging in this checkout's

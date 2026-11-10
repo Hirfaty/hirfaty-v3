@@ -6,7 +6,6 @@ import {
     ChevronRight,
     Loader2,
     PackageSearch,
-    Search,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
@@ -70,7 +69,6 @@ export default function ProductsIndex({
     canWishlist,
 }: Props) {
     const { t, isRTL } = useTranslation();
-    const [search, setSearch] = useState(filters.search);
     const [busy, setBusy] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
 
@@ -165,8 +163,10 @@ export default function ProductsIndex({
      * against only applies to the `only:`-scoped reload in loadMore below.
      */
     const applyFilters = (overrides: Partial<Filters> = {}) => {
+        // The search itself comes from the header's search panel, which
+        // lands here as ?search=; a category pick keeps it.
         const next = {
-            search,
+            search: filters.search,
             category_id: filters.category_id,
             ...overrides,
         };
@@ -186,30 +186,6 @@ export default function ProductsIndex({
             },
         );
     };
-
-    /**
-     * Debounced search. Fires only once the box has actually diverged from
-     * what the server already has, which makes it a no-op on mount without
-     * needing a "first render" ref.
-     *
-     * That guard used to be a ref, and StrictMode defeated it: React runs
-     * setup → cleanup → setup on the *same* instance, so the ref was already
-     * false by the second setup and the effect fired a spurious visit ~300ms
-     * after every mount. Because that visit rebuilt its query from the props
-     * of the render it closed over, it raced the click that caused the mount
-     * and could silently drop the filter just applied — which is why picking
-     * a category sometimes appeared not to stick.
-     */
-    useEffect(() => {
-        if (search === filters.search) {
-            return;
-        }
-
-        const timer = setTimeout(() => applyFilters({ search }), 300);
-
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, filters.search]);
 
     const loadMore = () => {
         // reload() already forces preserveScroll/preserveState, which is why
@@ -256,28 +232,6 @@ export default function ProductsIndex({
 
                     <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
                         <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
-                            <label className="mb-6 flex items-center gap-2 border border-souk-brown/25 bg-souk-cream/40 px-3 py-2 transition-colors focus-within:border-souk-brown">
-                                {busy ? (
-                                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-souk-brown/60" />
-                                ) : (
-                                    <Search
-                                        className="h-4 w-4 shrink-0 text-souk-brown/60"
-                                        strokeWidth={1.5}
-                                    />
-                                )}
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder={t(
-                                        'buyer.products.search_placeholder',
-                                    )}
-                                    aria-label={t(
-                                        'buyer.products.search_label',
-                                    )}
-                                    className="min-w-0 flex-1 bg-transparent text-sm text-souk-title outline-none placeholder:text-souk-brown-deep/45"
-                                />
-                            </label>
-
                             <h3 className="mb-4 text-[10px] font-semibold tracking-[0.16em] text-souk-brown-deep/50 uppercase">
                                 {t('buyer.products.categories')}
                             </h3>
@@ -452,13 +406,12 @@ export default function ProductsIndex({
                                     </p>
                                     {hasActiveFilters && (
                                         <button
-                                            onClick={() => {
-                                                setSearch('');
+                                            onClick={() =>
                                                 applyFilters({
                                                     search: '',
                                                     category_id: '',
-                                                });
-                                            }}
+                                                })
+                                            }
                                             className="border border-souk-brown px-6 py-2.5 text-sm text-souk-brown-deep transition-colors hover:bg-souk-brown hover:text-souk-cream"
                                         >
                                             {t('buyer.products.reset_all')}

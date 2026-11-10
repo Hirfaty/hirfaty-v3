@@ -114,23 +114,15 @@ systemctl list-timers hirfaty-backup.timer --no-pager
 
 `status` should show `status=0/SUCCESS`, and the monitor from step 3 should show a ping.
 
-## 8. Media browser
+## 8. Looking inside a backup: the viewer, on your computer
 
-If it was running, recreate it so it drops the old backup mount:
-
-```bash
-make media-browser-stop
-```
+Nothing on the server can show a backup any more: the old media browser is gone from `docker-compose.prod.yml`. Remove what it left on the server, once (it says "No such container" if it was never started):
 
 ```bash
-make media-browser
+docker rm -f hirfaty-media-browser; docker volume rm hirfaty_media_browser_uploads; docker image rm hirfaty-media-browser:latest
 ```
 
-To see a backup's photos, download `media.tar.gz.age` from R2 and run this on your computer, then upload `media.tar.gz` on the page (5 GB maximum):
-
-```bash
-age -d -i hirfaty-backup.key -o media.tar.gz media.tar.gz.age
-```
+To look inside a backup, use the **hirfaty-backups-viewer** project on your own computer, a separate folder outside this repo; its README covers the setup (a second, **read-only** R2 token, never the server's) and its use (`make up`, then http://127.0.0.1:8090, your `hirfaty-backup.key` on its page). It shows every product with its photos and their details, the ateliers, the crafts, a check of photos against the database, every table and a read-only SQL console. It never downloads `config.tar.gz.age`.
 
 ## 9. Only after step 6 passed: delete the old local backups
 
