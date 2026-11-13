@@ -2,8 +2,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     BadgeCheck,
     Ban,
-    CheckCircle2,
-    Clock,
     EllipsisVertical,
     Eye,
     Hourglass,
@@ -17,7 +15,6 @@ import {
     UserCheck,
     Mail,
     Users,
-    XCircle,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -79,92 +76,16 @@ type UserRow = User & {
     } | null;
 };
 
-type ProRequestStatus = 'pending' | 'approved' | 'declined';
-
 interface Props {
     users: PaginatedData<UserRow>;
     totalUsers: number;
     roleCounts: Record<'buyer' | 'professional_buyer' | 'seller', number>;
-    /*
-     * Counted over every role, not just `professional_buyer`: the status
-     * outlives the decision — a declined request leaves the account a plain
-     * `buyer`, while an approved one is by then `professional_buyer`.
-     */
-    professionalRequestCounts: Record<ProRequestStatus, number>;
-    /** Buyers waiting on a trade decision. Drives the queue banner below. */
-    pendingProfessionalCount: number;
     /** Signups stopped before the password step — see pending.tsx. */
     pendingSignupCount: number;
     filters: {
         search?: string;
         role?: string;
-        professional_request_status?: ProRequestStatus | string;
     };
-}
-
-const PRO_REQUEST_BADGE: Record<
-    ProRequestStatus,
-    { label: string; className: string; Icon: typeof Clock }
-> = {
-    pending: {
-        label: 'Demande en attente',
-        className: 'bg-amber-100 text-amber-700',
-        Icon: Clock,
-    },
-    approved: {
-        label: 'Compte pro approuvé',
-        className: 'bg-emerald-100 text-emerald-700',
-        Icon: CheckCircle2,
-    },
-    declined: {
-        label: 'Demande refusée',
-        className: 'bg-rose-100 text-rose-700',
-        Icon: XCircle,
-    },
-};
-
-/**
- * What the trade-request lifecycle looks like for this row, if anything.
- *
- * `professional_request_status` is the source of truth once a request
- * exists — it survives the decision, so it is checked ahead of the role.
- * An account promoted straight from the admin's user editor (never went
- * through a request) has no status to show; the old verified/non-vérifié
- * hint covers that case instead.
- */
-function ProRequestStatusBadge({ user }: { user: UserRow }) {
-    if (user.professional_request_status) {
-        const badge = PRO_REQUEST_BADGE[user.professional_request_status];
-        const Icon = badge.Icon;
-
-        return (
-            <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
-                title={badge.label}
-            >
-                <Icon className="h-3 w-3" />
-                {badge.label}
-            </span>
-        );
-    }
-
-    if (user.role === 'professional_buyer') {
-        return user.professional_verified_at ? (
-            <CheckCircle2
-                className="h-4 w-4 text-emerald-600"
-                aria-label="Vérifié"
-            />
-        ) : (
-            <span
-                className="text-[11px] text-ink-soft"
-                title="En attente de vérification"
-            >
-                non vérifié
-            </span>
-        );
-    }
-
-    return null;
 }
 
 const PROVIDER_LABEL: Record<SocialProvider, string> = {
@@ -278,8 +199,6 @@ export default function UsersIndex({
     users,
     totalUsers,
     roleCounts,
-    professionalRequestCounts,
-    pendingProfessionalCount,
     pendingSignupCount,
     filters,
 }: Props) {
@@ -325,18 +244,6 @@ export default function UsersIndex({
             route('admin.users.index'),
             { ...filters, role: role ?? undefined, page: 1 },
             { preserveState: true },
-        );
-    };
-
-    const setRequestStatus = (status: ProRequestStatus | null) => {
-        router.get(
-            route('admin.users.index'),
-            {
-                ...filters,
-                professional_request_status: status ?? undefined,
-                page: 1,
-            },
-            { preserveState: true, preserveScroll: true },
         );
     };
 
@@ -398,10 +305,6 @@ export default function UsersIndex({
     };
 
     const activeRole = filters.role ?? null;
-    const activeRequestStatus =
-        (filters.professional_request_status as ProRequestStatus | undefined) ||
-        null;
-    const pendingActive = activeRequestStatus === 'pending';
     const tabs: { value: string | null; label: string; count: number }[] = [
         { value: null, label: 'Tous', count: totalUsers },
         { value: 'seller', label: 'Vendeurs', count: roleCounts.seller },
@@ -440,39 +343,6 @@ export default function UsersIndex({
                     </Link>
                 </div>
             </header>
-
-            {/*
-                Trade-request queue. Not a role tab: a buyer waiting on a
-                decision is still `buyer`, so this is its own filter and its
-                own banner — and it only exists while there's work to do.
-            */}
-            {pendingProfessionalCount > 0 && (
-                <button
-                    type="button"
-                    onClick={() =>
-                        setRequestStatus(pendingActive ? null : 'pending')
-                    }
-                    className={`flex items-center gap-3 rounded-xl border px-5 py-3.5 text-left transition ${
-                        pendingActive
-                            ? 'border-amber-400 bg-amber-100'
-                            : 'border-amber-300/60 bg-amber-50 hover:bg-amber-100'
-                    }`}
-                >
-                    <Clock className="h-5 w-5 shrink-0 text-amber-600" />
-                    <span className="text-sm text-ink">
-                        <span className="font-medium">
-                            {pendingProfessionalCount} demande
-                            {pendingProfessionalCount > 1 ? 's' : ''} de compte
-                            professionnel
-                        </span>{' '}
-                        <span className="text-ink-soft">
-                            {pendingActive
-                                ? '— cliquez pour afficher tout le monde'
-                                : 'en attente de votre décision.'}
-                        </span>
-                    </span>
-                </button>
-            )}
 
             {/* ── Role filter tabs ─────────────────────────── */}
             <div className="flex flex-wrap gap-2">
@@ -520,72 +390,6 @@ export default function UsersIndex({
                         {pendingSignupCount}
                     </span>
                 </Link>
-            </div>
-
-            {/*
-                Trade-request status filter. Separate from the role tabs
-                above for the same reason as the banner: the status
-                (pending/approved/declined) and the role diverge — a
-                declined request leaves the account a plain buyer, and an
-                approved one shows both `professional_buyer` above *and*
-                `approved` here.
-            */}
-            <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-ink-soft">
-                    Demandes pro :
-                </span>
-                {(
-                    [
-                        { value: null, label: 'Toutes' },
-                        {
-                            value: 'pending' as const,
-                            label: 'En attente',
-                        },
-                        {
-                            value: 'approved' as const,
-                            label: 'Approuvées',
-                        },
-                        {
-                            value: 'declined' as const,
-                            label: 'Refusées',
-                        },
-                    ] satisfies {
-                        value: ProRequestStatus | null;
-                        label: string;
-                    }[]
-                ).map((tab) => {
-                    const active = activeRequestStatus === tab.value;
-                    const count =
-                        tab.value === null
-                            ? professionalRequestCounts.pending +
-                              professionalRequestCounts.approved +
-                              professionalRequestCounts.declined
-                            : professionalRequestCounts[tab.value];
-
-                    return (
-                        <button
-                            key={tab.label}
-                            type="button"
-                            onClick={() => setRequestStatus(tab.value)}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                                active
-                                    ? 'border-ink bg-ink text-white'
-                                    : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
-                            }`}
-                        >
-                            {tab.label}
-                            <span
-                                className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                                    active
-                                        ? 'bg-white/20 text-white'
-                                        : 'bg-muted text-ink-soft'
-                                }`}
-                            >
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
             </div>
 
             {/* ── Search ───────────────────────────────────── */}
@@ -681,9 +485,6 @@ export default function UsersIndex({
                                             >
                                                 {ROLE_LABEL[user.role]}
                                             </span>
-                                            <ProRequestStatusBadge
-                                                user={user}
-                                            />
                                         </div>
                                     </TableCell>
                                     <TableCell>

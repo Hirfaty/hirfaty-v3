@@ -7,6 +7,8 @@ import CartSheet from '@/components/CartSheet';
 import CartSync from '@/components/CartSync';
 import CategoriesMegaMenu from '@/components/CategoriesMegaMenu';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import PriceModeChooser from '@/components/PriceModeChooser';
+import PriceModeSwitch from '@/components/PriceModeSwitch';
 import RegionMenu from '@/components/RegionMenu';
 import SearchPanel from '@/components/SearchPanel';
 import {
@@ -191,8 +193,11 @@ export const SiteHeader = ({
     const categories = navCategories ?? [];
 
     // Marks the current section so its nav link can carry the zellij star.
+    // Home only on an exact match: every public page sits under `/fr/…`, so
+    // a prefix match lit "Accueil" up on all of them.
     const isActive = (href: string) =>
-        currentUrl === href || currentUrl.startsWith(`${href}/`);
+        currentUrl === href ||
+        (href !== homeHref && currentUrl.startsWith(`${href}/`));
 
     /*
      * "Home" only makes sense as a way back — it's absent on the home page
@@ -255,8 +260,10 @@ export const SiteHeader = ({
         route('products.index', { category_id: id }, false);
 
     /*
-     * Only meaningful in `overlay`: whether the page has moved far enough for
-     * the bar to take its cream fill. With an anchor the bar holds out until
+     * Whether the page has moved far enough for the bar to change: in
+     * `overlay`, to take its cream fill; in `solid`, to lift off the page with
+     * a hairline shadow, so the pinned bar reads as above the content
+     * scrolling under it. With an anchor the bar holds out until
      * the anchored element's bottom clears the top of the viewport — the
      * `/about` hero stays transparent over its pinned photograph for its
      * whole window. Without one it falls back to 24px of scroll rather than
@@ -266,10 +273,6 @@ export const SiteHeader = ({
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
-        if (variant !== 'overlay') {
-            return;
-        }
-
         const onScroll = () => {
             if (overlayAnchor?.current) {
                 setScrolled(
@@ -297,14 +300,24 @@ export const SiteHeader = ({
 
     return (
         <header
-            className={`z-50 transition-colors duration-300 ${
+            /*
+             * Always in view while scrolling: `overlay` pins over its hero,
+             * `solid` sticks to the top of the page it sits in (so it keeps
+             * its place in the flow, and nothing under it needs a spacer).
+             * The solid bar is ~5rem tall — other sticky elements on the
+             * storefront (product gallery, filter rail, order summaries)
+             * stick below it at `top-24`/`top-28`.
+             */
+            className={`z-50 transition-[background-color,box-shadow] duration-300 ${
                 variant === 'overlay'
                     ? `fixed inset-x-0 top-0 ${
                           scrolled || searchOpen
                               ? 'bg-cream shadow-sm shadow-ink/5'
                               : 'bg-transparent'
                       }`
-                    : 'relative bg-transparent'
+                    : `sticky top-0 bg-souk-paper/95 backdrop-blur-md ${
+                          scrolled || searchOpen ? 'shadow-sm shadow-ink/5' : ''
+                      }`
             }`}
         >
             <CartSync />
@@ -316,6 +329,13 @@ export const SiteHeader = ({
              * the only thing every one of those pages has in common.
              */}
             <ReviewPrompt />
+
+            {/*
+             * "Particulier ou pro ?" — asked once, on the first page a new
+             * visitor lands on, for the same reason as the two above: the
+             * header is the one thing every storefront page has.
+             */}
+            <PriceModeChooser />
 
             <div className="relative container flex items-center justify-between gap-6 py-5">
                 <Link
@@ -593,6 +613,12 @@ export const SiteHeader = ({
                     />
 
                     {/*
+                     * Particulier | Pro — which price list the storefront
+                     * shows. Phones get the full version in the drawer.
+                     */}
+                    <PriceModeSwitch light={light} />
+
+                    {/*
                      * Language and currency together — see RegionMenu. They
                      * were two controls side by side, which was a lot of
                      * chrome for two preferences set once.
@@ -653,6 +679,18 @@ export const SiteHeader = ({
                                             .
                                         </span>
                                     </SheetTitle>
+                                </div>
+
+                                {/* First thing in the drawer: on a phone this
+                                    is the header's price switch. */}
+                                <div className="border-b border-ink/10 px-6 py-4">
+                                    <p className="mb-3 text-[11px] tracking-[0.18em] text-ink/50 uppercase">
+                                        {t('pro.mode.label')}
+                                    </p>
+                                    <PriceModeSwitch
+                                        variant="menu"
+                                        onSwitched={() => setMenuOpen(false)}
+                                    />
                                 </div>
 
                                 {/* Scrolls: with the crafts listed out, the

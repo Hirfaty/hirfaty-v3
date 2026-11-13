@@ -1,7 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowUpRight,
-    Briefcase,
     CheckCircle2,
     Clock,
     LayoutGrid,
@@ -47,7 +46,6 @@ interface DashboardStats {
     total_sellers: number;
     total_buyers: number;
     pending_sellers: number;
-    pending_professional_buyers: number;
 }
 
 type RegistrationPeriod = 'day' | 'week' | 'month' | 'year';
@@ -349,7 +347,7 @@ const AdminDashboard = ({
             </div>
 
             {/* ── Activity, then the review queues ─────────── */}
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <Stat
                     label="Commandes"
                     value={stats.total_orders}
@@ -382,19 +380,6 @@ const AdminDashboard = ({
                     icon={Store}
                     tone={stats.pending_sellers > 0 ? 'warning' : 'default'}
                     href={route('admin.stores.index', { status: 'pending' })}
-                />
-                <Stat
-                    label="Acheteurs pro en attente"
-                    value={stats.pending_professional_buyers}
-                    icon={Briefcase}
-                    tone={
-                        stats.pending_professional_buyers > 0
-                            ? 'warning'
-                            : 'default'
-                    }
-                    href={route('admin.users.index', {
-                        professional_request_status: 'pending',
-                    })}
                 />
             </div>
 

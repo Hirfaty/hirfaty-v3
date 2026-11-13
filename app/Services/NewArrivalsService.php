@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -11,20 +10,20 @@ use Illuminate\Database\Eloquent\Collection;
 class NewArrivalsService
 {
     /**
-     * The most recently listed pieces, newest first.
+     * The most recently listed pieces, taking turns across categories (see
+     * query()).
      *
-     * Ordered on `id` rather than `created_at`: the seeder and the bulk
-     * importer both write a batch inside one second, so a timestamp sort
+     * Recency is read from `id` rather than `created_at`: the seeder and the
+     * bulk importer both write a batch inside one second, so a timestamp sort
      * leaves those rows in an arbitrary order that changes between requests —
      * which would shuffle the grid under a shopper paging through it.
      *
-     * The audience gate is the same one the main listing applies. Without it
-     * a trade-only piece would be reachable here by anyone, which is exactly
-     * the hole `visibility` exists to close.
+     * `$audience` is the price list the visitor is browsing in
+     * (PriceModeService::audience()), which decides which pieces are listed.
      */
-    public function paginate(?User $viewer, int $perPage = 12): LengthAwarePaginator
+    public function paginate(string $audience, int $perPage = 12): LengthAwarePaginator
     {
-        return $this->query($viewer)
+        return $this->query($audience)
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -45,27 +44,40 @@ class NewArrivalsService
      *
      * @return Collection<int, Product>
      */
-    public function forHome(?User $viewer, int $limit = 18): Collection
+    public function forHome(string $audience, int $limit = 18): Collection
     {
-        return $this->query($viewer)
+        return $this->query($audience)
             ->whereHas('store')
             ->take($limit)
             ->get();
     }
 
     /**
-     * The shared shape of both: newest first, gated to what this viewer may
-     * see, with everything `BuyerProductResource` reads eager loaded.
+     * The shared shape of both: gated to what this viewer may see, with
+     * everything `BuyerProductResource` reads eager loaded, in turns across
+     * categories.
+     *
+     * Not plain newest-first: when the desk files a batch of thirty pieces in
+     * one category, that alone would fill the home row and the first pages
+     * here. Each piece is ranked by recency within its own category, and the
+     * list runs rank by rank — the newest piece of every category, then the
+     * second newest of every category, and so on — newest first within a
+     * rank. Every published piece still appears, just interleaved.
+     *
+     * The rank is computed over the same gated set as the outer query, so a
+     * hidden or unpublished piece never takes a category's turn.
      *
      * @return Builder<Product>
      */
-    private function query(?User $viewer): Builder
+    private function query(string $audience): Builder
     {
-        $audience = Product::audienceFor($viewer);
+        $ranked = $this->visibleTo(Product::query(), $audience)
+            ->select('id')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY id DESC) AS category_rank');
 
-        return Product::query()
-            ->storefront()
-            ->whereIn('visibility', ['both', $audience])
+        return $this->visibleTo(Product::query(), $audience)
+            ->joinSub($ranked, 'ranked', 'ranked.id', '=', 'products.id')
+            ->select('products.*')
             // BuyerProductResource reaches through to `store->city->name`;
             // without the eager load every card fires two extra queries.
             // `variants.media` lets it fold variant photography into
@@ -73,6 +85,23 @@ class NewArrivalsService
             // the same reasoning.
             ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists'])
-            ->orderByDesc('id');
+            ->orderBy('ranked.category_rank')
+            ->orderByDesc('products.id');
+    }
+
+    /**
+     * Published, priced, in a selling shop, and open to the audience being
+     * browsed. Without the audience gate a trade-only piece would be
+     * reachable here by anyone, which is exactly the hole `visibility` exists
+     * to close.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    private function visibleTo(Builder $query, string $audience): Builder
+    {
+        return $query
+            ->storefront()
+            ->whereIn('visibility', ['both', $audience]);
     }
 }

@@ -26,6 +26,11 @@ export type ShowcaseProduct = {
      * through a path that skips the eager load) still shows its own photos.
      */
     gallery_images?: { id: number; url: string; type: string }[];
+    /**
+     * Present only while the visitor browses in pro mode (the header switch,
+     * see PriceModeService); null when the piece has no trade rate.
+     */
+    professional_effective_price?: number | null;
 };
 
 /** How many products fill the spotlight carousel down the leading third. */
@@ -267,6 +272,11 @@ export function ShowcaseCard({
         product.base_price !== null ? Number(product.base_price) : null;
     const sale = product.sale_price ? Number(product.sale_price) : null;
     const onSale = base !== null && sale !== null && sale < base;
+    const retail = onSale ? sale : base;
+    // The trade price, when the visitor browses in pro mode and the piece
+    // has one below the public price.
+    const pro = product.professional_effective_price ?? null;
+    const showPro = retail !== null && pro !== null && pro < retail;
 
     return (
         /*
@@ -336,7 +346,20 @@ export function ShowcaseCard({
                     {product.name}
                 </h3>
                 <div className="mt-1 flex items-baseline gap-2">
-                    {base !== null ? (
+                    {showPro ? (
+                        <>
+                            <span className="font-display text-[15px] text-olive">
+                                {money(pro)}
+                                <TaxIncluded />
+                            </span>
+                            <span className="text-xs text-souk-brown-deep/45 line-through">
+                                {money(retail)}
+                            </span>
+                            <span className="rounded-full bg-olive/12 px-1.5 py-px text-[9px] font-medium tracking-[0.14em] text-olive uppercase">
+                                Pro
+                            </span>
+                        </>
+                    ) : base !== null ? (
                         <>
                             <span className="font-display text-[15px] text-souk-brown">
                                 {money(onSale ? sale : base)}

@@ -13,6 +13,8 @@ import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
+import { usePriceMode } from '@/hooks/use-price-mode';
+import type { PriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
 
 /**
@@ -177,6 +179,12 @@ type CheckoutForm = {
     payment_method: string;
     /** Bill the piece "Buy now" holds rather than the cart. */
     buy_now: boolean;
+    /**
+     * The price list this page quoted from. Checked server-side against the
+     * current one, so switching mode in another tab cannot bill a total
+     * other than the one on screen.
+     */
+    price_mode: PriceMode;
     /** Which carrier ships the basket — one of `deliveryServices`. */
     delivery_service_id: number | null;
     save_address: boolean;
@@ -264,6 +272,7 @@ const Checkout = ({
     deliveryRates: DeliveryRatesMap;
 }) => {
     const { t, locale } = useTranslation();
+    const { mode: priceMode } = usePriceMode();
 
     // Default first (the query orders on is_default), so a buyer with a book
     // lands on their usual address rather than an empty form.
@@ -302,6 +311,7 @@ const Checkout = ({
             // Card through Payzone when it is on offer, else PayPal.
             payment_method: paymentMethods[0] ?? 'card',
             buy_now: buyNow !== null,
+            price_mode: priceMode,
             /*
              * The buyer's pick, when they make one. Until then the first carrier
              * that ships to the destination is used (see `selectedService`), and
@@ -1211,7 +1221,7 @@ const Checkout = ({
                     </div>
 
                     {/* ══ Right: order summary ═════════════════════ */}
-                    <aside className="lg:sticky lg:top-6 lg:self-start">
+                    <aside className="lg:sticky lg:top-24 lg:self-start">
                         <SectionHeading>
                             {t('buyer.checkout.summary')}
                         </SectionHeading>

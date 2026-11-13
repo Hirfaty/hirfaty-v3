@@ -1,40 +1,46 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     ArrowRight,
-    BadgePercent,
     CheckCircle2,
-    Clock,
     Layers,
-    Send,
-    ShieldCheck,
-    Store,
-    Truck,
+    Zap,
 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import { useRef } from 'react';
 import ArtisanCta from '@/components/ArtisanCta';
-import { ZellijStarIcon } from '@/components/home/CraftIcons';
+import {
+    CratesIcon,
+    StorefrontIcon,
+    WholesaleTagIcon,
+    ZellijStarIcon,
+} from '@/components/home/CraftIcons';
 import Reveal from '@/components/home/Reveal';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { switchPriceMode, usePriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
 import pottery from '@/images/cat-pottery.jpg';
 import textile from '@/images/cat-textile.jpg';
 import wood from '@/images/cat-wood.jpg';
-import heroMain from '@/images/hero-main.jpg';
-import zellij from '@/images/zellij-pattern.jpg';
-import { login } from '@/routes';
+import heroWorkshop from '@/images/hero/hero-3.jpg';
+import workshop from '@/images/hero-main.jpg';
 
 /** Museum-caption label, matching the rest of the storefront. */
 const EYEBROW = 'text-[11px] tracking-[0.22em] uppercase';
+
+/** Section heading, as the home page and /about set theirs. */
+const HEADING =
+    'font-display text-[clamp(1.9rem,3.6vw,2.9rem)] leading-[1.06] font-bold tracking-[-0.02em] text-souk-title';
 
 /** Figures for the illustration only — labelled as such on the page. */
 const DEMO = { public: 480, trade: 336, minQty: 12 } as const;
 const DEMO_SAVING = Math.round((1 - DEMO.trade / DEMO.public) * 100);
 
+/** The same hand-drawn icons the home page's wholesale branch uses. */
 const PERKS = [
-    { key: 'pricing', Icon: BadgePercent },
-    { key: 'catalogue', Icon: Layers },
-    { key: 'direct', Icon: Store },
+    { key: 'pricing', Icon: WholesaleTagIcon },
+    { key: 'catalogue', Icon: CratesIcon },
+    { key: 'direct', Icon: StorefrontIcon },
 ] as const;
 
 /** One photograph per step, so the sequence reads visually as well as in prose. */
@@ -45,26 +51,71 @@ const STEPS = [
 ] as const;
 
 const NOTES = [
-    { key: 'review', Icon: ShieldCheck },
+    { key: 'open', Icon: Zap },
     { key: 'minimum', Icon: Layers },
-    { key: 'same', Icon: Truck },
+    { key: 'switch', Icon: ArrowLeftRight },
 ] as const;
 
-/** Anchor the hero button jumps to when there is a form to fill in. */
-const FORM_ID = 'request';
+/**
+ * The thin rule with a lozenge at its centre — the divider the home page
+ * draws between its sections' parts.
+ */
+function Rule({ light = false }: { light?: boolean }) {
+    return (
+        <span
+            aria-hidden="true"
+            className="mx-auto flex w-24 items-center gap-2"
+        >
+            <span
+                className={`h-px flex-1 ${light ? 'bg-souk-cream/40' : 'bg-souk-brown/25'}`}
+            />
+            <span
+                className={`h-1.5 w-1.5 shrink-0 rotate-45 border ${light ? 'border-souk-cream/60' : 'border-souk-brown/45'}`}
+            />
+            <span
+                className={`h-px flex-1 ${light ? 'bg-souk-cream/40' : 'bg-souk-brown/25'}`}
+            />
+        </span>
+    );
+}
 
-type Props = {
-    status: string | null;
-    canRequest: boolean;
-    isProfessional: boolean;
-    isVerified: boolean;
-    submittedMessage: string | null;
-    requestedAt: string | null;
-    declineReason: string | null;
-};
+/** Centred eyebrow + heading, the way every home section opens. */
+function SectionTitle({
+    eyebrow,
+    heading,
+    lead,
+}: {
+    eyebrow: string;
+    heading: string;
+    lead?: string;
+}) {
+    return (
+        <div className="mx-auto max-w-2xl text-center">
+            <Reveal>
+                <p className={`text-souk-brown/80 ${EYEBROW}`}>{eyebrow}</p>
+            </Reveal>
+            <Reveal delay={80}>
+                <h2 className={`mt-4 ${HEADING}`}>{heading}</h2>
+            </Reveal>
+            {lead && (
+                <Reveal delay={140}>
+                    <p className="mt-5 text-lg leading-relaxed text-souk-brown-deep/75">
+                        {lead}
+                    </p>
+                </Reveal>
+            )}
+            <Reveal delay={180}>
+                <div className="mt-7">
+                    <Rule />
+                </div>
+            </Reveal>
+        </div>
+    );
+}
 
 /**
- * One tile of the price illustration.
+ * One tile of the price illustration, framed like a catalogue card
+ * (CollectionCard) so the reader recognises what they will see in the shop.
  *
  * Both sides render the same photograph and the same piece — that *is* the
  * point being made, so drawing them from one component rather than two keeps
@@ -82,338 +133,285 @@ function DemoCard({
     money: (v: number) => string;
 }) {
     return (
-        <div
-            className={`overflow-hidden rounded-3xl border bg-white/70 ${
-                trade
-                    ? 'border-olive/30 shadow-xl shadow-olive/10'
-                    : 'border-souk-brown/12'
-            }`}
-        >
+        <div>
             <p
-                className={`px-5 py-3 text-center ${EYEBROW} ${
-                    trade
-                        ? 'bg-olive/10 text-olive'
-                        : 'bg-souk-brown/5 text-souk-brown-deep/60'
-                }`}
+                className={`mb-3 text-center ${EYEBROW} ${trade ? 'text-souk-brown' : 'text-souk-brown-deep/55'}`}
             >
                 {label}
             </p>
 
-            <div className="relative aspect-[4/3] overflow-hidden bg-souk-brown/5">
-                <img
-                    src={pottery}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                />
-                {trade && (
-                    <span className="absolute start-4 top-4 rounded-full bg-olive px-3 py-1 text-[10px] font-medium tracking-[0.16em] text-white uppercase">
-                        {t('pro.demo.badge')}
-                    </span>
-                )}
-            </div>
-
-            <div className="p-5">
-                <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
-                    {t('pro.demo.workshop')}
-                </p>
-                <h3 className="mt-2 font-display text-lg leading-snug text-souk-title">
-                    {t('pro.demo.product_name')}
-                </h3>
-
-                {/* Fixed height so the two cards stay the same size even
-                    though only one of them carries a badge row. */}
-                <div className="mt-4 min-h-[5.5rem]">
-                    {trade ? (
-                        <>
-                            {/*
-                             * The public figure is ruled through rather than
-                             * simply replaced: the line draws across it and
-                             * the trade price lifts in behind, so the eye
-                             * follows the substitution happening.
-                             * `origin-left` flips under RTL, or the rule would
-                             * draw away from the text instead of across it.
-                             */}
-                            <span className="relative inline-block text-souk-brown-deep/45">
-                                {money(DEMO.public)} TTC
-                                <span
-                                    aria-hidden="true"
-                                    className="absolute inset-x-0 top-1/2 h-px origin-left bg-souk-brown-deep/45 motion-safe:animate-rule-through rtl:origin-right"
-                                />
-                            </span>
-
-                            <div className="motion-safe:animate-lift-in">
-                                <p className="mt-1.5 font-display text-3xl leading-none text-olive">
-                                    {money(DEMO.trade)}
-                                    <span className="ms-1.5 text-sm">TTC</span>
-                                </p>
-                                <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
-                                        {t('pro.demo.saving').replace(
-                                            ':percent',
-                                            String(DEMO_SAVING),
-                                        )}
-                                    </span>
-                                    <span className="text-[11px] text-olive/80">
-                                        {t('pro.demo.min_note').replace(
-                                            ':count',
-                                            String(DEMO.minQty),
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="font-display text-3xl leading-none text-souk-title">
-                            {money(DEMO.public)}
-                            <span className="ms-1.5 text-sm">TTC</span>
-                        </p>
+            <div
+                className={`rounded-md border bg-souk-paper p-1.5 transition-shadow duration-500 sm:p-2 ${
+                    trade
+                        ? 'border-souk-brown shadow-[0_24px_50px_-30px_var(--color-souk-brown)]'
+                        : 'border-souk-brown/25'
+                }`}
+            >
+                <div className="relative aspect-[4/3] overflow-hidden border border-souk-brown/20 bg-white">
+                    <img
+                        src={pottery}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                    />
+                    {trade && (
+                        <span className="absolute start-3 top-3 rounded-full bg-souk-brown px-3 py-1 text-[10px] font-medium tracking-[0.16em] text-souk-cream uppercase">
+                            {t('pro.demo.badge')}
+                        </span>
                     )}
+                </div>
+
+                <div className="px-2.5 pt-4 pb-3 sm:px-3">
+                    <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
+                        {t('pro.demo.workshop')}
+                    </p>
+                    <h3 className="mt-1.5 font-display text-lg leading-snug text-souk-title">
+                        {t('pro.demo.product_name')}
+                    </h3>
+
+                    {/* Fixed height so the two cards stay the same size even
+                        though only one of them carries a badge row. */}
+                    <div className="mt-3 min-h-[5.25rem]">
+                        {trade ? (
+                            <>
+                                {/*
+                                 * The public figure is ruled through rather
+                                 * than simply replaced: the line draws across
+                                 * it and the trade price lifts in behind, so
+                                 * the eye follows the substitution happening.
+                                 * `origin-left` flips under RTL, or the rule
+                                 * would draw away from the text instead of
+                                 * across it.
+                                 */}
+                                <span className="relative inline-block text-sm text-souk-brown-deep/45">
+                                    {money(DEMO.public)} TTC
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute inset-x-0 top-1/2 h-px origin-left bg-souk-brown-deep/45 motion-safe:animate-rule-through rtl:origin-right"
+                                    />
+                                </span>
+
+                                <div className="motion-safe:animate-lift-in">
+                                    <p className="mt-1 font-display text-3xl leading-none text-souk-brown">
+                                        {money(DEMO.trade)}
+                                        <span className="ms-1.5 text-sm">
+                                            TTC
+                                        </span>
+                                    </p>
+                                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-souk-brown/10 px-2 py-0.5 text-[11px] font-medium text-souk-brown">
+                                            {t('pro.demo.saving').replace(
+                                                ':percent',
+                                                String(DEMO_SAVING),
+                                            )}
+                                        </span>
+                                        <span className="text-[11px] text-souk-brown-deep/65">
+                                            {t('pro.demo.min_note').replace(
+                                                ':count',
+                                                String(DEMO.minQty),
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="pt-5 font-display text-3xl leading-none text-souk-title">
+                                {money(DEMO.public)}
+                                <span className="ms-1.5 text-sm">TTC</span>
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
 
-export default function ProfessionalAccount({
-    status,
-    canRequest,
-    isVerified,
-    submittedMessage,
-    declineReason,
-}: Props) {
+/**
+ * How pro prices work — for the visitor deciding whether to switch.
+ *
+ * There is nothing to apply for: anyone shops on the pro list by choosing
+ * "Pro" (PriceModeService), and each piece is then sold from the minimum
+ * quantity the admin set on it. So the page explains that and offers the
+ * switch, straight into the catalogue.
+ *
+ * Laid out the way /about and the home page are: a full-bleed photograph
+ * under the overlay header, then light paper and peach sections with centred
+ * headings, arch-topped photography and a single brown band for the action.
+ */
+export default function ProfessionalAccount() {
     const { t, locale } = useTranslation();
+    const { isPro } = usePriceMode();
 
-    /*
-     * The page is public now, so "no user" is a routine state rather than an
-     * edge case — `canRequest` is false both for a guest and for a signed-in
-     * account that may not ask, and only the shared `auth` prop tells the two
-     * apart. A guest is offered registration; an eligible buyer is offered
-     * the form further down.
-     */
-    const { auth } = usePage().props as unknown as {
-        auth: { user: { id: number } | null };
-    };
-    const isGuest = !auth?.user;
+    /* The overlay bar stays transparent until the hero has scrolled away. */
+    const heroRef = useRef<HTMLElement>(null);
 
-    const { data, setData, post, processing, errors } = useForm({
-        message: '',
-    });
+    const intlLocale =
+        { fr: 'fr-MA', ar: 'ar-MA', en: 'en-MA' }[locale as string] ?? 'fr-MA';
 
     const money = (v: number) =>
-        new Intl.NumberFormat(
-            { fr: 'fr-MA', ar: 'ar-MA', en: 'en-MA' }[locale as string] ??
-                'fr-MA',
-            { maximumFractionDigits: 0 },
-        ).format(v);
+        new Intl.NumberFormat(intlLocale, {
+            maximumFractionDigits: 0,
+        }).format(v);
 
-    const submit = (e: FormEvent) => {
-        e.preventDefault();
-        post(route('professional.request'), { preserveScroll: true });
-    };
+    /** Straight to the catalogue at pro prices — the page's best argument. */
+    const seeProPrices = () =>
+        switchPriceMode('professional', {
+            onSuccess: () => router.visit(route('products.index')),
+        });
 
     /**
-     * The headline action, which differs by where the reader stands.
-     *
-     * The two settled states render as a status rather than a link: a button
-     * offering something already granted, or already pending, would be a dead
-     * control.
+     * The page's one action, twice (hero and closing band): switch to pro and
+     * go shopping — or, already in pro mode, just go shopping.
      */
-    const cta = (() => {
-        if (isVerified) {
-            return {
-                label: t('pro.hero.cta_verified'),
-                href: null,
-                Icon: CheckCircle2,
-            };
-        }
+    const action = (tone: 'light' | 'dark') => {
+        const classes =
+            tone === 'light'
+                ? 'bg-souk-cream text-souk-brown-deep shadow-lg shadow-black/20 hover:bg-white'
+                : 'bg-souk-brown text-souk-cream hover:bg-souk-brown-deep';
+        const inner = (
+            <>
+                {isPro ? t('pro.hero.browse') : t('pro.hero.cta')}
+                <ArrowRight
+                    className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                    strokeWidth={1.75}
+                />
+            </>
+        );
 
-        if (status === 'pending') {
-            return {
-                label: t('pro.hero.cta_pending'),
-                href: null,
-                Icon: Clock,
-            };
-        }
-
-        if (isGuest) {
-            return {
-                label: t('pro.hero.cta_guest'),
-                href: login(),
-                Icon: ArrowRight,
-            };
-        }
-
-        // Signed in and allowed to ask — jump to the form at the foot.
-        return canRequest
-            ? {
-                  label: t('pro.hero.cta_buyer'),
-                  href: `#${FORM_ID}`,
-                  Icon: ArrowRight,
-              }
-            : { label: null, href: null, Icon: ArrowRight };
-    })();
+        return isPro ? (
+            <Link
+                href={route('products.index')}
+                className={`group inline-flex items-center gap-3 rounded-sm px-8 py-4 font-display text-lg transition-colors duration-300 ${classes}`}
+            >
+                {inner}
+            </Link>
+        ) : (
+            <button
+                type="button"
+                onClick={seeProPrices}
+                className={`group inline-flex cursor-pointer items-center gap-3 rounded-sm px-8 py-4 font-display text-lg transition-colors duration-300 ${classes}`}
+            >
+                {inner}
+            </button>
+        );
+    };
 
     return (
         <>
             <Head title={t('pro.meta.title')} />
 
             <div className="min-h-screen bg-souk-paper">
-                <SiteHeader />
+                <SiteHeader variant="overlay" overlayAnchor={heroRef} />
 
                 {/* ───────────────────────── Hero ───────────────────────── */}
-                <section className="relative overflow-hidden">
-                    <div className="relative bg-souk-brown lg:rounded-br-[26rem]">
-                        <div
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 opacity-[0.07] mix-blend-screen"
-                            style={{
-                                backgroundImage: `url(${zellij})`,
-                                backgroundSize: '340px',
-                            }}
+                <section
+                    ref={heroRef}
+                    className="relative isolate overflow-hidden"
+                >
+                    <img
+                        src={heroWorkshop}
+                        alt=""
+                        loading="eager"
+                        className="absolute inset-0 -z-10 h-full w-full object-cover motion-safe:animate-ken-burns"
+                    />
+                    {/* Darkens the photograph so the type reads over it. */}
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-0 -z-10 bg-gradient-to-b from-souk-title/75 via-souk-title/60 to-souk-title/80"
+                    />
+
+                    <div className="container flex min-h-[82svh] flex-col items-center justify-center pt-32 pb-20 text-center lg:pt-36 lg:pb-24">
+                        <Reveal>
+                            <p
+                                className={`flex items-center justify-center gap-2.5 text-souk-cream/85 ${EYEBROW}`}
+                            >
+                                <ZellijStarIcon className="h-3.5 w-3.5" />
+                                {t('pro.hero.eyebrow')}
+                            </p>
+                        </Reveal>
+
+                        <h1 className="mt-6 max-w-4xl font-display text-[clamp(2.3rem,5.4vw,4.4rem)] leading-[1.02] font-bold tracking-[-0.02em] text-white">
+                            <Reveal delay={80}>
+                                <span className="block">
+                                    {t('pro.hero.title1')}
+                                </span>
+                            </Reveal>
+                            <Reveal delay={170}>
+                                <span className="block text-souk-cream">
+                                    {t('pro.hero.title2')}
+                                </span>
+                            </Reveal>
+                        </h1>
+
+                        <Reveal delay={260}>
+                            <p className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
+                                {t('pro.hero.lead')}
+                            </p>
+                        </Reveal>
+
+                        <Reveal delay={340}>
+                            <div className="mt-10 flex flex-wrap items-center justify-center gap-3.5">
+                                {/* Already in pro mode: say so, then offer the
+                                    catalogue rather than a switch to nowhere. */}
+                                {isPro && (
+                                    <p className="inline-flex items-center gap-2.5 rounded-sm border border-souk-cream/40 bg-souk-title/30 px-6 py-3.5 text-souk-cream backdrop-blur-sm">
+                                        <CheckCircle2
+                                            className="h-5 w-5 shrink-0"
+                                            strokeWidth={1.6}
+                                        />
+                                        {t('pro.hero.cta_active')}
+                                    </p>
+                                )}
+                                {action('light')}
+                            </div>
+                        </Reveal>
+                    </div>
+                </section>
+
+                {/* ───────────────────── What you get ───────────────────── */}
+                <section className="relative overflow-hidden bg-souk-paper py-16 lg:py-24">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:38px]"
+                    />
+
+                    <div className="relative container">
+                        <SectionTitle
+                            eyebrow={t('pro.perks.eyebrow')}
+                            heading={t('pro.perks.heading')}
                         />
 
-                        <div className="relative container grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
-                            <div>
-                                <Reveal>
-                                    <p
-                                        className={`text-souk-cream/70 ${EYEBROW}`}
-                                    >
-                                        {t('pro.hero.eyebrow')}
-                                    </p>
-                                </Reveal>
-
-                                <h1 className="mt-6 font-display text-[clamp(2.5rem,6vw,5rem)] leading-[0.98] font-bold tracking-[-0.02em] text-white">
-                                    <Reveal delay={80}>
-                                        <span className="block">
-                                            {t('pro.hero.title1')}
+                        <div className="mt-14 grid gap-12 md:grid-cols-3 md:gap-0 md:divide-x md:divide-souk-brown/12">
+                            {PERKS.map(({ key, Icon }, i) => (
+                                <Reveal key={key} delay={i * 120}>
+                                    <article className="group mx-auto max-w-sm px-2 text-center md:px-8 lg:px-10">
+                                        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-t-full rounded-b-lg bg-souk-peach text-souk-brown ring-1 ring-souk-brown/15 transition-colors duration-500 group-hover:bg-souk-brown group-hover:text-souk-cream">
+                                            <Icon className="h-8 w-8" />
                                         </span>
-                                    </Reveal>
-                                    <Reveal delay={180}>
-                                        <span className="block text-souk-cream italic">
-                                            {t('pro.hero.title2')}
-                                        </span>
-                                    </Reveal>
-                                </h1>
-
-                                <Reveal delay={280}>
-                                    <p className="mt-7 max-w-xl text-xl leading-relaxed text-souk-cream/85">
-                                        {t('pro.hero.lead')}
-                                    </p>
+                                        <h3 className="mt-6 font-display text-xl leading-snug text-souk-title">
+                                            {t(`pro.perks.${key}.title`)}
+                                        </h3>
+                                        <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
+                                            {t(`pro.perks.${key}.body`)}
+                                        </p>
+                                    </article>
                                 </Reveal>
-
-                                {/* A refusal is the one state that owes the
-                                    reader a reason, so it is surfaced here
-                                    rather than buried further down. */}
-                                {status === 'declined' && declineReason && (
-                                    <Reveal delay={320}>
-                                        <div className="mt-6 max-w-xl rounded-2xl border border-souk-cream/25 bg-souk-cream/10 px-5 py-4">
-                                            <p
-                                                className={`text-souk-cream/70 ${EYEBROW}`}
-                                            >
-                                                {t(
-                                                    'buyer.professional.declined_reason',
-                                                )}
-                                            </p>
-                                            <p className="mt-2 text-sm leading-relaxed text-souk-cream/90">
-                                                {declineReason}
-                                            </p>
-                                        </div>
-                                    </Reveal>
-                                )}
-
-                                <Reveal delay={360}>
-                                    <div className="mt-10 flex flex-wrap items-center gap-4">
-                                        {cta.label &&
-                                            (cta.href ? (
-                                                <Link
-                                                    href={cta.href}
-                                                    className="group relative inline-flex items-center gap-3 overflow-hidden rounded-xl bg-souk-cream px-8 py-4 font-display text-lg text-souk-brown-deep shadow-lg shadow-black/10 transition-transform duration-300 hover:-translate-y-0.5"
-                                                >
-                                                    <span
-                                                        aria-hidden="true"
-                                                        className="absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 opacity-0 group-hover:animate-sheen group-hover:opacity-100"
-                                                    />
-                                                    {cta.label}
-                                                    <cta.Icon
-                                                        className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1"
-                                                        strokeWidth={1.75}
-                                                    />
-                                                </Link>
-                                            ) : (
-                                                <p className="inline-flex items-center gap-3 rounded-xl border border-souk-cream/35 bg-souk-cream/10 px-6 py-3.5 text-souk-cream">
-                                                    <cta.Icon
-                                                        className="h-5 w-5 shrink-0"
-                                                        strokeWidth={1.6}
-                                                    />
-                                                    {cta.label}
-                                                </p>
-                                            ))}
-
-                                        <Link
-                                            href={route('products.index')}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-souk-cream/40 px-7 py-4 text-souk-cream transition-colors duration-300 hover:bg-souk-cream/10"
-                                        >
-                                            {t('pro.hero.browse')}
-                                        </Link>
-                                    </div>
-                                </Reveal>
-                            </div>
-
-                            {/* Arch-framed photograph, drifting and slowly
-                                zooming — the treatment the home hero uses, so
-                                the two pages read as one site. */}
-                            <Reveal from="scale" delay={200}>
-                                <div className="relative mx-auto w-full max-w-[26rem]">
-                                    <div
-                                        aria-hidden="true"
-                                        className="absolute -top-6 -right-5 h-full w-full rounded-t-full rounded-bl-3xl border-[3px] border-souk-cream/60"
-                                    />
-                                    <div className="relative aspect-[530/620] w-full overflow-hidden rounded-t-full rounded-bl-3xl shadow-2xl shadow-black/25 motion-safe:animate-float-slow">
-                                        <img
-                                            src={heroMain}
-                                            alt=""
-                                            loading="eager"
-                                            className="h-full w-full object-cover motion-safe:animate-ken-burns"
-                                        />
-                                        <div
-                                            aria-hidden="true"
-                                            className="absolute inset-0 bg-gradient-to-t from-souk-brown/45 via-transparent to-transparent"
-                                        />
-                                    </div>
-                                </div>
-                            </Reveal>
+                            ))}
                         </div>
                     </div>
                 </section>
 
                 {/* ───────────────── The price illustration ───────────────── */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-tadelakt motif-fade [--pattern-size:34px]"
-                    />
+                <section className="border-y border-souk-brown/10 bg-souk-peach py-16 lg:py-24">
+                    <div className="container">
+                        <SectionTitle
+                            eyebrow={t('pro.demo.eyebrow')}
+                            heading={t('pro.demo.heading')}
+                            lead={t('pro.demo.lead')}
+                        />
 
-                    <div className="relative container">
-                        <div className="max-w-2xl">
-                            <Reveal>
-                                <p className={`text-souk-brown ${EYEBROW}`}>
-                                    {t('pro.demo.eyebrow')}
-                                </p>
-                            </Reveal>
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                                    {t('pro.demo.heading')}
-                                </h2>
-                            </Reveal>
-                            <Reveal delay={140}>
-                                <p className="mt-5 text-xl leading-relaxed text-souk-brown-deep/75">
-                                    {t('pro.demo.lead')}
-                                </p>
-                            </Reveal>
-                        </div>
-
-                        <div className="mt-14 grid max-w-3xl gap-6 sm:grid-cols-2">
+                        <div className="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2 sm:gap-8">
                             <Reveal from="left">
                                 <DemoCard
                                     label={t('pro.demo.public_label')}
@@ -433,97 +431,53 @@ export default function ProfessionalAccount({
                         </div>
 
                         <Reveal delay={220}>
-                            <p className="mt-6 text-xs text-souk-brown-deep/50 italic">
+                            <p className="mt-7 text-center text-xs text-souk-brown-deep/55">
                                 {t('pro.demo.disclaimer')}
                             </p>
                         </Reveal>
                     </div>
                 </section>
 
-                {/* ───────────────────── What you get ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-arches motif-fade [--pattern-color:rgba(130,71,42,0.13)] [--pattern-size:52px]"
-                    />
-
-                    <div className="relative container">
-                        <div className="max-w-2xl">
-                            <Reveal>
-                                <p className={`text-souk-brown ${EYEBROW}`}>
-                                    {t('pro.perks.eyebrow')}
-                                </p>
-                            </Reveal>
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                                    {t('pro.perks.heading')}
-                                </h2>
-                            </Reveal>
-                        </div>
-
-                        <div className="mt-16 grid gap-6 md:grid-cols-3">
-                            {PERKS.map(({ key, Icon }, i) => (
-                                <Reveal key={key} delay={i * 120}>
-                                    <article className="group h-full rounded-3xl border border-souk-brown/12 bg-souk-paper/70 p-9 transition-all duration-500 hover:-translate-y-1.5 hover:border-souk-brown/25 hover:shadow-xl hover:shadow-souk-brown/10">
-                                        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-souk-brown/8 text-souk-brown ring-1 ring-souk-brown/10 transition-all duration-500 group-hover:rotate-6 group-hover:bg-souk-brown group-hover:text-souk-cream">
-                                            <Icon
-                                                className="h-7 w-7"
-                                                strokeWidth={1.5}
-                                            />
-                                        </span>
-                                        <h3 className="mt-6 font-display text-2xl leading-snug text-souk-title">
-                                            {t(`pro.perks.${key}.title`)}
-                                        </h3>
-                                        <p className="mt-3.5 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                            {t(`pro.perks.${key}.body`)}
-                                        </p>
-                                    </article>
-                                </Reveal>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
                 {/* ───────────────────── How it works ───────────────────── */}
-                <section className="relative overflow-hidden bg-souk-paper py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-weave motif-fade opacity-50 [--pattern-color:rgba(130,71,42,0.07)] [--pattern-size:46px]"
-                    />
+                <section className="bg-souk-paper py-16 lg:py-24">
+                    <div className="container">
+                        <SectionTitle
+                            eyebrow={t('pro.steps.eyebrow')}
+                            heading={t('pro.steps.heading')}
+                        />
 
-                    <div className="relative container">
-                        <div className="max-w-2xl">
-                            <Reveal>
-                                <p className={`text-souk-brown ${EYEBROW}`}>
-                                    {t('pro.steps.eyebrow')}
-                                </p>
-                            </Reveal>
-                            <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
-                                    {t('pro.steps.heading')}
-                                </h2>
-                            </Reveal>
-                        </div>
+                        <ol className="relative mt-14 grid gap-14 md:grid-cols-3 md:gap-8">
+                            {/* The thread the three doorways hang from. */}
+                            <span
+                                aria-hidden="true"
+                                className="absolute inset-x-[16%] top-[8.5rem] hidden h-px bg-souk-brown/20 md:block"
+                            />
 
-                        <ol className="mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
                             {STEPS.map(({ n, src }, i) => (
                                 <Reveal key={n} delay={i * 130} from="scale">
-                                    <li className="group">
-                                        <div className="relative aspect-[5/3] overflow-hidden rounded-t-[4rem] rounded-b-2xl bg-souk-brown/5 ring-1 ring-souk-brown/10">
+                                    <li className="group relative flex flex-col items-center text-center">
+                                        {/* Arch-topped, as everywhere else
+                                            on the site — a workshop doorway
+                                            rather than a rounded rectangle. */}
+                                        <div className="relative h-[17rem] w-[12.5rem] overflow-hidden rounded-t-full rounded-b-lg bg-souk-brown/5 ring-1 ring-souk-brown/15">
                                             <img
                                                 src={src}
                                                 alt=""
                                                 loading="lazy"
                                                 className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-105"
                                             />
-                                            <span className="absolute start-4 bottom-4 flex h-11 w-11 items-center justify-center rounded-full bg-souk-paper/95 font-display text-xl text-souk-title tabular-nums shadow-lg backdrop-blur">
-                                                {n}
-                                            </span>
+                                            <div
+                                                aria-hidden="true"
+                                                className="absolute inset-0 bg-souk-title/10"
+                                            />
                                         </div>
+                                        <span className="relative z-10 -mt-6 flex h-12 w-12 items-center justify-center rounded-full border border-souk-brown/20 bg-souk-paper font-display text-xl text-souk-brown tabular-nums shadow-md shadow-souk-brown/10">
+                                            {n}
+                                        </span>
                                         <h3 className="mt-5 font-display text-xl leading-snug text-souk-title">
                                             {t(`pro.steps.${n}.title`)}
                                         </h3>
-                                        <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
+                                        <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-souk-brown-deep/75">
                                             {t(`pro.steps.${n}.body`)}
                                         </p>
                                     </li>
@@ -534,42 +488,39 @@ export default function ProfessionalAccount({
                 </section>
 
                 {/* ────────────────────── Good to know ────────────────────── */}
-                <section className="relative overflow-hidden bg-souk-peach py-24 lg:py-32">
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 motif-zellij motif-fade opacity-60 [--pattern-color:rgba(130,71,42,0.1)] [--pattern-size:58px]"
-                    />
-
-                    <div className="relative container">
-                        <div className="max-w-2xl">
+                <section className="border-y border-souk-brown/10 bg-souk-peach py-16 lg:py-24">
+                    <div className="container grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+                        <div className="text-center lg:sticky lg:top-28 lg:self-start lg:text-start">
                             <Reveal>
-                                <p className={`text-souk-brown ${EYEBROW}`}>
+                                <p className={`text-souk-brown/80 ${EYEBROW}`}>
                                     {t('pro.notes.eyebrow')}
                                 </p>
                             </Reveal>
                             <Reveal delay={80}>
-                                <h2 className="mt-4 font-display text-[clamp(2rem,4vw,3.5rem)] leading-[1.04] font-bold tracking-[-0.02em] text-souk-title">
+                                <h2 className={`mt-4 ${HEADING}`}>
                                     {t('pro.notes.heading')}
                                 </h2>
                             </Reveal>
                         </div>
 
-                        <div className="mt-14 divide-y divide-souk-brown/12 border-y border-souk-brown/12">
+                        <div className="divide-y divide-souk-brown/12 border-y border-souk-brown/12">
                             {NOTES.map(({ key, Icon }, i) => (
                                 <Reveal key={key} delay={i * 100}>
-                                    <div className="flex flex-col gap-3 py-7 sm:flex-row sm:gap-8">
-                                        <div className="flex items-center gap-3 sm:w-72 sm:shrink-0">
+                                    <div className="flex gap-5 py-7">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-t-full rounded-b-md bg-souk-paper text-souk-brown ring-1 ring-souk-brown/15">
                                             <Icon
-                                                className="h-5 w-5 shrink-0 text-souk-brown"
+                                                className="h-5 w-5"
                                                 strokeWidth={1.5}
                                             />
+                                        </span>
+                                        <div>
                                             <h3 className="font-display text-lg leading-snug text-souk-title">
                                                 {t(`pro.notes.${key}.title`)}
                                             </h3>
+                                            <p className="mt-2 text-[15px] leading-relaxed text-souk-brown-deep/75">
+                                                {t(`pro.notes.${key}.body`)}
+                                            </p>
                                         </div>
-                                        <p className="text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                            {t(`pro.notes.${key}.body`)}
-                                        </p>
                                     </div>
                                 </Reveal>
                             ))}
@@ -577,158 +528,69 @@ export default function ProfessionalAccount({
                     </div>
                 </section>
 
-                {/* ──────────────────── Ask, or the verdict ──────────────────── */}
-                <section
-                    id={FORM_ID}
-                    className="relative overflow-hidden bg-souk-paper py-24 lg:py-32"
-                >
-                    <div className="relative container">
-                        <div className="mx-auto max-w-2xl">
-                            <Reveal>
-                                <div className="rounded-3xl border border-souk-brown/12 bg-souk-peach/50 p-8 sm:p-11">
-                                    <ZellijStarIcon className="h-8 w-8 text-souk-brown/30" />
+                {/* ─────────────────────── The way in ─────────────────────── */}
+                <section className="bg-souk-paper py-16 lg:py-24">
+                    <div className="container">
+                        <Reveal from="scale">
+                            {/*
+                             * The page's one brown band, built like the home
+                             * page's brochure banner: the photograph fills
+                             * the leading half on large screens, the steps
+                             * and the switch sit on a paper card on the other.
+                             */}
+                            <div className="relative isolate grid overflow-hidden rounded-md bg-souk-brown lg:grid-cols-2">
+                                <div className="relative flex flex-col justify-end px-6 pt-10 pb-8 sm:px-10 lg:min-h-[30rem] lg:py-14">
+                                    <img
+                                        src={workshop}
+                                        alt=""
+                                        loading="lazy"
+                                        className="absolute inset-0 -z-10 hidden h-full w-full object-cover lg:block"
+                                    />
+                                    <div
+                                        aria-hidden="true"
+                                        className="absolute inset-0 -z-10 hidden bg-gradient-to-t from-souk-brown via-souk-brown/70 to-souk-brown/10 lg:block"
+                                    />
 
-                                    {isVerified ? (
-                                        <>
-                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
-                                                {t(
-                                                    'buyer.professional.approved_title',
-                                                )}
-                                            </h2>
-                                            <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                                {t(
-                                                    'buyer.professional.approved_body',
-                                                )}
-                                            </p>
-                                        </>
-                                    ) : status === 'pending' ? (
-                                        <>
-                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
-                                                {t(
-                                                    'buyer.professional.pending_title',
-                                                )}
-                                            </h2>
-                                            <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                                {t(
-                                                    'buyer.professional.pending_body',
-                                                )}
-                                            </p>
-                                            {/* Their own words back, so they
-                                                can see what was sent. */}
-                                            {submittedMessage && (
-                                                <p className="mt-5 rounded-2xl border border-souk-brown/12 bg-souk-paper/70 px-5 py-4 text-sm leading-relaxed text-souk-brown-deep/80 italic">
-                                                    {submittedMessage}
-                                                </p>
-                                            )}
-                                        </>
-                                    ) : isGuest ? (
-                                        <>
-                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
-                                                {t('pro.cta.heading')}
-                                            </h2>
-                                            <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                                {t('pro.cta.body')}
-                                            </p>
-                                            <Link
-                                                href={login()}
-                                                className="group mt-6 inline-flex items-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep"
-                                            >
-                                                {t('pro.hero.cta_guest')}
-                                                <ArrowRight
-                                                    className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                                                    strokeWidth={1.6}
-                                                />
-                                            </Link>
-                                        </>
-                                    ) : canRequest ? (
-                                        <>
-                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
-                                                {t('buyer.professional.title')}
-                                            </h2>
-                                            <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                                {t('buyer.professional.intro')}
-                                            </p>
-
-                                            {/* A previous refusal does not bar
-                                                a fresh attempt — see
-                                                User::canRequestProfessional. */}
-                                            {status === 'declined' && (
-                                                <p className="mt-4 text-sm text-souk-brown-deep/70">
-                                                    {t(
-                                                        'buyer.professional.declined_retry',
-                                                    )}
-                                                </p>
-                                            )}
-
-                                            <form
-                                                onSubmit={submit}
-                                                className="mt-6"
-                                            >
-                                                <label
-                                                    htmlFor="message"
-                                                    className={`mb-2 block text-souk-brown-deep/55 ${EYEBROW}`}
-                                                >
-                                                    {t(
-                                                        'buyer.professional.label',
-                                                    )}
-                                                </label>
-                                                <textarea
-                                                    id="message"
-                                                    rows={5}
-                                                    value={data.message}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'message',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder={t(
-                                                        'buyer.onboarding.professional.placeholder',
-                                                    )}
-                                                    className="w-full rounded-xl border border-souk-brown/20 bg-white/70 px-4 py-3 text-sm text-souk-title transition-colors placeholder:text-souk-brown-deep/40 focus:border-souk-brown focus:outline-none"
-                                                />
-                                                {errors.message && (
-                                                    <p className="mt-1.5 text-xs text-terracotta">
-                                                        {errors.message}
-                                                    </p>
-                                                )}
-                                                <p className="mt-2 text-xs text-souk-brown-deep/60">
-                                                    {t(
-                                                        'buyer.onboarding.professional.hint',
-                                                    )}
-                                                </p>
-
-                                                <button
-                                                    type="submit"
-                                                    disabled={processing}
-                                                    className="mt-5 inline-flex items-center gap-2.5 rounded-xl bg-souk-brown px-6 py-3.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    {t(
-                                                        'buyer.professional.submit',
-                                                    )}
-                                                    <Send
-                                                        className="h-4 w-4"
-                                                        strokeWidth={1.6}
-                                                    />
-                                                </button>
-                                            </form>
-                                        </>
-                                    ) : (
-                                        /* Signed in, but not an account that
-                                           can hold trade access — a seller or
-                                           an admin reading out of interest. */
-                                        <>
-                                            <h2 className="mt-5 font-display text-2xl font-bold text-souk-title">
-                                                {t('pro.cta.heading')}
-                                            </h2>
-                                            <p className="mt-3 text-[15px] leading-relaxed text-souk-brown-deep/75">
-                                                {t('pro.cta.body')}
-                                            </p>
-                                        </>
-                                    )}
+                                    <ZellijStarIcon className="h-7 w-7 text-souk-cream/70" />
+                                    <h2 className="mt-5 font-display text-[clamp(1.7rem,3vw,2.4rem)] leading-[1.1] font-bold text-white">
+                                        {isPro
+                                            ? t('pro.cta.active_heading')
+                                            : t('pro.cta.heading')}
+                                    </h2>
+                                    <p className="mt-4 max-w-md text-[15px] leading-relaxed text-souk-cream/85">
+                                        {isPro
+                                            ? t('pro.cta.active_body')
+                                            : t('pro.cta.body')}
+                                    </p>
                                 </div>
-                            </Reveal>
-                        </div>
+
+                                <div className="p-2 sm:p-3">
+                                    <div className="flex h-full flex-col justify-center rounded-sm bg-souk-paper px-6 py-8 sm:px-10 sm:py-12">
+                                        <ol className="space-y-5">
+                                            {STEPS.map(({ n }) => (
+                                                <li
+                                                    key={n}
+                                                    className="flex items-start gap-4"
+                                                >
+                                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-souk-brown/10 font-display text-souk-brown">
+                                                        {n}
+                                                    </span>
+                                                    <span className="pt-1 font-display text-[17px] leading-snug text-souk-title">
+                                                        {t(
+                                                            `pro.steps.${n}.title`,
+                                                        )}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ol>
+
+                                        <div className="mt-8">
+                                            {action('dark')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Reveal>
                     </div>
                 </section>
 

@@ -43,31 +43,6 @@ class BuyerAccountService
     }
 
     /**
-     * Account type, and everything the card needs to render its four states:
-     * ordinary buyer, request pending, request declined, or a verified trade
-     * account.
-     *
-     * `isProfessional` and `isVerified` are separate because they can
-     * legitimately disagree — an admin can set the role by hand without
-     * stamping the verification, and only the verified pair actually earns
-     * wholesale prices (Product::audienceFor).
-     *
-     * @return array<string, mixed>
-     */
-    public function accountType(User $user): array
-    {
-        return [
-            'isProfessional' => $user->isProfessionalBuyer(),
-            'isVerified' => $user->isVerifiedProfessionalBuyer(),
-            'requestStatus' => $user->professional_request_status,
-            'requestMessage' => $user->professional_request_message,
-            'requestedAt' => $user->professional_requested_at,
-            'declineReason' => $user->professional_decline_reason,
-            'canRequest' => $user->canRequestProfessional(),
-        ];
-    }
-
-    /**
      * @return array<int, array<string, mixed>>
      */
     public function addresses(User $user): array

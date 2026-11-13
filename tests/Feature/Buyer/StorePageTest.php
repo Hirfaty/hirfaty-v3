@@ -107,11 +107,11 @@ test('a consumer does not see trade-only pieces on a shop page', function () {
         );
 });
 
-test('a verified trade buyer does see them', function () {
+test('a buyer in pro mode does see them', function () {
     storeProduct($this->store, ['name' => 'Grand public']);
     storeProduct($this->store, ['name' => 'Pro only', 'visibility' => 'professional']);
 
-    $this->actingAs(User::factory()->verifiedProfessional()->create())
+    $this->actingAs(proBuyer())
         ->get(route('stores.show', $this->store->slug))
         ->assertInertia(fn (Assert $page) => $page
             ->has('products', 2)

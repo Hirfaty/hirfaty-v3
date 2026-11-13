@@ -3,6 +3,7 @@ import { Loader2, MapPin, Package, Store as StoreIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import ProPriceNotice from '@/components/buyer/ProPriceNotice';
 import VerifiedBadge from '@/components/buyer/VerifiedBadge';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
@@ -216,6 +217,8 @@ export default function StoreShow({
                 <h2 className="font-display text-2xl text-souk-title">
                     {t('buyer.store.creations')}
                 </h2>
+
+                <ProPriceNotice className="mt-6" />
 
                 {products.length === 0 ? (
                     <div className="mt-8 rounded-2xl border border-souk-brown/12 bg-souk-peach/40 px-6 py-16 text-center">

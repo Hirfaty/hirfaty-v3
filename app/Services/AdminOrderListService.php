@@ -29,6 +29,18 @@ class AdminOrderListService
         'cancelled' => 'Annulée',
     ];
 
+    /** The price lists a purchase can have been billed on, for the export. */
+    private const PRICE_MODE_LABELS = [
+        'individual' => 'Particulier',
+        'professional' => 'Entreprise',
+    ];
+
+    /**
+     * What the "grille" filter accepts: either list, or `unknown` for orders
+     * placed before the price list was recorded.
+     */
+    public const PRICE_MODE_FILTERS = ['individual', 'professional', 'unknown'];
+
     public function __construct(
         private readonly SpreadsheetExportService $spreadsheets,
     ) {}
@@ -36,7 +48,7 @@ class AdminOrderListService
     /**
      * The filters and nothing else — no eager loads, no ordering.
      *
-     * @param  array{search?: ?string, status?: ?string, from?: ?string, to?: ?string}  $filters
+     * @param  array{search?: ?string, status?: ?string, from?: ?string, to?: ?string, price_mode?: ?string}  $filters
      * @return Builder<Order>
      */
     public function query(array $filters): Builder
@@ -58,7 +70,12 @@ class AdminOrderListService
             }))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['from'] ?? null, fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
-            ->when($filters['to'] ?? null, fn ($query, $to) => $query->whereDate('created_at', '<=', $to));
+            ->when($filters['to'] ?? null, fn ($query, $to) => $query->whereDate('created_at', '<=', $to))
+            ->when($filters['price_mode'] ?? null, fn ($query, $mode) => match ($mode) {
+                'unknown' => $query->whereNull('price_mode'),
+                'individual', 'professional' => $query->where('price_mode', $mode),
+                default => $query,
+            });
     }
 
     /**
@@ -77,6 +94,7 @@ class AdminOrderListService
                 'Date',
                 'Statut',
                 'Paiement',
+                'Grille de prix',
                 'Client',
                 'Email client',
                 'Téléphone de livraison',
@@ -119,6 +137,7 @@ class AdminOrderListService
                 $order->payment_status === 'refunded' => 'Carte — remboursée',
                 default => 'Carte — payée',
             },
+            self::PRICE_MODE_LABELS[$order->price_mode] ?? 'Non enregistrée',
             trim(($buyer?->first_name ?? '').' '.($buyer?->last_name ?? '')),
             $buyer?->email ?? '',
             $order->shipping_phone ?? '',

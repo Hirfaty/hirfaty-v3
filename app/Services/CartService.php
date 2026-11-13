@@ -6,7 +6,6 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -15,6 +14,10 @@ use Illuminate\Validation\ValidationException;
  * The "add to cart" button, the guest-cart merge and "Buy now" (which skips
  * the cart — see BuyNowService) all run through here, so every line is held
  * to exactly the same checks.
+ *
+ * `$audience` is the price list the buyer shops on (PriceModeService): on the
+ * pro list a piece is sold from its per-product minimum, and a trade-only
+ * piece is for sale on the pro list alone.
  */
 class CartService
 {
@@ -24,9 +27,14 @@ class CartService
      *
      * @throws ValidationException
      */
-    public function addLine(Cart $cart, int $productId, ?int $variantId, int $quantity = 1): CartItem
-    {
-        $product = $this->forSale($productId);
+    public function addLine(
+        Cart $cart,
+        int $productId,
+        ?int $variantId,
+        int $quantity = 1,
+        string $audience = Product::AUDIENCE_INDIVIDUAL,
+    ): CartItem {
+        $product = $this->forSale($productId, $audience);
         $variant = $this->resolveVariant($product, $variantId);
 
         /*
@@ -46,7 +54,7 @@ class CartService
         $newQuantity = ($existing?->quantity ?? 0) + $quantity;
 
         $this->assertStockFor($product, $variant, $newQuantity);
-        $this->assertMinimumFor($product, $cart->user, $newQuantity);
+        $this->assertMinimumFor($product, $audience, $newQuantity);
 
         if ($existing) {
             $existing->update(['quantity' => $newQuantity]);
@@ -70,13 +78,13 @@ class CartService
      *
      * @throws ValidationException
      */
-    public function assertBuyable(?User $buyer, int $productId, ?int $variantId, int $quantity): array
+    public function assertBuyable(string $audience, int $productId, ?int $variantId, int $quantity): array
     {
-        $product = $this->forSale($productId);
+        $product = $this->forSale($productId, $audience);
         $variant = $this->resolveVariant($product, $variantId);
 
         $this->assertStockFor($product, $variant, $quantity);
-        $this->assertMinimumFor($product, $buyer, $quantity);
+        $this->assertMinimumFor($product, $audience, $quantity);
 
         return [$product, $variant];
     }
@@ -84,42 +92,76 @@ class CartService
     /**
      * Guard a quantity change on an existing line.
      *
-     * Both checks, not just stock: without the minimum a trade buyer could add
+     * Both checks, not just stock: without the minimum a pro buyer could add
      * the required 20, then edit the line down to 1 and walk straight past the
      * bulk rule with wholesale pricing intact.
      *
      * @throws ValidationException
      */
-    public function assertQuantity(CartItem $item, int $quantity): void
+    public function assertQuantity(CartItem $item, int $quantity, string $audience = Product::AUDIENCE_INDIVIDUAL): void
     {
-        $item->loadMissing(['product', 'variant', 'cart.user']);
+        $item->loadMissing(['product', 'variant']);
 
         $this->assertStockFor($item->product, $item->variant, $quantity);
-        $this->assertMinimumFor($item->product, $item->cart?->user, $quantity);
+        $this->assertMinimumFor($item->product, $audience, $quantity);
     }
 
     /**
-     * Hold a line to the minimum its buyer's price list demands.
+     * Why this basket cannot go to checkout on this price list, or null when
+     * it can — the first line under its pro minimum, or a trade-only piece on
+     * the retail list.
      *
-     * Wholesale rates are granted on the understanding that the trade buys in
-     * bulk, so the minimum is part of the bargain rather than a display hint —
-     * `min_order_qty_professional` had been carried on the product and shown on
-     * the page since trade pricing landed, but `minOrderQtyFor()` was never
-     * called by anything, so a verified professional could buy a single piece
-     * at the wholesale price.
+     * Both happen only when the buyer switches mode with a full basket: the
+     * lines were valid when added. CheckoutService refuses them too; this is
+     * so the checkout page can send the buyer back to the basket to fix them
+     * instead of letting them fill in a form that will be refused.
+     */
+    public function checkoutIssue(Cart $cart, string $audience): ?string
+    {
+        foreach ($cart->items as $item) {
+            $product = $item->product;
+
+            if (! $product) {
+                continue;
+            }
+
+            if (! $product->isVisibleTo($audience)) {
+                return __('buyer.cart.err_pro_only_line', ['name' => $product->name]);
+            }
+
+            $minimum = $product->minOrderQtyFor($audience);
+
+            if ((int) $item->quantity < $minimum) {
+                return __('buyer.cart.err_pro_minimum', [
+                    'count' => $minimum,
+                    'name' => $product->name,
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Hold a line to the minimum its price list demands.
      *
-     * Keyed off the *cart owner*, not the request user, so the merge of a
-     * localStorage cart is held to the same rule as a live click.
+     * Pro prices are open to anyone, on the understanding that the trade buys
+     * in bulk: the minimum the admin set on the piece is the whole of that
+     * bargain, so it is enforced here rather than left as a display hint.
+     * Retail is from one piece.
      *
      * @throws ValidationException
      */
-    private function assertMinimumFor(Product $product, ?User $user, int $quantity): void
+    public function assertMinimumFor(Product $product, string $audience, int $quantity): void
     {
-        $minimum = $product->minOrderQtyFor(Product::audienceFor($user));
+        $minimum = $product->minOrderQtyFor($audience);
 
         if ($quantity < $minimum) {
             throw ValidationException::withMessages([
-                'quantity' => "Commande minimum de {$minimum} pièces pour '{$product->name}' au tarif professionnel.",
+                'quantity' => __('buyer.cart.err_pro_minimum', [
+                    'count' => $minimum,
+                    'name' => $product->name,
+                ]),
             ]);
         }
     }
@@ -128,15 +170,25 @@ class CartService
      * storefront(), not a plain find: a product that is unpublished, or whose
      * seller has been blocked, is not for sale either.
      *
+     * Nor is a trade-only piece outside pro mode — the same rule that keeps
+     * it off the individual listing, held here too so a stale link or a
+     * mode switched mid-visit cannot slip it into a retail basket.
+     *
      * @throws ValidationException
      */
-    private function forSale(int $productId): Product
+    private function forSale(int $productId, string $audience): Product
     {
         $product = Product::storefront()->find($productId);
 
         if (! $product) {
             throw ValidationException::withMessages([
                 'product_id' => 'Ce produit n\'est plus disponible.',
+            ]);
+        }
+
+        if (! $product->isVisibleTo($audience)) {
+            throw ValidationException::withMessages([
+                'product_id' => __('buyer.cart.err_pro_only'),
             ]);
         }
 

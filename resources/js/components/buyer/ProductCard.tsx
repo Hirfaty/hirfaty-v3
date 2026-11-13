@@ -53,7 +53,10 @@ export type ListingProduct = {
     gallery_images?: Media[];
     wishlists_count?: number;
 
-    // Present only for professional buyers.
+    /** Listed to the trade alone (`visibility = professional`). */
+    professional_only?: boolean;
+
+    // Present only while the storefront shows pro prices (PriceModeService).
     professional_price?: string | null;
     professional_sale_price?: string | null;
     professional_effective_price?: number | null;

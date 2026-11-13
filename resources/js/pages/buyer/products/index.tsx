@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
+import ProPriceNotice from '@/components/buyer/ProPriceNotice';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
@@ -231,7 +232,7 @@ export default function ProductsIndex({
                     </div>
 
                     <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-12">
-                        <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-8 lg:mb-0 lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
+                        <aside className="mb-10 border-b border-souk-brown/15 pb-10 lg:sticky lg:top-28 lg:mb-0 lg:max-h-[calc(100svh-8rem)] lg:overflow-y-auto lg:border-e lg:border-b-0 lg:pe-10 lg:pb-0">
                             <h3 className="mb-4 text-[10px] font-semibold tracking-[0.16em] text-souk-brown-deep/50 uppercase">
                                 {t('buyer.products.categories')}
                             </h3>
@@ -381,6 +382,10 @@ export default function ProductsIndex({
                         </aside>
 
                         <div className="min-w-0">
+                            {/* Pro prices on screen, but not this visitor's
+                                to buy at yet: how to get there. */}
+                            <ProPriceNotice className="mb-7" />
+
                             <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
                                 <span>
                                     {pagination.total}{' '}

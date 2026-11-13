@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Services\PriceModeService;
 use App\Services\ProductSearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
 {
-    public function __construct(private ProductSearchService $search) {}
+    public function __construct(
+        private ProductSearchService $search,
+        private PriceModeService $priceMode,
+    ) {}
 
     /**
      * Live results for the header's search panel.
@@ -25,11 +29,12 @@ class SearchController extends Controller
         ]);
 
         $term = trim((string) ($validated['q'] ?? ''));
+        $audience = $this->priceMode->audience($request);
 
         return response()->json([
             'term' => $term,
-            'products' => $this->search->suggest($request->user(), $term),
-            'total' => $this->search->countFor($request->user(), $term),
+            'products' => $this->search->suggest($audience, $term),
+            'total' => $this->search->countFor($audience, $term),
         ]);
     }
 }

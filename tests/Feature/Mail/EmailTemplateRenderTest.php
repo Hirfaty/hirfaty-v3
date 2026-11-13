@@ -131,10 +131,6 @@ function mailViews(): array
             ];
         }
 
-        $views["buyer.professional.approved.{$locale}"] = fn (array $f) => ['user' => $f['buyer']];
-        $views["buyer.professional.declined.{$locale}"] = fn (array $f) => [
-            'user' => $f['buyer'], 'reason' => 'Établissement non confirmé.',
-        ];
         $views["auth.reset-password.{$locale}"] = fn (array $f) => [
             'user' => $f['buyer'], 'url' => 'https://hirfaty.com/reset/token',
             'count' => 60,

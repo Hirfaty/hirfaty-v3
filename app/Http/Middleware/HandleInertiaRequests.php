@@ -4,9 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Models\Cart;
 use App\Models\Category;
-use App\Models\Product;
 use App\Services\AdminNotificationService;
 use App\Services\CurrencyService;
+use App\Services\PriceModeService;
 use App\Services\ReviewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -80,6 +80,13 @@ class HandleInertiaRequests extends Middleware
              */
             'currency' => fn () => app(CurrencyService::class)->payload($request),
             'currencyOptions' => fn () => app(CurrencyService::class)->options(),
+            /*
+             * Which price list this visitor shops on ("particulier" or "pro")
+             * and whether the first-visit chooser still has to ask — see
+             * PriceModeService. Drives the header switch, the chooser and the
+             * pro minimum-quantity hints.
+             */
+            'priceMode' => fn () => app(PriceModeService::class)->payload($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'cart' => fn () => $this->getSharedCart($request),
             'navCategories' => fn () => $this->getNavCategories(),
@@ -255,7 +262,7 @@ class HandleInertiaRequests extends Middleware
          * header cart could therefore quote a total the checkout disagreed
          * with. Route through the line, like CheckoutService does.
          */
-        $audience = Product::audienceFor($user);
+        $audience = app(PriceModeService::class)->audience($request);
 
         $items = $cart->items->map(function ($item) use ($audience) {
             /*

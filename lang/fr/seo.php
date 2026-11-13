@@ -28,9 +28,9 @@ return [
     'privacy' => 'Politique de confidentialité de Hirfaty : ce que nous collectons, pourquoi, qui y a accès et comment exercer vos droits.',
     'shipping' => 'Politique de livraison de Hirfaty : délais, tarifs et zones de livraison au Maroc et à l’international.',
     'terms' => 'Conditions d’utilisation de Hirfaty pour les acheteurs et les artisans de la place de marché.',
-    'business' => 'Hirfaty pour les professionnels : achetez l’artisanat marocain en volume, aux tarifs réservés aux comptes pro.',
+    'business' => 'Hirfaty pour les professionnels : achetez l’artisanat marocain en volume, au prix de gros, sans compte à demander.',
     'sell' => 'Vous êtes artisan marocain ? Ouvrez votre atelier sur Hirfaty et vendez vos créations au Maroc et à l’international.',
-    'professional' => 'Comptes professionnels Hirfaty : tarifs dédiés et commandes en volume pour hôtels, décorateurs et boutiques.',
+    'professional' => 'Prix professionnels Hirfaty : tarifs de gros ouverts à tous, sans demande, à partir d’une quantité minimum par pièce. Pour hôtels, décorateurs et boutiques.',
 
     'product' => ':product, pièce faite main par :store. Achetez-la directement à l’artisan sur Hirfaty, livrée au Maroc et à l’étranger.',
     'store' => ':store, atelier d’artisanat marocain. Découvrez ses pièces faites main et achetez directement à l’artisan sur Hirfaty.',

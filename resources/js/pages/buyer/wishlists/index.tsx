@@ -1,6 +1,7 @@
 import CollectionCard from '@/components/buyer/CollectionCard';
 import EmptyShowcase from '@/components/buyer/EmptyShowcase';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import ProPriceNotice from '@/components/buyer/ProPriceNotice';
 import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import BuyerAccountLayout from '@/layouts/buyer/account-layout';
@@ -52,19 +53,22 @@ export default function BuyerWishlists({
                     ctaLabel={t('buyer.wishlist.empty_cta')}
                 />
             ) : (
-                <div className="grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3">
-                    {products.map((product) => (
-                        <CollectionCard
-                            key={product.id}
-                            product={product}
-                            audience={audience}
-                            money={money}
-                            t={t}
-                            wishlisted
-                            canWishlist={canWishlist}
-                        />
-                    ))}
-                </div>
+                <>
+                    <ProPriceNotice className="mb-8" />
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-14 md:grid-cols-3">
+                        {products.map((product) => (
+                            <CollectionCard
+                                key={product.id}
+                                product={product}
+                                audience={audience}
+                                money={money}
+                                t={t}
+                                wishlisted
+                                canWishlist={canWishlist}
+                            />
+                        ))}
+                    </div>
+                </>
             )}
         </BuyerAccountLayout>
     );

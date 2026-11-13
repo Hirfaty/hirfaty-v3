@@ -36,10 +36,15 @@ export type ProductVariantResource = {
     sku: string | null;
     stock: number;
     in_stock: boolean;
-    /** Effective price for the current viewer's price list. */
+    /** Effective price on the price list being shown (particulier or pro). */
     price: number | null;
     /** Struck-through "was" price, or null when nothing to strike. */
     original_price: number | null;
+    /**
+     * Pro mode only (PriceModeService): this variant's public price, to set
+     * the trade figure in `price` against. Absent in individual mode.
+     */
+    retail_price?: number | null;
     /** "Rouge / M". */
     label: string;
     options: VariantOption[];

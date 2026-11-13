@@ -81,9 +81,10 @@ use Override;
 // registration (Actions\Fortify\CreateNewUser) whitelists fields explicitly.
 //
 // `onboarded_at` is fillable (harmless: it only silences an intro tour).
-// The professional_* columns deliberately are NOT — they decide which price
-// list an account is billed on, and are written only by
-// ProfessionalAccountService via forceFill, never from request input.
+// The professional_* columns are left over from the retired trade-account
+// review: nothing writes them any more, and they decide nothing — prices
+// follow the buyer's own choice (PriceModeService). Kept for the records they
+// already hold.
 #[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at', 'onboarded_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements AuthMustVerifyEmail
@@ -115,15 +116,6 @@ class User extends Authenticatable implements AuthMustVerifyEmail
         ];
     }
 
-    /** Trade access asked for, awaiting an admin. */
-    public const PRO_REQUEST_PENDING = 'pending';
-
-    /** Granted — the account is a verified professional_buyer. */
-    public const PRO_REQUEST_APPROVED = 'approved';
-
-    /** Refused, with a reason the buyer can read. */
-    public const PRO_REQUEST_DECLINED = 'declined';
-
     /**
      * Craft categories picked during onboarding. A preference signal only —
      * nothing gates on it, and skipping the tour leaves it empty.
@@ -152,12 +144,6 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     public function socialAccounts()
     {
         return $this->hasMany(SocialAccount::class);
-    }
-
-    /** The admin who approved or declined the trade request. */
-    public function professionalReviewer()
-    {
-        return $this->belongsTo(self::class, 'professional_reviewed_by');
     }
 
     /**
@@ -191,27 +177,6 @@ class User extends Authenticatable implements AuthMustVerifyEmail
         return $this->onboarded_at === null && $this->isBuyer();
     }
 
-    /** Asked for trade access and still waiting on an admin. */
-    public function hasPendingProfessionalRequest(): bool
-    {
-        return $this->professional_request_status === self::PRO_REQUEST_PENDING;
-    }
-
-    /**
-     * Whether the trade-account form should be offered at all.
-     *
-     * False once there's a live request (nothing to add by asking twice) and
-     * false for an account that is already professional. A *declined* request
-     * does not block: circumstances change, and the refusal reason tells them
-     * what to fix before asking again.
-     */
-    public function canRequestProfessional(): bool
-    {
-        return $this->isBuyer()
-            && ! $this->isProfessionalBuyer()
-            && ! $this->hasPendingProfessionalRequest();
-    }
-
     // Role helpers
     public function isSuperAdmin(): bool
     {
@@ -227,34 +192,12 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     }
 
     /**
-     * Buys in bulk and is billed from the professional price list.
+     * The `professional_buyer` role an admin can still give an account. A
+     * label only: prices follow the buyer's own choice (PriceModeService).
      */
     public function isProfessionalBuyer(): bool
     {
         return $this->role === 'professional_buyer';
-    }
-
-    /**
-     * A trade account an admin has actually reviewed.
-     *
-     * Trade pricing keys off this rather than the role alone: anyone can
-     * register as a professional buyer, and wholesale rates should not be
-     * handed out — nor billed — on an unvetted self-declaration.
-     */
-    public function isVerifiedProfessionalBuyer(): bool
-    {
-        return $this->isProfessionalBuyer()
-            && $this->professional_verified_at !== null;
-    }
-
-    /**
-     * Whether an admin has reviewed and approved this professional buyer.
-     * Nothing currently gates purchasing on this — it's surfaced to the admin
-     * so they can decide to verify (or unverify) an account, not enforced.
-     */
-    public function isProfessionalVerified(): bool
-    {
-        return $this->professional_verified_at !== null;
     }
 
     public function isSeller(): bool

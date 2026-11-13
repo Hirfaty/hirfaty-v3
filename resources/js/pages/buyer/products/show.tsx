@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
+    ArrowRight,
+    Building2,
     BadgePercent,
     Check,
     CheckCircle2,
@@ -46,6 +48,7 @@ import SiteHeader from '@/components/SiteHeader';
 import { useCartSheet } from '@/contexts/CartSheetContext';
 import { useCurrency } from '@/hooks/use-currency';
 import { useHoverGallery } from '@/hooks/use-hover-gallery';
+import { switchPriceMode, usePriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
 import type { Media } from '@/types';
 import type {
@@ -58,12 +61,23 @@ const EYEBROW = 'text-[11px] tracking-[0.18em] uppercase';
 
 type DetailProduct = BuyerProductResource & {
     wishlists_count?: number;
+    /** Pro mode only — see BuyerProductResource. */
     professional_effective_price?: number | null;
     min_order_qty_professional?: number;
+    /** Listed to the trade alone: no retail price to fall back on. */
+    professional_only?: boolean;
     store: BuyerProductResource['store'] & { logo?: string | null };
 };
 
 type Selection = Record<string, string>;
+
+/** ProductDetailService::proOffer() — a pro/public price pair. */
+type PricePair = { price: number; retail: number };
+type ProOffer = PricePair & {
+    min_qty: number;
+    /** Keyed by variant id; only variants with a trade rate. */
+    variants: Record<number, PricePair>;
+};
 
 /**
  * Does this variant match every option named in `selection`?
@@ -139,24 +153,64 @@ function OptionValue({
 }
 
 /**
+ * The trade price on screen, set against the public one — or null when the
+ * storefront is in individual mode, or this piece (or the chosen variant) has
+ * no trade rate below its public price.
+ *
+ * In pro mode a selected variant carries both figures itself (`price` on the
+ * trade list, `retail_price` public); before one is picked, the product's own
+ * pair stands in.
+ */
+function tradeFigures(
+    product: DetailProduct,
+    variant: ProductVariantResource | null,
+): { trade: number; public: number } | null {
+    if (variant !== null) {
+        if (variant.retail_price == null || variant.price == null) {
+            return null;
+        }
+
+        const trade = Number(variant.price);
+        const pub = Number(variant.retail_price);
+
+        return trade < pub ? { trade, public: pub } : null;
+    }
+
+    const trade = product.professional_effective_price ?? null;
+
+    if (trade === null || product.base_price === null) {
+        return null;
+    }
+
+    const base = Number(product.base_price);
+    const sale = product.sale_price ? Number(product.sale_price) : null;
+    const pub = sale !== null && sale < base ? sale : base;
+
+    return trade < pub ? { trade, public: pub } : null;
+}
+
+/**
  * Price block.
  *
- * A verified trade buyer sees their wholesale rate as *the* price, with the
- * public price struck through — CheckoutService bills exactly this figure, so
- * it can be stated plainly rather than hedged as "indicative". Everyone else
- * sees retail. Both come from the same `Product::audienceFor()` decision
- * server-side, so this cannot quote a number the basket won't honour.
+ * In pro mode (the header switch, PriceModeService) the trade rate is *the*
+ * price, with the public price struck through — it is exactly what
+ * CheckoutService bills, so it is stated plainly. Anyone may shop in pro
+ * mode; the one condition, the piece's minimum quantity, sits on the stepper
+ * below where the buyer runs into it.
  *
  * `variant` wins when one is selected: its override is what gets billed.
  */
 function PriceBlock({
     product,
     variant,
+    isPro,
     money,
     t,
 }: {
     product: DetailProduct;
     variant: ProductVariantResource | null;
+    /** The visitor shops on the trade list (PriceModeService). */
+    isPro: boolean;
     money: (v: number | string) => string;
     t: (k: string) => string;
 }) {
@@ -195,11 +249,11 @@ function PriceBlock({
               ? base
               : null;
 
-    const trade = product.professional_effective_price ?? null;
-    const hasTrade = variant === null && trade !== null && trade < retail;
-    const saving = hasTrade ? Math.round((1 - trade / retail) * 100) : 0;
+    const figures = tradeFigures(product, variant);
 
-    if (hasTrade) {
+    if (figures !== null) {
+        const saving = Math.round((1 - figures.trade / figures.public) * 100);
+
         return (
             <div className="rounded-2xl border border-olive/25 bg-olive/5 p-5">
                 <p className={`text-olive/80 ${EYEBROW}`}>
@@ -207,11 +261,11 @@ function PriceBlock({
                 </p>
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="font-display text-4xl leading-none text-olive">
-                        {money(trade)}
+                        {money(figures.trade)}
                         <TaxIncluded />
                     </span>
                     <span className="text-sm text-souk-brown-deep/50 line-through">
-                        {money(retail)}
+                        {money(figures.public)}
                     </span>
                     {saving > 0 && (
                         <span className="rounded-full bg-olive px-2 py-0.5 text-[11px] font-medium text-white">
@@ -225,9 +279,9 @@ function PriceBlock({
                         strokeWidth={1.5}
                     />
                     {/*
-                     * The bulk minimum used to be repeated here. It now sits
-                     * on the quantity stepper instead — the one place where
-                     * the buyer can actually run into it.
+                     * The bulk minimum is not repeated here. It sits on the
+                     * quantity stepper instead — the one place where the
+                     * buyer can actually run into it.
                      */}
                     {t('buyer.detail.trade_billed_note')}
                 </p>
@@ -236,19 +290,143 @@ function PriceBlock({
     }
 
     return (
-        <div className="flex flex-wrap items-baseline gap-x-3">
-            <span
-                className={`font-display text-[2.6rem] leading-none ${strike ? 'text-terracotta' : 'text-souk-title'}`}
-            >
-                {money(retail)}
-                <TaxIncluded />
-            </span>
-            {strike && (
-                <span className="text-base text-souk-brown-deep/45 line-through">
-                    {money(strike)}
+        <div>
+            <div className="flex flex-wrap items-baseline gap-x-3">
+                <span
+                    className={`font-display text-[2.6rem] leading-none ${strike ? 'text-terracotta' : 'text-souk-title'}`}
+                >
+                    {money(retail)}
+                    <TaxIncluded />
                 </span>
+                {strike && (
+                    <span className="text-base text-souk-brown-deep/45 line-through">
+                        {money(strike)}
+                    </span>
+                )}
+            </div>
+            {/* Pro mode, but this workshop set no trade rate here. */}
+            {isPro && (
+                <p className="mt-2 text-xs text-souk-brown-deep/60">
+                    {t('pro.price.no_pro_rate')}
+                </p>
             )}
         </div>
+    );
+}
+
+/**
+ * What this piece would cost a business, for a visitor on personal prices
+ * (`proOffer`, ProductDetailService): the two price lists side by side as a
+ * pair of tiers — the one they are on, and the pro one with its minimum —
+ * so the difference reads at a glance, with the switch right there.
+ *
+ * Follows the selected variant when it has a trade rate of its own.
+ */
+function ProOfferCard({
+    offer,
+    variant,
+    money,
+    t,
+}: {
+    offer: ProOffer;
+    variant: ProductVariantResource | null;
+    money: (v: number | string) => string;
+    t: (k: string) => string;
+}) {
+    const pair =
+        variant !== null ? (offer.variants[variant.id] ?? null) : offer;
+
+    // A variant without a trade rate below its public price: nothing to sell.
+    if (pair === null) {
+        return null;
+    }
+
+    const saving = Math.round((1 - pair.price / pair.retail) * 100);
+    const minQty = Math.max(1, offer.min_qty);
+    const savedAtMinimum = (pair.retail - pair.price) * minQty;
+
+    return (
+        <section
+            aria-label={t('pro.offer.eyebrow')}
+            className="mt-6 overflow-hidden rounded-2xl border border-souk-brown/15 bg-souk-paper"
+        >
+            <div className="flex items-center gap-3 border-b border-souk-brown/10 bg-souk-peach/60 px-5 py-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-t-full rounded-b-md bg-souk-brown/10 text-souk-brown">
+                    <Building2 className="h-4 w-4" strokeWidth={1.6} />
+                </span>
+                <p className={`text-souk-brown ${EYEBROW}`}>
+                    {t('pro.offer.eyebrow')}
+                </p>
+            </div>
+
+            <div className="grid grid-cols-2">
+                {/* The tier they are on now. */}
+                <div className="px-4 py-5 sm:px-5">
+                    <span className="inline-block rounded-full border border-souk-brown/20 px-2 py-0.5 text-[10px] tracking-[0.12em] text-souk-brown-deep/60 uppercase">
+                        {t('pro.offer.current')}
+                    </span>
+                    <p className="mt-3 text-sm font-medium text-souk-title">
+                        {t('pro.offer.personal')}
+                    </p>
+                    <p className="mt-0.5 text-xs text-souk-brown-deep/60">
+                        {t('pro.offer.from_one')}
+                    </p>
+                    <p className="mt-4 font-display text-xl leading-none text-souk-brown-deep/70 sm:text-2xl">
+                        {money(pair.retail)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-souk-brown-deep/50">
+                        {t('pro.offer.per_piece')}
+                    </p>
+                </div>
+
+                {/* The pro tier, filled: the one on offer. */}
+                <div className="relative overflow-hidden bg-souk-brown px-4 py-5 text-souk-cream sm:px-5">
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -end-8 -top-6 h-24 w-36 motif-arches opacity-60 [--pattern-color:rgba(240,228,201,0.16)]"
+                    />
+                    <span className="relative inline-block rounded-full bg-souk-cream px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-souk-brown">
+                        {saving > 0 ? `−${saving}%` : t('pro.offer.pro')}
+                    </span>
+                    <p className="relative mt-3 text-sm font-medium">
+                        {t('pro.offer.pro')}
+                    </p>
+                    <p className="relative mt-0.5 text-xs text-souk-cream/75">
+                        {minQty > 1
+                            ? t('pro.offer.from_qty').replace(
+                                  ':count',
+                                  String(minQty),
+                              )
+                            : t('pro.offer.from_one')}
+                    </p>
+                    <p className="relative mt-4 font-display text-xl leading-none text-white sm:text-2xl">
+                        {money(pair.price)}
+                    </p>
+                    <p className="relative mt-1 text-[11px] text-souk-cream/70">
+                        {t('pro.offer.per_piece')}
+                    </p>
+                </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-souk-brown/10 px-5 py-4">
+                <p className="text-[13px] leading-snug text-souk-brown-deep/75">
+                    {t('pro.offer.saving')
+                        .replace(':amount', money(savedAtMinimum))
+                        .replace(':count', String(minQty))}
+                </p>
+                <button
+                    type="button"
+                    onClick={() => switchPriceMode('professional')}
+                    className="group inline-flex items-center gap-2 rounded-lg bg-souk-brown px-4 py-2.5 text-sm font-medium text-souk-cream transition-colors hover:bg-souk-brown-deep"
+                >
+                    {t('pro.offer.cta')}
+                    <ArrowRight
+                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5"
+                        strokeWidth={1.75}
+                    />
+                </button>
+            </div>
+        </section>
     );
 }
 
@@ -596,6 +774,7 @@ const ProductDetail = ({
     reviewsPagination,
     myReview = null,
     preview = null,
+    proOffer = null,
 }: {
     product: DetailProduct;
     inWishlist: boolean;
@@ -608,6 +787,8 @@ const ProductDetail = ({
     /** Storefront only — the admin preview leaves it out. */
     myReview?: MyReview;
     preview?: PreviewInfo | null;
+    /** Personal prices only: the same piece on the pro list. */
+    proOffer?: ProOffer | null;
 }) => {
     const { t, locale } = useTranslation();
     /* The drawer SiteHeader mounts — opened once the line is actually in. */
@@ -622,7 +803,6 @@ const ProductDetail = ({
         auth: {
             user: {
                 role?: string;
-                professional_verified_at?: string | null;
             } | null;
         };
     };
@@ -657,21 +837,36 @@ const ProductDetail = ({
         ? resolveVariant(variants, selection)
         : null;
 
+    /*
+     * Particulier or pro — what the storefront is showing, and whether
+     * checkout would bill this visitor the pro list (PriceModeService).
+     */
+    const { isPro } = usePriceMode();
+
+    /** The bulk floor on the trade price, when the workshop set one. */
+    const proMinQty = product.min_order_qty_professional ?? 1;
+
     /**
      * The smallest quantity this viewer is allowed to order.
      *
-     * Only ever above 1 for a verified trade account: the resource merges
-     * `min_order_qty_professional` in for the professional audience alone, so
-     * a consumer reading the same product simply gets 1. Wholesale rates are
-     * granted on the understanding that the trade buys in bulk, which is why
-     * the floor travels with the price list rather than with the product.
+     * Only ever above 1 in pro mode: the floor belongs to the trade price
+     * list (CartService and CheckoutService hold the basket to it). Wholesale
+     * rates are offered on the understanding that the trade buys in bulk,
+     * which is why the floor travels with the price list rather than with the
+     * product.
      */
-    const minQty = product.min_order_qty_professional ?? 1;
+    const minQty = isPro ? proMinQty : 1;
 
     const [activeIdx, setActiveIdx] = useState(0);
-    // Opens on the minimum rather than 1, so a trade buyer isn't shown a
+    // Opens on the minimum rather than 1, so a pro buyer isn't shown a
     // quantity their own price list would refuse.
-    const [qty, setQty] = useState(minQty);
+    const [chosenQty, setQty] = useState(minQty);
+    /*
+     * Never below the current floor. The first-visit chooser switches the
+     * price list without remounting the page, so a stepper opened at 1 on
+     * personal prices would otherwise sit under the pro minimum.
+     */
+    const qty = Math.max(chosenQty, minQty);
     const [wished, setWished] = useState(inWishlist);
     /**
      * Holds the Add-to-Cart button in its confirming state for 3s after a
@@ -759,11 +954,6 @@ const ProductDetail = ({
         product.sale_price &&
         Number(product.sale_price) < Number(product.base_price);
 
-    // A trade account that hasn't been verified yet still pays retail, so it
-    // gets a nudge rather than the wholesale figure.
-    const isPendingTrade =
-        auth.user?.role === 'professional_buyer' &&
-        !auth.user?.professional_verified_at;
     const isGuestOrConsumer =
         !auth.user || auth.user.role === 'buyer' || !auth.user.role;
 
@@ -812,10 +1002,9 @@ const ProductDetail = ({
      *
      * There is no longer a localStorage path here. The basket a guest built
      * was priced entirely client-side, and with two price lists in play that
-     * is no longer a safe thing to do: which figure a line is worth depends on
-     * whether an admin has verified the account, and whether a product may be
-     * bought in ones or only by the twenty. Neither is knowable before we know
-     * who is shopping, so the basket starts once they have signed in.
+     * is no longer a safe thing to do: what a line is worth, and whether it
+     * may be bought in ones or only by the twenty, is the server's to decide
+     * (CartService), so the basket starts once they have signed in.
      */
     const handleAddToCart = () => {
         if (preview) {
@@ -978,7 +1167,7 @@ const ProductDetail = ({
                  * below the fold. svh, not vh, so the mobile browser chrome
                  * collapsing doesn't resize it mid-scroll.
                  */}
-                <div className="col-span-12 flex h-[70svh] gap-3 lg:sticky lg:top-0 lg:col-span-6 lg:h-screen lg:gap-4 lg:self-start">
+                <div className="col-span-12 flex h-[70svh] gap-3 lg:sticky lg:top-20 lg:col-span-6 lg:h-[calc(100vh-5rem)] lg:gap-4 lg:self-start">
                     {/*
                      * Thumbnail rail. Scrolls on its own when there are more
                      * frames than fit; the padding keeps the active ring from
@@ -1160,6 +1349,7 @@ const ProductDetail = ({
                         <PriceBlock
                             product={product}
                             variant={selectedVariant}
+                            isPro={isPro}
                             money={money}
                             t={t}
                         />
@@ -1199,19 +1389,14 @@ const ProductDetail = ({
                         </p>
                     </div>
 
-                    {isPendingTrade && (
-                        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-souk-brown-deep/85">
-                            <Clock
-                                className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
-                                strokeWidth={1.5}
-                            />
-                            <span>
-                                <span className="font-medium text-souk-title">
-                                    {t('buyer.detail.trade_pending_title')}
-                                </span>{' '}
-                                {t('buyer.detail.trade_pending_body')}
-                            </span>
-                        </div>
+                    {/* Personal prices: what the business price would be. */}
+                    {!isPro && proOffer && (
+                        <ProOfferCard
+                            offer={proOffer}
+                            variant={selectedVariant}
+                            money={money}
+                            t={t}
+                        />
                     )}
 
                     <div className="mt-8 h-px bg-souk-brown/12" />
@@ -1252,7 +1437,8 @@ const ProductDetail = ({
                             </div>
                         ))}
 
-                    {/* Quantity */}
+                    {/* Quantity — not while the access panel stands in for
+                        the buy box: there is nothing to buy a quantity of. */}
                     <div className="mt-7">
                         <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
                             {t('buyer.detail.quantity')}
@@ -1268,7 +1454,7 @@ const ProductDetail = ({
                         <div className="mt-3 inline-flex items-center rounded-xl border border-souk-brown/20">
                             <button
                                 onClick={() =>
-                                    setQty((q) => Math.max(minQty, q - 1))
+                                    setQty(Math.max(minQty, qty - 1))
                                 }
                                 disabled={qty <= minQty}
                                 aria-label={t('buyer.detail.decrease')}
@@ -1281,7 +1467,7 @@ const ProductDetail = ({
                             </span>
                             <button
                                 onClick={() =>
-                                    setQty((q) => Math.min(maxQty, q + 1))
+                                    setQty(Math.min(maxQty, qty + 1))
                                 }
                                 disabled={qty >= maxQty || soldOut}
                                 aria-label={t('buyer.detail.increase')}
@@ -1290,6 +1476,31 @@ const ProductDetail = ({
                                 <Plus className="h-3.5 w-3.5" />
                             </button>
                         </div>
+
+                        {/*
+                         * The pro floor is the one condition on these prices,
+                         * so the way round it sits right beside it: fewer
+                         * pieces are sold at the personal price, from one.
+                         * Not for a trade-only piece, which has no personal
+                         * price to fall back on.
+                         */}
+                        {isPro && minQty > 1 && !product.professional_only && (
+                            <p className="mt-3 text-[13px] text-souk-brown-deep/70">
+                                {t('pro.price.fewer').replace(
+                                    ':count',
+                                    String(minQty),
+                                )}{' '}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        switchPriceMode('individual')
+                                    }
+                                    className="text-souk-brown underline underline-offset-4 transition-colors hover:text-souk-title"
+                                >
+                                    {t('pro.price.buy_retail')}
+                                </button>
+                            </p>
+                        )}
                     </div>
 
                     {/* Actions */}
@@ -1511,8 +1722,9 @@ const ProductDetail = ({
                         </p>
                     </div>
 
-                    {/* Trade CTA for consumers and guests. */}
-                    {isGuestOrConsumer && (
+                    {/* Pro prices, offered to whoever is on personal ones —
+                        there is nothing to apply for, just the switch. */}
+                    {isGuestOrConsumer && !isPro && !proOffer && (
                         <div className="mt-7 rounded-2xl border border-olive/25 bg-olive/5 p-5">
                             <p className="font-display text-xl text-souk-title">
                                 {t('buyer.detail.trade_cta_title')}
@@ -1520,16 +1732,26 @@ const ProductDetail = ({
                             <p className="mt-1.5 text-[13px] leading-relaxed text-souk-brown-deep/75">
                                 {t('buyer.detail.trade_cta_body')}
                             </p>
-                            {/* One target for everyone: the trade page is
-                                public now, so a guest reads what they would
-                                be signing up for instead of landing on a bare
-                                registration form. */}
-                            <Link
-                                href={route('professional.show')}
-                                className="mt-4 inline-block rounded-lg bg-olive px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                            >
-                                {t('buyer.detail.trade_cta_button')}
-                            </Link>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                {/* Shows the trade figures right here, on
+                                    this piece. */}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        switchPriceMode('professional')
+                                    }
+                                    className="inline-block rounded-lg bg-olive px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                                >
+                                    {t('pro.price.see_pro')}
+                                </button>
+                                {/* How pro prices work, for the curious. */}
+                                <Link
+                                    href={route('professional.show')}
+                                    className="inline-block rounded-lg border border-olive/40 px-4 py-2.5 text-xs font-medium text-olive transition-colors hover:bg-olive/10"
+                                >
+                                    {t('buyer.detail.trade_cta_button')}
+                                </Link>
+                            </div>
                         </div>
                     )}
                 </div>

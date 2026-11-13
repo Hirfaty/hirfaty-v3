@@ -70,7 +70,7 @@ export default function AddressCard({
         // No border: the white fill and a soft shadow already lift the card off
         // the paper background, and a rule around it was a third edge doing
         // the same job.
-        <aside className="rounded-2xl bg-white p-6 shadow-sm shadow-souk-brown/5 lg:sticky lg:top-10">
+        <aside className="rounded-2xl bg-white p-6 shadow-sm shadow-souk-brown/5 lg:sticky lg:top-28">
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                     <MapPin

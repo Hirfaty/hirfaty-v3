@@ -178,10 +178,8 @@ return [
     'detail.trade_min_qty' => 'Commande minimum : :count pièces',
     'detail.trade_billed_note' => 'Ce tarif est appliqué automatiquement au paiement.',
     'detail.trade_cta_title' => 'Vous achetez en gros ?',
-    'detail.trade_cta_body' => 'Les comptes professionnels vérifiés bénéficient de tarifs réservés sur une grande partie du catalogue.',
-    'detail.trade_cta_button' => 'Ouvrir un compte pro',
-    'detail.trade_pending_title' => 'Compte professionnel en attente de vérification.',
-    'detail.trade_pending_body' => 'Vos tarifs professionnels s’appliqueront dès qu’un administrateur aura validé votre compte.',
+    'detail.trade_cta_body' => 'Les prix pro sont ouverts à tous : passez en mode « Entreprise » et commandez à partir de la quantité minimum de chaque pièce.',
+    'detail.trade_cta_button' => 'Comment ça marche',
 
     // Variants
     'detail.select_variant_prompt' => 'Choisissez une option',
@@ -252,30 +250,6 @@ return [
     'onboarding.interests.body' => 'Choisissez les métiers qui vous intéressent. Nous nous en servirons pour mettre en avant ce qui vous ressemble.',
     'onboarding.interests.optional' => 'Facultatif — vous pourrez changer d\'avis à tout moment.',
 
-    /*
-     * `.placeholder` et `.hint` sont les deux seules clés restantes de
-     * l'ancienne étape professionnelle : le parcours ne la pose plus, mais
-     * pages/buyer/professional-account.tsx les réutilise pour la même
-     * question posée plus tard, quand un acheteur la demande réellement. Ne
-     * pas supprimer.
-     */
-    'onboarding.professional.placeholder' => 'Ex : Je gère un riad de 8 chambres à Marrakech et je cherche du linge de maison et de la vaisselle artisanale en quantité.',
-    'onboarding.professional.hint' => '20 caractères minimum. Vous pourrez continuer à commander normalement pendant l\'examen de votre demande.',
-
-    // ── Compte professionnel (page dédiée) ───────────────────────────────
-    'professional.title' => 'Compte professionnel',
-    'professional.intro' => 'Riad, hôtel, restaurant, boutique : si vous achetez en quantité, demandez l\'accès aux tarifs de gros.',
-    'professional.label' => 'Parlez-nous de votre activité',
-    'professional.submit' => 'Envoyer ma demande',
-    'professional.pending_title' => 'Demande en cours d\'examen',
-    'professional.pending_body' => 'Notre équipe étudie votre demande. Vous recevrez un email dès qu\'elle sera traitée — vous pouvez continuer à commander normalement en attendant.',
-    'professional.approved_title' => 'Compte professionnel actif',
-    'professional.approved_body' => 'Les tarifs de gros s\'appliquent automatiquement sur les produits concernés.',
-    'professional.declined_title' => 'Demande non retenue',
-    'professional.declined_reason' => 'Motif',
-    'professional.declined_retry' => 'Vous pouvez soumettre une nouvelle demande.',
-    'professional.submitted_on' => 'Envoyée le :date',
-
     // ── Espace compte : quatre pages partageant la barre latérale ─────────
     'account.title' => 'Mon compte',
     'account.subtitle' => 'Vos informations, vos commandes et les pièces que vous avez enregistrées.',
@@ -287,25 +261,13 @@ return [
     'account.nav_orders' => 'Commandes',
     'account.nav_wishlist' => 'Coups de cœur',
     'account.nav_payment' => 'Paiement',
-    /*
-     * Toujours utilisée par le titre de la page /professional-account. La
-     * barre d'onglets du compte ne la liste plus — voir la note dans
-     * layouts/buyer/account-layout.tsx.
-     */
-    'account.nav_professional' => 'Compte professionnel',
     'account.logout' => 'Déconnexion',
-
-    // Le type de compte — remplace l'avatar et le nom qui occupaient le haut
-    // de la colonne latérale.
-    'account.badge_personal' => 'Compte particulier',
-    'account.badge_professional' => 'Compte professionnel',
 
     // Une carte par achat depuis que l'historique les regroupe — la
     // répartition entre ateliers apparaît dans la carte, pas en cartes de plus.
     'account.orders_intro' => 'Tout ce que vous avez commandé. Un achat qui touche plusieurs ateliers reste une seule commande ici, chaque atelier étant suivi séparément.',
     'account.wishlist_intro' => 'Les pièces que vous avez enregistrées, conservées jusqu\'à ce que vous les retiriez.',
     'account.payment_intro' => 'Les cartes et moyens utilisés pour régler vos commandes.',
-    'account.professional_intro' => 'Demandez l\'accès professionnel, ou consultez l\'état d\'une demande déjà envoyée.',
 
     'account.placeholder' => 'Rien à afficher ici pour le moment.',
 
@@ -369,6 +331,13 @@ return [
 
     // ── Panier ───────────────────────────────────────────────────────────
     'cart.title' => 'Votre panier',
+    'cart.err_pro_minimum' => 'Au prix pro, « :name » se commande par :count pièces minimum.',
+    'cart.err_pro_only' => 'Cette pièce est réservée aux prix pro. Passez en mode « Entreprise » pour la commander.',
+    'cart.err_pro_only_line' => '« :name » est réservée aux prix pro. Repassez en mode « Entreprise » ou retirez-la du panier.',
+    'cart.pro_min_line' => 'Minimum :count pièces au prix pro',
+    'cart.pro_min_raise' => 'Passer à :count',
+    'cart.pro_min_or' => 'ou',
+    'cart.pro_min_switch' => 'revenir aux prix particuliers',
     'cart.back' => 'Continuer la découverte',
     'cart.count_one' => ':count article',
     'cart.count_many' => ':count articles',
@@ -466,6 +435,7 @@ return [
     'checkout.err_delivery_service' => 'Ce mode de livraison n’est pas disponible pour cette destination.',
     'checkout.err_payment_method' => 'Choisissez un mode de paiement.',
     'checkout.err_coupon_unknown' => 'Ce code promo n’est pas valide.',
+    'checkout.err_price_mode_changed' => 'Vous avez changé de grille de prix entre-temps. Vérifiez le total ci-dessous puis validez à nouveau.',
     'order_placed.eyebrow' => 'Félicitations',
     'order_placed.title' => 'Votre commande est passée !',
     'order_placed.body' => 'Merci pour votre confiance. Nos artisans se mettent au travail et nous vous tiendrons informé(e) par e-mail à chaque étape.',

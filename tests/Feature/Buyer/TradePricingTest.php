@@ -15,9 +15,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 uses(RefreshDatabase::class);
 
 /**
- * Trade pricing is gated on a *verified* professional account, and the same
- * gate decides both what the storefront quotes and what checkout bills — so
- * these assert the two together rather than trusting them to agree.
+ * Pro prices are a choice anyone makes (PriceModeService), and the same
+ * choice decides both what the storefront quotes and what checkout bills —
+ * so these assert the two together rather than trusting them to agree.
  */
 function tradeStore(): Store
 {
@@ -76,12 +76,8 @@ function checkoutAs(User $user, Product $product, int $qty = 2): void
     confirmCardPayment();
 }
 
-test('a verified trade buyer is billed the wholesale rate', function () {
-    $buyer = User::factory()->create([
-        'role' => 'professional_buyer',
-        'email_verified_at' => now(),
-        'professional_verified_at' => now(),
-    ]);
+test('a buyer in pro mode is billed the wholesale rate', function () {
+    $buyer = proBuyer();
 
     $product = tradeProduct(tradeStore());
 
@@ -97,22 +93,7 @@ test('a verified trade buyer is billed the wholesale rate', function () {
         ->and((float) $order->total_amount)->toBe(240.0);
 });
 
-test('an UNVERIFIED trade buyer is billed retail', function () {
-    $buyer = User::factory()->create([
-        'role' => 'professional_buyer',
-        'email_verified_at' => now(),
-        'professional_verified_at' => null,
-    ]);
-
-    $product = tradeProduct(tradeStore());
-
-    checkoutAs($buyer, $product, 2);
-
-    expect((float) OrderItem::first()->unit_price)->toBe(200.0)
-        ->and((float) Order::first()->total_amount)->toBe(400.0);
-});
-
-test('an ordinary buyer is billed retail even when a trade rate exists', function () {
+test('a buyer on personal prices is billed retail even when a trade rate exists', function () {
     $buyer = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
 
     $product = tradeProduct(tradeStore());
@@ -123,7 +104,11 @@ test('an ordinary buyer is billed retail even when a trade rate exists', functio
         ->and((float) Order::first()->total_amount)->toBe(400.0);
 });
 
-test('what a verified trade buyer is quoted matches what they are billed', function () {
+/**
+ * The role an admin may still grant (the old trade-account review) decides
+ * nothing on its own any more: prices follow the buyer's own choice.
+ */
+test('a professional_buyer role alone does not change the bill', function () {
     $buyer = User::factory()->create([
         'role' => 'professional_buyer',
         'email_verified_at' => now(),
@@ -132,9 +117,18 @@ test('what a verified trade buyer is quoted matches what they are billed', funct
 
     $product = tradeProduct(tradeStore());
 
+    checkoutAs($buyer, $product, 2);
+
+    expect((float) OrderItem::first()->unit_price)->toBe(200.0);
+});
+
+test('what a pro-mode buyer is quoted matches what they are billed', function () {
+    $buyer = proBuyer();
+
+    $product = tradeProduct(tradeStore());
+
     // Driven through the real page rather than instantiating the resource by
-    // hand: the trade block is gated on $request->user(), so a hand-built
-    // request can silently resolve to null and make this pass vacuously.
+    // hand, so the quote comes from the same request path as the bill.
     $this->actingAs($buyer)
         ->get(route('products.show', $product->slug))
         ->assertOk()
@@ -150,18 +144,12 @@ test('what a verified trade buyer is quoted matches what they are billed', funct
     expect((float) OrderItem::first()->unit_price)->toBe(120.0);
 });
 
-test('an unverified trade buyer is not even shown the wholesale rate', function () {
-    $unverified = User::factory()->create([
-        'role' => 'professional_buyer',
-        'email_verified_at' => now(),
-        'professional_verified_at' => null,
-    ]);
+test('personal prices do not show the wholesale rate', function () {
+    $buyer = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
 
     $product = tradeProduct(tradeStore());
 
-    // The whole trade block is merged in conditionally; publishing a seller's
-    // wholesale price to an unvetted account undercuts their retail price.
-    $this->actingAs($unverified)
+    $this->actingAs($buyer)
         ->get(route('products.show', $product->slug))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -170,11 +158,9 @@ test('an unverified trade buyer is not even shown the wholesale rate', function 
         );
 });
 
-test('an unverified trade buyer browses as an ordinary buyer', function () {
+test('personal prices list consumer pieces, not trade-only ones', function () {
     $store = tradeStore();
 
-    // Visibility routes through audienceFor() too, so requiring verification
-    // for pricing necessarily gates the trade-only catalogue as well.
     Product::create([
         'store_id' => $store->id,
         'name' => 'Trade only',
@@ -194,13 +180,9 @@ test('an unverified trade buyer browses as an ordinary buyer', function () {
         'visibility' => 'individual',
     ]);
 
-    $unverified = User::factory()->create([
-        'role' => 'professional_buyer',
-        'email_verified_at' => now(),
-        'professional_verified_at' => null,
-    ]);
+    $buyer = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
 
-    $this->actingAs($unverified)
+    $this->actingAs($buyer)
         ->get(route('products.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
@@ -209,12 +191,8 @@ test('an unverified trade buyer browses as an ordinary buyer', function () {
         );
 });
 
-test('a product without a trade rate falls back to retail for a verified buyer', function () {
-    $buyer = User::factory()->create([
-        'role' => 'professional_buyer',
-        'email_verified_at' => now(),
-        'professional_verified_at' => now(),
-    ]);
+test('a product without a trade rate falls back to retail in pro mode', function () {
+    $buyer = proBuyer();
 
     $store = tradeStore();
     $retailOnly = Product::create([
@@ -229,4 +207,32 @@ test('a product without a trade rate falls back to retail for a verified buyer',
     checkoutAs($buyer, $retailOnly, 1);
 
     expect((float) OrderItem::first()->unit_price)->toBe(300.0);
+});
+
+/**
+ * The checkout page posts the price list it quoted from. If the buyer flipped
+ * the switch since (another tab), the total on screen is not what would be
+ * charged — refused rather than billed.
+ */
+test('checkout refuses a total quoted on another price list', function () {
+    $buyer = proBuyer();
+
+    $product = tradeProduct(tradeStore());
+    $city = City::create(['name' => 'Fès', 'region' => 'Fès-Meknès']);
+    Cart::firstOrCreate(['user_id' => $buyer->id])
+        ->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+    $this->actingAs($buyer)->post(route('checkout.store'), [
+        'first_name' => 'Yasmine',
+        'last_name' => 'Alaoui',
+        'shipping_address' => '1 Rue Test',
+        'city_id' => $city->id,
+        'postal_code' => '30000',
+        'country' => 'MA',
+        'shipping_phone' => '0600000000',
+        'payment_method' => 'card',
+        'price_mode' => 'individual',
+    ])->assertSessionHasErrors('cart');
+
+    expect(Order::withoutGlobalScope(Order::SETTLED_SCOPE)->count())->toBe(0);
 });

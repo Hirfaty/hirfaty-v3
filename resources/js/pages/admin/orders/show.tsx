@@ -22,6 +22,7 @@ import type {
 } from '@/components/admin/cancel-order-dialog';
 import CathedisPanel from '@/components/admin/cathedis-panel';
 import type { CathedisPanelData } from '@/components/admin/cathedis-panel';
+import PriceModeBadge from '@/components/admin/price-mode-badge';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -245,8 +246,14 @@ const Show = ({
                         <ArrowLeft className="h-4 w-4" />
                         Commandes
                     </Link>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+                    <h1 className="mt-2 flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-tight text-ink">
                         Achat {group.reference}
+                        {/* Particulier or Entreprise — the price list it
+                            was billed on. */}
+                        <PriceModeBadge
+                            mode={group.price_mode}
+                            className="text-xs"
+                        />
                     </h1>
                     <p className="mt-1 text-sm text-ink-soft">
                         {itemCount} article{itemCount > 1 ? 's' : ''} ·{' '}

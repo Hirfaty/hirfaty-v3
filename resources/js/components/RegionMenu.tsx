@@ -7,6 +7,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { useCurrency } from '@/hooks/use-currency';
+import { switchPriceMode, usePriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
 import { switchLocale } from '@/lib/locale';
 
@@ -31,6 +32,7 @@ const LOCALES = [
 export default function RegionMenu({ light = false }: { light?: boolean }) {
     const { t, locale } = useTranslation();
     const { currency, options } = useCurrency();
+    const { mode, isPro } = usePriceMode();
     const [open, setOpen] = useState(false);
 
     const go = (routeName: string, code: string) => {
@@ -77,7 +79,7 @@ export default function RegionMenu({ light = false }: { light?: boolean }) {
                     type="button"
                     aria-label={t('common.region_label')}
                     title={t('common.region_label')}
-                    className={`hidden items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-medium tracking-[0.14em] transition-colors md:inline-flex ${
+                    className={`hidden items-center gap-1.5 rounded-sm px-2 py-1 text-[11px] font-medium tracking-[0.14em] whitespace-nowrap transition-colors md:inline-flex ${
                         light
                             ? 'text-white/75 hover:bg-white/15 hover:text-white'
                             : 'text-ink/65 hover:bg-sand/40 hover:text-ink'
@@ -89,14 +91,56 @@ export default function RegionMenu({ light = false }: { light?: boolean }) {
                      * see what they are on without opening anything.
                      */}
                     {String(locale).toUpperCase()} · {currency.code}
+                    {/*
+                     * Below `xl` the header has no room for the price switch
+                     * itself (PriceModeSwitch), so its state shows here.
+                     */}
+                    {isPro && (
+                        <span
+                            className={`ms-0.5 rounded-full px-1.5 py-px text-[9px] tracking-[0.12em] xl:hidden ${
+                                light
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-olive/15 text-olive'
+                            }`}
+                        >
+                            PRO
+                        </span>
+                    )}
                 </button>
             </PopoverTrigger>
 
             <PopoverContent
                 align="end"
-                className="w-60 rounded-xl border-souk-brown/15 p-2"
+                className="w-72 rounded-xl border-souk-brown/15 p-2"
             >
+                {/*
+                 * Which price list the storefront shows — the header's pill
+                 * does this from `xl` up; this is the way in below that.
+                 */}
                 <p className="px-2.5 pt-1 pb-1.5 text-[10px] tracking-[0.16em] text-ink-soft uppercase">
+                    {t('pro.mode.label')}
+                </p>
+                <div className="space-y-0.5">
+                    {(['individual', 'professional'] as const).map((m) => (
+                        <Row
+                            key={m}
+                            label={t(`pro.mode.${m}`)}
+                            hint={t(`pro.mode.${m}_hint`)}
+                            active={mode === m}
+                            onSelect={() => {
+                                setOpen(false);
+
+                                if (mode !== m) {
+                                    switchPriceMode(m);
+                                }
+                            }}
+                        />
+                    ))}
+                </div>
+
+                <div className="my-2 h-px bg-souk-brown/10" />
+
+                <p className="px-2.5 pb-1.5 text-[10px] tracking-[0.16em] text-ink-soft uppercase">
                     {t('common.language_label')}
                 </p>
                 <div className="space-y-0.5">

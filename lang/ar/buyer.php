@@ -179,10 +179,8 @@ return [
     'detail.trade_min_qty' => 'الحد الأدنى للطلب: :count قطع',
     'detail.trade_billed_note' => 'يُطبَّق هذا السعر تلقائياً عند الدفع.',
     'detail.trade_cta_title' => 'تشتري بالجملة؟',
-    'detail.trade_cta_body' => 'تحصل الحسابات الاحترافية الموثّقة على أسعار خاصة في جزء كبير من الكتالوج.',
-    'detail.trade_cta_button' => 'افتح حساباً احترافياً',
-    'detail.trade_pending_title' => 'حساب احترافي في انتظار التوثيق.',
-    'detail.trade_pending_body' => 'ستُطبَّق أسعارك الاحترافية بمجرد موافقة المشرف على حسابك.',
+    'detail.trade_cta_body' => 'أسعار المحترفين متاحة للجميع: انتقل إلى وضع «شركات» واطلب ابتداءً من الحد الأدنى لكل قطعة.',
+    'detail.trade_cta_button' => 'كيف يعمل ذلك',
 
     // Variants
     'detail.select_variant_prompt' => 'اختر خياراً',
@@ -253,29 +251,6 @@ return [
     'onboarding.interests.body' => 'اختر الحرف التي تهمك، وسنستعملها لإبراز ما يناسبك.',
     'onboarding.interests.optional' => 'اختياري — يمكنك تغيير رأيك في أي وقت.',
 
-    /*
-     * `.placeholder` و`.hint` هما المفتاحان الباقيان من خطوة الحساب
-     * المهني السابقة: لم تعد الجولة تطرحهما، لكن
-     * pages/buyer/professional-account.tsx يعيد استخدامهما لنفس السؤال
-     * حين يطلبه المشتري لاحقاً بالفعل. لا تحذفهما.
-     */
-    'onboarding.professional.placeholder' => 'مثال: أدير رياضاً من 8 غرف في مراكش وأبحث عن مفروشات وأوانٍ مصنوعة يدوياً بكميات.',
-    'onboarding.professional.hint' => '20 حرفاً على الأقل. يمكنك مواصلة الطلب كالمعتاد أثناء مراجعة طلبك.',
-
-    // ── الحساب المهني (صفحة مستقلة) ──────────────────────────────────────
-    'professional.title' => 'الحساب المهني',
-    'professional.intro' => 'رياض، فندق، مطعم، متجر: إذا كنت تشتري بكميات، اطلب الوصول إلى أسعار الجملة.',
-    'professional.label' => 'حدثنا عن نشاطك',
-    'professional.submit' => 'إرسال الطلب',
-    'professional.pending_title' => 'الطلب قيد المراجعة',
-    'professional.pending_body' => 'يدرس فريقنا طلبك. ستصلك رسالة بمجرد اتخاذ القرار — ويمكنك مواصلة الطلب كالمعتاد في انتظار ذلك.',
-    'professional.approved_title' => 'الحساب المهني مفعّل',
-    'professional.approved_body' => 'تُطبَّق أسعار الجملة تلقائياً على المنتجات المعنية.',
-    'professional.declined_title' => 'لم يتم قبول الطلب',
-    'professional.declined_reason' => 'السبب',
-    'professional.declined_retry' => 'يمكنك تقديم طلب جديد.',
-    'professional.submitted_on' => 'أُرسل في :date',
-
     // ── مساحة الحساب: أربع صفحات تتقاسم الشريط الجانبي ────────────────────
     'account.title' => 'حسابي',
     'account.subtitle' => 'معلوماتك وطلباتك والقطع التي احتفظت بها.',
@@ -287,24 +262,13 @@ return [
     'account.nav_orders' => 'الطلبات',
     'account.nav_wishlist' => 'المفضلة',
     'account.nav_payment' => 'الأداء',
-    /*
-     * لا تزال مستخدمة في عنوان صفحة /professional-account نفسها. شريط
-     * تبويبات الحساب لم يعد يعرضها — انظر الملاحظة في
-     * layouts/buyer/account-layout.tsx.
-     */
-    'account.nav_professional' => 'الحساب المهني',
     'account.logout' => 'تسجيل الخروج',
-
-    // نوع الحساب — يحلّ محلّ الصورة والاسم الذين كانا أعلى الشريط الجانبي.
-    'account.badge_personal' => 'حساب شخصي',
-    'account.badge_professional' => 'حساب مهني',
 
     // بطاقة واحدة لكل عملية شراء منذ أن صار السجل يجمعها — توزّعها على
     // الورشات يظهر داخل البطاقة، لا كبطاقات إضافية.
     'account.orders_intro' => 'كل ما طلبته. عملية الشراء التي تشمل عدة ورشات تبقى طلباً واحداً هنا، مع متابعة كل ورشة على حدة.',
     'account.wishlist_intro' => 'القطع التي احتفظت بها، تبقى إلى أن تحذفها.',
     'account.payment_intro' => 'البطاقات ووسائل الأداء المستعملة لتسوية طلباتك.',
-    'account.professional_intro' => 'اطلب الوصول المهني، أو تحقق من حالة طلب سبق إرساله.',
 
     'account.placeholder' => 'لا شيء لعرضه هنا بعد.',
 
@@ -368,6 +332,13 @@ return [
 
     // ── السلة ────────────────────────────────────────────────────────────
     'cart.title' => 'سلتك',
+    'cart.err_pro_minimum' => 'بسعر المحترفين، تُطلب «:name» بـ :count قطع على الأقل.',
+    'cart.err_pro_only' => 'هذه القطعة متاحة بأسعار المحترفين فقط. انتقل إلى وضع «شركات» لطلبها.',
+    'cart.err_pro_only_line' => '«:name» متاحة بأسعار المحترفين فقط. عُد إلى وضع «شركات» أو احذفها من السلة.',
+    'cart.pro_min_line' => 'الحد الأدنى :count قطع بسعر المحترفين',
+    'cart.pro_min_raise' => 'ارفع إلى :count',
+    'cart.pro_min_or' => 'أو',
+    'cart.pro_min_switch' => 'عُد إلى أسعار الأفراد',
     'cart.back' => 'تابع التصفح',
     'cart.count_one' => 'منتج واحد',
     'cart.count_many' => ':count منتجات',
@@ -465,6 +436,7 @@ return [
     'checkout.err_delivery_service' => 'طريقة التوصيل هذه غير متاحة لهذه الوجهة.',
     'checkout.err_payment_method' => 'اختر طريقة الدفع.',
     'checkout.err_coupon_unknown' => 'رمز الخصم هذا غير صالح.',
+    'checkout.err_price_mode_changed' => 'غيّرت لائحة الأسعار في الأثناء. تحقّق من المجموع أدناه ثم أكّد من جديد.',
     'order_placed.eyebrow' => 'تهانينا',
     'order_placed.title' => 'تم تسجيل طلبك!',
     'order_placed.body' => 'شكرًا على ثقتك. سيبدأ حرفيّونا العمل على طلبك، وسنُبقيك على اطلاع عبر البريد الإلكتروني في كل مرحلة.',

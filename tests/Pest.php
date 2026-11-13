@@ -2,7 +2,10 @@
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Product;
+use App\Models\User;
 use App\Services\PaymentService;
+use App\Services\PriceModeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -100,4 +103,28 @@ function confirmCardPayment(?string $reference = null): void
         'transactions' => [['type' => 'CHARGE', 'state' => 'APPROVED', 'resultCode' => 0, 'amount' => (float) $payment->amount]],
         'paymentMethod' => 'Visa',
     ]);
+}
+
+/**
+ * Shop on the pro price list for the rest of this test — the "Pro" choice in
+ * the header or the first-visit popup (PriceModeService). Anyone may make it;
+ * every request the test sends afterwards carries the cookie.
+ */
+function shopInProMode(): void
+{
+    test()->withCookie(PriceModeService::COOKIE, Product::AUDIENCE_PROFESSIONAL);
+}
+
+/**
+ * A signed-up buyer shopping on the pro price list. No trade account or
+ * verification is involved any more — choosing "Pro" is all it takes.
+ */
+function proBuyer(array $attributes = []): User
+{
+    shopInProMode();
+
+    return User::factory()->create(array_merge([
+        'role' => 'buyer',
+        'email_verified_at' => now(),
+    ], $attributes));
 }

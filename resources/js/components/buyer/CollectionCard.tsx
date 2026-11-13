@@ -258,6 +258,26 @@ export function CollectionCard({
                         <span className="text-xs text-souk-brown-deep/60">
                             {t('buyer.products.price_coming_soon')}
                         </span>
+                    ) : showPro ? (
+                        /*
+                         * Pro mode (the header switch): the trade price is
+                         * the headline and the public one is struck beside
+                         * it. Whether this visitor can actually *buy* at it
+                         * is the page's to say — see ProPriceNotice and the
+                         * product page's buy box.
+                         */
+                        <>
+                            <span className="text-sm font-semibold text-olive">
+                                {money(pro)}
+                                <TaxIncluded />
+                            </span>
+                            <span className="text-xs text-souk-brown-deep/50 line-through">
+                                {money(retail as number)}
+                            </span>
+                            <span className="rounded-full bg-olive/12 px-1.5 py-px text-[9px] font-medium tracking-[0.14em] text-olive uppercase">
+                                {t('pro.price.tag')}
+                            </span>
+                        </>
                     ) : (
                         <>
                             <span className="text-sm font-semibold text-souk-brown">
@@ -273,16 +293,13 @@ export function CollectionCard({
                     )}
                 </div>
 
-                {/* Retail stays the headline for every audience because retail
-                    is what CheckoutService bills; a trade buyer additionally
-                    sees their reference rate, marked as such. */}
-                {showPro && (
-                    <p
-                        className="mt-1.5 text-[10px] tracking-[0.12em] text-olive uppercase"
-                        title={t('buyer.products.pro_price_hint')}
-                    >
-                        {t('buyer.products.pro_short')} {money(pro)}
-                        <TaxIncluded />
+                {/* Bulk floor on the trade price, when the workshop set one. */}
+                {showPro && (product.min_order_qty_professional ?? 1) > 1 && (
+                    <p className="mt-1 text-[10px] tracking-[0.06em] text-olive/80">
+                        {t('pro.price.min_qty').replace(
+                            ':count',
+                            String(product.min_order_qty_professional),
+                        )}
                     </p>
                 )}
             </div>

@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     BadgeCheck,
     CreditCard,
@@ -10,8 +10,8 @@ import {
 import type { ReactNode } from 'react';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import { switchPriceMode, usePriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
-import type { Auth } from '@/types';
 
 export type AccountSection =
     | 'overview'
@@ -48,8 +48,9 @@ interface Props {
  *
  * No avatar or name either. The header above already says who is signed in;
  * repeating it here spent the most prominent spot on the page telling the
- * reader something they knew. What they cannot see anywhere else is which
- * *kind* of account they hold, so that badge takes the slot instead.
+ * reader something they knew. The slot holds the price list they shop on
+ * instead (PriceModeService) — the one setting that changes what every page
+ * quotes — with the switch right beside it.
  */
 export default function BuyerAccountLayout({
     active,
@@ -60,17 +61,9 @@ export default function BuyerAccountLayout({
 }: Props) {
     const { t } = useTranslation();
 
-    // Read from the globally shared auth prop, so a page needs no props at all
-    // just to render its own chrome.
-    const user = usePage<{ auth: Auth }>().props.auth.user;
-
-    /*
-     * `role`, not `professional_verified_at`. A buyer whose request is still
-     * pending is a `buyer` until an admin promotes them — see
-     * Admin\UserController::approveProfessional — so the role is the only
-     * field that answers "what am I being billed as right now".
-     */
-    const isProfessional = user.role === 'professional_buyer';
+    // Particulier or pro — read from the shared prop, so a page needs no
+    // props at all just to render its own chrome.
+    const { isPro } = usePriceMode();
 
     const items = [
         {
@@ -114,17 +107,33 @@ export default function BuyerAccountLayout({
             <div className="container py-10 lg:max-w-screen-xl lg:py-14">
                 {/* ── Standing + sign out ───────────────────────────────── */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <span
-                        className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
-                            isProfessional
-                                ? 'bg-souk-green/10 text-souk-green'
-                                : 'bg-souk-brown/10 text-souk-brown-deep/80'
-                        }`}
-                    >
-                        <BadgeCheck className="h-4 w-4" strokeWidth={1.7} />
-                        {isProfessional
-                            ? t('buyer.account.badge_professional')
-                            : t('buyer.account.badge_personal')}
+                    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span
+                            className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                                isPro
+                                    ? 'bg-souk-green/10 text-souk-green'
+                                    : 'bg-souk-brown/10 text-souk-brown-deep/80'
+                            }`}
+                        >
+                            <BadgeCheck className="h-4 w-4" strokeWidth={1.7} />
+                            {t('pro.mode.label')} ·{' '}
+                            {isPro
+                                ? t('pro.mode.professional')
+                                : t('pro.mode.individual')}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() =>
+                                switchPriceMode(
+                                    isPro ? 'individual' : 'professional',
+                                )
+                            }
+                            className="text-xs text-souk-brown-deep/60 underline underline-offset-4 transition-colors hover:text-souk-title"
+                        >
+                            {isPro
+                                ? t('pro.notice.show_retail')
+                                : t('pro.price.see_pro')}
+                        </button>
                     </span>
 
                     <button

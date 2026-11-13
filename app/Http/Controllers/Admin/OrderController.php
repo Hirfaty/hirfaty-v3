@@ -32,7 +32,7 @@ class OrderController extends Controller
 {
     public function index(Request $request, AdminOrderListService $list)
     {
-        $filters = $request->only(['search', 'status', 'from', 'to']);
+        $filters = $request->only(['search', 'status', 'from', 'to', 'price_mode']);
 
         $query = $list->query($filters)->with(['buyer', 'store', 'items.product.images', 'city']);
 
@@ -76,6 +76,7 @@ class OrderController extends Controller
             'status' => ['nullable', 'in:pending,confirmed,shipped,delivered,cancelled'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'price_mode' => ['nullable', Rule::in(AdminOrderListService::PRICE_MODE_FILTERS)],
         ]);
 
         return $list->export($data['format'], $data);
@@ -275,6 +276,14 @@ class OrderController extends Controller
              */
             'display_currency' => $first->display_currency,
             'display_rate' => $first->display_rate === null ? null : (float) $first->display_rate,
+
+            /*
+             * Particulier (`individual`) or Entreprise (`professional`): the
+             * price list the buyer checked out on. One checkout bills every
+             * order of the group on the same list. Null for purchases from
+             * before it was recorded.
+             */
+            'price_mode' => $first->price_mode,
 
             /*
              * What the parcel shipped by, snapshotted at checkout so a carrier

@@ -78,6 +78,83 @@ it('orders them newest first', function () {
     );
 });
 
+// ── Turns across categories ──────────────────────────────────────────────────
+
+function arrivalCategory(string $slug): Category
+{
+    return Category::create([
+        'slug' => $slug,
+        'name' => ['fr' => ucfirst($slug), 'ar' => $slug, 'en' => ucfirst($slug)],
+    ]);
+}
+
+/**
+ * A batch filed in one category must not take over the row: each category
+ * gets its newest piece in before any category gets a second.
+ */
+it('takes turns across categories rather than letting one batch fill the row', function () {
+    $rugs = arrivalCategory('tapis');
+    $lamps = arrivalCategory('luminaires');
+
+    $pot = arrival(['name' => 'Old pot']);
+    $lamp = arrival(['name' => 'Lamp', 'category_id' => $lamps->id]);
+
+    $batch = [];
+
+    foreach (range(1, 20) as $n) {
+        $batch[] = arrival(['name' => "Rug {$n}", 'category_id' => $rugs->id]);
+    }
+
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page
+        ->has('newArrivals', 18)
+        // First round: the newest of each category, newest first.
+        ->where('newArrivals.0.id', end($batch)->id)
+        ->where('newArrivals.1.id', $lamp->id)
+        ->where('newArrivals.2.id', $pot->id)
+        // Then the rest of the batch.
+        ->where('newArrivals.3.id', $batch[18]->id)
+    );
+});
+
+it('interleaves categories on the new arrivals page too', function () {
+    $rugs = arrivalCategory('tapis');
+
+    $pot = arrival(['name' => 'Old pot']);
+
+    foreach (range(1, 15) as $n) {
+        arrival(['name' => "Rug {$n}", 'category_id' => $rugs->id]);
+    }
+
+    $this->get('/fr/new-arrivals')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products', 12)
+            ->where('products.1.id', $pot->id)
+            ->where('pagination.total', 16)
+        );
+});
+
+/**
+ * The rank is taken over what the visitor may see, so a hidden piece never
+ * uses up its category's turn.
+ */
+it('does not let hidden pieces take a category turn', function () {
+    $rugs = arrivalCategory('tapis');
+
+    $pot = arrival(['name' => 'Visible pot']);
+    arrival(['name' => 'Hidden pot', 'status' => 'pending_review']);
+    arrival(['name' => 'Trade pot', 'visibility' => 'professional']);
+
+    foreach (range(1, 3) as $n) {
+        arrival(['name' => "Rug {$n}", 'category_id' => $rugs->id]);
+    }
+
+    $this->get('/fr')->assertInertia(fn (Assert $page) => $page
+        ->has('newArrivals', 4)
+        ->where('newArrivals.1.id', $pot->id)
+    );
+});
+
 it('sends fewer than eighteen when the catalogue is short', function () {
     arrival();
     arrival();
@@ -109,18 +186,13 @@ it('hides trade-only pieces from an ordinary buyer', function () {
         ->assertInertia(fn (Assert $page) => $page->has('newArrivals', 0));
 });
 
-it('shows trade-only pieces to a verified professional buyer', function () {
+it('shows trade-only pieces to a visitor shopping in pro mode', function () {
     arrival(['name' => 'Trade only', 'visibility' => 'professional']);
 
-    // A verified trade account is the `professional_buyer` *role* plus a
-    // verification timestamp — see `User::isVerifiedProfessionalBuyer()`.
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
+    // The "Pro" choice in the header — no account needed (PriceModeService).
+    shopInProMode();
 
-    $this->actingAs($pro)
-        ->get('/fr')
+    $this->get('/fr')
         ->assertInertia(fn (Assert $page) => $page
             ->has('newArrivals', 1)
             ->where('newArrivals.0.name', 'Trade only')

@@ -54,6 +54,9 @@ class Order extends Model
         // What the buyer was reading at checkout, and the rate that was live
         // then. Presentation history, not money: the order settles in MAD.
         'display_currency', 'display_rate',
+        // The price list it was billed on — `individual` or `professional`
+        // (PriceModeService); null on orders from before it was recorded.
+        'price_mode',
         // Which carrier shipped and what it was called then — a snapshot, like
         // shipping_address, so a carrier renamed later can't rewrite the
         // history of an order it already carried. `delivery_service_id` alone

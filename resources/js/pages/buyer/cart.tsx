@@ -13,11 +13,13 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { Audience, ListingProduct } from '@/components/buyer/ProductCard';
+import ProPriceNotice from '@/components/buyer/ProPriceNotice';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Spinner } from '@/components/ui/spinner';
 import { useCurrency } from '@/hooks/use-currency';
+import { switchPriceMode } from '@/hooks/use-price-mode';
 import { useTranslation } from '@/hooks/use-translation';
 
 /** Museum-caption label, matching the listing and detail pages. */
@@ -39,7 +41,10 @@ type CartLine = {
     line_total: number | null;
     original_unit_price: number | null;
     available_stock: number;
+    /** The floor on the buyer's price list — above 1 only in pro mode. */
     min_quantity: number;
+    /** Trade-only piece, but the buyer is on personal prices now. */
+    unavailable_on_mode: boolean;
 };
 
 /**
@@ -123,6 +128,17 @@ const CartPage = ({
      */
     const hasUnpriced = items.some((line) => line.unit_price === null);
 
+    /*
+     * Lines checkout would refuse on the current price list: under their pro
+     * minimum (added at personal prices, then the buyer switched to pro), or
+     * a trade-only piece after switching back. Each is flagged on its line
+     * with the one-click fix; the checkout button waits until they are.
+     */
+    const hasBlocked = items.some(
+        (line) => line.quantity < line.min_quantity || line.unavailable_on_mode,
+    );
+    const cannotCheckout = hasUnpriced || hasBlocked;
+
     const changeQuantity = (line: CartLine, quantity: number) => {
         setBusyId(line.id);
         router.patch(
@@ -174,6 +190,9 @@ const CartPage = ({
                         </span>
                     )}
                 </div>
+
+                {/* Pro prices: a reminder of the one condition attached. */}
+                {items.length > 0 && <ProPriceNotice className="mt-6" />}
             </section>
 
             {items.length === 0 ? (
@@ -210,6 +229,8 @@ const CartPage = ({
                                 const busy = busyId === line.id;
                                 const atFloor =
                                     line.quantity <= line.min_quantity;
+                                const belowMinimum =
+                                    line.quantity < line.min_quantity;
                                 const atCeiling =
                                     line.quantity >= line.available_stock;
 
@@ -325,6 +346,98 @@ const CartPage = ({
                                                     </p>
                                                 )}
 
+                                                {/* Under the pro minimum:
+                                                    raise it in one click, or
+                                                    go back to personal
+                                                    prices, from one piece. */}
+                                                {belowMinimum &&
+                                                    !line.unavailable_on_mode && (
+                                                        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-xl bg-terracotta/8 px-3 py-2 text-xs leading-relaxed text-terracotta">
+                                                            <span>
+                                                                {t(
+                                                                    'buyer.cart.pro_min_line',
+                                                                ).replace(
+                                                                    ':count',
+                                                                    String(
+                                                                        line.min_quantity,
+                                                                    ),
+                                                                )}
+                                                                :
+                                                            </span>
+                                                            {line.available_stock >=
+                                                                line.min_quantity && (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            changeQuantity(
+                                                                                line,
+                                                                                line.min_quantity,
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            busy
+                                                                        }
+                                                                        className="font-medium underline underline-offset-4 disabled:opacity-50"
+                                                                    >
+                                                                        {t(
+                                                                            'buyer.cart.pro_min_raise',
+                                                                        ).replace(
+                                                                            ':count',
+                                                                            String(
+                                                                                line.min_quantity,
+                                                                            ),
+                                                                        )}
+                                                                    </button>
+                                                                    <span>
+                                                                        {t(
+                                                                            'buyer.cart.pro_min_or',
+                                                                        )}
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    switchPriceMode(
+                                                                        'individual',
+                                                                    )
+                                                                }
+                                                                className="underline underline-offset-4"
+                                                            >
+                                                                {t(
+                                                                    'buyer.cart.pro_min_switch',
+                                                                )}
+                                                            </button>
+                                                        </p>
+                                                    )}
+
+                                                {/* A trade-only piece, now
+                                                    the buyer is on personal
+                                                    prices. */}
+                                                {line.unavailable_on_mode && (
+                                                    <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-xl bg-terracotta/8 px-3 py-2 text-xs leading-relaxed text-terracotta">
+                                                        <span>
+                                                            {t(
+                                                                'buyer.cart.err_pro_only',
+                                                            )}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                switchPriceMode(
+                                                                    'professional',
+                                                                )
+                                                            }
+                                                            className="font-medium underline underline-offset-4"
+                                                        >
+                                                            {t(
+                                                                'pro.price.see_pro',
+                                                            )}
+                                                        </button>
+                                                    </p>
+                                                )}
+
                                                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
                                                     <div className="inline-flex items-center rounded-xl border border-souk-brown/20">
                                                         <button
@@ -356,8 +469,12 @@ const CartPage = ({
                                                             onClick={() =>
                                                                 changeQuantity(
                                                                     line,
-                                                                    line.quantity +
-                                                                        1,
+                                                                    // Under the floor, one more is
+                                                                    // still refused: go to it.
+                                                                    belowMinimum
+                                                                        ? line.min_quantity
+                                                                        : line.quantity +
+                                                                              1,
                                                                 )
                                                             }
                                                             disabled={
@@ -429,7 +546,7 @@ const CartPage = ({
 
                     {/* ── Summary ───────────────────────────────── */}
                     <aside className="col-span-12 lg:col-span-4">
-                        <div className="rounded-2xl border border-souk-brown/12 bg-souk-peach/40 p-6 lg:sticky lg:top-6">
+                        <div className="rounded-2xl border border-souk-brown/12 bg-souk-peach/40 p-6 lg:sticky lg:top-24">
                             <p className={`text-souk-brown-deep/55 ${EYEBROW}`}>
                                 {t('buyer.cart.summary')}
                             </p>
@@ -466,15 +583,16 @@ const CartPage = ({
 
                             <Link
                                 href={route('checkout.show')}
-                                // An unpriced line makes the whole basket
-                                // unpayable, so the link is inert rather than
-                                // sending them to a checkout that will refuse.
-                                aria-disabled={hasUnpriced}
+                                // An unpriced or flagged line makes the whole
+                                // basket unpayable, so the link is inert
+                                // rather than sending them to a checkout that
+                                // will refuse.
+                                aria-disabled={cannotCheckout}
                                 onClick={(e) =>
-                                    hasUnpriced && e.preventDefault()
+                                    cannotCheckout && e.preventDefault()
                                 }
                                 className={`mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-xl px-6 py-3.5 text-sm font-medium transition-colors ${
-                                    hasUnpriced
+                                    cannotCheckout
                                         ? 'pointer-events-none bg-souk-brown/40 text-souk-cream/70'
                                         : 'bg-souk-brown text-souk-cream hover:bg-souk-brown-deep'
                                 }`}

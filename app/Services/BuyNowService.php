@@ -39,13 +39,15 @@ class BuyNowService
      * Hold one piece for checkout, after the same checks adding it to the
      * cart would run — plus a price, since this goes straight to the till.
      *
+     * `$audience` is the buyer's chosen price list (PriceModeService).
+     *
      * @throws ValidationException
      */
-    public function start(Session $session, User $buyer, int $productId, ?int $variantId, int $quantity): void
+    public function start(Session $session, string $audience, int $productId, ?int $variantId, int $quantity): void
     {
-        [$product, $variant] = $this->carts->assertBuyable($buyer, $productId, $variantId, $quantity);
+        [$product, $variant] = $this->carts->assertBuyable($audience, $productId, $variantId, $quantity);
 
-        if ($this->line($product, $variant, $quantity)->unitPriceFor(Product::audienceFor($buyer)) === null) {
+        if ($this->line($product, $variant, $quantity)->unitPriceFor($audience) === null) {
             throw ValidationException::withMessages([
                 'product_id' => "Le produit '{$product->name}' n'a pas encore de prix et ne peut pas être commandé.",
             ]);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerProductResource;
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\PriceModeService;
 use App\Services\SeoService;
 use App\Services\WishlistService;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class StoreController extends Controller
     public function __construct(
         private WishlistService $wishlist,
         private SeoService $seo,
+        private PriceModeService $priceMode,
     ) {}
 
     public function show(Request $request, string $slug)
@@ -40,7 +42,8 @@ class StoreController extends Controller
             ->with(['city:id,name,name_translations', 'category'])
             ->firstOrFail();
 
-        $audience = Product::audienceFor($request->user());
+        // The list the visitor is browsing in (PriceModeService).
+        $audience = $this->priceMode->audience($request);
 
         $products = Product::query()
             ->where('store_id', $store->id)

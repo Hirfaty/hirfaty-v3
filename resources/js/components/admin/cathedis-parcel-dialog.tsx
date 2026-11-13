@@ -277,8 +277,25 @@ export default function CathedisParcelDialog({
                         <Field
                             label="Ville Cathedis"
                             hint={
-                                form.city_name &&
-                                `Ville de la commande : ${form.city_name}`
+                                /*
+                                 * The list is read from our own copy of
+                                 * Cathedis's cities, refreshed weekly by
+                                 * `cathedis:sync-cities`. Empty means that copy
+                                 * was never filled (a fresh database) — say
+                                 * so, rather than show a select with nothing
+                                 * in it.
+                                 */
+                                cities?.length === 0 ? (
+                                    <span className="text-rose-600">
+                                        Aucune ville Cathedis enregistrée.
+                                        Lancez « php artisan
+                                        cathedis:sync-cities » puis rouvrez
+                                        cette fenêtre.
+                                    </span>
+                                ) : (
+                                    form.city_name &&
+                                    `Ville de la commande : ${form.city_name}`
+                                )
                             }
                         >
                             <select
@@ -286,11 +303,15 @@ export default function CathedisParcelDialog({
                                 onChange={(e) =>
                                     pickCity(Number(e.target.value))
                                 }
-                                disabled={!cities}
+                                disabled={!cities || cities.length === 0}
                                 className={inputClass}
                             >
                                 <option value="" disabled>
-                                    {cities ? 'Choisir…' : 'Chargement…'}
+                                    {!cities
+                                        ? 'Chargement…'
+                                        : cities.length === 0
+                                          ? 'Aucune ville'
+                                          : 'Choisir…'}
                                 </option>
                                 {shown.map((c) => (
                                     <option key={c.id} value={c.id}>

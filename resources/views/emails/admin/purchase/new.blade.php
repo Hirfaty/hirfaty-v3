@@ -45,6 +45,12 @@
         <x-mail.row label="Paiement" :value="$first?->payment_method === \App\Models\Order::PAYMENT_PAYPAL
             ? 'Payée avec PayPal — rien à encaisser'
             : 'Payée par carte (Payzone) — rien à encaisser'" />
+        {{-- La grille choisie au paiement : prix Particulier ou prix Entreprise (pro). --}}
+        @if ($first?->price_mode)
+            <x-mail.row label="Grille de prix" :value="$first->price_mode === 'professional'
+                ? 'Entreprise (prix pro)'
+                : 'Particulier'" />
+        @endif
         @if ($first?->notes)
             <x-mail.row label="Note du client" :value="$first->notes" />
         @endif

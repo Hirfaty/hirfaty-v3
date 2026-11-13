@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -114,20 +113,19 @@ class ProductSearchService
      *
      * Deliberately not the listing's paginated payload: this is a preview, so
      * it carries only what a suggestion row draws, and it applies the same
-     * storefront + audience gates the listing does — a trade-only piece must
-     * not leak to a consumer through the search box either.
+     * storefront + audience gates the listing does, for the price list the
+     * visitor is browsing in (PriceModeService) — the box never offers a piece
+     * the listing it hands off to would not show.
      *
      * @return array<int, array<string, mixed>>
      */
-    public function suggest(?User $viewer, string $term, int $limit = 6): array
+    public function suggest(string $audience, string $term, int $limit = 6): array
     {
         $term = trim($term);
 
         if (mb_strlen($term) < self::MIN_TERM_LENGTH) {
             return [];
         }
-
-        $audience = Product::audienceFor($viewer);
 
         $query = Product::query()
             ->storefront()
@@ -165,15 +163,13 @@ class ProductSearchService
      * How many pieces the term matches in total, so the panel can offer
      * "see all N results" rather than implying the preview is the whole set.
      */
-    public function countFor(?User $viewer, string $term): int
+    public function countFor(string $audience, string $term): int
     {
         $term = trim($term);
 
         if (mb_strlen($term) < self::MIN_TERM_LENGTH) {
             return 0;
         }
-
-        $audience = Product::audienceFor($viewer);
 
         return $this->applyTerm(
             Product::query()

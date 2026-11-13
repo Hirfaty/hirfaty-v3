@@ -30,6 +30,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PayPalController;
 use App\Http\Controllers\PayzoneController;
+use App\Http\Controllers\PriceModeController;
 use App\Http\Controllers\Seller\DashboardController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
@@ -41,6 +42,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\LocaleService;
+use App\Services\PriceModeService;
 use App\Services\SocialAuthService;
 use Illuminate\Support\Facades\Route;
 
@@ -153,17 +155,9 @@ Route::prefix('{locale}')
         Route::get('/stores/{slug}', [BuyerStoreController::class, 'show'])->name('stores.show');
 
         /*
-         * What a trade account is and how to get one.
-         *
-         * Public, unlike its POST counterpart (`professional.request`, in the
-         * buyer group): this is the page that has to
-         * *sell* the feature, and it was previously behind `role:buyer` — so the one
-         * audience it exists to convince, people who have not signed up yet, were the
-         * only ones who could never read it. A guest following a "buying wholesale?"
-         * prompt landed on the registration form with nothing having explained what
-         * they were signing up for.
-         *
-         * The controller therefore has to tolerate a null user; see its show().
+         * How pro prices work: open to anyone who switches to "Pro", from a
+         * minimum quantity per piece. Public — it exists for visitors who
+         * have not decided yet.
          */
         Route::get('/professional-account', [ProfessionalRequestController::class, 'show'])->name('professional.show');
 
@@ -216,11 +210,6 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         // browsers can only send on a POST.
         Route::post('/users/{user}', [Admin\UserController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/ban', [Admin\UserController::class, 'ban'])->name('users.ban');
-        Route::patch('/users/{user}/verify-professional', [Admin\UserController::class, 'verifyProfessional'])->name('users.verify-professional');
-        // Buyer-initiated trade requests: approving promotes the account to
-        // professional_buyer, which nothing else outside this pair can do.
-        Route::patch('/users/{user}/professional/approve', [Admin\UserController::class, 'approveProfessional'])->name('users.professional.approve');
-        Route::patch('/users/{user}/professional/decline', [Admin\UserController::class, 'declineProfessional'])->name('users.professional.decline');
         Route::post('/users/{user}/reset-link', [Admin\UserController::class, 'resetLink'])->name('users.reset-link');
         // Private desk notes on an account. Scoped through User::adminNotes()
         // (hence `{adminNote}`), so a note id from another account 404s
@@ -505,12 +494,10 @@ Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(
     Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 
     /*
-     * Submitting the request stays gated — there is no account to upgrade
-     * without one. Only the GET side is public; see below.
+     * No `POST /professional-account`: there is no trade account to ask for.
+     * Pro prices are a choice every visitor makes (PriceModeService); the GET
+     * page only explains them.
      */
-    Route::post('/professional-account', [ProfessionalRequestController::class, 'store'])
-        ->middleware('throttle:5,60')
-        ->name('professional.request');
 });
 
 // Public routes — no auth needed
@@ -698,6 +685,16 @@ Route::post('/currency/{currency}', function (string $currency, CurrencyService 
 
     return back();
 })->name('currency.switch');
+
+/*
+ * Which price list the visitor shops on: "particulier" or "professionnel" —
+ * the first-visit chooser and the header switch both post here. It decides
+ * what is shown and what is billed alike (PriceModeService); pro prices are
+ * open to anyone, from each piece's minimum quantity.
+ */
+Route::post('/price-mode/{mode}', PriceModeController::class)
+    ->whereIn('mode', PriceModeService::MODES)
+    ->name('price-mode.switch');
 
 require __DIR__.'/settings.php';
 

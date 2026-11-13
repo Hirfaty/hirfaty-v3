@@ -66,27 +66,6 @@ class UserFactory extends Factory
     }
 
     /**
-     * A trade account an admin has approved — the only kind that is billed
-     * wholesale and held to bulk minimums.
-     *
-     * Set after creation rather than as state attributes: the professional_*
-     * columns are deliberately not fillable (they decide which price list an
-     * account pays), so a factory attribute would be silently dropped and the
-     * test would quietly assert against a plain buyer.
-     */
-    public function verifiedProfessional(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'professional_buyer',
-        ])->afterCreating(function (User $user) {
-            $user->forceFill([
-                'professional_verified_at' => now(),
-                'professional_request_status' => User::PRO_REQUEST_APPROVED,
-            ])->save();
-        });
-    }
-
-    /**
      * Indicate that the model has two-factor authentication configured.
      */
     public function withTwoFactor(): static

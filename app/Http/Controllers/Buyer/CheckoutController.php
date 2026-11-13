@@ -11,6 +11,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Services\BuyerAccountService;
 use App\Services\BuyNowService;
+use App\Services\CartService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CityService;
@@ -19,12 +20,18 @@ use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
 use App\Services\PaymentService;
 use App\Services\PayPalPaymentService;
+use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
+    public function __construct(
+        private PriceModeService $priceMode,
+        private CartService $carts,
+    ) {}
+
     public function show(
         Request $request,
         DeliveryFeeService $deliveryFees,
@@ -42,6 +49,16 @@ class CheckoutController extends Controller
 
         if ($cart->items->isEmpty()) {
             return redirect()->route('products.index');
+        }
+
+        /*
+         * A line under its pro minimum (added at retail, then the buyer
+         * switched to pro) or a trade-only piece on the retail list cannot
+         * be paid for as it stands. Back to the basket, which flags the line
+         * and offers the fix, rather than a form that will only refuse.
+         */
+        if ($issue = $this->carts->checkoutIssue($cart, $this->priceMode->audience($request))) {
+            return redirect()->route('cart.show')->with('error', $issue);
         }
 
         return $this->page($request, $cart, false, $deliveryFees, $currencies, $paypal);
@@ -62,7 +79,7 @@ class CheckoutController extends Controller
 
         $buyNow->start(
             $request->session(),
-            $request->user(),
+            $this->priceMode->audience($request),
             (int) $data['product_id'],
             isset($data['variant_id']) ? (int) $data['variant_id'] : null,
             (int) $data['quantity'],
@@ -88,6 +105,15 @@ class CheckoutController extends Controller
         // nearest sensible place.
         if (! $cart) {
             return redirect()->route('cart.show');
+        }
+
+        // The mode can have changed since Buy now was pressed: back to the
+        // piece, whose page shows what its current price list asks for.
+        if ($issue = $this->carts->checkoutIssue($cart, $this->priceMode->audience($request))) {
+            $slug = $cart->items->first()?->product?->slug;
+
+            return ($slug ? redirect()->route('products.show', $slug) : redirect()->route('cart.show'))
+                ->with('error', $issue);
         }
 
         return $this->page($request, $cart, true, $deliveryFees, $currencies, $paypal);
@@ -288,11 +314,24 @@ class CheckoutController extends Controller
         // ships to the destination.
         $destination['delivery_service_id'] = $request->validated('delivery_service_id');
 
+        /*
+         * Billed on the buyer's chosen price list. The page posts the one it
+         * quoted from; if the buyer has flipped the header switch since (in
+         * another tab, say), the totals on screen are no longer what would be
+         * charged — refuse, and let the reloaded page quote again.
+         */
+        $audience = $this->priceMode->audience($request);
+        $quoted = $request->validated('price_mode');
+
+        if ($quoted !== null && $quoted !== $audience) {
+            return back()->withErrors(['cart' => __('buyer.checkout.err_price_mode_changed')]);
+        }
+
         // An online purchase this buyer left unpaid is still holding its
         // stock; this checkout replaces it.
         $payments->releaseOpenPurchases($request->user());
 
-        $orders = $checkout->process($cart, $destination);
+        $orders = $checkout->process($cart, $destination, $audience);
 
         if ($buyNowCart) {
             $buyNow->placed($request->session(), $buyNowCart, $orders[0]->group_reference);

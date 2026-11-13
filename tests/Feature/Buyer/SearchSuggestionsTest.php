@@ -126,24 +126,23 @@ test('the search box never leaks trade-only or unpublished pieces', function () 
         ->assertJsonPath('total', 1);
 });
 
-test('a professional buyer is quoted the trade rate in the panel', function () {
+test('pro mode is quoted the trade rate in the panel', function () {
     suggestable([
         'name' => 'Tajine émaillé',
         'base_price' => 200,
         'professional_price' => 120,
     ]);
 
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
-
-    // Guest first: actingAs() persists for the rest of the test, so the
-    // retail assertion has to run before the trade one.
+    // Personal prices first: the pro cookie persists for the rest of the
+    // test once set, so the retail assertion has to run before it.
     $this->getJson(route('search.suggestions', ['q' => 'tajine']))
         ->assertJsonPath('products.0.price', 200);
 
-    $this->actingAs($pro)
+    // withCredentials: a JSON test request sends no cookies otherwise, and
+    // the browser's same-origin fetch does.
+    shopInProMode();
+
+    $this->withCredentials()
         ->getJson(route('search.suggestions', ['q' => 'tajine']))
         ->assertJsonPath('products.0.price', 120);
 });

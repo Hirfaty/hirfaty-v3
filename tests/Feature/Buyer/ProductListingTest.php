@@ -71,16 +71,12 @@ test('guests never see trade-only products', function () {
         );
 });
 
-test('professional buyers see trade products but not consumer-only ones', function () {
+test('pro mode lists trade products but not consumer-only ones', function () {
     listed(['name' => 'Trade only', 'visibility' => 'professional']);
     listed(['name' => 'Consumer only', 'visibility' => 'individual']);
 
-    // Verified: trade pricing and trade-only visibility are gated on an
-    // admin having reviewed the account, not on the role alone.
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
+    // Anyone shopping in pro mode — no trade account involved.
+    $pro = proBuyer();
 
     $this->actingAs($pro)
         ->get(route('products.index'))
@@ -93,7 +89,7 @@ test('professional buyers see trade products but not consumer-only ones', functi
 
 // ── Wholesale figures are not leaked to consumers ────────────────────
 
-test('the trade price is withheld from guests and ordinary buyers', function () {
+test('the trade price is withheld outside pro mode', function () {
     listed(['professional_price' => 120, 'min_order_qty_professional' => 5]);
 
     $assertHidden = fn (Assert $page) => $page
@@ -106,15 +102,11 @@ test('the trade price is withheld from guests and ordinary buyers', function () 
     $this->actingAs($buyer)->get(route('products.index'))->assertInertia($assertHidden);
 });
 
-test('a professional buyer receives the trade price and minimum quantity', function () {
+test('pro mode receives the trade price and minimum quantity', function () {
     listed(['base_price' => 200, 'professional_price' => 120, 'min_order_qty_professional' => 5]);
 
-    // Verified: trade pricing and trade-only visibility are gated on an
-    // admin having reviewed the account, not on the role alone.
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
+    // Anyone shopping in pro mode — no trade account involved.
+    $pro = proBuyer();
 
     $this->actingAs($pro)
         ->get(route('products.index'))
@@ -129,12 +121,8 @@ test('a product with no trade rate reports none rather than echoing retail', fun
     // render as a "pro price" identical to the public one.
     listed(['base_price' => 200, 'professional_price' => null]);
 
-    // Verified: trade pricing and trade-only visibility are gated on an
-    // admin having reviewed the account, not on the role alone.
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
+    // Anyone shopping in pro mode — no trade account involved.
+    $pro = proBuyer();
 
     $this->actingAs($pro)
         ->get(route('products.index'))

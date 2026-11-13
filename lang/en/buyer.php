@@ -177,10 +177,8 @@ return [
     'detail.trade_min_qty' => 'Minimum order: :count pieces',
     'detail.trade_billed_note' => 'This rate is applied automatically at checkout.',
     'detail.trade_cta_title' => 'Buying wholesale?',
-    'detail.trade_cta_body' => 'Verified trade accounts get reserved rates across much of the catalogue.',
-    'detail.trade_cta_button' => 'Open a trade account',
-    'detail.trade_pending_title' => 'Trade account awaiting verification.',
-    'detail.trade_pending_body' => 'Your trade rates will apply as soon as an administrator approves your account.',
+    'detail.trade_cta_body' => 'Pro prices are open to everyone: switch to “Business” and order from each piece’s minimum quantity.',
+    'detail.trade_cta_button' => 'How it works',
 
     // Variants
     'detail.select_variant_prompt' => 'Choose an option',
@@ -251,29 +249,6 @@ return [
     'onboarding.interests.body' => 'Pick the crafts you care about. We\'ll use them to put what suits you up front.',
     'onboarding.interests.optional' => 'Optional — you can change your mind any time.',
 
-    /*
-     * `.placeholder` and `.hint` are the only two of the old trade-request
-     * step still in use — the tour no longer asks this, but
-     * pages/buyer/professional-account.tsx reuses them for the same question
-     * asked later, when a buyer actually requests it. Do not remove.
-     */
-    'onboarding.professional.placeholder' => 'e.g. I run an 8-room riad in Marrakech and I\'m looking for household linen and handmade tableware in quantity.',
-    'onboarding.professional.hint' => '20 characters minimum. You can carry on ordering as normal while we review your request.',
-
-    // ── Professional account (standalone page) ───────────────────────────
-    'professional.title' => 'Professional account',
-    'professional.intro' => 'Riad, hotel, restaurant, shop: if you buy in quantity, request access to wholesale pricing.',
-    'professional.label' => 'Tell us about your business',
-    'professional.submit' => 'Send my request',
-    'professional.pending_title' => 'Request under review',
-    'professional.pending_body' => 'Our team is looking at your request. You\'ll get an email as soon as it\'s decided — you can carry on ordering as normal in the meantime.',
-    'professional.approved_title' => 'Professional account active',
-    'professional.approved_body' => 'Wholesale pricing applies automatically on the products that have it.',
-    'professional.declined_title' => 'Request not approved',
-    'professional.declined_reason' => 'Reason',
-    'professional.declined_retry' => 'You\'re welcome to submit a new request.',
-    'professional.submitted_on' => 'Sent on :date',
-
     // ── Account area: four pages sharing the tab strip at the top ────────
     'account.title' => 'My account',
     'account.subtitle' => 'Your details, your orders and the pieces you saved.',
@@ -285,25 +260,13 @@ return [
     'account.nav_orders' => 'Orders',
     'account.nav_wishlist' => 'Wishlist',
     'account.nav_payment' => 'Payment',
-    /*
-     * Still used by the standalone /professional-account page's own heading.
-     * The account tab strip no longer lists it — see the note in
-     * layouts/buyer/account-layout.tsx.
-     */
-    'account.nav_professional' => 'Professional account',
     'account.logout' => 'Sign out',
-
-    // Which kind of account this is — replaces the avatar and name that used
-    // to sit at the top of the rail.
-    'account.badge_personal' => 'Personal account',
-    'account.badge_professional' => 'Trade account',
 
     // One card per purchase since the history started grouping them — the
     // split across workshops shows up inside the card, not as extra cards.
     'account.orders_intro' => 'Everything you have ordered. A purchase reaching several workshops stays one order here, with each workshop followed separately.',
     'account.wishlist_intro' => 'The pieces you saved, kept until you remove them.',
     'account.payment_intro' => 'The cards and methods used to pay for your orders.',
-    'account.professional_intro' => 'Request trade access, or check the status of a request already sent.',
 
     'account.placeholder' => 'Nothing to show here yet.',
 
@@ -367,6 +330,13 @@ return [
 
     // ── Cart ─────────────────────────────────────────────────────────────
     'cart.title' => 'Your cart',
+    'cart.err_pro_minimum' => 'At the pro price, “:name” is sold by :count pieces minimum.',
+    'cart.err_pro_only' => 'This piece is sold at pro prices only. Switch to “Business” to order it.',
+    'cart.err_pro_only_line' => '“:name” is sold at pro prices only. Switch back to “Business” or remove it from your basket.',
+    'cart.pro_min_line' => 'Minimum :count pieces at the pro price',
+    'cart.pro_min_raise' => 'Make it :count',
+    'cart.pro_min_or' => 'or',
+    'cart.pro_min_switch' => 'go back to personal prices',
     'cart.back' => 'Keep browsing',
     'cart.count_one' => ':count item',
     'cart.count_many' => ':count items',
@@ -464,6 +434,7 @@ return [
     'checkout.err_delivery_service' => 'This delivery method isn’t available for this destination.',
     'checkout.err_payment_method' => 'Choose a payment method.',
     'checkout.err_coupon_unknown' => 'That discount code isn’t valid.',
+    'checkout.err_price_mode_changed' => 'You switched price list in the meantime. Check the total below, then confirm again.',
     'order_placed.eyebrow' => 'Congratulations',
     'order_placed.title' => 'Your order is placed!',
     'order_placed.body' => 'Thank you for your trust. Our artisans are getting to work, and we will keep you posted by email at every step.',

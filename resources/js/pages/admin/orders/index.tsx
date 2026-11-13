@@ -3,6 +3,8 @@ import { ArrowUpRight, ImageOff, Loader2, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import ExportMenu from '@/components/admin/export-menu';
+import PriceModeBadge from '@/components/admin/price-mode-badge';
+import type { OrderPriceMode } from '@/components/admin/price-mode-badge';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
 import { formatDate } from '@/lib/utils';
@@ -50,6 +52,8 @@ export type OrderGroup = {
      */
     display_currency: string | null;
     display_rate: number | null;
+    /** Particulier or Entreprise at checkout; null before it was recorded. */
+    price_mode: OrderPriceMode;
     /** Which carrier the purchase shipped by (snapshot from checkout). */
     delivery_service_name: string | null;
     /** Cash to collect (`cod`), or paid online through Payzone (`card`). */
@@ -140,7 +144,7 @@ const Index = ({
 }: {
     groups: OrderGroup[];
     pagination: Pagination;
-    filters: { search?: string; status?: string };
+    filters: { search?: string; status?: string; price_mode?: string };
 }) => {
     const { t } = useTranslation();
     const [search, setSearch] = useState(filters.search ?? '');
@@ -181,6 +185,22 @@ const Index = ({
         );
     };
 
+    const setPriceMode = (mode: string | null) => {
+        router.get(
+            route('admin.orders.index'),
+            { ...filters, price_mode: mode ?? undefined, page: 1 },
+            { preserveState: true },
+        );
+    };
+
+    /** Which price list the purchase was billed on — see PriceModeBadge. */
+    const priceModeTabs = [
+        { value: null, label: 'Toutes' },
+        { value: 'individual', label: 'Particulier' },
+        { value: 'professional', label: 'Entreprise' },
+        { value: 'unknown', label: 'Non enregistrée' },
+    ] as const;
+
     const tabs = [
         { value: null, label: 'Toutes' },
         { value: 'pending', label: 'En attente' },
@@ -218,6 +238,31 @@ const Index = ({
                             type="button"
                             onClick={() => setStatus(tab.value)}
                             className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition ${
+                                active
+                                    ? 'border-ink bg-ink text-white'
+                                    : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── Price list filter ────────────────────────── */}
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-ink-soft">
+                    Grille de prix :
+                </span>
+                {priceModeTabs.map((tab) => {
+                    const active = (filters.price_mode ?? null) === tab.value;
+
+                    return (
+                        <button
+                            key={tab.label}
+                            type="button"
+                            onClick={() => setPriceMode(tab.value)}
+                            className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                                 active
                                     ? 'border-ink bg-ink text-white'
                                     : 'border-border bg-card text-ink-soft hover:border-ink/30 hover:text-ink'
@@ -290,6 +335,10 @@ const Index = ({
                                                 {group.city_name}
                                             </p>
                                         )}
+                                        <PriceModeBadge
+                                            mode={group.price_mode}
+                                            className="mt-1"
+                                        />
                                     </td>
                                     <td className="px-5 py-3">
                                         <ItemThumbs group={group} />

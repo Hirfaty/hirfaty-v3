@@ -99,11 +99,11 @@ test('the cart page prices each line for the viewer, with its image', function (
 
 /**
  * The reason the page stopped computing prices itself: it read
- * `sale_price ?? base_price` off the product, so a verified trade account was
- * quoted retail in the basket and then billed wholesale at the till.
+ * `sale_price ?? base_price` off the product, so a pro buyer was quoted
+ * retail in the basket and then billed wholesale at the till.
  */
-test('a verified trade buyer is quoted their wholesale price in the cart', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+test('a buyer in pro mode is quoted their wholesale price in the cart', function () {
+    $buyer = proBuyer();
     $store = createStoreForCart();
     $product = createCartProduct($store, 'Jar');
     $product->update([

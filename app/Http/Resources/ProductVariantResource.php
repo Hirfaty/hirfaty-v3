@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,9 +20,11 @@ class ProductVariantResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Same choke point as BuyerProductResource and CheckoutService, so the
-        // price shown on a variant is the price that variant is billed at.
-        $audience = Product::audienceFor($request->user());
+        // The price list the visitor is browsing in, as BuyerProductResource
+        // reads it. For a verified trade account that is also the billed list;
+        // anyone else in pro mode is shown it and offered the way to qualify.
+        $audience = app(PriceModeService::class)->audience($request);
+        $isProfessional = $audience === Product::AUDIENCE_PROFESSIONAL;
 
         return [
             'id' => $this->id,
@@ -30,9 +33,15 @@ class ProductVariantResource extends JsonResource
             'stock' => (int) $this->stock,
             'in_stock' => (int) $this->stock > 0,
 
-            // What this variant actually costs the current viewer.
+            // What this variant costs on the price list being shown.
             'price' => $this->priceFor($audience),
             'original_price' => $this->originalPriceFor($audience),
+
+            // In pro mode, the public figure to compare the trade price with.
+            'retail_price' => $this->when(
+                $isProfessional,
+                fn () => $this->priceFor(Product::AUDIENCE_INDIVIDUAL),
+            ),
 
             // "Rouge / M" — for the cart line and the selected-variant summary.
             'label' => $this->label(),

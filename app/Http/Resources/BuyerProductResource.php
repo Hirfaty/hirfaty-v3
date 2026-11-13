@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Product;
 use App\Services\HtmlSanitizer;
+use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,12 +18,11 @@ class BuyerProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         /*
-         * Asked via audienceFor() rather than checking the role directly, so
-         * this cannot drift from what CheckoutService bills — both route
-         * through the same helper, and both therefore require a *verified*
-         * trade account. An unverified one is shown, and charged, retail.
+         * The price list this visitor chose (PriceModeService) — the one
+         * checkout bills them on too, so the trade figures below are their
+         * price, not an indication.
          */
-        $isProfessional = Product::audienceFor($request->user()) === Product::AUDIENCE_PROFESSIONAL;
+        $isProfessional = app(PriceModeService::class)->audience($request) === Product::AUDIENCE_PROFESSIONAL;
 
         return [
             'id' => $this->id,
@@ -145,12 +145,13 @@ class BuyerProductResource extends JsonResource
 
             'wishlists_count' => $this->whenCounted('wishlists'),
 
+            // A trade-only piece is listed in pro mode alone; the product
+            // page offers no "buy at retail" way out for it.
+            'professional_only' => $this->visibility === Product::AUDIENCE_PROFESSIONAL,
+
             /*
-             * Wholesale figures are exposed only to professional buyers:
-             * publishing a seller's trade price to consumers undercuts their
-             * retail price. `professional_price` is a *reference* rate — the
-             * checkout still bills the retail list to everyone, so the UI
-             * labels it as indicative rather than as "your price".
+             * Wholesale figures, merged in only while the visitor shops in
+             * pro mode, with the per-piece minimum that comes with them.
              */
             $this->mergeWhen($isProfessional, fn () => [
                 'professional_price' => $this->professional_price,

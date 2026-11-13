@@ -10,12 +10,10 @@ use App\Models\Store;
 use App\Models\User;
 use App\Notifications\WelcomeUser;
 use App\Services\AdminUserListService;
-use App\Services\ProfessionalAccountService;
 use App\Services\SpreadsheetExportService;
 use App\Services\StoreImageService;
 use App\Services\UserNoteService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -205,22 +203,6 @@ class UserController extends Controller
                 $user->forceFill(['email_verified_at' => null])->save();
             }
 
-            /*
-             * Verification is a statement about a *professional buyer*, so it
-             * is dropped when the account stops being one — otherwise
-             * switching back later would silently restore wholesale pricing
-             * without anyone reviewing the account a second time.
-             *
-             * Assigned directly rather than through update(): the column is
-             * deliberately left out of User's Fillable list because it gates
-             * which price list a buyer is billed on, and mass assignment would
-             * quietly ignore it here anyway.
-             */
-            if ($data['role'] !== 'professional_buyer' && $user->professional_verified_at !== null) {
-                $user->professional_verified_at = null;
-                $user->save();
-            }
-
             if ($becomesSeller) {
                 $store = $user->store;
 
@@ -308,7 +290,7 @@ class UserController extends Controller
 
     public function index(Request $request, AdminUserListService $list)
     {
-        $filters = $request->only(['search', 'role', 'professional_request_status']);
+        $filters = $request->only(['search', 'role']);
 
         $users = $list->query($filters)->latest()->paginate(20)->withQueryString()
             ->through(fn (User $user) => $list->presentRow($user));
@@ -320,14 +302,6 @@ class UserController extends Controller
             ->groupBy('role')
             ->pluck('count', 'role');
 
-        // Same idea for the trade-request status filter: counted once, over
-        // every role, so a declined buyer and an approved (now professional_
-        // buyer) account both still count towards their tab.
-        $requestStatusCounts = User::whereNotNull('professional_request_status')
-            ->selectRaw('professional_request_status, count(*) as count')
-            ->groupBy('professional_request_status')
-            ->pluck('count', 'professional_request_status');
-
         return Inertia::render('admin/users/index', [
             'users' => $users,
             'totalUsers' => $roleCounts->sum(),
@@ -336,13 +310,6 @@ class UserController extends Controller
                 'professional_buyer' => $roleCounts->get('professional_buyer', 0),
                 'seller' => $roleCounts->get('seller', 0),
             ],
-            'professionalRequestCounts' => [
-                'pending' => $requestStatusCounts->get(User::PRO_REQUEST_PENDING, 0),
-                'approved' => $requestStatusCounts->get(User::PRO_REQUEST_APPROVED, 0),
-                'declined' => $requestStatusCounts->get(User::PRO_REQUEST_DECLINED, 0),
-            ],
-            // Drives the "N waiting" banner above the table.
-            'pendingProfessionalCount' => $requestStatusCounts->get(User::PRO_REQUEST_PENDING, 0),
             // Signups stopped before the password step — they have no row in
             // this table, so the page links out to them with this count.
             'pendingSignupCount' => $list->pendingSignups()->count(),
@@ -360,11 +327,6 @@ class UserController extends Controller
             'format' => ['required', Rule::in(SpreadsheetExportService::FORMATS)],
             'search' => ['nullable', 'string', 'max:255'],
             'role' => ['nullable', 'in:seller,buyer,professional_buyer'],
-            'professional_request_status' => ['nullable', Rule::in([
-                User::PRO_REQUEST_PENDING,
-                User::PRO_REQUEST_APPROVED,
-                User::PRO_REQUEST_DECLINED,
-            ])],
         ]);
 
         return $list->export($data['format'], $data);
@@ -484,57 +446,6 @@ class UserController extends Controller
         $action = $user->is_banned ? 'banned' : 'unbanned';
 
         return back()->with('success', "User {$action} successfully.");
-    }
-
-    /**
-     * Toggle verification on an account that is *already* a professional
-     * buyer — a manual override for accounts the admin set up by hand, or to
-     * revoke trade pricing without changing the role.
-     *
-     * Distinct from approveProfessional() below, which is the buyer-initiated
-     * request flow: that one promotes an ordinary buyer, this one only flips
-     * the stamp on someone already in the role.
-     */
-    public function verifyProfessional(User $user)
-    {
-        if ($user->role !== 'professional_buyer') {
-            abort(403);
-        }
-
-        $user->professional_verified_at = $user->professional_verified_at ? null : now();
-        $user->save();
-
-        $action = $user->professional_verified_at ? 'verified' : 'unverified';
-
-        return back()->with('success', "Professional buyer {$action}.");
-    }
-
-    /**
-     * Grant a pending trade request. Delegated to the service because it is
-     * the single place `role` becomes professional_buyer — see
-     * ProfessionalAccountService for why that matters.
-     */
-    public function approveProfessional(User $user, ProfessionalAccountService $professional)
-    {
-        $professional->approve($user, Auth::user());
-
-        return back()->with('success', 'Compte professionnel activé. L’acheteur a été prévenu.');
-    }
-
-    /**
-     * Refuse a pending trade request. The reason is required: it is emailed
-     * to the buyer and shown on their account page, so "no" always comes with
-     * something they can act on.
-     */
-    public function declineProfessional(Request $request, User $user, ProfessionalAccountService $professional)
-    {
-        $data = $request->validate([
-            'reason' => ['required', 'string', 'max:500'],
-        ]);
-
-        $professional->decline($user, Auth::user(), $data['reason']);
-
-        return back()->with('success', 'Demande refusée. L’acheteur a été prévenu.');
     }
 
     /**

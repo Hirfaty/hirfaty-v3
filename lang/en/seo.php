@@ -28,9 +28,9 @@ return [
     'privacy' => 'Hirfaty’s privacy policy: what we collect, why, who can see it and how to exercise your rights.',
     'shipping' => 'Hirfaty’s shipping policy: delivery times, rates and destinations across Morocco and internationally.',
     'terms' => 'Hirfaty’s terms of use for buyers and artisans on the marketplace.',
-    'business' => 'Hirfaty for business: buy Moroccan craft in volume, at prices reserved for trade accounts.',
+    'business' => 'Hirfaty for business: buy Moroccan craft in volume, at wholesale prices, with no account to apply for.',
     'sell' => 'Are you a Moroccan artisan? Open your workshop on Hirfaty and sell your work across Morocco and abroad.',
-    'professional' => 'Hirfaty trade accounts: dedicated pricing and bulk orders for hotels, interior designers and shops.',
+    'professional' => 'Hirfaty pro prices: wholesale rates open to everyone, no application, from a minimum quantity per piece. For hotels, designers and shops.',
 
     'product' => ':product, handmade by :store. Buy it directly from the artisan on Hirfaty, shipped across Morocco and abroad.',
     'store' => ':store, a Moroccan craft workshop. Discover their handmade pieces and buy directly from the artisan on Hirfaty.',

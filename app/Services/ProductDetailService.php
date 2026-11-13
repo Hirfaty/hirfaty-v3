@@ -19,7 +19,10 @@ use Inertia\Inertia;
  */
 class ProductDetailService
 {
-    public function __construct(private ReviewService $reviews) {}
+    public function __construct(
+        private ReviewService $reviews,
+        private PriceModeService $priceMode,
+    ) {}
 
     /**
      * Everything the page renders, for `with()` / `load()`.
@@ -51,11 +54,15 @@ class ProductDetailService
     public function props(Product $product, Request $request): array
     {
         $reviews = $this->reviews->paginateFor($product);
+        // The rows under the piece list what the visitor is browsing in, like
+        // every other grid — no trade-only piece in individual mode.
+        $audience = $this->priceMode->audience($request);
 
         return [
             'product' => new BuyerProductResource($product),
-            'moreFromStore' => BuyerProductResource::collection($this->moreFromStore($product)),
-            'relatedProducts' => BuyerProductResource::collection($this->relatedProducts($product)),
+            'moreFromStore' => BuyerProductResource::collection($this->moreFromStore($product, $audience)),
+            'relatedProducts' => BuyerProductResource::collection($this->relatedProducts($product, $audience)),
+            'proOffer' => $this->proOffer($product, $request),
             'reviewSummary' => $this->reviews->summaryFor($product),
             // Merged so "more reviews" appends a page instead of replacing
             // the list — same contract as the listing's `products`.
@@ -66,6 +73,56 @@ class ProductDetailService
                 'current_page' => $reviews->currentPage(),
                 'has_more' => $reviews->hasMorePages(),
             ],
+        ];
+    }
+
+    /**
+     * What this piece would cost on the pro list, for a visitor shopping on
+     * personal prices — the page sets the two side by side so a business
+     * buyer sees what switching to "Pro" would get them, without switching
+     * first.
+     *
+     * Null when there is nothing to show: already in pro mode (the price
+     * block quotes it), a crawler (the landing page must read as the retail
+     * figure the Merchant feed lists), a piece not sold to the trade, or one
+     * with no trade rate below its public price — product or any variant.
+     *
+     * @return array{price: float, retail: float, min_qty: int, variants: array<int, array{price: float, retail: float}>}|null
+     */
+    public function proOffer(Product $product, Request $request): ?array
+    {
+        if ($this->priceMode->isCrawler($request)
+            || $this->priceMode->audience($request) === Product::AUDIENCE_PROFESSIONAL
+            || ! $product->isVisibleTo(Product::AUDIENCE_PROFESSIONAL)) {
+            return null;
+        }
+
+        $variants = [];
+
+        foreach ($product->variants ?? [] as $variant) {
+            $pro = $variant->priceFor(Product::AUDIENCE_PROFESSIONAL);
+            $retail = $variant->priceFor(Product::AUDIENCE_INDIVIDUAL);
+
+            if ($pro !== null && $retail !== null && $pro < $retail) {
+                $variants[$variant->id] = ['price' => $pro, 'retail' => $retail];
+            }
+        }
+
+        $pro = $product->priceFor(Product::AUDIENCE_PROFESSIONAL);
+        $retail = $product->priceFor(Product::AUDIENCE_INDIVIDUAL);
+        $productHasRate = $pro !== null && $retail !== null && $pro < $retail;
+
+        if (! $productHasRate && $variants === []) {
+            return null;
+        }
+
+        return [
+            // The product's own pair; a selected variant's, when it has one,
+            // replaces it on the page.
+            'price' => $productHasRate ? $pro : min(array_column($variants, 'price')),
+            'retail' => $productHasRate ? $retail : $variants[array_key_first($variants)]['retail'],
+            'min_qty' => $product->minOrderQtyFor(Product::AUDIENCE_PROFESSIONAL),
+            'variants' => $variants,
         ];
     }
 
@@ -104,16 +161,17 @@ class ProductDetailService
         }
 
         if ($product->visibility === Product::AUDIENCE_PROFESSIONAL) {
-            $issues[] = 'Réservé aux acheteurs professionnels — les particuliers ne le voient pas.';
+            $issues[] = 'Réservé aux professionnels — visible seulement avec l’affichage « prix pro ».';
         }
 
         return $issues;
     }
 
     /** @return Collection<int, Product> */
-    private function moreFromStore(Product $product): Collection
+    private function moreFromStore(Product $product, string $audience): Collection
     {
         return Product::storefront()
+            ->whereIn('visibility', ['both', $audience])
             ->where('store_id', $product->store_id)
             ->where('id', '!=', $product->id)
             ->with(['images', 'variants.media'])
@@ -129,9 +187,10 @@ class ProductDetailService
      *
      * @return Collection<int, Product>
      */
-    private function relatedProducts(Product $product): Collection
+    private function relatedProducts(Product $product, string $audience): Collection
     {
         return Product::storefront()
+            ->whereIn('visibility', ['both', $audience])
             ->where('id', '!=', $product->id)
             ->where('store_id', '!=', $product->store_id)
             ->when(

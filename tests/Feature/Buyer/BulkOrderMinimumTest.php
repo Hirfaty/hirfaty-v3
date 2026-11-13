@@ -39,8 +39,8 @@ function createBulkProduct(int $minimum = 20, string $visibility = 'both', int $
     ]);
 }
 
-test('a verified trade buyer cannot add less than the bulk minimum', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+test('a buyer in pro mode cannot add less than the bulk minimum', function () {
+    $buyer = proBuyer();
     $product = createBulkProduct(minimum: 20);
 
     $this->actingAs($buyer)
@@ -50,8 +50,8 @@ test('a verified trade buyer cannot add less than the bulk minimum', function ()
     expect(CartItem::count())->toBe(0);
 });
 
-test('a verified trade buyer can add at the bulk minimum', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+test('a buyer in pro mode can add at the bulk minimum', function () {
+    $buyer = proBuyer();
     $product = createBulkProduct(minimum: 20);
 
     $this->actingAs($buyer)
@@ -67,7 +67,7 @@ test('a verified trade buyer can add at the bulk minimum', function () {
  * they have added enough of them.
  */
 test('repeated adds accumulate towards the bulk minimum', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+    $buyer = proBuyer();
     $product = createBulkProduct(minimum: 3);
 
     foreach ([1, 1] as $quantity) {
@@ -84,7 +84,7 @@ test('repeated adds accumulate towards the bulk minimum', function () {
     expect((int) CartItem::first()->quantity)->toBe(3);
 });
 
-test('a normal buyer is not held to the trade minimum', function () {
+test('a buyer on personal prices is not held to the trade minimum', function () {
     $buyer = User::factory()->create(['role' => 'buyer']);
     $product = createBulkProduct(minimum: 20);
 
@@ -95,24 +95,8 @@ test('a normal buyer is not held to the trade minimum', function () {
     expect((int) CartItem::first()->quantity)->toBe(1);
 });
 
-/**
- * An unverified trade account pays retail, so it buys on retail terms too —
- * the minimum and the wholesale price are two halves of the same bargain and
- * must not come apart.
- */
-test('an unverified trade account is not held to the trade minimum', function () {
-    $buyer = User::factory()->create(['role' => 'professional_buyer']);
-    $product = createBulkProduct(minimum: 20);
-
-    $this->actingAs($buyer)
-        ->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 1])
-        ->assertSessionHasNoErrors();
-
-    expect((int) CartItem::first()->quantity)->toBe(1);
-});
-
-test('a trade buyer cannot edit a line back down below the minimum', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+test('a pro-mode line cannot be edited back down below the minimum', function () {
+    $buyer = proBuyer();
     $product = createBulkProduct(minimum: 20);
 
     $cart = Cart::create(['user_id' => $buyer->id]);
@@ -138,7 +122,7 @@ test('a guest cannot add to the cart', function () {
     expect(CartItem::count())->toBe(0);
 });
 
-test('a consumer cannot open a trade-only product by its slug', function () {
+test('a trade-only product does not open on personal prices', function () {
     $buyer = User::factory()->create(['role' => 'buyer']);
     $product = createBulkProduct(visibility: 'professional');
 
@@ -147,11 +131,53 @@ test('a consumer cannot open a trade-only product by its slug', function () {
         ->assertNotFound();
 });
 
-test('a verified trade buyer can open a trade-only product', function () {
-    $buyer = User::factory()->verifiedProfessional()->create();
+test('a trade-only product opens in pro mode', function () {
+    $buyer = proBuyer();
     $product = createBulkProduct(visibility: 'professional');
 
     $this->actingAs($buyer)
         ->get(route('products.show', $product->slug))
+        ->assertOk();
+});
+
+/**
+ * The basket was filled at personal prices, then the buyer switched to pro:
+ * the line now sits under the pro floor. Checkout refuses it (naming the
+ * piece) rather than billing wholesale for a single piece.
+ */
+test('switching to pro with a line under the minimum blocks checkout', function () {
+    $buyer = User::factory()->create(['role' => 'buyer', 'email_verified_at' => now()]);
+    $product = createBulkProduct(minimum: 20);
+
+    $this->actingAs($buyer)
+        ->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 1])
+        ->assertSessionHasNoErrors();
+
+    shopInProMode();
+
+    // The basket flags it, so the buyer can raise it or switch back.
+    $this->actingAs($buyer)
+        ->get(route('cart.show'))
+        ->assertInertia(fn ($page) => $page
+            ->where('items.0.min_quantity', 20)
+            ->where('items.0.quantity', 1)
+        );
+
+    // And the checkout page sends them back there instead of a form that
+    // will only refuse.
+    $this->actingAs($buyer)
+        ->get(route('checkout.show'))
+        ->assertRedirect(route('cart.show'))
+        ->assertSessionHas('error');
+
+    // Raising it to the floor clears the way.
+    $item = CartItem::first();
+
+    $this->actingAs($buyer)
+        ->patch(route('cart.update', $item), ['quantity' => 20])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($buyer)
+        ->get(route('checkout.show'))
         ->assertOk();
 });

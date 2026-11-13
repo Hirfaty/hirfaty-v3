@@ -41,10 +41,13 @@ class HomeService
      * product whose only extra photo lives on a colour variant would show a
      * single static frame.
      */
-    public function featuredProducts(int $limit = 29): Collection
+    public function featuredProducts(string $audience, int $limit = 29): Collection
     {
         return Product::query()
             ->storefront()
+            // The same audience gate as every other listing: a trade-only
+            // piece shows in pro mode, a consumer-only one in individual mode.
+            ->whereIn('visibility', ['both', $audience])
             ->whereHas('store')
             ->with(['store.city', 'category', 'images', 'variants.media'])
             ->withCount(['wishlists'])

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,7 +31,8 @@ class CartLineResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $audience = Product::audienceFor($request->user());
+        // The buyer's chosen price list — the one checkout bills.
+        $audience = app(PriceModeService::class)->audience($request);
 
         $unit = $this->unitPriceFor($audience);
         $qty = (int) $this->quantity;
@@ -76,9 +78,17 @@ class CartLineResource extends JsonResource
             // design, so the stepper must read the variant's own figure.
             'available_stock' => $this->availableStock(),
 
-            // Above 1 only for a verified trade account. The stepper floors on
-            // it so the buyer can't dial below what CartService will accept.
+            // Above 1 only on the pro list, where the admin set a floor for
+            // this piece. The stepper floors on it so the buyer can't dial
+            // below what CartService will accept — and a line added at retail
+            // that now sits under it (the buyer switched to pro since) is
+            // flagged so it can be raised before checkout refuses it.
             'min_quantity' => $this->product?->minOrderQtyFor($audience) ?? 1,
+
+            // A trade-only piece left in the basket after switching back to
+            // personal prices: checkout refuses it, so the line says so.
+            'unavailable_on_mode' => $this->product !== null
+                && ! $this->product->isVisibleTo($audience),
         ];
     }
 

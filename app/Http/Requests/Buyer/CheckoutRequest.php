@@ -138,6 +138,9 @@ class CheckoutRequest extends FormRequest
 
             // Checking out the piece "Buy now" holds, rather than the cart.
             'buy_now' => ['nullable', 'boolean'],
+            // The price list the page quoted from (PriceModeService) — checked
+            // against the current one in CheckoutController::store.
+            'price_mode' => ['nullable', 'in:individual,professional'],
         ];
     }
 

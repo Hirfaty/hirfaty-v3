@@ -233,38 +233,6 @@ test('the edit screen flags a seller who can no longer change role', function ()
         ->assertInertia(fn (Assert $page) => $page->where('canLeaveSellerRole', false)->etc());
 });
 
-test('leaving the professional role clears the verification stamp', function () {
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
-
-    $this->actingAs($this->admin)
-        ->post(route('admin.users.update', $pro), editPayload($pro, [
-            'role' => 'buyer',
-        ]))
-        ->assertSessionHasNoErrors();
-
-    // Otherwise switching back would silently restore trade pricing without
-    // anyone reviewing the account a second time.
-    expect($pro->fresh()->professional_verified_at)->toBeNull();
-});
-
-test('a verified professional keeps their stamp when other fields change', function () {
-    $pro = User::factory()->create([
-        'role' => 'professional_buyer',
-        'professional_verified_at' => now(),
-    ]);
-
-    $this->actingAs($this->admin)
-        ->post(route('admin.users.update', $pro), editPayload($pro, [
-            'first_name' => 'Renommé',
-        ]))
-        ->assertSessionHasNoErrors();
-
-    expect($pro->fresh()->professional_verified_at)->not->toBeNull();
-});
-
 test('a super admin cannot be edited', function () {
     $other = User::factory()->create(['role' => 'super_admin']);
 

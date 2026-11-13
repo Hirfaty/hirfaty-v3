@@ -39,8 +39,12 @@ class CheckoutService
      * is kept. PaymentService finishes the job once the provider confirms the
      * money — recordEarning() and announce() below — or releases everything
      * if it never does.
+     *
+     * `$audience` is the price list the buyer shops on (PriceModeService),
+     * resolved by the caller from their own request — the same one the
+     * basket and the checkout page quoted from.
      */
-    public function process(Cart $cart, array $checkoutData)
+    public function process(Cart $cart, array $checkoutData, string $audience = Product::AUDIENCE_INDIVIDUAL)
     {
         $orders = [];
 
@@ -48,16 +52,6 @@ class CheckoutService
         $paymentMethod = in_array($checkoutData['payment_method'] ?? null, Order::ONLINE_METHODS, true)
             ? $checkoutData['payment_method']
             : Order::PAYMENT_CARD;
-
-        /*
-         * Which price list this basket is billed on, resolved once from the
-         * cart's owner. Verified trade accounts are charged their wholesale
-         * rate; everyone else — including an unverified trade account — pays
-         * retail. Product::audienceFor() is the same call the storefront uses
-         * to decide what to *show*, so a buyer cannot be quoted one figure
-         * and charged another.
-         */
-        $audience = Product::audienceFor($cart->user);
 
         /*
          * One place that turns a cart line into a unit price. The order total
@@ -110,6 +104,32 @@ class CheckoutService
                     throw ValidationException::withMessages([
                         'cart' => "Le produit '".($item->product->name ?? 'Inconnu')
                             ."' n'est plus disponible. Retirez-le du panier.",
+                    ]);
+                }
+
+                /*
+                 * The pro list is sold from each piece's minimum. A line can
+                 * sit under it when it was added at retail and the buyer has
+                 * switched to pro since — the basket flags it, and this is
+                 * the backstop, naming the piece and the floor.
+                 */
+                $minimum = $item->product?->minOrderQtyFor($audience) ?? 1;
+
+                if ((int) $item->quantity < $minimum) {
+                    throw ValidationException::withMessages([
+                        'cart' => __('buyer.cart.err_pro_minimum', [
+                            'count' => $minimum,
+                            'name' => $item->product->name ?? 'Inconnu',
+                        ]),
+                    ]);
+                }
+
+                // Nor may a trade-only piece leave on the retail list.
+                if ($item->product && ! $item->product->isVisibleTo($audience)) {
+                    throw ValidationException::withMessages([
+                        'cart' => __('buyer.cart.err_pro_only_line', [
+                            'name' => $item->product->name,
+                        ]),
                     ]);
                 }
             }
@@ -249,6 +269,9 @@ class CheckoutService
                      */
                     'display_currency' => $checkoutData['display_currency'] ?? null,
                     'display_rate' => $checkoutData['display_rate'] ?? null,
+                    // Particulier or Entreprise: the list every line above
+                    // was priced on, so the desk can tell them apart later.
+                    'price_mode' => $audience,
                     'seller_earnings' => $sellerEarnings,
                     'shipping_address' => $checkoutData['shipping_address'],
                     // Every order a split basket produces ships to the same

@@ -14,12 +14,9 @@ use Illuminate\Support\Facades\DB;
  * they engage?". Anything else and a skipped tour would reappear on every
  * login, which is the opposite of skippable.
  *
- * This used to also offer a trade-account request as its last step — dropped
- * because asking a brand-new buyer whether they want wholesale pricing before
- * they have seen the market answers a question nobody has asked yet. That
- * request still exists, just moved to where the need actually shows up: a
- * buyer can ask for it any time from /professional-account
- * (ProfessionalRequestController → ProfessionalAccountService).
+ * This used to also offer a trade-account request as its last step. There is
+ * no such request any more: pro prices are a choice anyone makes from the
+ * header (PriceModeService), so the tour has nothing to ask about them.
  */
 class OnboardingService
 {

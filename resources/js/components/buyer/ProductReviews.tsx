@@ -284,7 +284,7 @@ export default function ProductReviews({
             ) : (
                 <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[280px_1fr] lg:gap-14">
                     {/* ── Summary ── */}
-                    <div className="lg:sticky lg:top-24 lg:self-start">
+                    <div className="lg:sticky lg:top-28 lg:self-start">
                         <div className="flex items-end gap-3">
                             <p className="font-display text-5xl leading-none text-souk-title">
                                 {summary.average?.toFixed(1)}

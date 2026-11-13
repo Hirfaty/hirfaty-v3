@@ -22,13 +22,10 @@ class AccountKindController extends Controller
     /**
      * The trade door.
      *
-     * The one with a real design question behind it: `professional_buyer`
-     * decides which price list an account is billed on, so it is deliberately
-     * impossible to self-assign — the role is granted only by an admin review
-     * (Admin\UserController::approveProfessional), and
-     * RegistrationCodeService::complete hardcodes `buyer`. Trade signup needs
-     * that vetting step designed with it rather than a form bolted on, which
-     * is why this is a page and not a form.
+     * Nothing to sign up for: pro prices are open to anyone who switches to
+     * "Pro" (PriceModeService), with no trade account to apply for — see
+     * /professional-account. This page stays a placeholder until a separate
+     * business signup is actually designed.
      */
     public function business(): Response
     {

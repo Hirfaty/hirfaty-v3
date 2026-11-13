@@ -7,8 +7,8 @@ use App\Http\Resources\BuyerProductResource;
 use App\Http\Resources\CartLineResource;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Product;
 use App\Services\CartService;
+use App\Services\PriceModeService;
 use App\Services\ProductScoringService;
 use App\Services\WishlistService;
 use Auth;
@@ -22,6 +22,7 @@ class CartController extends Controller
         private readonly CartService $cart,
         private readonly ProductScoringService $scoring,
         private readonly WishlistService $wishlist,
+        private readonly PriceModeService $priceMode,
     ) {}
 
     public function show(Request $request)
@@ -40,8 +41,12 @@ class CartController extends Controller
         // A row of popular pieces at the bottom of the basket, nudging the
         // buyer to keep browsing instead of the page ending at the total.
         // Excludes what's already in the basket so it never just repeats it.
+        // Listed and priced in the mode the buyer is browsing in, like every
+        // other grid. The basket lines above stay on the billed list.
+        $audience = $this->priceMode->audience($request);
+
         $suggestions = $this->scoring->suggestionsFor(
-            $request->user(),
+            $audience,
             $cart->items->pluck('product_id')->all(),
         );
 
@@ -50,7 +55,8 @@ class CartController extends Controller
             // the page cannot recompute a total the checkout disagrees with.
             'items' => CartLineResource::collection($cart->items)->resolve($request),
             'suggestions' => BuyerProductResource::collection($suggestions)->resolve($request),
-            'audience' => Product::audienceFor($request->user()),
+            // Only the suggestion cards read this.
+            'audience' => $audience,
             'wishlisted' => $this->wishlist->idsFor($request->user(), $suggestions),
             'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
@@ -74,6 +80,7 @@ class CartController extends Controller
             (int) $data['product_id'],
             isset($data['variant_id']) ? (int) $data['variant_id'] : null,
             (int) ($data['quantity'] ?? 1),
+            $this->priceMode->audience($request),
         );
 
         return back()->with('success', 'Added to cart.');
@@ -88,8 +95,8 @@ class CartController extends Controller
         // Stop a quantity bump sailing past available stock: otherwise the
         // cart sits on an impossible quantity until checkout rejects the
         // entire basket, which reads as a broken checkout rather than as one
-        // line being over-ordered. Also holds a trade line to its bulk minimum.
-        $this->cart->assertQuantity($cartItem, (int) $data['quantity']);
+        // line being over-ordered. Also holds a pro line to its bulk minimum.
+        $this->cart->assertQuantity($cartItem, (int) $data['quantity'], $this->priceMode->audience($request));
 
         $cartItem->update(['quantity' => $data['quantity']]);
 
@@ -128,6 +135,7 @@ class CartController extends Controller
                     (int) $item['product_id'],
                     isset($item['variant_id']) ? (int) $item['variant_id'] : null,
                     (int) $item['quantity'],
+                    $this->priceMode->audience($request),
                 );
             } catch (ValidationException) {
                 continue;

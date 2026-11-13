@@ -11,6 +11,7 @@ use App\Models\ProductView;
 use App\Models\Wishlist;
 use App\Services\CategoryService;
 use App\Services\NewArrivalsService;
+use App\Services\PriceModeService;
 use App\Services\ProductDetailService;
 use App\Services\ProductScoringService;
 use App\Services\ProductSearchService;
@@ -31,11 +32,14 @@ class ProductController extends Controller
         private SeoService $seo,
         private ProductDetailService $details,
         private CategoryService $categories,
+        private PriceModeService $priceMode,
     ) {}
 
     public function index(Request $request)
     {
-        $audience = Product::audienceFor($request->user());
+        // The list the visitor chose to browse — PriceModeService. Pro mode
+        // lists trade-only pieces and hides consumer-only ones.
+        $audience = $this->priceMode->audience($request);
 
         $query = Product::query()
             ->storefront()
@@ -136,7 +140,8 @@ class ProductController extends Controller
      */
     public function newArrivals(Request $request, NewArrivalsService $newArrivals)
     {
-        $paginator = $newArrivals->paginate($request->user());
+        $audience = $this->priceMode->audience($request);
+        $paginator = $newArrivals->paginate($audience);
 
         return Inertia::render('buyer/products/new', [
             // Merged rather than replaced so "load more" appends a page
@@ -150,7 +155,7 @@ class ProductController extends Controller
                 'total' => $paginator->total(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-            'audience' => Product::audienceFor($request->user()),
+            'audience' => $audience,
             'wishlisted' => $this->wishlist->idsFor($request->user(), $paginator->items()),
             'canWishlist' => (bool) $request->user()?->isBuyer(),
         ]);
@@ -158,7 +163,7 @@ class ProductController extends Controller
 
     public function show(Request $request, string $slug)
     {
-        $audience = Product::audienceFor($request->user());
+        $audience = $this->priceMode->audience($request);
 
         $product = Product::storefront()
             ->where('slug', $slug)

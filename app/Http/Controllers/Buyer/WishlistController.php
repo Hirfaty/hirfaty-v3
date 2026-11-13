@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Services\BuyerAccountService;
+use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,13 +18,17 @@ use Inertia\Inertia;
  */
 class WishlistController extends Controller
 {
-    public function __construct(private BuyerAccountService $account) {}
+    public function __construct(
+        private BuyerAccountService $account,
+        private PriceModeService $priceMode,
+    ) {}
 
     public function __invoke(Request $request)
     {
         return Inertia::render('buyer/wishlists/index', [
             'products' => $this->account->wishlist($request->user(), $request),
-            'audience' => Product::audienceFor($request->user()),
+            // The price list the buyer is browsing in, as on every grid.
+            'audience' => $this->priceMode->audience($request),
             'canWishlist' => true,
         ]);
     }

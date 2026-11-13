@@ -67,9 +67,6 @@ class AdminDashboardService
             // Same count as the "En attente" tab of the workshops page, which
             // the tile links to.
             'pending_sellers' => Store::where('verification_status', Store::VERIFICATION_PENDING)->count(),
-            // Trade requests awaiting a decision — the users table's
-            // `professional_request_status=pending` queue.
-            'pending_professional_buyers' => User::where('professional_request_status', User::PRO_REQUEST_PENDING)->count(),
         ];
     }
 

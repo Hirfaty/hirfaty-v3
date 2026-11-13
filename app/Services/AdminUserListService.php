@@ -34,12 +34,6 @@ class AdminUserListService
         'cooperative' => 'Coopérative',
     ];
 
-    private const PRO_REQUEST_LABELS = [
-        User::PRO_REQUEST_PENDING => 'En attente',
-        User::PRO_REQUEST_APPROVED => 'Approuvée',
-        User::PRO_REQUEST_DECLINED => 'Refusée',
-    ];
-
     private const SIGNUP_METHOD_LABELS = [
         'email' => 'Email',
         'google' => 'Google',
@@ -65,7 +59,7 @@ class AdminUserListService
      * exports walk the rows with lazyByIdDesc(), which pages on `id` and
      * would skip or repeat rows under any other ordering placed ahead of it.
      *
-     * @param  array{search?: ?string, role?: ?string, professional_request_status?: ?string}  $filters
+     * @param  array{search?: ?string, role?: ?string}  $filters
      * @return Builder<User>
      */
     public function query(array $filters): Builder
@@ -110,18 +104,6 @@ class AdminUserListService
 
         if ($role = $filters['role'] ?? null) {
             $query->where('role', $role);
-        }
-
-        /*
-         * A queue view, not a role: the request status outlives the decision
-         * (a declined buyer stays `buyer`, an approved one becomes
-         * `professional_buyer`), so this filters on
-         * `professional_request_status` directly rather than folding it into
-         * the role tabs. Kept as its own parameter so it composes with a role
-         * filter and a search.
-         */
-        if ($requestStatus = $filters['professional_request_status'] ?? null) {
-            $query->where('professional_request_status', $requestStatus);
         }
 
         return $query;
@@ -201,8 +183,6 @@ class AdminUserListService
             'Rôle',
             'Statut',
             'Email vérifié',
-            'Demande pro',
-            'Pro vérifié le',
             'Boutique',
             'Type de boutique',
             'Ville',
@@ -227,8 +207,6 @@ class AdminUserListService
             self::ROLE_LABELS[$user->role] ?? $user->role,
             $user->is_banned ? 'Bloqué' : 'Actif',
             $user->email_verified_at ? 'Oui' : 'Non',
-            self::PRO_REQUEST_LABELS[$user->professional_request_status] ?? '',
-            $this->date($user->professional_verified_at),
             $store?->store_name ?? '',
             $store ? (self::STORE_TYPE_LABELS[$store->type] ?? $store->type) : '',
             $store?->city?->name ?? '',

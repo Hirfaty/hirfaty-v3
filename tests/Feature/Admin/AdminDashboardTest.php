@@ -242,17 +242,6 @@ test('the pending sellers stat counts shops awaiting verification', function () 
         ->assertInertia(fn ($page) => $page->where('stats.pending_sellers', 2));
 });
 
-test('the pending professional buyers stat counts trade requests awaiting review', function () {
-    User::factory()->create(['role' => 'buyer', 'professional_request_status' => 'pending']);
-    User::factory()->create(['role' => 'buyer', 'professional_request_status' => 'declined']);
-    User::factory()->create(['role' => 'professional_buyer', 'professional_request_status' => 'approved']);
-    User::factory()->create(['role' => 'buyer']);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.dashboard'))
-        ->assertInertia(fn ($page) => $page->where('stats.pending_professional_buyers', 1));
-});
-
 test('the money figures are what buyers paid, delivery included', function () {
     $buyer = User::factory()->create(['role' => 'buyer']);
     $order = fn (string $status, float $products, float $delivery) => Order::create([

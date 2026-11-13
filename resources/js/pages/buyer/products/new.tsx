@@ -3,6 +3,7 @@ import { ArrowRight, Loader2, PackageSearch } from 'lucide-react';
 import { useState } from 'react';
 import { CollectionCard } from '@/components/buyer/CollectionCard';
 import type { ListingProduct } from '@/components/buyer/ProductCard';
+import ProPriceNotice from '@/components/buyer/ProPriceNotice';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { useCurrency } from '@/hooks/use-currency';
@@ -67,6 +68,8 @@ export default function NewArrivals({
                 <SiteHeader />
 
                 <section className="mx-auto max-w-[1440px] px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
+                    <ProPriceNotice className="mb-7" />
+
                     <div className="mb-7 flex items-center justify-between gap-4 text-xs text-souk-brown-deep/70">
                         <span>
                             {pagination.total}{' '}

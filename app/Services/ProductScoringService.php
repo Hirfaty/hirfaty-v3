@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductView;
-use App\Models\User;
 use App\Models\Wishlist;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -71,12 +70,12 @@ class ProductScoringService
      * `visibility`), ranked by the same demand score, with whatever is
      * already in the basket excluded so the row never just repeats it.
      *
+     * `$audience` is the price list being browsed (PriceModeService).
+     *
      * @param  array<int, int>  $excludeProductIds
      */
-    public function suggestionsFor(?User $user, array $excludeProductIds = [], int $limit = 8): Collection
+    public function suggestionsFor(string $audience, array $excludeProductIds = [], int $limit = 8): Collection
     {
-        $audience = Product::audienceFor($user);
-
         $query = Product::query()
             ->storefront()
             ->whereIn('visibility', ['both', $audience])

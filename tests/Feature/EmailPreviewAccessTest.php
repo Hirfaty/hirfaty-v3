@@ -22,7 +22,6 @@ uses(RefreshDatabase::class);
 dataset('preview routes', [
     'verify email' => '/preview/email/verify/buyer/fr',
     'auth code' => '/preview/email/code/login_code/fr',
-    'professional verdict' => '/preview/email/professional/approved/fr',
 ]);
 
 test('a guest is sent to sign in', function (string $url) {
