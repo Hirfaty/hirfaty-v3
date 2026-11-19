@@ -35,6 +35,8 @@ export default function CodeEntry({
     locked,
     submitLabel,
     testId,
+    channel = 'email',
+    withLink = false,
 }: {
     /** Wayfinder form definition to post the code to. */
     submit: { action: string; method: 'post' };
@@ -46,6 +48,10 @@ export default function CodeEntry({
     locked: boolean;
     submitLabel: string;
     testId: string;
+    /** Where the code went — picks the "nothing arrived?" hint. */
+    channel?: 'email' | 'phone';
+    /** The email carries a one-click confirm button too (signups only). */
+    withLink?: boolean;
 }) {
     const { t } = useTranslation();
     const { flash } = usePage<{ flash?: { success?: string } }>().props;
@@ -193,8 +199,16 @@ export default function CodeEntry({
                     </button>
                 )}
 
+                {channel === 'email' && withLink && (
+                    <p className="mt-2.5 text-xs leading-relaxed text-souk-brown-deep/60">
+                        {t('common.auth.login.code_or_link')}
+                    </p>
+                )}
+
                 <p className="mt-2.5 text-[11px] leading-relaxed text-souk-brown-deep/45">
-                    {t('common.auth.login.code_spam_hint')}
+                    {channel === 'phone'
+                        ? t('common.auth.login.code_spam_hint_sms')
+                        : t('common.auth.login.code_spam_hint')}
                 </p>
             </div>
         </>

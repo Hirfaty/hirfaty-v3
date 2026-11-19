@@ -4,6 +4,7 @@ import ProductDescription from '@/components/product-description';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useMadSymbol } from '@/hooks/use-currency';
 import SellerLayout from '@/layouts/seller/layout';
 import type { Category, Media, Product, ProductStatus } from '@/types';
 
@@ -33,6 +34,8 @@ function SellerProductPreview({
         total_orders: number;
     };
 }) {
+    // "د.م." in Arabic, "MAD" otherwise.
+    const mad = useMadSymbol();
     const images = product.media.filter((media) => media.type === 'image');
     const videos = product.media.filter((media) => media.type === 'video');
     const heroMedia = images[0] ?? videos[0] ?? null;
@@ -208,7 +211,7 @@ function SellerProductPreview({
                                             {formattedSalePrice ||
                                                 formattedBasePrice}{' '}
                                             <span className="text-base text-muted-foreground">
-                                                MAD
+                                                {mad}
                                             </span>
                                         </span>
                                         {onSale && (
@@ -219,7 +222,7 @@ function SellerProductPreview({
                                     </div>
                                     {onSale && (
                                         <p className="mt-1 text-sm text-muted-foreground line-through">
-                                            {formattedBasePrice} MAD
+                                            {formattedBasePrice} {mad}
                                         </p>
                                     )}
                                 </div>
@@ -292,7 +295,7 @@ function SellerProductPreview({
                             <div className="flex items-center justify-between">
                                 <span>Prix de base</span>
                                 <span className="tabular-nums">
-                                    {formattedBasePrice} MAD
+                                    {formattedBasePrice} {mad}
                                 </span>
                             </div>
                             <Separator />

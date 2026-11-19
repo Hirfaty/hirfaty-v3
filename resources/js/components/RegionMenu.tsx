@@ -90,7 +90,10 @@ export default function RegionMenu({ light = false }: { light?: boolean }) {
                      * The trigger states the current pair, so the visitor can
                      * see what they are on without opening anything.
                      */}
-                    {String(locale).toUpperCase()} · {currency.code}
+                    {/* In Arabic, the currency as an Arabic reader writes
+                        it ("د.م."), not its Latin code. */}
+                    {String(locale).toUpperCase()} ·{' '}
+                    {locale === 'ar' ? currency.symbol : currency.code}
                     {/*
                      * Below `xl` the header has no room for the price switch
                      * itself (PriceModeSwitch), so its state shows here.

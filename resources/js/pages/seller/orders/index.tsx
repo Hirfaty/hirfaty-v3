@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
@@ -43,16 +44,14 @@ const STATUS: Record<OrderStatus, { label: string; className: string }> = {
     cancelled: { label: 'Annulée', className: 'bg-rose-100 text-rose-700' },
 };
 
-// `total_amount` arrives as a decimal string from the API, not a number.
-const money = (n: string | number) =>
-    `${new Intl.NumberFormat('fr-MA').format(Math.round(Number(n)))} MAD`;
-
 export default function SellerOrders({
     orders,
 }: {
     orders: PaginatedData<Order>;
 }) {
     const { t } = useTranslation();
+    // MAD as written in the page's language ("د.م." in Arabic).
+    const { baseMoney: money } = useCurrency();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>(
         'all',

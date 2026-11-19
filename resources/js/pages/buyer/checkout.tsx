@@ -4,11 +4,14 @@ import {
     ArrowLeft,
     Check,
     CreditCard,
+    Loader2,
     Truck,
     Wallet,
 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import CheckoutContact from '@/components/buyer/checkout-contact';
+import type { CheckoutContactState } from '@/components/buyer/checkout-contact';
 import { ZellijStarIcon } from '@/components/home/CraftIcons';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
@@ -155,6 +158,11 @@ type Customer = {
     first_name: string | null;
     last_name: string | null;
     email: string | null;
+    /**
+     * The address a buyer who signed in by phone gave at a previous checkout
+     * — asked again (pre-filled) while they have no sign-in address.
+     */
+    contact_email: string | null;
     phone: string | null;
 };
 
@@ -170,10 +178,14 @@ const NEW_ADDRESS = 'new';
 type CheckoutForm = {
     first_name: string;
     last_name: string;
+    /** Asked only of a buyer with no sign-in address (signed in by phone). */
+    email: string;
     shipping_phone: string;
     address_id: number | null;
     shipping_address: string;
     city_id: number | null;
+    /** The town abroad, where `city_id` has nothing to offer. */
+    city_name: string;
     postal_code: string;
     country: string;
     payment_method: string;
@@ -225,6 +237,20 @@ function FieldLabel({
     );
 }
 
+/** The little circle shown while DHL prices the basket. */
+function QuotingSpinner({ label }: { label: string }) {
+    return (
+        <span role="status" className="inline-flex items-center">
+            <Loader2
+                className="h-4 w-4 animate-spin text-souk-brown"
+                strokeWidth={1.8}
+                aria-hidden
+            />
+            <span className="sr-only">{label}</span>
+        </span>
+    );
+}
+
 function FieldError({ message }: { message?: string }) {
     if (!message) {
         return null;
@@ -244,7 +270,9 @@ const Checkout = ({
     initialCountry,
     deliveryServices,
     deliveryRates,
+    liveQuotedServices,
     buyNow,
+    contact,
 }: {
     items: CheckoutLine[];
     /** Named in the visitor's language — CityService::options(). */
@@ -270,6 +298,18 @@ const Checkout = ({
     initialCountry: string;
     deliveryServices: DeliveryServiceOption[];
     deliveryRates: DeliveryRatesMap;
+    /**
+     * Slugs (DHL) whose card fee is only an estimate: the page asks
+     * checkout.delivery_quote for the carrier's live price for this basket
+     * once the destination is known, and that is what gets billed.
+     */
+    liveQuotedServices: string[];
+    /**
+     * Not signed in: the contact box's state — an email or phone confirmed by
+     * code before the order can be placed (CheckoutContactService). Null for
+     * a signed-in buyer.
+     */
+    contact: CheckoutContactState | null;
 }) => {
     const { t, locale } = useTranslation();
     const { mode: priceMode } = usePriceMode();
@@ -297,6 +337,7 @@ const Checkout = ({
              */
             first_name: customer.first_name ?? '',
             last_name: customer.last_name ?? '',
+            email: customer.contact_email ?? '',
             shipping_phone:
                 preselected?.recipient_phone ?? customer.phone ?? '',
             address_id: preselected?.id ?? null,
@@ -307,6 +348,7 @@ const Checkout = ({
                     ? (cities[0]?.id ?? null)
                     : null,
             postal_code: '',
+            city_name: '',
             country: initialCountry,
             // Card through Payzone when it is on offer, else PayPal.
             payment_method: paymentMethods[0] ?? 'card',
@@ -362,6 +404,7 @@ const Checkout = ({
             // saved to the book behind the buyer's back.
             shipping_address: '',
             postal_code: '',
+            city_name: '',
             save_address: false,
             address_label: '',
             shipping_phone:
@@ -405,7 +448,10 @@ const Checkout = ({
             ...current,
             country: code,
             city_id: code === defaultCountry ? (cities[0]?.id ?? null) : null,
+            // A town typed for another country does not belong to this one.
+            city_name: '',
         }));
+        setTowns([]);
     };
 
     /*
@@ -460,19 +506,180 @@ const Checkout = ({
      * charged once and follows the destination — and abroad, the basket's
      * weight — rather than the number of workshops.
      */
+    /*
+     * Abroad, DHL's own price for this basket (DhlRateService), asked as
+     * soon as the country is picked and again when the postcode changes
+     * (DHL charges more for some remote areas). Each answer is kept for the
+     * page, so going back to a country already priced costs no new request;
+     * `null` means DHL could not answer and the card's figure stands — the
+     * server falls back to it too.
+     */
+    const destinationPostal = (
+        savedChoice ? (savedChoice.postal_code ?? '') : data.postal_code
+    )
+        .trim()
+        .toUpperCase();
+    const liveService =
+        selected && liveQuotedServices.includes(selected.service.slug)
+            ? selected.service
+            : null;
+    const quoteKey = liveService
+        ? [
+              destinationCountry,
+              destinationCityId ?? '',
+              destinationPostal,
+              liveService.id,
+          ].join('|')
+        : null;
+    const [liveQuotes, setLiveQuotes] = useState<Record<string, number | null>>(
+        {},
+    );
+    const quoting = quoteKey !== null && !(quoteKey in liveQuotes);
+    const liveFee = quoteKey !== null ? (liveQuotes[quoteKey] ?? null) : null;
+
+    useEffect(() => {
+        if (quoteKey === null || quoteKey in liveQuotes || !liveService) {
+            return;
+        }
+
+        const controller = new AbortController();
+        const done = (fee: number | null) =>
+            setLiveQuotes((current) => ({ ...current, [quoteKey]: fee }));
+
+        // A pause first, so typing a postcode asks once, not per keystroke.
+        const timer = window.setTimeout(() => {
+            fetch(
+                route('checkout.delivery_quote', {
+                    country: destinationCountry,
+                    ...(destinationCityId !== null
+                        ? { city_id: destinationCityId }
+                        : {}),
+                    ...(destinationPostal !== ''
+                        ? { postal_code: destinationPostal }
+                        : {}),
+                    delivery_service_id: liveService.id,
+                    buy_now: data.buy_now ? 1 : 0,
+                }),
+                {
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                },
+            )
+                .then((response) => (response.ok ? response.json() : null))
+                .then((body: { fee?: unknown } | null) =>
+                    done(typeof body?.fee === 'number' ? body.fee : null),
+                )
+                .catch((error: unknown) => {
+                    if ((error as Error)?.name !== 'AbortError') {
+                        done(null);
+                    }
+                });
+        }, 350);
+
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [
+        quoteKey,
+        liveQuotes,
+        liveService,
+        destinationCountry,
+        destinationCityId,
+        destinationPostal,
+        data.buy_now,
+    ]);
+
+    /*
+     * Abroad, the towns DHL knows for the postcode typed — offered under the
+     * "Ville" field, and the first one filled in while the field is empty.
+     * The field stays free to type: DHL may not know every village.
+     */
+    const [towns, setTowns] = useState<string[]>([]);
+    const newPostal = data.postal_code.trim();
+
+    useEffect(() => {
+        if (choice !== NEW_ADDRESS || isDomestic || newPostal.length < 3) {
+            return;
+        }
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => {
+            fetch(
+                route('checkout.towns', {
+                    country: data.country,
+                    postal_code: newPostal,
+                }),
+                {
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                },
+            )
+                .then((response) => (response.ok ? response.json() : null))
+                .then((body: { towns?: string[] } | null) => {
+                    const found = body?.towns ?? [];
+                    setTowns(found);
+
+                    if (found.length > 0) {
+                        setData((current) =>
+                            current.city_name.trim() === ''
+                                ? { ...current, city_name: found[0] }
+                                : current,
+                        );
+                    }
+                })
+                .catch(() => undefined);
+        }, 400);
+
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [choice, isDomestic, newPostal, data.country, setData]);
+
     const subtotal = items.reduce(
         (sum, line) => sum + (line.line_total ?? 0),
         0,
     );
 
-    const deliveryTotal = selected?.fee ?? FALLBACK_DELIVERY_FEE;
+    const deliveryTotal = liveFee ?? selected?.fee ?? FALLBACK_DELIVERY_FEE;
 
     const grandTotal = subtotal + deliveryTotal;
 
     const payingWithPayPal = data.payment_method === 'paypal';
 
+    // A visitor still has to confirm where the order details go.
+    const needsContact = contact !== null;
+
+    // Signed in by phone, with no address on file: ask for one.
+    const asksForEmail = !needsContact && !customer.email;
+
+    /*
+     * Confirming a phone number signs the visitor in with it, and the page
+     * comes back with that number on the account: use it for delivery too,
+     * unless they have typed one already.
+     */
+    useEffect(() => {
+        if (customer.phone) {
+            setData((current) =>
+                current.shipping_phone.trim() === ''
+                    ? { ...current, shipping_phone: customer.phone ?? '' }
+                    : current,
+            );
+        }
+    }, [customer.phone, setData]);
+
     const submit = (e: FormEvent) => {
         e.preventDefault();
+
+        if (needsContact) {
+            document
+                .getElementById('checkout-contact')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            return;
+        }
+
         transform((current) => ({
             ...current,
             delivery_service_id:
@@ -529,6 +736,13 @@ const Checkout = ({
                             {t('buyer.checkout.title')}
                         </h1>
 
+                        {/* ── Where the order details go (visitors) ── */}
+                        {contact && (
+                            <div className="mt-8">
+                                <CheckoutContact state={contact} />
+                            </div>
+                        )}
+
                         {/* ── Customer details ──────────────────── */}
                         <div className="mt-8">
                             <SectionHeading>
@@ -582,25 +796,61 @@ const Checkout = ({
                                 </div>
 
                                 {/*
-                                 * Shown, not asked for. This is the address the
-                                 * buyer signs in with — /account locks it for
-                                 * the same reason, and editing it here would
-                                 * either do nothing or change their login.
+                                 * With a sign-in address: shown, not asked for
+                                 * — /account locks it too, and editing it here
+                                 * would either do nothing or change their
+                                 * login. Signed in by phone: the number is
+                                 * already the phone field below, so the email
+                                 * is asked for instead (CheckoutRequest).
                                  */}
-                                <div>
-                                    <FieldLabel htmlFor="email">
-                                        {t('buyer.checkout.email')}
-                                    </FieldLabel>
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        readOnly
-                                        disabled
-                                        dir="ltr"
-                                        value={customer.email ?? '—'}
-                                        className={FIELD_LOCKED}
-                                    />
-                                </div>
+                                {!needsContact &&
+                                    (asksForEmail ? (
+                                        <div>
+                                            <FieldLabel
+                                                htmlFor="email"
+                                                required
+                                            >
+                                                {t('buyer.checkout.email')}
+                                            </FieldLabel>
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                inputMode="email"
+                                                required
+                                                autoComplete="email"
+                                                dir="ltr"
+                                                value={data.email}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'email',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder={t(
+                                                    'buyer.checkout.email_placeholder',
+                                                )}
+                                                className={FIELD}
+                                            />
+                                            <FieldError
+                                                message={errors.email}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <FieldLabel htmlFor="email">
+                                                {t('buyer.checkout.email')}
+                                            </FieldLabel>
+                                            <input
+                                                id="email"
+                                                type="text"
+                                                readOnly
+                                                disabled
+                                                dir="ltr"
+                                                value={customer.email ?? '—'}
+                                                className={FIELD_LOCKED}
+                                            />
+                                        </div>
+                                    ))}
 
                                 <div>
                                     <FieldLabel
@@ -873,13 +1123,55 @@ const Checkout = ({
                                         </div>
 
                                         {/*
-                                         * Morocco only: `cities` holds Moroccan
+                                         * Morocco: `cities` holds Moroccan
                                          * cities, which is what the selected
                                          * service prices domestic delivery
-                                         * against, so abroad there is nothing
-                                         * to pick from and the town rides in
-                                         * the address line instead.
+                                         * against. Abroad there is no list,
+                                         * so the town is typed — with the
+                                         * towns DHL knows for the postcode
+                                         * offered — and kept on the order
+                                         * for DHL (`shipping_city`).
                                          */}
+                                        {!isDomestic && (
+                                            <div>
+                                                <FieldLabel
+                                                    htmlFor="city_name"
+                                                    required
+                                                >
+                                                    {t('buyer.checkout.city')}
+                                                </FieldLabel>
+                                                <input
+                                                    id="city_name"
+                                                    type="text"
+                                                    list="checkout-towns"
+                                                    autoComplete="address-level2"
+                                                    value={data.city_name}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'city_name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    maxLength={100}
+                                                    placeholder={t(
+                                                        'buyer.checkout.city_name_placeholder',
+                                                    )}
+                                                    className={FIELD}
+                                                />
+                                                <datalist id="checkout-towns">
+                                                    {towns.map((town) => (
+                                                        <option
+                                                            key={town}
+                                                            value={town}
+                                                        />
+                                                    ))}
+                                                </datalist>
+                                                <FieldError
+                                                    message={errors.city_name}
+                                                />
+                                            </div>
+                                        )}
+
                                         {isDomestic && (
                                             <div>
                                                 <FieldLabel
@@ -1066,8 +1358,26 @@ const Checkout = ({
                                                                 />
                                                                 {service.name}
                                                                 <span className="ms-auto shrink-0 font-normal">
-                                                                    {money(fee)}{' '}
-                                                                    TTC
+                                                                    {active &&
+                                                                    quoting ? (
+                                                                        <QuotingSpinner
+                                                                            label={t(
+                                                                                'buyer.checkout.delivery_quoting',
+                                                                            )}
+                                                                        />
+                                                                    ) : (
+                                                                        <>
+                                                                            {money(
+                                                                                active
+                                                                                    ? (liveFee ??
+                                                                                          fee)
+                                                                                    : fee,
+                                                                            )}{' '}
+                                                                            {t(
+                                                                                'common.ttc',
+                                                                            )}
+                                                                        </>
+                                                                    )}
                                                                 </span>
                                                             </span>
                                                             {service.description && (
@@ -1268,7 +1578,7 @@ const Checkout = ({
                                             <span className="font-display text-sm text-souk-title">
                                                 {money(line.line_total ?? 0)}{' '}
                                                 <span className="text-xs">
-                                                    TTC
+                                                    {t('common.ttc')}
                                                 </span>
                                             </span>
                                             <span className="text-xs text-souk-brown-deep/60">
@@ -1336,7 +1646,7 @@ const Checkout = ({
                                     )}
                                 </span>
                                 <span className="text-souk-title">
-                                    {money(subtotal)} TTC
+                                    {money(subtotal)} {t('common.ttc')}
                                 </span>
                             </div>
 
@@ -1345,7 +1655,18 @@ const Checkout = ({
                                     {t('buyer.checkout.delivery_fee')}
                                 </span>
                                 <span className="text-souk-title">
-                                    {money(deliveryTotal)} TTC
+                                    {quoting ? (
+                                        <QuotingSpinner
+                                            label={t(
+                                                'buyer.checkout.delivery_quoting',
+                                            )}
+                                        />
+                                    ) : (
+                                        <>
+                                            {money(deliveryTotal)}{' '}
+                                            {t('common.ttc')}
+                                        </>
+                                    )}
                                 </span>
                             </div>
                         </div>
@@ -1355,8 +1676,20 @@ const Checkout = ({
                                 {t('buyer.checkout.total')}
                             </span>
                             <span className="font-display text-2xl leading-none text-souk-title">
-                                {money(grandTotal)}
-                                <span className="ms-1.5 text-sm">TTC</span>
+                                {quoting ? (
+                                    <QuotingSpinner
+                                        label={t(
+                                            'buyer.checkout.delivery_quoting',
+                                        )}
+                                    />
+                                ) : (
+                                    <>
+                                        {money(grandTotal)}
+                                        <span className="ms-1.5 text-sm">
+                                            {t('common.ttc')}
+                                        </span>
+                                    </>
+                                )}
                             </span>
                         </div>
 
@@ -1395,9 +1728,21 @@ const Checkout = ({
                             </p>
                         )}
 
+                        {needsContact && (
+                            <p className="mt-6 flex items-start gap-2 text-xs text-souk-brown-deep/70">
+                                <AlertCircle
+                                    className="mt-px h-3.5 w-3.5 shrink-0 text-souk-brown"
+                                    strokeWidth={1.6}
+                                />
+                                {t('buyer.checkout.contact_needed')}
+                            </p>
+                        )}
+
                         <button
                             type="submit"
-                            disabled={processing || !canPay}
+                            disabled={
+                                processing || !canPay || quoting || needsContact
+                            }
                             data-test="checkout-submit"
                             className="mt-6 inline-flex w-full items-center justify-center gap-2.5 rounded-lg bg-souk-title px-6 py-3.5 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-50"
                         >

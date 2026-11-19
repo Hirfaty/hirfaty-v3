@@ -26,6 +26,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
@@ -71,10 +72,10 @@ const STATUS: Record<string, { label: string; className: string }> = {
     archived: { label: 'Archivé', className: 'bg-slate-100 text-slate-500' },
 };
 
-const money = (n: number) =>
-    `${new Intl.NumberFormat('fr-MA').format(Math.round(n))} MAD`;
-
 function PriceCell({ product }: { product: ProductRow }) {
+    // MAD as written in the page's language ("د.م." in Arabic).
+    const { baseMoney: money } = useCurrency();
+
     if (product.base_price === null) {
         return <span className="text-ink-soft">—</span>;
     }

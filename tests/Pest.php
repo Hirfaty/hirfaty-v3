@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\PaymentService;
 use App\Services\PriceModeService;
+use App\Services\SmsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -127,4 +128,45 @@ function proBuyer(array $attributes = []): User
         'role' => 'buyer',
         'email_verified_at' => now(),
     ], $attributes));
+}
+
+/**
+ * Stand in for the SMS provider: records every text instead of sending it,
+ * and says phone sign-in is available (as production does once a real driver
+ * is set). `codeTo()` reads back the 6-digit code a text carried.
+ */
+function fakeSms(): SmsService
+{
+    $fake = new class extends SmsService
+    {
+        /** @var array<int, array{to: string, text: string}> */
+        public array $sent = [];
+
+        public bool $up = true;
+
+        public function available(): bool
+        {
+            return $this->up;
+        }
+
+        public function send(string $to, string $text): void
+        {
+            $this->sent[] = ['to' => $to, 'text' => $text];
+        }
+
+        public function codeTo(string $to): ?string
+        {
+            foreach (array_reverse($this->sent) as $message) {
+                if ($message['to'] === $to && preg_match('/#(\d{6})/', $message['text'], $m)) {
+                    return $m[1];
+                }
+            }
+
+            return null;
+        }
+    };
+
+    app()->instance(SmsService::class, $fake);
+
+    return $fake;
 }

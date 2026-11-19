@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Contact;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -88,18 +89,24 @@ class PendingRegistration extends Model
     }
 
     /**
-     * The email with its local part largely masked — `ac•••@example.com`.
-     *
-     * Shown on the code screen so the visitor can tell they typed the address
-     * they meant, without printing a full address onto a page that might be
-     * read over a shoulder or resumed on a shared machine.
+     * The address or number this signup is proving — whichever one the
+     * visitor typed. Exactly one of `email`/`phone` is set.
      */
-    public function maskedEmail(): string
+    public function contact(): Contact
     {
-        [$local, $domain] = array_pad(explode('@', $this->email, 2), 2, '');
+        return filled($this->phone)
+            ? Contact::phone($this->phone)
+            : Contact::email((string) $this->email);
+    }
 
-        $visible = mb_substr($local, 0, min(2, max(1, mb_strlen($local) - 1)));
-
-        return $visible.str_repeat('•', 3).'@'.$domain;
+    /**
+     * `ac•••@example.com` / `+212 •••••••78` — shown on the code screen so the
+     * visitor can tell they typed what they meant, without printing it in full
+     * onto a page that might be read over a shoulder or resumed on a shared
+     * machine.
+     */
+    public function maskedContact(): string
+    {
+        return $this->contact()->masked();
     }
 }

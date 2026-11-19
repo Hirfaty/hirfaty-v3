@@ -33,6 +33,9 @@ class LoginCodeNotification extends Notification
     public function __construct(
         public readonly string $code,
         private readonly int $expiresInMinutes,
+        // The signed one-click sign-in link (LoginCodeService::linkFor) —
+        // public so tests can follow the link that was mailed.
+        public readonly ?string $url = null,
     ) {}
 
     /**
@@ -64,6 +67,7 @@ class LoginCodeNotification extends Notification
                 'locale' => $locale,
                 'expiresInMinutes' => $this->expiresInMinutes,
                 'copy' => 'login_code',
+                'url' => $this->url,
             ]);
     }
 }

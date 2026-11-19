@@ -7,6 +7,7 @@ use App\Models\PendingRegistration;
 use App\Models\User;
 use App\Notifications\NewSellerForAdmin;
 use App\Notifications\RegistrationCode;
+use App\Support\Contact;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,11 @@ use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 
 /**
- * The signup flow: email → emailed code → details → account.
+ * The signup flow: email or phone → a code sent there → account.
+ *
+ * A shopper's account is made the moment the code is accepted — there is no
+ * password to choose and nothing else to fill in. An artisan's door (/sell)
+ * still has a details step, for the workshop.
  *
  * Serves both doors. The first three steps are identical whichever one the
  * visitor came through; only the last differs, which is why there are two
@@ -61,6 +66,8 @@ class RegistrationCodeService
      */
     public function __construct(
         private readonly StoreSetupService $stores,
+        private readonly SmsService $sms,
+        private readonly LoginCodeService $loginCodes,
     ) {}
 
     /**
@@ -75,7 +82,7 @@ class RegistrationCodeService
      * second thing, not the first.
      */
     public function start(
-        string $email,
+        Contact $contact,
         string $locale,
         string $intent = PendingRegistration::INTENT_BUYER,
     ): string {
@@ -94,7 +101,7 @@ class RegistrationCodeService
          * and verified would skip the code entirely.
          */
         $pending = PendingRegistration::updateOrCreate(
-            ['email' => $email],
+            [$contact->isPhone() ? 'phone' : 'email' => $contact->value],
             [
                 ...$this->freshCodeAttributes(Hash::make($code)),
                 'resume_token_hash' => hash('sha256', $resumeToken),
@@ -104,7 +111,7 @@ class RegistrationCodeService
             ],
         );
 
-        $this->mail($pending, $code);
+        $this->deliver($pending, $code);
 
         return $resumeToken;
     }
@@ -127,7 +134,7 @@ class RegistrationCodeService
 
         $pending->update($this->freshCodeAttributes(Hash::make($code)));
 
-        $this->mail($pending, $code);
+        $this->deliver($pending, $code);
 
         return true;
     }
@@ -157,34 +164,28 @@ class RegistrationCodeService
     }
 
     /**
-     * Create the account and clear the pending row.
+     * Create the shopper's account and clear the pending row.
      *
-     * Deliberately fast: a shopper's signup is just a password on top of the
-     * address the code already confirmed. `first_name`/`last_name`/
-     * `phone_number` are nullable on `users` for exactly this — nothing here
-     * blocks on a name or a delivery number, and Buyer\ProfileController on
-     * /account is where either gets filled in whenever the buyer gets to it.
-     * A checkout still asks for a delivery contact of its own, so nothing
-     * downstream depends on these being set at signup.
+     * No password and no profile: the code just proved the address or number,
+     * and that is the account. A name and a delivery number are asked for at
+     * checkout, where they are needed, and can be filled in on /account.
      *
-     * `email_verified_at` is stamped here rather than left for the emailed
-     * link flow: typing back a code sent to that inbox *is* the proof of
-     * ownership, and asking for it twice would be the same check again.
+     * Whichever of address or number the code went to is stamped verified —
+     * typing the code back *is* the proof, and asking again would be the same
+     * check twice. Accepting the terms is the "by continuing you agree" line
+     * under the field the visitor typed into.
      *
-     * @param  array{first_name?: ?string, last_name?: ?string, phone_number?: ?string, password: string}  $data
+     * @param  array{first_name?: ?string, last_name?: ?string}  $data
      */
-    public function complete(PendingRegistration $pending, array $data): User
+    public function complete(PendingRegistration $pending, array $data = []): User
     {
         $user = User::create([
             'first_name' => $data['first_name'] ?? null,
             'last_name' => $data['last_name'] ?? null,
-            'phone_number' => $data['phone_number'] ?? null,
-            'password' => $data['password'],
-            'email' => $pending->email,
-            'email_verified_at' => now(),
-            // Only ever a buyer. Sellers register through the separate form,
-            // which still runs Fortify's CreateNewUser — self-assigning any
-            // other role must stay impossible from a public endpoint.
+            ...$this->contactAttributes($pending),
+            // Only ever a buyer. The seller role comes from the pending row's
+            // intent through completeSeller() — self-assigning any other role
+            // must stay impossible from a public endpoint.
             'role' => 'buyer',
             'terms_accepted' => true,
             'terms_accepted_at' => now(),
@@ -214,7 +215,7 @@ class RegistrationCodeService
      * one made through the old wizard — hence the holding page the seller
      * lands on afterwards.
      *
-     * @param  array{first_name: string, last_name: string, phone_number: string, password: string, store_name: string, type: string, category_id: int, city_id: int, description: string}  $data
+     * @param  array{first_name: string, last_name: string, phone_number?: ?string, store_name: string, type: string, category_id: int, city_id: int, description: string}  $data
      */
     public function completeSeller(PendingRegistration $pending, array $data): User
     {
@@ -222,13 +223,10 @@ class RegistrationCodeService
             $user = User::create([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
-                'phone_number' => $data['phone_number'],
-                'password' => $data['password'],
-                'email' => $pending->email,
-                // Typing back a code sent to that inbox is the proof of
-                // ownership; asking for it again via an emailed link would be
-                // the same check twice. Same reasoning as complete().
-                'email_verified_at' => now(),
+                // The number typed on the form, unless the signup itself was
+                // by phone — then the proven one, which the form cannot change.
+                'phone_number' => $data['phone_number'] ?? null,
+                ...$this->contactAttributes($pending),
                 'role' => 'seller',
                 'terms_accepted' => true,
                 'terms_accepted_at' => now(),
@@ -398,12 +396,36 @@ class RegistrationCodeService
     }
 
     /**
-     * On-demand mail: there is no `User` to notify yet, which is the whole
-     * point of this table.
+     * The account columns the code proved: the address or the number, marked
+     * verified. Typing back a code sent there is the proof of ownership.
+     *
+     * @return array<string, mixed>
      */
-    private function mail(PendingRegistration $pending, string $code): void
+    private function contactAttributes(PendingRegistration $pending): array
     {
-        Notification::route('mail', $pending->email)->notify(
+        $contact = $pending->contact();
+
+        return $contact->isPhone()
+            ? ['phone_number' => $contact->value, 'phone_verified_at' => now()]
+            : ['email' => $contact->value, 'email_verified_at' => now()];
+    }
+
+    /**
+     * Send the code where the visitor asked: an email (with a one-click
+     * confirm link) or an SMS. On-demand either way — there is no `User` to
+     * notify yet, which is the whole point of this table.
+     */
+    private function deliver(PendingRegistration $pending, string $code): void
+    {
+        $contact = $pending->contact();
+
+        if ($contact->isPhone()) {
+            $this->sms->send($contact->value, $this->loginCodes->smsText($code, $pending->locale));
+
+            return;
+        }
+
+        Notification::route('mail', $contact->value)->notify(
             new RegistrationCode($code, $pending->locale, self::CODE_TTL_MINUTES, $this->linkFor($pending)),
         );
     }

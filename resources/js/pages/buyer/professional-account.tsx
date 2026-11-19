@@ -184,7 +184,7 @@ function DemoCard({
                                  * across it.
                                  */}
                                 <span className="relative inline-block text-sm text-souk-brown-deep/45">
-                                    {money(DEMO.public)} TTC
+                                    {money(DEMO.public)} {t('common.ttc')}
                                     <span
                                         aria-hidden="true"
                                         className="absolute inset-x-0 top-1/2 h-px origin-left bg-souk-brown-deep/45 motion-safe:animate-rule-through rtl:origin-right"
@@ -195,7 +195,7 @@ function DemoCard({
                                     <p className="mt-1 font-display text-3xl leading-none text-souk-brown">
                                         {money(DEMO.trade)}
                                         <span className="ms-1.5 text-sm">
-                                            TTC
+                                            {t('common.ttc')}
                                         </span>
                                     </p>
                                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
@@ -217,7 +217,9 @@ function DemoCard({
                         ) : (
                             <p className="pt-5 font-display text-3xl leading-none text-souk-title">
                                 {money(DEMO.public)}
-                                <span className="ms-1.5 text-sm">TTC</span>
+                                <span className="ms-1.5 text-sm">
+                                    {t('common.ttc')}
+                                </span>
                             </p>
                         )}
                     </div>

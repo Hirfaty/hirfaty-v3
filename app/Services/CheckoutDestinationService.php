@@ -27,10 +27,14 @@ class CheckoutDestinationService
     /**
      * `city_id` is null for an international destination: `cities` holds
      * Moroccan cities only. `country` rides along with it because delivery is
-     * priced per destination — see DeliveryFeeService.
+     * priced per destination — see DeliveryFeeService. `country` and
+     * `postal_code` are also kept on the order on their own
+     * (`shipping_country`, `shipping_postal_code`): DHL Express needs them
+     * apart from the printable line to ship abroad, as is `city_name` — the
+     * town, Moroccan or typed abroad (`shipping_city`).
      *
      * @param  array<string, mixed>  $data  validated CheckoutRequest input
-     * @return array{shipping_address: string, shipping_phone: string, city_id: int|null, country: string, notes: string|null}
+     * @return array{shipping_address: string, shipping_phone: string, city_id: int|null, city_name: string|null, country: string, postal_code: string|null, notes: string|null}
      */
     public function resolve(User $user, array $data): array
     {
@@ -56,7 +60,9 @@ class CheckoutDestinationService
                 // Not cast to int: an international address has no Moroccan
                 // city, and (int) null is 0 — a city id that does not exist.
                 'city_id' => $saved->city_id,
+                'city_name' => $saved->townName(),
                 'country' => $saved->country ?: Address::DEFAULT_COUNTRY,
+                'postal_code' => self::postalCode($saved->postal_code),
                 'notes' => $data['notes'] ?? null,
             ];
         }
@@ -72,10 +78,13 @@ class CheckoutDestinationService
                 'recipient_phone' => $data['shipping_phone'],
                 'address_line' => $data['shipping_address'],
                 'city_id' => $data['city_id'] ?? null,
+                'city_name' => self::townName($data['city_name'] ?? null),
                 'postal_code' => $data['postal_code'] ?? null,
                 'country' => $data['country'] ?? null,
             ]);
         }
+
+        $town = $this->cityName($data['city_id'] ?? null) ?? self::townName($data['city_name'] ?? null);
 
         /*
          * Assembled exactly the way Address::toShippingLine() assembles a saved
@@ -83,7 +92,7 @@ class CheckoutDestinationService
          * parcel label.
          */
         $cityLine = trim(collect([
-            $this->cityName($data['city_id'] ?? null),
+            $town,
             $data['postal_code'] ?? null,
         ])->filter()->implode(' '));
 
@@ -95,9 +104,27 @@ class CheckoutDestinationService
             'shipping_phone' => (string) $data['shipping_phone'],
             // Left null rather than cast: see the saved-address branch above.
             'city_id' => $data['city_id'] ?? null,
+            'city_name' => $town,
             'country' => $data['country'] ?? Address::DEFAULT_COUNTRY,
+            'postal_code' => self::postalCode($data['postal_code'] ?? null),
             'notes' => $data['notes'] ?? null,
         ];
+    }
+
+    /** A typed town, trimmed, with its spaces tidied; null when blank. */
+    private static function townName(?string $town): ?string
+    {
+        $town = trim((string) preg_replace('/\s+/u', ' ', (string) $town));
+
+        return $town === '' ? null : mb_substr($town, 0, 100);
+    }
+
+    /** Trimmed, upper-cased ("sw1a 1aa" → "SW1A 1AA"), null when blank. */
+    private static function postalCode(?string $code): ?string
+    {
+        $code = mb_strtoupper(trim((string) $code));
+
+        return $code === '' ? null : mb_substr($code, 0, 20);
     }
 
     /**
@@ -118,6 +145,15 @@ class CheckoutDestinationService
             'first_name' => blank($user->first_name) ? $data['first_name'] : null,
             'last_name' => blank($user->last_name) ? $data['last_name'] : null,
             'phone_number' => blank($user->phone_number) ? $data['shipping_phone'] : null,
+            /*
+             * Unlike the rest, replaced on every order: it is only ever asked
+             * of a buyer with no sign-in address (CheckoutRequest), and the
+             * page pre-fills it, so what arrives is their latest word on it.
+             * Lowercased the way sign-in addresses are stored.
+             */
+            'contact_email' => blank($user->email) && filled($data['email'] ?? null)
+                ? mb_strtolower(trim($data['email']))
+                : null,
         ]);
 
         if ($fill === []) {

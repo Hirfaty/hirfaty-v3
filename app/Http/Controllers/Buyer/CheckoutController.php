@@ -12,17 +12,20 @@ use App\Models\Order;
 use App\Services\BuyerAccountService;
 use App\Services\BuyNowService;
 use App\Services\CartService;
+use App\Services\CheckoutContactService;
 use App\Services\CheckoutDestinationService;
 use App\Services\CheckoutService;
 use App\Services\CityService;
 use App\Services\CountryService;
 use App\Services\CurrencyService;
 use App\Services\DeliveryFeeService;
+use App\Services\DhlExpress\DhlTownService;
 use App\Services\PaymentService;
 use App\Services\PayPalPaymentService;
 use App\Services\PriceModeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class CheckoutController extends Controller
@@ -38,16 +41,16 @@ class CheckoutController extends Controller
         CurrencyService $currencies,
         PayPalPaymentService $paypal,
     ) {
-        $cart = Cart::where('user_id', Auth::id())
-            ->with([
-                'items.product.images',
-                'items.product.store',
-                'items.variant.options',
-                'items.variant.media',
-            ])
-            ->firstOrFail();
+        // A visitor checks out from the basket their cookie names; they give
+        // an email or phone on this page, and confirming it signs them in.
+        $cart = $this->carts->current($request)?->load([
+            'items.product.images',
+            'items.product.store',
+            'items.variant.options',
+            'items.variant.media',
+        ]);
 
-        if ($cart->items->isEmpty()) {
+        if (! $cart || $cart->items->isEmpty()) {
             return redirect()->route('products.index');
         }
 
@@ -163,9 +166,11 @@ class CheckoutController extends Controller
             // on is_default), so the page can pre-select without re-sorting.
             // Addresses in a destination the card no longer serves are left
             // out: they could not be priced.
-            'addresses' => SavedAddressResource::collection(
-                $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name,name_translations'))->get(),
-            )->resolve($request),
+            'addresses' => $user
+                ? SavedAddressResource::collection(
+                    $deliveryFees->scopeToDeliverable($user->addresses()->with('city:id,name,name_translations'))->get(),
+                )->resolve($request)
+                : [],
 
             /*
              * What the account already knows, so the form opens part-filled.
@@ -180,11 +185,21 @@ class CheckoutController extends Controller
              * in.
              */
             'customer' => [
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'email' => $user->email,
-                'phone' => $user->phone_number,
+                'first_name' => $user?->first_name,
+                'last_name' => $user?->last_name,
+                'email' => $user?->email,
+                // Asked at checkout of a buyer who signed in by phone, and
+                // pre-filled from their last order (CheckoutRequest).
+                'contact_email' => $user?->contact_email,
+                'phone' => $user?->phone_number,
             ],
+
+            /*
+             * A visitor who has not signed in gives an email or phone here,
+             * and confirms it with a code before they can pay — see
+             * CheckoutContactService. Null once signed in.
+             */
+            'contact' => $user ? null : app(CheckoutContactService::class)->state($request),
 
             /*
              * Whitelisted server-side in CheckoutRequest and shared from there,
@@ -217,6 +232,9 @@ class CheckoutController extends Controller
              */
             'deliveryServices' => $delivery['services'],
             'deliveryRates' => $delivery['rates'],
+            // Slugs whose card figure is only an estimate: the page asks
+            // checkout.delivery_quote for DHL's live price once it knows where.
+            'liveQuotedServices' => $deliveryFees->liveQuotedSlugs(),
 
             /*
              * Checking out one piece straight from its page rather than the
@@ -257,6 +275,57 @@ class CheckoutController extends Controller
             ['code' => __('buyer.checkout.err_coupon_unknown')],
             'coupon',
         );
+    }
+
+    /**
+     * The delivery price for the basket to a destination, as checkout will
+     * bill it — abroad, DHL's live price for this basket (DhlRateService),
+     * which the page shows with a spinner while it is asked. JSON.
+     *
+     * Over the cart, or the buy-now piece when `buy_now` is set, as store()
+     * bills them.
+     */
+    public function deliveryQuote(Request $request, DeliveryFeeService $deliveryFees, BuyNowService $buyNow)
+    {
+        $data = $request->validate([
+            'country' => ['required', 'string', 'size:2', Rule::in($deliveryFees->shippableCountryCodes())],
+            'city_id' => ['nullable', 'integer'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'delivery_service_id' => ['nullable', 'integer'],
+            'buy_now' => ['nullable', 'boolean'],
+        ]);
+
+        $cart = $request->boolean('buy_now')
+            ? $buyNow->cart($request->session(), $request->user())
+            : $this->carts->current($request)?->load(['items.product', 'items.variant']);
+
+        if (! $cart || $cart->items->isEmpty()) {
+            return response()->json(['message' => __('buyer.checkout.err_empty')], 422);
+        }
+
+        $cityId = isset($data['city_id']) ? (int) $data['city_id'] : null;
+        $service = $deliveryFees->serviceFor($data['country'], $cityId, isset($data['delivery_service_id']) ? (int) $data['delivery_service_id'] : null);
+        $quote = $deliveryFees->quote($data['country'], $cityId, $service, $cart->items, $data['postal_code'] ?? null);
+
+        return response()->json([
+            'service_id' => $service?->id,
+            'fee' => $quote['fee'],
+            'live' => $quote['live'],
+        ]);
+    }
+
+    /**
+     * The towns DHL knows for a postcode abroad, offered under the checkout's
+     * "Ville" field. Empty when DHL cannot say — the field stays free to type.
+     */
+    public function towns(Request $request, DhlTownService $towns)
+    {
+        $data = $request->validate([
+            'country' => ['required', 'string', 'size:2'],
+            'postal_code' => ['required', 'string', 'max:20'],
+        ]);
+
+        return response()->json(['towns' => $towns->suggestions($data['country'], $data['postal_code'])]);
     }
 
     public function store(
@@ -358,9 +427,14 @@ class CheckoutController extends Controller
     {
         $shaped = $account->purchase($request->user(), $purchase) ?? abort(404);
 
+        $contact = $request->user()->contact();
+
         return Inertia::render('buyer/checkout-confirmation', [
             'purchase' => $shaped,
-            'email' => $request->user()->email,
+            // Where the confirmation went: the address, or by SMS to the
+            // number an account made by phone proved.
+            'email' => $contact?->display(),
+            'contactChannel' => $contact?->channel,
         ]);
     }
 }

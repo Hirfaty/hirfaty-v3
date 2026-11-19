@@ -187,8 +187,8 @@ return [
 
     // Sign-in gate
     'detail.login_to_buy' => 'سجّل الدخول للشراء',
-    'detail.login_to_buy_hint' => 'سلتك وأسعارك مرتبطة بحسابك.',
-    'detail.login_to_buy_register' => 'إنشاء حساب',
+    'detail.login_to_buy_hint' => 'لا حاجة لحساب: ستُدخل بريدك الإلكتروني أو هاتفك عند الطلب. لديك حساب؟',
+    'detail.login_to_buy_register' => 'تسجيل الدخول',
     'detail.below_min_qty' => 'الكمية المتوفرة أقل من حدّك الأدنى للطلب',
     'detail.below_min_stock' => 'بقي :count فقط — الحد الأدنى لطلبك :min',
 
@@ -275,8 +275,6 @@ return [
     // ── ‎/account: الهوية وكلمة المرور والعنوان الافتراضي ─────────────────
     'account.section_identity' => 'المعلومات الشخصية',
     'account.section_identity_desc' => 'الاسم الذي تُحرَّر به طلباتك وسندات التسليم.',
-    'account.section_password' => 'كلمة المرور',
-    'account.section_password_desc' => 'اختر كلمة مرور جديدة. ستبقى متصلاً على هذا الجهاز.',
     'account.section_address' => 'عنوان التوصيل الافتراضي',
     'account.section_address_desc' => 'المكان الذي تُرسل إليه طلباتك. يملؤه الأداء تلقائياً.',
 
@@ -287,12 +285,6 @@ return [
     'account.field_email' => 'البريد الإلكتروني',
     'account.field_phone' => 'الهاتف',
     'account.locked_note' => 'لا يمكن تغيير بريدك الإلكتروني ورقم هاتفك من هنا حالياً — تواصل معنا وسنحدّثهما لك.',
-
-    'account.field_password' => 'كلمة المرور',
-    'account.change_password' => 'تغيير كلمة المرور',
-    'account.field_current_password' => 'كلمة المرور الحالية',
-    'account.field_new_password' => 'كلمة المرور الجديدة',
-    'account.field_confirm_password' => 'تأكيد كلمة المرور الجديدة',
 
     'account.no_address' => 'لا يوجد عنوان محفوظ بعد.',
     'account.add_address' => 'إضافة عنوان',
@@ -307,8 +299,6 @@ return [
     'account.field_recipient_phone' => 'هاتف المستلم',
 
     'account.saved' => 'تم الحفظ.',
-    'account.update_password' => 'تحديث كلمة المرور',
-    'account.password_saved' => 'تم تحديث كلمة المرور.',
     'account.save_address' => 'حفظ العنوان',
 
     'account.profile_saved' => 'تم تحديث معلوماتك.',
@@ -360,6 +350,8 @@ return [
     'cart.subtotal' => 'المجموع الفرعي',
     'cart.savings' => 'التوفير',
     'cart.total' => 'المجموع',
+    'cart.delivery' => 'التوصيل',
+    'cart.delivery_at_checkout' => 'تُحتسب عند الدفع',
     'cart.checkout' => 'إتمام الطلب',
     'cart.secure_payment' => 'دفع آمن',
     'cart.split_note' => 'ستُقسَّم سلتك إلى طلب لكل ورشة.',
@@ -377,6 +369,7 @@ return [
     'checkout.use_new_address' => 'استخدام عنوان آخر',
     'checkout.new_address' => 'عنوان جديد',
     'checkout.city' => 'المدينة',
+    'checkout.city_name_placeholder' => 'مثال: باريس',
     'checkout.address_line' => 'العنوان الكامل',
     'checkout.address_placeholder' => 'الشارع، الحي، رقم المنزل…',
     'checkout.phone' => 'الهاتف',
@@ -398,12 +391,14 @@ return [
     'checkout.summary' => 'ملخص الطلب',
     'checkout.products' => 'المنتجات (:count)',
     'checkout.delivery_fee' => 'رسوم التوصيل',
+    'checkout.delivery_quoting' => 'جارٍ حساب سعر التوصيل…',
     'checkout.delivery_service_heading' => 'طريقة التوصيل',
     'checkout.total' => 'المجموع',
     'checkout.processing' => 'جارٍ المعالجة…',
 
     'checkout.err_address' => 'يرجى تحديد عنوان التوصيل.',
     'checkout.err_city' => 'اختر مدينة.',
+    'checkout.err_city_name' => 'أدخل المدينة.',
     'checkout.err_phone' => 'رقم الهاتف مطلوب للتوصيل.',
     'checkout.err_empty' => 'سلتك فارغة.',
     'checkout.err_buy_now_gone' => 'لم تعد هذه القطعة متوفرة. عد إلى صفحتها للمحاولة مجدداً.',
@@ -527,4 +522,32 @@ return [
     'cancel_reason.delay' => 'ستكون مدة الصنع طويلة جداً',
     'cancel_reason.duplicate' => 'تم تقديم الطلب مرتين',
     'cancel_reason.pricing_error' => 'خطأ في سعر القطعة',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'checkout.contact_heading' => 'إلى أين نرسل تفاصيل طلبك؟',
+    'checkout.contact_intro' => 'أدخل بريدك الإلكتروني أو هاتفك: سنرسل إليه التأكيد والتتبّع. لا حاجة لإنشاء حساب أو كلمة مرور.',
+    'checkout.contact_send' => 'استلام رمز',
+    'checkout.contact_code_sent' => 'تم إرسال الرمز — أدخله أدناه.',
+    'checkout.contact_sent_email' => 'أُرسل الرمز عبر البريد الإلكتروني إلى',
+    'checkout.contact_sent_sms' => 'أُرسل الرمز عبر رسالة نصية إلى',
+    'checkout.contact_code_label' => 'رمز من 6 أرقام',
+    'checkout.contact_verify' => 'تأكيد',
+    'checkout.contact_change' => 'تعديل',
+    'checkout.contact_wrong_hint' => 'لم يصل شيء؟ تأكّد أنه لك أعلاه — وإلا اضغط «تعديل».',
+    'checkout.contact_resend' => 'إعادة إرسال الرمز',
+    'checkout.contact_resend_in' => 'إعادة الإرسال بعد :seconds ث',
+    'checkout.contact_confirmed' => 'تم التأكيد — يمكنك إتمام طلبك.',
+    'checkout.contact_expired' => 'انتهت صلاحية الرمز — أدخل بريدك الإلكتروني أو هاتفك مرة أخرى.',
+    'checkout.contact_needed' => 'أكّد أولاً بريدك الإلكتروني أو هاتفك، أعلى الصفحة.',
+    'checkout.contact_why' => 'الرمز يضمن أنه لك فعلاً: مع خطأ في الكتابة لن يصلك التأكيد ولا التتبّع.',
+    'checkout.email_placeholder' => 'you@example.com',
+    'checkout.err_email' => 'أدخل بريدًا إلكترونيًا صالحًا.',
+    'order_placed.sms' => 'تم إرسال ملخص الطلب برسالة نصية إلى :email.',
+    'sms.order_placed' => 'حرفتي: تم تأكيد الطلب :reference، شكراً لك! تتبّعه هنا: :url',
+    'sms.order_confirmed' => 'حرفتي: طلبك :reference قيد التحضير. التتبّع: :url',
+    'sms.order_shipped' => 'حرفتي: طلبك :reference في الطريق. التتبّع: :url',
+    'sms.order_delivered' => 'حرفتي: تم توصيل طلبك :reference. شكراً لك! التفاصيل: :url',
+    'sms.order_cancelled' => 'حرفتي: تم إلغاء طلبك :reference. التفاصيل: :url',
+    'checkout.contact_or_link' => 'أو اضغط ببساطة على الزر في البريد الإلكتروني: ستكمل هذه الصفحة من تلقاء نفسها.',
+    'checkout.contact_link_confirmed' => 'تم تأكيد البريد — لحظة من فضلك…',
 ];

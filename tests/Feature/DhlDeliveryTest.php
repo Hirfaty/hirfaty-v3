@@ -83,6 +83,7 @@ function dhlCheckout(array $overrides = []): array
         'shipping_phone' => '+33600000000',
         'shipping_address' => '12 rue de la Paix, Paris',
         'postal_code' => '75002',
+        'city_name' => 'Paris',
         'country' => 'FR',
         'payment_method' => 'card',
     ], $overrides);

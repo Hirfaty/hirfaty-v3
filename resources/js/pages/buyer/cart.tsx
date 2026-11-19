@@ -114,9 +114,8 @@ const CartPage = ({
     }, 0);
 
     /*
-     * The delivery charge is a flat, checkout-only line (see
-     * DeliveryFeeService) — the cart only ever sells products, so its
-     * total is the products' total, full stop.
+     * Delivery depends on the address, which is only given at checkout — so
+     * the basket says it will be added there, and its total is the products'.
      */
     const total = subtotal;
 
@@ -312,7 +311,9 @@ const CartPage = ({
                                                                         line.line_total,
                                                                     )}
                                                                     <span className="ms-1 text-xs">
-                                                                        TTC
+                                                                        {t(
+                                                                            'common.ttc',
+                                                                        )}
                                                                     </span>
                                                                 </p>
                                                                 <p className="mt-1 text-[11px] text-souk-brown-deep/55">
@@ -328,7 +329,9 @@ const CartPage = ({
                                                                         line.unit_price ??
                                                                             0,
                                                                     )}{' '}
-                                                                    TTC{' '}
+                                                                    {t(
+                                                                        'common.ttc',
+                                                                    )}{' '}
                                                                     {t(
                                                                         'buyer.cart.per_unit',
                                                                     )}
@@ -557,27 +560,43 @@ const CartPage = ({
                                         {t('buyer.cart.subtotal')}
                                     </span>
                                     <span className="text-souk-title">
-                                        {money(subtotal)} TTC
+                                        {money(subtotal)} {t('common.ttc')}
                                     </span>
                                 </div>
 
                                 {savings > 0 && (
                                     <div className="flex items-baseline justify-between text-terracotta">
                                         <span>{t('buyer.cart.savings')}</span>
-                                        <span>−{money(savings)} TTC</span>
+                                        <span>
+                                            −{money(savings)} {t('common.ttc')}
+                                        </span>
                                     </div>
                                 )}
+
+                                <div
+                                    className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
+                                    data-test="cart-delivery"
+                                >
+                                    <span className="text-souk-brown-deep/75">
+                                        {t('buyer.cart.delivery')}
+                                    </span>
+                                    <span className="ms-auto text-end text-souk-brown-deep/60 italic">
+                                        {t('buyer.cart.delivery_at_checkout')}
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="my-5 h-px bg-souk-brown/12" />
 
-                            <div className="flex items-baseline justify-between">
-                                <span className="text-souk-title">
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+                                <span className="whitespace-nowrap text-souk-title">
                                     {t('buyer.cart.total')}
                                 </span>
-                                <span className="font-display text-2xl leading-none text-souk-title">
+                                <span className="ms-auto font-display text-2xl leading-none whitespace-nowrap text-souk-title">
                                     {money(total)}
-                                    <span className="ms-1.5 text-sm">TTC</span>
+                                    <span className="ms-1.5 text-sm">
+                                        {t('common.ttc')}
+                                    </span>
                                 </span>
                             </div>
 

@@ -7,39 +7,38 @@ use App\Notifications\LoginCodeNotification;
 use App\Notifications\RegistrationCode;
 use App\Services\LoginCodeService;
 use App\Services\RegistrationCodeService;
+use App\Services\SmsService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 
 /**
- * The unified /login flow — one email field that branches three ways.
+ * The unified /login flow — one "email or phone" field, and a code.
  *
- * There is no /register any more; signing in and signing up share a screen and
- * the server decides which is happening (see Auth\LoginIdentifyController). So
- * the branch itself is the first thing worth pinning, followed by two families
- * of guard:
+ * There is no /register and no password for shoppers: whatever is typed gets
+ * a 6-digit code, to sign in to the account it belongs to or to make one (see
+ * Auth\LoginIdentifyController). Only admins and two-factor accounts keep the
+ * password screen. Three families of guard are pinned here:
  *
- *  - **Resume.** The premise is that someone can close the tab mid-signup and
- *    come back. "You cannot resume on an email alone" is the only thing
- *    standing between this feature and letting a stranger finish somebody
- *    else's signup with their own password.
- *  - **Passwordless eligibility.** An emailed code opens a session, so it must
- *    not become a way around two-factor or a ban.
+ *  - **Resume.** "You cannot resume on an email alone" is what stops a
+ *    stranger finishing somebody else's signup.
+ *  - **Eligibility.** A code opens a session, so it must not become a way
+ *    around two-factor, a ban or an admin's password.
+ *  - **Phones.** Only a number proven by an SMS code signs anyone in.
  */
 beforeEach(function () {
     Notification::fake();
 });
 
 /**
- * Walks steps 1 and 2 and hands back the resume cookie plus the code that was
- * actually mailed, so a test can start from "code accepted" without asserting
- * its way through the earlier steps again.
+ * Starts a signup and hands back the resume cookie plus the code that was
+ * actually mailed.
  *
  * @return array{cookie: string, code: string, pending: PendingRegistration}
  */
 function startSignup(string $email = 'buyer@example.com'): array
 {
-    $response = test()->post(route('login.identify'), ['email' => $email]);
+    $response = test()->post(route('login.identify'), ['identifier' => $email]);
 
     /*
      * Decrypted on the way out and handed back as plaintext, because
@@ -68,7 +67,7 @@ function startSignup(string $email = 'buyer@example.com'): array
     ];
 }
 
-// ── Identify: one field, three outcomes ────────────────────────────────
+// ── Identify: one field ─────────────────────────────────────────────────
 
 test('the front door renders', function () {
     $this->get(route('login'))
@@ -78,15 +77,12 @@ test('the front door renders', function () {
 
 test('/register is gone', function () {
     /*
-     * Signup is not a separate screen any more, and Fortify's registration
-     * feature is switched off — so both its routes must be absent, not merely
-     * unlinked. A lingering `POST /register` would be a second way in that
-     * skips the emailed code entirely.
+     * Fortify's registration feature is switched off — so both its routes
+     * must be absent, not merely unlinked. A lingering `POST /register` would
+     * be a second way in that skips the code entirely.
      *
      * The POST answers 405 rather than 404 because `Route::fallback` at the
-     * foot of routes/web.php is a GET-only catch-all: the URI therefore
-     * resolves, but the method does not. Either way there is no endpoint —
-     * what matters is that nothing handles it.
+     * foot of routes/web.php is a GET-only catch-all.
      */
     $this->get('/register')->assertNotFound();
     $this->post('/register', [])->assertStatus(405);
@@ -95,16 +91,16 @@ test('/register is gone', function () {
         ->and(Route::has('register.store'))->toBeFalse();
 });
 
-test('a known address is routed to the password screen', function () {
+test('a known address gets a sign-in code, not a password screen', function () {
     $user = User::factory()->create(['email' => 'known@example.com']);
 
-    $this->post(route('login.identify'), ['email' => 'known@example.com'])
-        ->assertRedirect(route('login.password'))
-        ->assertSessionHas('login.identified_email', $user->email);
+    $this->post(route('login.identify'), ['identifier' => 'known@example.com'])
+        ->assertRedirect(route('login.code'))
+        ->assertSessionHas(LoginCodeService::SESSION_KEY, 'known@example.com');
 
-    // No signup started, no code sent — this is the sign-in branch.
+    // A sign-in, not a signup.
     expect(PendingRegistration::count())->toBe(0);
-    Notification::assertNothingSent();
+    Notification::assertSentTo($user, LoginCodeNotification::class);
 });
 
 test('a known address is matched regardless of the case it is typed in', function () {
@@ -113,17 +109,43 @@ test('a known address is matched regardless of the case it is typed in', functio
     /*
      * `fortify.lowercase_usernames` is on, so accounts are stored lowercased.
      * Comparing raw input would send someone who capitalised their address
-     * down the signup branch and then collide on the unique index at the end
-     * of it.
+     * down the signup branch and then collide on the unique index.
      */
-    $this->post(route('login.identify'), ['email' => 'Known@Example.COM'])
-        ->assertRedirect(route('login.password'));
+    $this->post(route('login.identify'), ['identifier' => 'Known@Example.COM'])
+        ->assertRedirect(route('login.code'));
 
     expect(PendingRegistration::count())->toBe(0);
 });
 
-test('submitting an email stores a pending registration and mails a code', function () {
-    $this->post(route('login.identify'), ['email' => 'buyer@example.com'])
+test('an admin is sent to the password screen and never gets a code', function () {
+    $admin = User::factory()->create(['email' => 'desk@example.com', 'role' => 'super_admin']);
+
+    $this->post(route('login.identify'), ['identifier' => 'desk@example.com'])
+        ->assertRedirect(route('login.password'));
+
+    $this->get(route('login.password'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('canUseCode', false));
+
+    $this->post(route('login.code.send'))->assertRedirect(route('login.password'));
+
+    expect(LoginCode::count())->toBe(0);
+    Notification::assertNotSentTo($admin, LoginCodeNotification::class);
+});
+
+test('something that is neither an address nor a number is refused under the field', function () {
+    $this->post(route('login.identify'), ['identifier' => 'ahmed.gmail.com'])
+        ->assertSessionHasErrors('identifier');
+
+    $this->post(route('login.identify'), ['identifier' => '06 12'])
+        ->assertSessionHasErrors('identifier');
+
+    expect(PendingRegistration::count())->toBe(0);
+    Notification::assertNothingSent();
+});
+
+test('submitting a new email stores a pending registration and mails a code', function () {
+    $this->post(route('login.identify'), ['identifier' => 'buyer@example.com'])
         ->assertRedirect(route('login.verify'))
         ->assertCookie(RegistrationCodeService::COOKIE);
 
@@ -135,7 +157,7 @@ test('submitting an email stores a pending registration and mails a code', funct
 
     Notification::assertSentOnDemand(RegistrationCode::class);
 
-    // No account yet — that is the entire difference from the old flow.
+    // No account until the code comes back.
     expect(User::where('email', 'buyer@example.com')->exists())->toBeFalse();
 });
 
@@ -147,46 +169,69 @@ test('the code is stored hashed, never in the clear', function () {
 });
 
 test('submitting the same email twice refreshes the one row rather than colliding', function () {
-    $this->post(route('login.identify'), ['email' => 'buyer@example.com']);
-    $this->post(route('login.identify'), ['email' => 'buyer@example.com']);
+    $this->post(route('login.identify'), ['identifier' => 'buyer@example.com']);
+    $this->post(route('login.identify'), ['identifier' => 'buyer@example.com']);
 
     expect(PendingRegistration::where('email', 'buyer@example.com')->count())->toBe(1);
 });
 
 test('re-entering an email voids the previous code and issues a fresh one', function () {
-    ['code' => $first, 'cookie' => $cookie] = startSignup();
+    ['code' => $first] = startSignup();
 
-    // Pass the first code, so there is a verified step to lose.
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.verify.store'), ['code' => $first]);
-
-    expect(PendingRegistration::first()->verified_at)->not->toBeNull();
-
-    /*
-     * Typing the address in again always costs a fresh trip to the inbox and
-     * voids the previous proof — the agreed behaviour. Only an unexpired
-     * resume *cookie* skips the code, never the email path.
-     */
-    $this->post(route('login.identify'), ['email' => 'buyer@example.com']);
+    $this->post(route('login.identify'), ['identifier' => 'buyer@example.com']);
 
     $pending = PendingRegistration::first();
 
-    expect($pending->verified_at)->toBeNull()
-        ->and(Hash::check($first, $pending->code_hash))->toBeFalse();
+    expect(Hash::check($first, $pending->code_hash))->toBeFalse();
 
     Notification::assertSentOnDemandTimes(RegistrationCode::class, 2);
 });
 
-// ── Step 2: the code ────────────────────────────────────────────────────
+test('codes to one address are capped per hour', function () {
+    foreach (range(1, 6) as $ignored) {
+        $this->post(route('login.identify'), ['identifier' => 'buyer@example.com'])
+            ->assertSessionHasNoErrors();
+    }
 
-test('the right code advances to the details step', function () {
+    $this->post(route('login.identify'), ['identifier' => 'buyer@example.com'])
+        ->assertSessionHasErrors('identifier');
+
+    Notification::assertSentOnDemandTimes(RegistrationCode::class, 6);
+});
+
+// ── The code makes the account ─────────────────────────────────────────
+
+test('the right code creates a verified buyer with no password and signs them in', function () {
     ['cookie' => $cookie, 'code' => $code] = startSignup();
 
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->post(route('login.verify.store'), ['code' => $code])
-        ->assertRedirect(route('login.details'));
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('onboarding.show'));
 
-    expect(PendingRegistration::first()->verified_at)->not->toBeNull();
+    $this->assertAuthenticated();
+
+    $user = User::firstWhere('email', 'buyer@example.com');
+
+    expect($user)->not->toBeNull()
+        ->and($user->role)->toBe('buyer')
+        ->and($user->password)->toBeNull()
+        ->and($user->hasPassword())->toBeFalse()
+        ->and($user->terms_accepted)->toBeTruthy()
+        // The code *was* the proof of inbox access.
+        ->and($user->email_verified_at)->not->toBeNull();
+
+    // The pending row is spent.
+    expect(PendingRegistration::count())->toBe(0);
+});
+
+test('a role cannot be smuggled in with the code', function () {
+    ['cookie' => $cookie, 'code' => $code] = startSignup();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $code, 'role' => 'super_admin']);
+
+    expect(User::firstWhere('email', 'buyer@example.com')->role)->toBe('buyer');
 });
 
 test('a wrong code is rejected and counted', function () {
@@ -202,6 +247,8 @@ test('a wrong code is rejected and counted', function () {
 
     expect($pending->attempts)->toBe(1)
         ->and($pending->verified_at)->toBeNull();
+
+    $this->assertGuest();
 });
 
 test('a code stops working after too many wrong guesses', function () {
@@ -211,13 +258,12 @@ test('a code stops working after too many wrong guesses', function () {
         'attempts' => RegistrationCodeService::MAX_ATTEMPTS,
     ]);
 
-    // Even the *correct* code is refused once the counter is spent —
-    // otherwise the limit would only slow an attacker down, not stop them.
+    // Even the *correct* code is refused once the counter is spent.
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->post(route('login.verify.store'), ['code' => $code])
         ->assertSessionHasErrors('code');
 
-    expect(PendingRegistration::first()->verified_at)->toBeNull();
+    $this->assertGuest();
 });
 
 test('an expired code sends the visitor back to the start', function () {
@@ -225,14 +271,11 @@ test('an expired code sends the visitor back to the start', function () {
 
     PendingRegistration::first()->update(['expires_at' => now()->subMinute()]);
 
-    /*
-     * Back to step 1, not "wrong code": an expired row is indistinguishable
-     * from no row at all as far as resuming goes, and dropping them on the
-     * code screen with a dead code would be a dead end.
-     */
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->post(route('login.verify.store'), ['code' => $code])
         ->assertRedirect(route('login'));
+
+    $this->assertGuest();
 });
 
 test('resend is refused while the cooldown is running', function () {
@@ -242,7 +285,6 @@ test('resend is refused while the cooldown is running', function () {
         ->post(route('login.resend'))
         ->assertSessionHasErrors('code');
 
-    // One mail from startSignup, and none from the refused resend.
     Notification::assertSentOnDemandTimes(RegistrationCode::class, 1);
 });
 
@@ -264,46 +306,38 @@ test('resend mails a fresh code once the cooldown has passed', function () {
 
     $pending = PendingRegistration::first();
 
-    // The old code must stop working, and the attempt counter has to reset or
-    // a visitor who mistyped the previous code could never use the new one.
     expect(Hash::check($original, $pending->code_hash))->toBeFalse()
         ->and($pending->attempts)->toBe(0);
 });
 
 // ── Resuming ────────────────────────────────────────────────────────────
 
-test('the code screen is skipped for a signup that already passed it', function () {
-    ['cookie' => $cookie, 'code' => $code] = startSignup();
+test('a verified shopper signup resumed later is finished, not asked again', function () {
+    ['cookie' => $cookie] = startSignup();
 
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.verify.store'), ['code' => $code]);
+    // Verified by the emailed link, say, but the account never made.
+    PendingRegistration::first()->update(['verified_at' => now()]);
 
-    // Coming back to step 2 after closing the tab: forward, not round again.
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->get(route('login.verify'))
         ->assertRedirect(route('login.details'));
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->get(route('login.details'))
+        ->assertRedirect(route('onboarding.show'));
+
+    $this->assertAuthenticated();
+    expect(User::where('email', 'buyer@example.com')->exists())->toBeTrue();
 });
 
-test('the details screen bounces back to the code screen until the code is passed', function () {
+test('the details step bounces back to the code screen until the code is passed', function () {
     ['cookie' => $cookie] = startSignup();
 
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->get(route('login.details'))
         ->assertRedirect(route('login.verify'));
-});
 
-test('the details screen renders for a verified signup', function () {
-    ['cookie' => $cookie, 'code' => $code] = startSignup();
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.verify.store'), ['code' => $code]);
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->get(route('login.details'))
-        ->assertOk()
-        // No `email` prop any more — the screen no longer displays the
-        // confirmed address, and nothing on it needs to.
-        ->assertInertia(fn ($page) => $page->component('auth/login/details'));
+    $this->assertGuest();
 });
 
 test('step 1 offers to resume a signup this browser already started', function () {
@@ -316,7 +350,7 @@ test('step 1 offers to resume a signup this browser already started', function (
             fn ($page) => $page->component('auth/login/identify')
                 ->where('resume.step', 'verify')
                 // Masked, because this page can be reopened days later.
-                ->where('resume.maskedEmail', 'bu•••@example.com'),
+                ->where('resume.maskedContact', 'bu•••@example.com'),
         );
 });
 
@@ -332,33 +366,20 @@ test('without the resume cookie there is nothing to resume', function () {
 });
 
 /**
- * The reason resumption is keyed on the cookie's secret and not on the email.
- *
- * Someone who knows a pending address must not be able to walk up to step 3
- * and finish that signup with a password of their choosing — that would be
- * taking over an inbox they never proved they can read.
+ * The reason resumption is keyed on the cookie's secret and not on the email:
+ * knowing a pending address must not let a stranger finish that signup.
  */
-test('a stranger cannot reach the details step for somebody else\'s pending signup', function () {
+test('a stranger cannot finish somebody else\'s pending signup', function () {
     startSignup('victim@example.com');
 
-    /*
-     * Stamped directly rather than by posting the code, for two reasons: the
-     * guard is what's under test, not the code check — and `withCookie()`
-     * persists on the test client for the rest of the test, so walking the
-     * victim through step 2 over HTTP would leave their resume cookie behind
-     * and the "stranger" below would not be one.
-     */
     PendingRegistration::firstWhere('email', 'victim@example.com')
         ->update(['verified_at' => now()]);
 
     // A different browser: no cookie, and knowing the address buys nothing.
     $this->get(route('login.details'))->assertRedirect(route('login'));
+    $this->post(route('login.details.store'), [])->assertRedirect(route('login'));
 
-    $this->post(route('login.details.store'), detailsPayload([
-        'first_name' => 'Mallory',
-        'phone_number' => '0600000009',
-    ]))->assertRedirect(route('login'));
-
+    $this->assertGuest();
     expect(User::where('email', 'victim@example.com')->exists())->toBeFalse();
 });
 
@@ -370,175 +391,15 @@ test('a forged resume cookie is ignored', function () {
         ->assertRedirect(route('login'));
 });
 
-// ── Step 3: the account ─────────────────────────────────────────────────
-
-/** Walks steps 1 and 2 so a test can post straight at step 3. */
-function verifiedSignup(string $email = 'buyer@example.com'): string
-{
-    ['cookie' => $cookie, 'code' => $code] = startSignup($email);
-
-    test()->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.verify.store'), ['code' => $code]);
-
-    return $cookie;
-}
+// ── Signing in with a code ─────────────────────────────────────────────
 
 /**
- * The whole point of the fast-signup flow: nothing here but a password and
- * consent. `first_name`/`last_name`/`phone_number` are deliberately absent —
- * that is what the real /login/details form sends, and RegistrationController
- * no longer requires any of them for a buyer.
- */
-function detailsPayload(array $overrides = []): array
-{
-    return array_merge([
-        'password' => 'Password!234',
-        'password_confirmation' => 'Password!234',
-        'terms_accepted' => true,
-    ], $overrides);
-}
-
-test('the final step creates an already-verified buyer with no profile yet, and signs them in', function () {
-    $cookie = verifiedSignup();
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), detailsPayload())
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('onboarding.show'));
-
-    $this->assertAuthenticated();
-
-    $user = User::firstWhere('email', 'buyer@example.com');
-
-    expect($user)->not->toBeNull()
-        ->and($user->role)->toBe('buyer')
-        // Nothing was asked for beyond the password, so nothing is set yet —
-        // Buyer\ProfileController is where these get filled in later.
-        ->and($user->first_name)->toBeNull()
-        ->and($user->last_name)->toBeNull()
-        ->and($user->phone_number)->toBeNull()
-        ->and($user->terms_accepted)->toBeTruthy()
-        // The code *was* the proof of inbox access — asking for a second
-        // round-trip through an emailed link would be the same check twice.
-        ->and($user->email_verified_at)->not->toBeNull();
-
-    // The pending row is spent.
-    expect(PendingRegistration::count())->toBe(0);
-});
-
-/**
- * The endpoint still accepts a name and a phone number when they are sent —
- * the artisan branch of this same controller action requires them — a buyer
- * client is simply not obliged to send them any more.
- */
-test('a buyer may still supply a name and phone if they want to', function () {
-    $cookie = verifiedSignup();
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), detailsPayload([
-            'first_name' => 'Achraf',
-            'last_name' => 'Ess',
-            'phone_number' => '0600000001',
-        ]))
-        ->assertSessionHasNoErrors();
-
-    $user = User::firstWhere('email', 'buyer@example.com');
-
-    expect($user->first_name)->toBe('Achraf')
-        ->and($user->last_name)->toBe('Ess')
-        ->and($user->phone_number)->toBe('0600000001');
-});
-
-test('the terms must be accepted', function () {
-    $cookie = verifiedSignup();
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), detailsPayload([
-            'terms_accepted' => false,
-        ]))
-        ->assertSessionHasErrors('terms_accepted');
-
-    $this->assertGuest();
-});
-
-test('a duplicate phone number is rejected instead of hitting the database', function () {
-    User::factory()->create(['phone_number' => '0600000000']);
-
-    $cookie = verifiedSignup();
-
-    /*
-     * users.phone_number carries a UNIQUE index. Without a matching `unique`
-     * validation rule the insert reaches the database and throws a
-     * QueryException — a 500 on the last step of signup rather than a field
-     * error next to the phone input.
-     */
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), detailsPayload([
-            'phone_number' => '0600000000',
-        ]))
-        ->assertSessionHasErrors('phone_number');
-
-    $this->assertGuest();
-    expect(User::where('email', 'buyer@example.com')->exists())->toBeFalse();
-});
-
-/**
- * The role is fixed in the service, not taken from the request. Posting one
- * anyway must not promote the account — the old form's `role` field is not
- * part of this endpoint's contract.
- */
-test('a role cannot be smuggled into the final step', function () {
-    $cookie = verifiedSignup();
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), detailsPayload([
-            'role' => 'super_admin',
-        ]));
-
-    expect(User::firstWhere('email', 'buyer@example.com')->role)->toBe('buyer');
-});
-
-// ── Signing in: the password screen ────────────────────────────────────
-
-/** Identifies as an existing account, leaving the session key behind. */
-function identifyAs(User $user): void
-{
-    test()->post(route('login.identify'), ['email' => $user->email]);
-}
-
-test('the password screen renders for an identified account', function () {
-    $user = User::factory()->create(['email' => 'known@example.com']);
-    identifyAs($user);
-
-    $this->get(route('login.password'))
-        ->assertOk()
-        ->assertInertia(
-            fn ($page) => $page->component('auth/login/password')
-                ->where('email', 'known@example.com')
-                ->where('canUseCode', true),
-        );
-});
-
-test('the password screen and code screen need an identified account', function () {
-    // No session key — nothing has said who this is, so there is nothing to
-    // ask a password for.
-    $this->get(route('login.password'))->assertRedirect(route('login'));
-    $this->get(route('login.code'))->assertRedirect(route('login'));
-    $this->post(route('login.code'))->assertRedirect(route('login'));
-    $this->post(route('login.code.verify'), ['code' => '123456'])
-        ->assertRedirect(route('login'));
-});
-
-// ── Signing in: the emailed code ───────────────────────────────────────
-
-/**
- * Identifies as `$user`, asks for a login code and returns the one that was
- * actually mailed.
+ * Identifies as `$user` — which sends the sign-in code — and returns the code
+ * that was actually mailed.
  */
 function requestLoginCode(User $user): string
 {
-    identifyAs($user);
-    test()->post(route('login.code.send'));
+    test()->post(route('login.identify'), ['identifier' => $user->email]);
 
     $code = null;
     Notification::assertSentTo(
@@ -554,14 +415,52 @@ function requestLoginCode(User $user): string
     return $code;
 }
 
+test('the code screen renders for an identified account', function () {
+    $user = User::factory()->create(['email' => 'known@example.com', 'password' => null]);
+    requestLoginCode($user);
+
+    $this->get(route('login.code'))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page->component('auth/login/code')
+                ->where('channel', 'email')
+                ->where('maskedContact', 'kn•••@example.com')
+                // Never set one: nothing to fall back on.
+                ->where('canUsePassword', false),
+        );
+});
+
+test('an account that still has a password may use it instead', function () {
+    $user = User::factory()->create(['email' => 'known@example.com']);
+    requestLoginCode($user);
+
+    $this->get(route('login.code'))
+        ->assertInertia(fn ($page) => $page->where('canUsePassword', true));
+
+    $this->get(route('login.password'))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page->component('auth/login/password')
+                ->where('email', 'known@example.com')
+                ->where('canUseCode', true),
+        );
+});
+
+test('the password screen and code screen need an identified account', function () {
+    $this->get(route('login.password'))->assertRedirect(route('login'));
+    $this->get(route('login.code'))->assertRedirect(route('login'));
+    $this->post(route('login.code'))->assertRedirect(route('login'));
+    $this->post(route('login.code.verify'), ['code' => '123456'])
+        ->assertRedirect(route('login'));
+});
+
 test('a login code signs an existing account in', function () {
     $user = User::factory()->create(['email' => 'known@example.com', 'role' => 'buyer']);
 
     $code = requestLoginCode($user);
 
     $this->post(route('login.code.verify'), ['code' => $code])
-        // Lands where a password sign-in would — LoginResponse, reused rather
-        // than reimplemented.
+        // Lands where a password sign-in would — LoginResponse, reused.
         ->assertRedirect(route('products.index'));
 
     $this->assertAuthenticatedAs($user);
@@ -633,13 +532,8 @@ test('asking for a second login code is a no-op while the cooldown runs', functi
 });
 
 /**
- * The reason the code path re-checks eligibility on every action instead of
- * trusting the password screen not to have offered it.
- *
- * A code mailed to the address *is* a single factor. If it alone could
- * authenticate, the second factor would be optional in practice for anyone who
- * knows the email — which is the entire population 2FA exists to protect
- * against.
+ * A code mailed to the address is a single factor. If it alone could
+ * authenticate, the second factor would be optional in practice.
  */
 test('two-factor accounts cannot sign in with a code', function () {
     $user = User::factory()->create([
@@ -647,7 +541,8 @@ test('two-factor accounts cannot sign in with a code', function () {
         'two_factor_confirmed_at' => now(),
     ]);
 
-    identifyAs($user);
+    $this->post(route('login.identify'), ['identifier' => $user->email])
+        ->assertRedirect(route('login.password'));
 
     $this->get(route('login.password'))
         ->assertOk()
@@ -665,17 +560,14 @@ test('two-factor accounts cannot sign in with a code', function () {
     Notification::assertNothingSent();
 });
 
-/**
- * A banned account is signed out on any request (see BlockedAccountTest), so
- * there is no point mailing it a code it can never use.
- */
 test('banned accounts cannot sign in with a code', function () {
     $user = User::factory()->create([
         'email' => 'banned@example.com',
         'is_banned' => true,
     ]);
 
-    identifyAs($user);
+    $this->post(route('login.identify'), ['identifier' => $user->email])
+        ->assertRedirect(route('login.password'));
 
     $this->get(route('login.password'))
         ->assertOk()
@@ -688,12 +580,117 @@ test('banned accounts cannot sign in with a code', function () {
     Notification::assertNothingSent();
 });
 
+// ── Phones ──────────────────────────────────────────────────────────────
+
+test('a Moroccan number typed the national way signs up by SMS', function () {
+    $sms = fakeSms();
+
+    $response = $this->post(route('login.identify'), ['identifier' => '06 12 34 56 78'])
+        ->assertRedirect(route('login.verify'));
+
+    // Normalised to E.164, whatever way it was typed.
+    $pending = PendingRegistration::firstWhere('phone', '+212612345678');
+    expect($pending)->not->toBeNull()
+        ->and($pending->email)->toBeNull();
+
+    $code = $sms->codeTo('+212612345678');
+    expect($code)->not->toBeNull();
+    Notification::assertNothingSent();
+
+    $cookie = $response->getCookie(RegistrationCodeService::COOKIE)->getValue();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->get(route('login.verify'))
+        ->assertInertia(
+            fn ($page) => $page->component('auth/login/verify')
+                ->where('channel', 'phone')
+                ->where('maskedContact', '+212 •••••••78'),
+        );
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $code])
+        ->assertSessionHasNoErrors();
+
+    $user = User::firstWhere('phone_number', '+212612345678');
+
+    expect($user)->not->toBeNull()
+        ->and($user->email)->toBeNull()
+        ->and($user->phone_verified_at)->not->toBeNull()
+        ->and($user->hasVerifiedEmail())->toBeTrue();
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('a verified number signs its account in, however it is written', function () {
+    $sms = fakeSms();
+    $user = User::factory()->create([
+        'email' => null,
+        'phone_number' => '+33612345678',
+        'phone_verified_at' => now(),
+        'role' => 'buyer',
+    ]);
+
+    $this->post(route('login.identify'), ['identifier' => '0033 6 12 34 56 78'])
+        ->assertRedirect(route('login.code'));
+
+    $code = $sms->codeTo('+33612345678');
+
+    $this->post(route('login.code.verify'), ['code' => $code])
+        ->assertRedirect(route('products.index'));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('an unverified number on an account opens nothing and starts nothing', function () {
+    $sms = fakeSms();
+
+    // Typed at checkout years ago, never proven — maybe mistyped.
+    User::factory()->create(['phone_number' => '+212612345678', 'phone_verified_at' => null]);
+
+    $this->post(route('login.identify'), ['identifier' => '0612345678'])
+        ->assertSessionHasErrors('identifier');
+
+    expect($sms->sent)->toBe([])
+        ->and(LoginCode::count())->toBe(0)
+        ->and(PendingRegistration::count())->toBe(0);
+});
+
+test('a refused text is reported under the field', function () {
+    $sms = new class extends SmsService
+    {
+        public function available(): bool
+        {
+            return true;
+        }
+
+        public function send(string $to, string $text): void
+        {
+            throw new RuntimeException('provider down');
+        }
+    };
+    app()->instance(SmsService::class, $sms);
+
+    $this->post(route('login.identify'), ['identifier' => '0612345678'])
+        ->assertSessionHasErrors('identifier');
+
+    $this->assertGuest();
+});
+
+test('phone sign-in is refused in production until a real SMS driver is set', function () {
+    config(['services.sms.driver' => 'log']);
+    app()['env'] = 'production';
+
+    expect(app(SmsService::class)->available())->toBeFalse();
+
+    config(['services.sms.driver' => 'twilio']);
+
+    expect(app(SmsService::class)->available())->toBeTrue();
+
+    app()['env'] = 'testing';
+});
+
 // ── The two non-shopper doors ───────────────────────────────────────────
 
-/*
- * The routes and names here are what the cards on /login link to, so a rename
- * breaks the front door silently. Pinned.
- */
 test('the artisan door renders', function () {
     $this->get(route('sell'))
         ->assertOk()
@@ -704,4 +701,116 @@ test('the trade door renders', function () {
     $this->get(route('business'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('join/business'));
+});
+
+// ── Signing in with the email's link ───────────────────────────────────
+
+/** Asks for a sign-in code for `$user` and returns the link that was mailed. */
+function requestLoginLink(User $user): string
+{
+    test()->post(route('login.identify'), ['identifier' => $user->email]);
+
+    $url = null;
+    Notification::assertSentTo($user, LoginCodeNotification::class, function (LoginCodeNotification $n) use (&$url) {
+        $url = $n->url;
+
+        return true;
+    });
+
+    expect($url)->not->toBeNull();
+
+    return $url;
+}
+
+test('the sign-in email carries a one-click link beside the code', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    requestLoginLink($user);
+
+    Notification::assertSentTo($user, LoginCodeNotification::class, function (LoginCodeNotification $n) use ($user) {
+        $html = (string) $n->toMail($user)->render();
+
+        return str_contains($html, e($n->url)) && str_contains($html, $n->code);
+    });
+});
+
+test('opened in the browser that asked, the link signs in at once', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    $link = requestLoginLink($user);
+
+    $this->get($link)->assertRedirect(route('products.index'));
+
+    $this->assertAuthenticatedAs($user);
+    expect(LoginCode::count())->toBe(0);
+
+    // The code tab, still polling: already signed in, so it just goes on.
+    $this->get(route('login.code'))->assertRedirect(route('products.index'));
+});
+
+test('opened elsewhere, the link only asks — and confirming lets the asking window sign in', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    $link = requestLoginLink($user);
+    $asking = session()->all();
+
+    // Another device: no session of the asking browser.
+    $this->flushSession();
+
+    $this->get($link)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('auth/login/link')->where('confirmed', false));
+    $this->assertGuest();
+
+    $this->post($link)->assertRedirect($link);
+    $this->assertGuest();
+    expect(LoginCode::first()->verified_at)->not->toBeNull();
+
+    // The asking browser's code screen, polling, signs in by itself.
+    $this->flushSession();
+    $this->withSession($asking)
+        ->get(route('login.code'))
+        ->assertRedirect(route('products.index'));
+
+    $this->assertAuthenticatedAs($user);
+    expect(LoginCode::count())->toBe(0);
+});
+
+test('"continue on this device" signs in where the link was opened', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    $link = requestLoginLink($user);
+    $this->flushSession();
+
+    $this->post($link, ['here' => true])->assertRedirect(route('products.index'));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('a sign-in link dies with its code, and a resend retires it', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    $first = requestLoginLink($user);
+
+    $this->travel(LoginCodeService::RESEND_COOLDOWN_SECONDS + 1)->seconds();
+    $this->post(route('login.code.send'));
+
+    $this->flushSession();
+    $this->get($first)->assertRedirect(route('login'))->assertSessionHas('error');
+
+    $latest = null;
+    Notification::assertSentTo($user, LoginCodeNotification::class, function ($n) use (&$latest) {
+        $latest = $n->url;
+
+        return true;
+    });
+
+    $this->travel(LoginCodeService::CODE_TTL_MINUTES + 1)->minutes();
+    $this->post($latest, ['here' => true])->assertRedirect(route('login'));
+
+    $this->assertGuest();
+});
+
+test('a tampered sign-in link is refused', function () {
+    $user = User::factory()->create(['role' => 'buyer']);
+    $link = requestLoginLink($user);
+    $this->flushSession();
+
+    $this->post($link.'x', ['here' => true])->assertRedirect(route('login'));
+    $this->assertGuest();
 });

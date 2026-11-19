@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePoll } from '@inertiajs/react';
 import { useTranslation } from '@/hooks/use-translation';
 import { login } from '@/routes';
 import { resend } from '@/routes/login';
@@ -6,7 +6,9 @@ import { store as verifyCode } from '@/routes/login/verify';
 import CodeEntry from './CodeEntry';
 
 /**
- * Signup step 2: the 6-digit code that proves a brand-new address is theirs.
+ * Signup: the 6-digit code that proves a brand-new address or number is
+ * theirs — and for a shopper, the last step: the account is made the moment
+ * it is accepted.
  *
  * Deliberately bare — no AuthShell chrome (top bar, logo, step indicator,
  * thumbnail strip). This is the one screen in the flow someone reaches
@@ -21,17 +23,28 @@ import CodeEntry from './CodeEntry';
  * profile completion rather than a session.
  */
 export default function LoginVerify({
-    maskedEmail,
+    maskedContact,
+    channel,
     resendIn,
     locked,
 }: {
-    maskedEmail: string;
+    maskedContact: string;
+    /** Whether the code went by email or SMS. */
+    channel: 'email' | 'phone';
     /** Seconds left on the resend cooldown when the page was rendered. */
     resendIn: number;
     /** The current code has taken all the wrong guesses it will take. */
     locked: boolean;
 }) {
     const { t } = useTranslation();
+
+    /*
+     * The signup email also has a "confirm" button. Someone who presses it
+     * instead of typing the code — in another tab, or on their phone — is
+     * noticed here within a few seconds: the server sees the signup
+     * confirmed and this screen moves on by itself.
+     */
+    usePoll(3000, {}, { keepAlive: false, autoStart: channel === 'email' });
 
     return (
         <>
@@ -42,15 +55,20 @@ export default function LoginVerify({
                     <h1 className="font-display text-[clamp(1.5rem,3.2vw,2rem)] leading-[1.1] tracking-[-0.02em] text-souk-title">
                         {t('common.auth.login.verify_title')}{' '}
                         <span className="text-souk-brown">
-                            {t('common.auth.login.verify_title_accent')}
+                            {t(
+                                channel === 'phone'
+                                    ? 'common.auth.login.title_accent_sms'
+                                    : 'common.auth.login.verify_title_accent',
+                            )}
                         </span>
                     </h1>
 
                     <p className="mt-2.5 text-sm leading-relaxed text-souk-brown-deep/70">
-                        {t('common.auth.login.verify_subtitle').replace(
-                            ':email',
-                            maskedEmail,
-                        )}
+                        {t(
+                            channel === 'phone'
+                                ? 'common.auth.login.verify_subtitle_sms'
+                                : 'common.auth.login.verify_subtitle',
+                        ).replace(':email', maskedContact)}
                     </p>
 
                     <CodeEntry
@@ -58,8 +76,14 @@ export default function LoginVerify({
                         resendUrl={resend.url()}
                         resendIn={resendIn}
                         locked={locked}
-                        submitLabel={t('common.auth.login.verify_submit')}
+                        submitLabel={t(
+                            channel === 'phone'
+                                ? 'common.auth.login.verify_submit_sms'
+                                : 'common.auth.login.verify_submit',
+                        )}
                         testId="login-verify-button"
+                        channel={channel}
+                        withLink
                     />
 
                     <p className="mt-5 text-center text-sm text-souk-brown-deep/65">
@@ -67,7 +91,7 @@ export default function LoginVerify({
                             href={login()}
                             className="text-souk-brown underline underline-offset-4 transition-colors hover:text-souk-brown-deep"
                         >
-                            {t('common.auth.login.wrong_email')}
+                            {t('common.auth.login.wrong_contact')}
                         </Link>
                     </p>
                 </div>

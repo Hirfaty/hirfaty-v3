@@ -138,10 +138,15 @@ class ProductScoringService
     // ─── Private ─────────────────────────────────────────────
     private function recordView(int $productId): void
     {
+        // The signed-in account, if it still exists: Auth::id() reads the
+        // session even after the account was deleted, and that id would
+        // fail the foreign key and take the product page down.
+        $userId = auth()->user()?->id;
+
         // Avoid counting the same user/IP multiple times per hour
         $alreadyViewed = ProductView::where('product_id', $productId)
-            ->where(function ($q) {
-                $q->where('user_id', auth()->id())
+            ->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
                     ->orWhere('ip_address', request()->ip());
             })
             ->where('viewed_at', '>=', now()->subHour())
@@ -150,7 +155,7 @@ class ProductScoringService
         if (! $alreadyViewed) {
             ProductView::create([
                 'product_id' => $productId,
-                'user_id' => auth()->id(),
+                'user_id' => $userId,
                 'ip_address' => request()->ip(),
                 'viewed_at' => now(),
             ]);

@@ -185,8 +185,8 @@ return [
 
     // Sign-in gate
     'detail.login_to_buy' => 'Sign in to buy',
-    'detail.login_to_buy_hint' => 'Your basket and your prices follow your account.',
-    'detail.login_to_buy_register' => 'Create an account',
+    'detail.login_to_buy_hint' => 'No account needed: you will give your email or phone when you order. Already a customer?',
+    'detail.login_to_buy_register' => 'Sign in',
     'detail.below_min_qty' => 'Not enough stock for your minimum order',
     'detail.below_min_stock' => 'Only :count left — your minimum order is :min',
 
@@ -273,8 +273,6 @@ return [
     // ── /account: identity, password, default address ────────────────────
     'account.section_identity' => 'Personal details',
     'account.section_identity_desc' => 'The name your orders and delivery notes are made out to.',
-    'account.section_password' => 'Password',
-    'account.section_password_desc' => 'Choose a new password. You will stay signed in on this device.',
     'account.section_address' => 'Default delivery address',
     'account.section_address_desc' => 'Where your orders are sent. Checkout fills this in for you.',
 
@@ -285,12 +283,6 @@ return [
     'account.field_email' => 'Email address',
     'account.field_phone' => 'Phone',
     'account.locked_note' => 'Your email address and phone number can\'t be changed here for now — get in touch and we\'ll update them for you.',
-
-    'account.field_password' => 'Password',
-    'account.change_password' => 'Change password',
-    'account.field_current_password' => 'Current password',
-    'account.field_new_password' => 'New password',
-    'account.field_confirm_password' => 'Confirm new password',
 
     'account.no_address' => 'No address saved yet.',
     'account.add_address' => 'Add an address',
@@ -305,8 +297,6 @@ return [
     'account.field_recipient_phone' => 'Recipient\'s phone',
 
     'account.saved' => 'Saved.',
-    'account.update_password' => 'Update password',
-    'account.password_saved' => 'Password updated.',
     'account.save_address' => 'Save address',
 
     'account.profile_saved' => 'Your details have been updated.',
@@ -358,6 +348,8 @@ return [
     'cart.subtotal' => 'Subtotal',
     'cart.savings' => 'Savings',
     'cart.total' => 'Total',
+    'cart.delivery' => 'Delivery',
+    'cart.delivery_at_checkout' => 'Calculated at payment',
     'cart.checkout' => 'Checkout',
     'cart.secure_payment' => 'Secure payment',
     'cart.split_note' => 'Your cart will be split into one order per workshop.',
@@ -375,6 +367,7 @@ return [
     'checkout.use_new_address' => 'Use another address',
     'checkout.new_address' => 'New address',
     'checkout.city' => 'City',
+    'checkout.city_name_placeholder' => 'e.g. London',
     'checkout.address_line' => 'Full address',
     'checkout.address_placeholder' => 'Street, neighbourhood, house number…',
     'checkout.phone' => 'Phone',
@@ -396,12 +389,14 @@ return [
     'checkout.summary' => 'Summary',
     'checkout.products' => 'Items (:count)',
     'checkout.delivery_fee' => 'Delivery fee',
+    'checkout.delivery_quoting' => 'Calculating the delivery price…',
     'checkout.delivery_service_heading' => 'Delivery method',
     'checkout.total' => 'Total',
     'checkout.processing' => 'Processing…',
 
     'checkout.err_address' => 'Please provide a delivery address.',
     'checkout.err_city' => 'Please choose a city.',
+    'checkout.err_city_name' => 'Enter the town or city.',
     'checkout.err_phone' => 'A phone number is required for delivery.',
     'checkout.err_empty' => 'Your cart is empty.',
     'checkout.err_buy_now_gone' => 'This piece is no longer available. Go back to its page to try again.',
@@ -525,4 +520,32 @@ return [
     'cancel_reason.delay' => 'The making time would be too long',
     'cancel_reason.duplicate' => 'The order was placed twice',
     'cancel_reason.pricing_error' => 'A pricing error on the piece',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'checkout.contact_heading' => 'Where should we send your order?',
+    'checkout.contact_intro' => 'Enter your email or phone: we will send the confirmation and tracking there. No account or password to create.',
+    'checkout.contact_send' => 'Get a code',
+    'checkout.contact_code_sent' => 'Code sent — enter it below.',
+    'checkout.contact_sent_email' => 'Code sent by email to',
+    'checkout.contact_sent_sms' => 'Code sent by SMS to',
+    'checkout.contact_code_label' => '6-digit code',
+    'checkout.contact_verify' => 'Confirm',
+    'checkout.contact_change' => 'Change',
+    'checkout.contact_wrong_hint' => 'Nothing arrived? Check it is really yours above — if not, tap “Change”.',
+    'checkout.contact_resend' => 'Resend the code',
+    'checkout.contact_resend_in' => 'Resend in :seconds s',
+    'checkout.contact_confirmed' => 'Confirmed — you can complete your order.',
+    'checkout.contact_expired' => 'The code has expired — enter your email or phone again.',
+    'checkout.contact_needed' => 'First confirm your email or phone, at the top of the page.',
+    'checkout.contact_why' => 'The code makes sure it is really yours: with a typo, you would get neither the confirmation nor the tracking.',
+    'checkout.email_placeholder' => 'you@example.com',
+    'checkout.err_email' => 'Please enter a valid email address.',
+    'order_placed.sms' => 'A summary has been sent by SMS to :email.',
+    'sms.order_placed' => 'Hirfaty: order :reference confirmed, thank you! Track it here: :url',
+    'sms.order_confirmed' => 'Hirfaty: your order :reference is being prepared. Tracking: :url',
+    'sms.order_shipped' => 'Hirfaty: your order :reference is on its way. Tracking: :url',
+    'sms.order_delivered' => 'Hirfaty: your order :reference has been delivered. Thank you! Details: :url',
+    'sms.order_cancelled' => 'Hirfaty: your order :reference has been cancelled. Details: :url',
+    'checkout.contact_or_link' => 'Or just click the button in the email: this page will carry on by itself.',
+    'checkout.contact_link_confirmed' => 'Email confirmed — one moment…',
 ];

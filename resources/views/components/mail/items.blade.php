@@ -68,7 +68,7 @@
                         @endif
                     </td>
                     <td align="center" style="{{ $cell }} color:{{ $theme['muted'] }};" dir="ltr">&times; {{ $item->quantity }}</td>
-                    <td align="{{ $end }}" style="{{ $cell }}" dir="ltr">{{ number_format($item->subtotal, 2) }} MAD</td>
+                    <td align="{{ $end }}" style="{{ $cell }}" dir="ltr">{{ number_format($item->subtotal, 2) }} {{ $rtl ? 'د.م.' : 'MAD' }}</td>
                 </tr>
             @endforeach
         </table>

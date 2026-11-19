@@ -136,10 +136,21 @@ test('buy now is refused for what the cart would refuse', function () {
         ->assertRedirect(route('cart.show'));
 });
 
-test('a guest is sent to sign in first', function () {
+test('a visitor goes straight to checkout, and must confirm a contact to pay', function () {
     $setup = buyNowSetup();
 
     $this->post(route('checkout.buy_now.start'), ['product_id' => $setup['tajine']->id, 'quantity' => 1])
+        ->assertRedirect(route('checkout.buy_now'));
+
+    $this->get(route('checkout.buy_now'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('buyer/checkout')
+            ->has('items', 1)
+            ->where('contact.step', 'enter'));
+
+    // Paying needs the account the contact box makes.
+    $this->post(route('checkout.store'), ['buy_now' => true] + $setup['payload'])
         ->assertRedirect(route('login'));
 });
 

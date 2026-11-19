@@ -32,6 +32,7 @@ class LoginCode extends Model
         return [
             'expires_at' => 'datetime',
             'last_sent_at' => 'datetime',
+            'verified_at' => 'datetime',
         ];
     }
 

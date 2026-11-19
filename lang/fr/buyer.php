@@ -186,8 +186,8 @@ return [
 
     // Sign-in gate
     'detail.login_to_buy' => 'Connectez-vous pour acheter',
-    'detail.login_to_buy_hint' => 'Votre panier et vos prix suivent votre compte.',
-    'detail.login_to_buy_register' => 'Créer un compte',
+    'detail.login_to_buy_hint' => 'Pas besoin de compte : vous indiquerez votre e-mail ou votre téléphone en commandant. Déjà client ?',
+    'detail.login_to_buy_register' => 'Se connecter',
     'detail.below_min_qty' => 'Stock insuffisant pour votre commande minimum',
     'detail.below_min_stock' => 'Plus que :count en stock — votre minimum est de :min',
 
@@ -274,8 +274,6 @@ return [
     // ── /account : identité, mot de passe, adresse par défaut ─────────────
     'account.section_identity' => 'Informations personnelles',
     'account.section_identity_desc' => 'Le nom au nom duquel vos commandes et bons de livraison sont établis.',
-    'account.section_password' => 'Mot de passe',
-    'account.section_password_desc' => 'Choisissez un nouveau mot de passe. Vous resterez connecté sur cet appareil.',
     'account.section_address' => 'Adresse de livraison par défaut',
     'account.section_address_desc' => 'Où vos commandes sont envoyées. Le paiement la renseigne pour vous.',
 
@@ -286,12 +284,6 @@ return [
     'account.field_email' => 'Adresse e-mail',
     'account.field_phone' => 'Téléphone',
     'account.locked_note' => 'Votre adresse e-mail et votre téléphone ne sont pas modifiables ici pour le moment — contactez-nous et nous les mettrons à jour.',
-
-    'account.field_password' => 'Mot de passe',
-    'account.change_password' => 'Changer le mot de passe',
-    'account.field_current_password' => 'Mot de passe actuel',
-    'account.field_new_password' => 'Nouveau mot de passe',
-    'account.field_confirm_password' => 'Confirmer le nouveau mot de passe',
 
     'account.no_address' => 'Aucune adresse enregistrée.',
     'account.add_address' => 'Ajouter une adresse',
@@ -306,8 +298,6 @@ return [
     'account.field_recipient_phone' => 'Téléphone du destinataire',
 
     'account.saved' => 'Enregistré.',
-    'account.update_password' => 'Mettre à jour le mot de passe',
-    'account.password_saved' => 'Mot de passe mis à jour.',
     'account.save_address' => 'Enregistrer l\'adresse',
 
     'account.profile_saved' => 'Vos informations ont été mises à jour.',
@@ -359,6 +349,8 @@ return [
     'cart.subtotal' => 'Sous-total',
     'cart.savings' => 'Économies',
     'cart.total' => 'Total',
+    'cart.delivery' => 'Livraison',
+    'cart.delivery_at_checkout' => 'Calculée au moment du paiement',
     'cart.checkout' => 'Passer commande',
     'cart.secure_payment' => 'Paiement sécurisé',
     'cart.split_note' => 'Votre panier sera réparti en une commande par atelier.',
@@ -376,6 +368,7 @@ return [
     'checkout.use_new_address' => 'Utiliser une autre adresse',
     'checkout.new_address' => 'Nouvelle adresse',
     'checkout.city' => 'Ville',
+    'checkout.city_name_placeholder' => 'Ex. : Paris',
     'checkout.address_line' => 'Adresse complète',
     'checkout.address_placeholder' => 'Rue, quartier, numéro de maison…',
     'checkout.phone' => 'Téléphone',
@@ -397,12 +390,14 @@ return [
     'checkout.summary' => 'Récapitulatif',
     'checkout.products' => 'Produits (:count)',
     'checkout.delivery_fee' => 'Frais de livraison',
+    'checkout.delivery_quoting' => 'Calcul du tarif de livraison…',
     'checkout.delivery_service_heading' => 'Mode de livraison',
     'checkout.total' => 'Total',
     'checkout.processing' => 'Traitement en cours…',
 
     'checkout.err_address' => 'Indiquez une adresse de livraison.',
     'checkout.err_city' => 'Choisissez une ville.',
+    'checkout.err_city_name' => 'Indiquez la ville.',
     'checkout.err_phone' => 'Un numéro de téléphone est requis pour la livraison.',
     'checkout.err_empty' => 'Votre panier est vide.',
     'checkout.err_buy_now_gone' => 'Cette pièce n’est plus disponible. Retournez sur sa page pour réessayer.',
@@ -527,4 +522,32 @@ return [
     'cancel_reason.delay' => 'Le délai de fabrication serait trop long',
     'cancel_reason.duplicate' => 'Commande passée en double',
     'cancel_reason.pricing_error' => 'Erreur de prix sur la pièce',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'checkout.contact_heading' => 'Où vous envoyer la commande ?',
+    'checkout.contact_intro' => 'Saisissez votre e-mail ou votre téléphone : nous y enverrons la confirmation et le suivi. Pas de compte ni de mot de passe à créer.',
+    'checkout.contact_send' => 'Recevoir un code',
+    'checkout.contact_code_sent' => 'Code envoyé — saisissez-le ci-dessous.',
+    'checkout.contact_sent_email' => 'Code envoyé par e-mail à',
+    'checkout.contact_sent_sms' => 'Code envoyé par SMS au',
+    'checkout.contact_code_label' => 'Code à 6 chiffres',
+    'checkout.contact_verify' => 'Confirmer',
+    'checkout.contact_change' => 'Modifier',
+    'checkout.contact_wrong_hint' => 'Rien reçu ? Vérifiez que c\'est bien le vôtre ci-dessus — sinon, « Modifier ».',
+    'checkout.contact_resend' => 'Renvoyer le code',
+    'checkout.contact_resend_in' => 'Renvoyer dans :seconds s',
+    'checkout.contact_confirmed' => 'C\'est confirmé — vous pouvez finaliser votre commande.',
+    'checkout.contact_expired' => 'Le code a expiré — saisissez à nouveau votre e-mail ou votre téléphone.',
+    'checkout.contact_needed' => 'Confirmez d\'abord votre e-mail ou votre téléphone, en haut de la page.',
+    'checkout.contact_why' => 'Le code nous assure que c\'est bien le vôtre : avec une faute de frappe, vous ne recevriez ni la confirmation ni le suivi.',
+    'checkout.email_placeholder' => 'vous@exemple.com',
+    'checkout.err_email' => 'Indiquez une adresse e-mail valide.',
+    'order_placed.sms' => 'Un récapitulatif a été envoyé par SMS au :email.',
+    'sms.order_placed' => 'Hirfaty : commande :reference confirmée, merci ! Suivez-la ici : :url',
+    'sms.order_confirmed' => 'Hirfaty : votre commande :reference est en préparation. Suivi : :url',
+    'sms.order_shipped' => 'Hirfaty : votre commande :reference est en route. Suivi : :url',
+    'sms.order_delivered' => 'Hirfaty : votre commande :reference a été livrée. Merci ! Détails : :url',
+    'sms.order_cancelled' => 'Hirfaty : votre commande :reference a été annulée. Détails : :url',
+    'checkout.contact_or_link' => 'Ou cliquez simplement sur le bouton dans l\'e-mail : cette page continuera d\'elle-même.',
+    'checkout.contact_link_confirmed' => 'E-mail confirmé — un instant…',
 ];

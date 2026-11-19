@@ -18,9 +18,12 @@ import type { BuyerPurchase } from '@/types/orders';
 export default function CheckoutConfirmation({
     purchase,
     email,
+    contactChannel,
 }: {
     purchase: BuyerPurchase;
+    /** Where the summary went: an address, or a number (by SMS). */
     email: string | null;
+    contactChannel: 'email' | 'phone' | null;
 }) {
     const { t } = useTranslation();
     const { money } = useCurrency();
@@ -30,9 +33,11 @@ export default function CheckoutConfirmation({
         .filter(Boolean)
         .join(', ');
 
-    const [emailBefore, emailAfter = ''] = t('buyer.order_placed.email').split(
-        ':email',
-    );
+    const [emailBefore, emailAfter = ''] = t(
+        contactChannel === 'phone'
+            ? 'buyer.order_placed.sms'
+            : 'buyer.order_placed.email',
+    ).split(':email');
 
     const steps = [
         { icon: ClipboardCheck, text: t('buyer.order_placed.step_confirm') },
@@ -147,7 +152,8 @@ export default function CheckoutConfirmation({
                                     {t('buyer.orders.total')}
                                 </dt>
                                 <dd className="font-display font-semibold tabular-nums">
-                                    {money(purchase.total_amount)} TTC
+                                    {money(purchase.total_amount)}{' '}
+                                    {t('common.ttc')}
                                 </dd>
                             </div>
                             {/* Absent for a purchase from before online payment. */}

@@ -2,6 +2,9 @@
 
 use App\Models\Media;
 use App\Services\Cathedis\CathedisShipmentService;
+use App\Services\DhlExpress\DhlExpressClient;
+use App\Services\DhlExpress\DhlExpressException;
+use App\Services\DhlExpress\DhlShipmentService;
 use App\Services\MediaHealthService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Inspiring;
@@ -68,6 +71,63 @@ Artisan::command('cathedis:refresh-deliveries', function (CathedisShipmentServic
 })->purpose("Read Cathedis parcels' statuses and carry them onto the orders");
 
 Schedule::command('cathedis:refresh-deliveries')->everyThirtyMinutes()->withoutOverlapping();
+
+/*
+ * ── DHL Express shipments ──────────────────────────────────────────
+ *
+ * Reads the checkpoints of every shipment still on its way, 200 per call,
+ * and carries them onto the orders: "shipped" at DHL's first checkpoint,
+ * "delivered" at OK (the buyer is emailed both times), tracking notes in
+ * between, and an alert in the admin bell for a bad address, a refusal,
+ * unpaid duties or a return — see DhlShipmentService::refreshOpen.
+ */
+Artisan::command('dhl:refresh-shipments', function (DhlShipmentService $shipments) {
+    $result = $shipments->refreshOpen();
+
+    $this->info("{$result['checked']} DHL shipment(s) checked, {$result['changed']} moved, {$result['failed']} failed.");
+})->purpose('Read DHL Express checkpoints and carry them onto the orders');
+
+Schedule::command('dhl:refresh-shipments')->everyThirtyMinutes()->withoutOverlapping();
+
+/*
+ * Checks the DHL Express settings without shipping anything: the login (an
+ * address check, Paris 75001) and the account (a price for a 1 kg box from
+ * the desk to Paris). Run it after changing DHL_EXPRESS_* in .env.
+ */
+Artisan::command('dhl:check', function (DhlExpressClient $dhl) {
+    $this->line('Environnement : '.$dhl->baseUrl().($dhl->isTest() ? ' (TEST)' : ' (PRODUCTION)'));
+
+    if (! $dhl->isConfigured()) {
+        $this->error('DHL_EXPRESS_USERNAME, DHL_EXPRESS_PASSWORD et DHL_EXPRESS_ACCOUNT_NUMBER doivent être renseignés.');
+
+        return 1;
+    }
+
+    try {
+        $towns = collect($dhl->validateAddress('FR', '75001'))->pluck('cityName')->filter()->unique()->implode(', ');
+        $this->info('✓ Identifiants acceptés — 75001 (FR) : '.($towns ?: 'aucune ville'));
+
+        $rates = $dhl->rates([
+            'originCountryCode' => config('services.dhl_express.shipper.country', 'MA'),
+            'originCityName' => config('services.dhl_express.shipper.city', 'Casablanca'),
+            'originPostalCode' => config('services.dhl_express.shipper.postal_code'),
+            'destinationCountryCode' => 'FR',
+            'destinationCityName' => 'Paris',
+            'destinationPostalCode' => '75001',
+        ]);
+
+        foreach ($rates as $product) {
+            $price = collect($product['totalPrice'] ?? [])->firstWhere('currencyType', 'BILLC') ?? ($product['totalPrice'][0] ?? []);
+            $this->info(sprintf('✓ Compte accepté — %s (%s) : %s %s', $product['productName'] ?? '?', $product['productCode'] ?? '?', $price['price'] ?? '?', $price['priceCurrency'] ?? ''));
+        }
+    } catch (DhlExpressException $e) {
+        $this->error('✗ DHL : '.$e->getMessage().($e->details ? ' — '.implode(' · ', $e->details) : ''));
+
+        return 1;
+    }
+
+    return 0;
+})->purpose('Check the DHL Express login and account without shipping anything');
 
 /*
  * ── Unpaid card purchases ───────────────────────────────────────────

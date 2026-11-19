@@ -6,7 +6,9 @@ use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryService;
+use App\Services\DhlExpress\DhlRateService;
 use Closure;
+use Database\Seeders\DhlDeliveryRateSeeder;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -21,8 +23,9 @@ use Illuminate\Validation\ValidationException;
  * A service prices in one of two ways (`DeliveryService::pricing`):
  *  - per destination (Cathedis): the fee on the `delivery_rates` row — per
  *    Moroccan city, or per whole country (`city_id` null);
- *  - by weight (DHL Express): the row only gives the country's zone, and
- *    WeightPricingService prices the basket's weight on that zone's grid.
+ *  - by weight (DHL Express): DHL's own price for the basket, asked live
+ *    (DhlRateService); when DHL cannot answer, the row's zone and
+ *    WeightPricingService's grid price the basket's weight instead.
  *
  * Every carrier's card together is the list of destinations: checkout offers
  * a country if any active service has a row for it, and bills it with the
@@ -56,16 +59,31 @@ class DeliveryFeeService
         private readonly WeightPricingService $weightPricing,
         private readonly ProductShippingService $shipping,
         private readonly CountryService $countries,
+        private readonly DhlRateService $dhlRates,
     ) {}
 
     /**
      * @param  int|null  $cityId  Only meaningful for Morocco, which is priced per city.
      * @param  iterable<CartItem>  $lines  The basket — read only by a weight-priced service.
+     * @param  string|null  $postalCode  Abroad, for DHL's remote-area surcharge.
      */
-    public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null, iterable $lines = []): float
+    public function resolve(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null, iterable $lines = [], ?string $postalCode = null): float
     {
+        return $this->quote($countryCode, $cityId, $service, $lines, $postalCode)['fee'];
+    }
+
+    /**
+     * resolve(), and whether the fee is DHL's live price rather than a card's.
+     *
+     * @param  iterable<CartItem>  $lines
+     * @return array{fee: float, live: bool}
+     */
+    public function quote(?string $countryCode, ?int $cityId = null, ?DeliveryService $service = null, iterable $lines = [], ?string $postalCode = null): array
+    {
+        $card = fn (?float $fee) => ['fee' => $fee ?? self::FALLBACK_FEE, 'live' => false];
+
         if (! $countryCode) {
-            return self::FALLBACK_FEE;
+            return $card(null);
         }
 
         $service ??= $this->defaultService();
@@ -73,24 +91,37 @@ class DeliveryFeeService
         // Service row gone (fresh DB, a seeder that never ran) — no card to
         // quote from, so fall back like a destination with no rate.
         if ($service === null) {
-            return self::FALLBACK_FEE;
+            return $card(null);
         }
 
         $rate = $this->rateFor($service, $countryCode, $cityId);
 
+        // The card is still the list of destinations: no row, no delivery.
         if ($rate === null) {
-            return self::FALLBACK_FEE;
+            return $card(null);
+        }
+
+        if ($service->slug === DhlDeliveryRateSeeder::SLUG) {
+            $live = $this->dhlRates->quote($service, $countryCode, $postalCode, $lines);
+
+            if ($live !== null) {
+                return ['fee' => $live, 'live' => true];
+            }
         }
 
         if ($service->isWeightPriced()) {
-            $quote = $rate->zone === null
+            return $card($rate->zone === null
                 ? null
-                : $this->weightPricing->quoteForZone($service, $rate->zone, $this->shipping->pieces($lines));
-
-            return $quote ?? self::FALLBACK_FEE;
+                : $this->weightPricing->quoteForZone($service, $rate->zone, $this->shipping->pieces($lines)));
         }
 
-        return $rate->fee !== null ? (float) $rate->fee : self::FALLBACK_FEE;
+        return $card($rate->fee !== null ? (float) $rate->fee : null);
+    }
+
+    /** The carriers whose price checkout asks live once the destination is known. */
+    public function liveQuotedSlugs(): array
+    {
+        return $this->dhlRates->enabled() ? [DhlDeliveryRateSeeder::SLUG] : [];
     }
 
     /**

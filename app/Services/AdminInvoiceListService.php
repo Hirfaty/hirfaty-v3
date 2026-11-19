@@ -187,9 +187,9 @@ class AdminInvoiceListService
                 'name' => match (true) {
                     $buyer === null => 'Compte supprimé',
                     $buyerName !== '' => $buyerName,
-                    default => $buyer->email ?? '—',
+                    default => $buyer->reachableEmail() ?? '—',
                 },
-                'email' => $buyer?->email,
+                'email' => $buyer?->reachableEmail(),
             ],
             'stores' => $orders->map(fn (Order $order) => $order->store?->store_name)->filter()->unique()->values(),
             'products_total' => $productsTotal,

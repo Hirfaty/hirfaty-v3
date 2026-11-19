@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\NotifiesBuyer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,7 +20,7 @@ use Illuminate\Notifications\Notification;
  */
 class OrderPlaced extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use NotifiesBuyer, Queueable;
 
     /**
      * @param  Collection  $orders  Every order the checkout produced, with
@@ -27,9 +28,9 @@ class OrderPlaced extends Notification implements ShouldQueue
      */
     public function __construct(public Collection $orders) {}
 
-    public function via(object $notifiable): array
+    protected function smsKey(): string
     {
-        return ['mail'];
+        return 'buyer.sms.order_placed';
     }
 
     public function toMail($notifiable): MailMessage

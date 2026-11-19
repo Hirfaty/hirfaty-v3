@@ -50,11 +50,11 @@ return [
     // ── Identification : le champ e-mail ─────────────────────────────────
     'auth.login.identify_title' => 'Connectez-vous ou',
     'auth.login.identify_title_accent' => 'créez votre compte',
-    'auth.login.identify_subtitle' => 'Vous ne savez plus si vous avez déjà un compte ? Saisissez votre e-mail, nous vérifions pour vous.',
-    'auth.login.email_required' => 'Adresse e-mail (obligatoire)',
+    'auth.login.identify_subtitle' => 'Pas de mot de passe : saisissez votre e-mail ou votre numéro de téléphone, nous vous envoyons un code.',
+    'auth.login.email_required' => 'E-mail ou numéro de téléphone',
     'auth.login.identify_submit' => 'Continuer',
-    'auth.login.privacy_note' => 'La protection de vos informations personnelles est notre priorité. Votre e-mail ne sert qu\'à confirmer le compte.',
-    'auth.login.identify_again' => 'Cela a pris trop de temps — saisissez à nouveau votre e-mail pour reprendre.',
+    'auth.login.privacy_note' => 'La protection de vos informations personnelles est notre priorité. Votre e-mail ou votre numéro ne sert qu\'à vous connecter et à vous tenir informé de vos commandes.',
+    'auth.login.identify_again' => 'Cela a pris trop de temps — saisissez à nouveau votre e-mail ou votre numéro pour reprendre.',
 
     // Les portes artisan et professionnelle, en cartes sous le formulaire.
     // « Hirfaty Seller » et « Hirfaty Business » sont des noms de produits :
@@ -84,7 +84,7 @@ return [
     'auth.login.code_subtitle' => 'Nous avons envoyé un code de connexion à 6 chiffres à :email. Saisissez-le ci-dessous et vous êtes connecté — sans mot de passe.',
     'auth.login.code_submit' => 'Me connecter',
     'auth.login.code_sent' => 'Un code de connexion est en route.',
-    'auth.login.code_unavailable' => 'Ce compte nécessite son mot de passe. Les codes ne sont pas disponibles pour les comptes avec vérification en deux étapes.',
+    'auth.login.code_unavailable' => 'Ce compte se connecte avec son mot de passe.',
 
     // ── Code d'inscription : confirmer une nouvelle adresse ─────────────
     'auth.login.verify_title' => 'Consultez votre',
@@ -98,8 +98,8 @@ return [
     'auth.login.link_invalid' => 'Ce lien n\'est plus valide. Si votre compte est déjà créé, connectez-vous ; sinon, saisissez votre e-mail pour recevoir un nouveau code.',
     'auth.login.link_title' => 'Presque',
     'auth.login.link_title_accent' => 'terminé',
-    'auth.login.link_subtitle' => 'Vous avez ouvert le lien envoyé à :email. Continuez ici pour finir votre inscription.',
-    'auth.login.link_submit' => 'Continuer mon inscription',
+    'auth.login.link_subtitle' => 'Vous avez ouvert le lien envoyé à :email. Confirmez que c\'est bien vous.',
+    'auth.login.link_submit' => 'Confirmer mon e-mail',
 
     // Communs aux deux écrans de code (voir CodeEntry.tsx).
     'auth.login.code_label' => 'Code de confirmation',
@@ -261,4 +261,36 @@ return [
 
     // ── Mention sous les prix des produits ──────────────────────────────
     'tax_included' => '(taxes comprises)',
+    // Short, beside a price: "200 MAD TTC" / "200 د.م. مع الضريبة".
+    'ttc' => 'TTC',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'auth.contact.required' => 'Saisissez votre e-mail ou votre numéro de téléphone.',
+    'auth.contact.invalid_phone' => 'Ce numéro ne semble pas valide — vérifiez le nombre de chiffres et l\'indicatif du pays.',
+    'auth.contact.invalid_email' => 'Cette adresse e-mail ne semble pas valide — vérifiez-la.',
+    'auth.contact.phone_unavailable' => 'La connexion par téléphone n\'est pas encore disponible — utilisez votre adresse e-mail.',
+    'auth.contact.not_a_shopper' => 'Ce contact appartient à un compte artisan ou administrateur — utilisez-en un autre pour commander.',
+    'auth.contact.use_password' => 'Ce compte se connecte avec un mot de passe — connectez-vous avec votre adresse e-mail.',
+    'auth.contact.phone_taken' => 'Ce numéro figure déjà sur un compte sans avoir été confirmé — connectez-vous avec votre adresse e-mail.',
+    'auth.contact.send_failed' => 'Nous n\'avons pas pu envoyer le code. Vérifiez le numéro, ou utilisez votre adresse e-mail.',
+    'auth.contact.too_many' => 'Trop de codes demandés. Réessayez dans :minutes min.',
+    'auth.contact.placeholder' => 'E-mail ou téléphone',
+    'auth.contact.suggest' => 'Vouliez-vous dire',
+    'auth.contact.phone_incomplete' => 'Numéro incomplet ou invalide pour ce pays — vérifiez les chiffres.',
+    'auth.contact.will_sms' => 'Code par SMS au',
+    'auth.contact.will_email' => 'Code par e-mail à',
+    'auth.contact.country_unknown' => 'Pays non reconnu',
+    'auth.sms.code' => 'Hirfaty : votre code est :code. Il expire dans :minutes minutes. Ne le partagez avec personne.',
+    'auth.login.terms_continue' => 'En continuant, vous acceptez la',
+    'auth.login.code_subtitle_sms' => 'Nous avons envoyé un code de connexion à 6 chiffres par SMS au :email. Saisissez-le ci-dessous et vous êtes connecté — sans mot de passe.',
+    'auth.login.verify_subtitle_sms' => 'Vous êtes nouveau ici — nous avons envoyé un code à 6 chiffres par SMS au :email. Saisissez-le pour confirmer le numéro.',
+    'auth.login.code_spam_hint_sms' => 'Toujours rien ? Un SMS peut prendre une minute — vérifiez aussi que le numéro est bien le vôtre.',
+    'auth.login.wrong_contact' => 'Ce n\'est pas le bon ? Recommencer',
+    'auth.login.title_accent_sms' => 'téléphone',
+    'auth.login.verify_submit_sms' => 'Confirmer mon numéro',
+    'auth.login.link_confirmed_title' => 'E-mail',
+    'auth.login.link_confirmed_accent' => 'confirmé',
+    'auth.login.link_confirmed_body' => 'Revenez à la fenêtre où vous avez commencé : elle continue toute seule.',
+    'auth.login.link_continue_here' => 'Continuer plutôt sur cet appareil',
+    'auth.login.code_or_link' => 'Vous pouvez aussi simplement cliquer sur le bouton dans l\'e-mail — cette page continuera d\'elle-même.',
 ];

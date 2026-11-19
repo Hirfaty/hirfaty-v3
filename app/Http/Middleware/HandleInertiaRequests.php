@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Services\AdminNotificationService;
+use App\Services\CartService;
 use App\Services\CurrencyService;
 use App\Services\PriceModeService;
 use App\Services\ReviewService;
@@ -242,12 +243,14 @@ class HandleInertiaRequests extends Middleware
 
     private function getSharedCart(Request $request): array
     {
-        $user = $request->user();
-        if (! $user) {
+        // The account's basket, or the one a visitor's cookie names — never
+        // made here: reading the header must not create rows.
+        $cart = app(CartService::class)->current($request);
+
+        if (! $cart) {
             return ['items' => [], 'count' => 0, 'subtotal' => 0];
         }
 
-        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
         $cart->load([
             'items.product.store',
             'items.product.images',

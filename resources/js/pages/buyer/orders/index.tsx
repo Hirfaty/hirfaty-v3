@@ -271,7 +271,8 @@ export default function BuyerOrders({
                                     </dt>
                                     <dd className="text-souk-title">
                                         <span className="font-display font-semibold tabular-nums">
-                                            {money(purchase.total_amount)} TTC
+                                            {money(purchase.total_amount)}{' '}
+                                            {t('common.ttc')}
                                         </span>
                                         {/* Delivery is charged once for the
                                             basket, not per piece — without

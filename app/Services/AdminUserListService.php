@@ -202,7 +202,7 @@ class AdminUserListService
             $user->id,
             $user->first_name ?? '',
             $user->last_name ?? '',
-            $user->email ?? '',
+            $user->reachableEmail() ?? '',
             $user->phone_number ?? '',
             self::ROLE_LABELS[$user->role] ?? $user->role,
             $user->is_banned ? 'Bloqué' : 'Actif',

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\PendingRegistration;
@@ -20,18 +19,18 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Finishing a signup: emailed code → password → account.
+ * Finishing a signup: the code sent to the address or number → account.
  *
- * The *start* of it is not here. `GET /login` is Fortify's route and the email
- * field on it posts to LoginIdentifyController, which decides between this
- * flow and the password screen; `GET /sell` is the artisan equivalent, posting
- * to SellerRegistrationController. By the time anything below runs, a
- * `pending_registrations` row already exists.
+ * A shopper's account is made the moment the code is accepted, and they are
+ * signed straight in — no password, no form. An artisan (/sell) still has a
+ * details step, for the workshop.
  *
- * Both doors land here, and the row's `intent` is what tells them apart: it
- * picks the page each step renders, the rules the last step validates, and the
- * screen the finished account is handed to. It is read off the database rather
- * than the request precisely because the seller role hangs off it.
+ * The *start* of it is not here. `GET /login` is Fortify's route and the field
+ * on it posts to LoginIdentifyController; `GET /sell` is the artisan
+ * equivalent. By the time anything below runs, a `pending_registrations` row
+ * already exists. The row's `intent` is what tells the two doors apart: it is
+ * read off the database rather than the request precisely because the seller
+ * role hangs off it.
  *
  * Thin by design — every decision lives in RegistrationCodeService. What this
  * class owns is the *guard* logic: reconciling the resume cookie against the
@@ -40,14 +39,12 @@ use Inertia\Response;
  */
 class RegistrationController extends Controller
 {
-    use PasswordValidationRules;
-
     public function __construct(
         private readonly RegistrationCodeService $codes,
     ) {}
 
     /**
-     * Step 2 — the code screen.
+     * The code screen.
      */
     public function showVerify(Request $request): Response|RedirectResponse
     {
@@ -58,8 +55,7 @@ class RegistrationController extends Controller
         }
 
         // Already past this step: never re-ask for a code that has been
-        // accepted. This is the branch that makes closing the tab on step 3
-        // and coming back land in the right place.
+        // accepted.
         if ($pending->isVerified()) {
             return to_route('login.details');
         }
@@ -74,7 +70,7 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Step 2 submit — check the typed code.
+     * Check the typed code — and for a shopper, that is the whole signup.
      */
     public function verify(Request $request): RedirectResponse
     {
@@ -93,7 +89,9 @@ class RegistrationController extends Controller
         ]);
 
         if ($this->codes->verify($pending, $validated['code'])) {
-            return to_route('login.details');
+            return $pending->isSeller()
+                ? to_route('login.details')
+                : $this->finishShopper($request, $pending);
         }
 
         // Refreshed from the database: `verify()` incremented `attempts`, and
@@ -108,13 +106,12 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Step 2, the other way — the "confirm my email" button in the email.
+     * The other way past the code — the "confirm my email" button in the
+     * email (an SMS carries the code alone).
      *
-     * Opened in the browser that started the signup, it does the whole job:
-     * the address is confirmed and the visitor lands on the details step.
-     *
-     * Opened anywhere else it only asks. Mail scanners open every link in an
-     * incoming email; if this GET moved the signup onto whatever browser
+     * Opened in the browser that started the signup, it does the whole job.
+     * Opened anywhere else it only asks: mail scanners open every link in an
+     * incoming email, and if this GET moved the signup onto whatever browser
      * opened it, a scanner would quietly take it away from the person it was
      * meant for. The page's button POSTs to confirmLink(), which a scanner
      * does not do.
@@ -134,16 +131,30 @@ class RegistrationController extends Controller
         }
 
         return Inertia::render('auth/login/link', [
-            'maskedEmail' => $pending->maskedEmail(),
+            'maskedEmail' => $pending->maskedContact(),
             // The signed URL itself: the POST is checked against the same
             // signature, so it has to go back with the same query string.
             'action' => $request->fullUrl(),
+            /*
+             * Already confirmed from here: the window the signup started in
+             * notices (its code screen and the checkout's code box poll) and
+             * finishes on its own — with its basket. This page then says to
+             * go back, and offers to finish here instead.
+             */
+            'confirmed' => $pending->isVerified(),
         ]);
     }
 
     /**
-     * The "continue here" button: confirm the address and move the signup
-     * onto this browser.
+     * The button on the link page, in a browser other than the one the
+     * signup started in.
+     *
+     * By default it only confirms the address: the original window, still on
+     * its code screen (or the checkout's code box), sees the confirmation and
+     * finishes there. That is usually where the person is — and at checkout
+     * it is where their basket is. `here` moves the signup onto this browser
+     * instead, for someone who has closed the other window or would rather
+     * carry on on this device.
      */
     public function confirmLink(Request $request): RedirectResponse
     {
@@ -155,19 +166,22 @@ class RegistrationController extends Controller
 
         $this->codes->verifyByLink($pending);
 
-        $response = to_route('login.details');
-
         if ($this->codes->isResumableHere($request, $pending)) {
-            return $response;
+            return to_route('login.details');
         }
 
-        return $response->withCookie(
+        if (! $request->boolean('here')) {
+            // Back to the link page, which now says "go back to the other window".
+            return redirect()->to($request->fullUrl());
+        }
+
+        return to_route('login.details')->withCookie(
             $this->codes->resumeCookie($this->codes->moveToThisBrowser($pending)),
         );
     }
 
     /**
-     * Step 2 — send a fresh code.
+     * Send a fresh code.
      */
     public function resend(Request $request): RedirectResponse
     {
@@ -177,7 +191,15 @@ class RegistrationController extends Controller
             return $this->restart();
         }
 
-        if (! $this->codes->resend($pending)) {
+        try {
+            $sent = $this->codes->resend($pending);
+        } catch (\RuntimeException $e) {
+            report($e);
+
+            return back()->withErrors(['code' => __('common.auth.contact.send_failed')]);
+        }
+
+        if (! $sent) {
             return back()->withErrors([
                 'code' => __('common.auth.login.resend_wait', [
                     'seconds' => $this->codes->secondsUntilResend($pending),
@@ -189,7 +211,8 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Step 3 — the details screen.
+     * After the code: a shopper's account is made here and now; an artisan
+     * gets the workshop form.
      */
     public function showDetails(Request $request, CityService $cities): Response|RedirectResponse
     {
@@ -200,41 +223,40 @@ class RegistrationController extends Controller
         }
 
         // The code is the gate on this screen. Without it there is nothing
-        // tying this browser to that inbox, so there is no account to create.
+        // tying this browser to that inbox or phone.
         if (! $pending->isVerified()) {
             return to_route('login.verify');
         }
 
-        /*
-         * The artisan version of this screen also names the workshop, so it
-         * needs the two lists to pick from. `translated_name`, never the raw
-         * Category: `categories.name` is a per-locale map, and handing an
-         * object to an <option> takes the whole page down with "Objects are
-         * not valid as a React child".
-         */
-        if ($pending->isSeller()) {
-            return Inertia::render('auth/seller/details', [
-                'categories' => Category::roots()
-                    ->ordered()
-                    ->get()
-                    ->map(fn (Category $category) => [
-                        'id' => $category->id,
-                        'name' => $category->translated_name,
-                    ]),
-                'cities' => $cities->options(),
-                'types' => Store::TYPES,
-            ]);
+        // Nothing for a shopper to fill in (reached by a resumed signup or
+        // the emailed link): the proven address or number is the account.
+        if (! $pending->isSeller()) {
+            return $this->finishShopper($request, $pending);
         }
 
-        // No `email` prop: the screen no longer displays the confirmed
-        // address (see pages/auth/login/details.tsx), and the server already
-        // knows it from `$pending` when the form is submitted — nothing on
-        // this screen needs it passed down.
-        return Inertia::render('auth/login/details');
+        /*
+         * `translated_name`, never the raw Category: `categories.name` is a
+         * per-locale map, and handing an object to an <option> takes the
+         * whole page down with "Objects are not valid as a React child".
+         */
+        return Inertia::render('auth/seller/details', [
+            'categories' => Category::roots()
+                ->ordered()
+                ->get()
+                ->map(fn (Category $category) => [
+                    'id' => $category->id,
+                    'name' => $category->translated_name,
+                ]),
+            'cities' => $cities->options(),
+            'types' => Store::TYPES,
+            // Signed up by phone: that number is proven and is the one on the
+            // account — the form shows it rather than asking for another.
+            'verifiedPhone' => $pending->contact()->isPhone() ? $pending->contact()->display() : null,
+        ]);
     }
 
     /**
-     * Step 3 submit — create the account and sign in.
+     * The artisan's details submit — create the account and the workshop.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -248,60 +270,58 @@ class RegistrationController extends Controller
             return to_route('login.verify');
         }
 
-        $isSeller = $pending->isSeller();
+        if (! $pending->isSeller()) {
+            return $this->finishShopper($request, $pending);
+        }
+
+        $byPhone = $pending->contact()->isPhone();
 
         $validated = $request->validate([
+            // The workshop needs a name to put on invoices and a number an
+            // admin can reach.
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             /*
-             * Required for a seller — the workshop needs a name to put on
-             * invoices and a number an admin can reach. Optional for a buyer:
-             * the whole point of this step is to be fast, and a shopper's name
-             * and phone are only needed at checkout, where CheckoutController
-             * already asks for a delivery contact. Left blank here, they can
-             * be filled in any time from Buyer\ProfileController on /account.
+             * Asked only when the signup was by email — by phone, the proven
+             * number is used. `unique` is load-bearing: users.phone_number
+             * carries a UNIQUE index, so without it a duplicate sails past
+             * validation and blows up on the insert.
              */
-            'first_name' => [Rule::requiredIf($isSeller), 'nullable', 'string', 'max:255'],
-            'last_name' => [Rule::requiredIf($isSeller), 'nullable', 'string', 'max:255'],
-            /*
-             * `unique` is load-bearing whenever the field is present:
-             * users.phone_number carries a UNIQUE index, so without it a
-             * duplicate number sails past validation and blows up on the
-             * insert — a 500 on the last step of signup instead of "this
-             * number is already in use". Same reasoning as
-             * Actions\Fortify\CreateNewUser.
-             */
-            'phone_number' => [
-                Rule::requiredIf($isSeller),
-                'nullable',
-                'string',
-                'max:20',
-                Rule::unique(User::class, 'phone_number'),
-            ],
-            'password' => $this->passwordRules(),
+            'phone_number' => $byPhone
+                ? ['exclude']
+                : ['required', 'string', 'max:20', Rule::unique(User::class, 'phone_number')],
             'terms_accepted' => ['required', 'accepted'],
 
             /*
-             * Workshop fields, present only on the artisan branch. All of them
-             * are required rather than optional, unlike the old setup wizard
-             * that let a seller skip craft, city and description: those three
-             * are exactly what Store::REQUIRED_PROFILE_FIELDS checks, and a
-             * shop missing any of them is silently *not* filed for review by
-             * StoreVerificationService::submit. Letting them be skipped here
-             * would land the seller on a page promising a review that was
-             * never actually requested.
+             * All required: craft, city and description are exactly what
+             * Store::REQUIRED_PROFILE_FIELDS checks, and a shop missing any of
+             * them is silently *not* filed for review by
+             * StoreVerificationService::submit.
              */
-            'store_name' => [Rule::requiredIf($isSeller), 'string', 'max:255', Rule::unique(Store::class, 'store_name')],
-            'type' => [Rule::requiredIf($isSeller), Rule::in(Store::TYPES)],
-            'category_id' => [Rule::requiredIf($isSeller), 'integer', 'exists:categories,id'],
-            'city_id' => [Rule::requiredIf($isSeller), 'integer', 'exists:cities,id'],
-            'description' => [Rule::requiredIf($isSeller), 'string', 'max:2500'],
+            'store_name' => ['required', 'string', 'max:255', Rule::unique(Store::class, 'store_name')],
+            'type' => ['required', Rule::in(Store::TYPES)],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'city_id' => ['required', 'integer', 'exists:cities,id'],
+            'description' => ['required', 'string', 'max:2500'],
         ]);
 
         // The role comes off the pending row, never off `$validated` — see
         // RegistrationCodeService::completeSeller.
-        $user = $isSeller
-            ? $this->codes->completeSeller($pending, $validated)
-            : $this->codes->complete($pending, $validated);
+        $user = $this->codes->completeSeller($pending, $validated);
 
+        return $this->signIn($request, $user);
+    }
+
+    /**
+     * Make the shopper's account from the proven contact and sign them in.
+     */
+    private function finishShopper(Request $request, PendingRegistration $pending): RedirectResponse
+    {
+        return $this->signIn($request, $this->codes->complete($pending));
+    }
+
+    private function signIn(Request $request, User $user): RedirectResponse
+    {
         /*
          * Fired for the benefit of anything else listening on signup. Safe
          * even though the user is already verified: the framework's
@@ -310,7 +330,8 @@ class RegistrationController extends Controller
          */
         event(new Registered($user));
 
-        Auth::login($user);
+        // Remembered: with no password, being signed out means another code.
+        Auth::login($user, remember: true);
         $request->session()->regenerate();
 
         return $this->landing($user)
@@ -323,10 +344,10 @@ class RegistrationController extends Controller
     private function verifyProps(PendingRegistration $pending): array
     {
         return [
-            // Masked, not the full address: this page can be resumed a week
-            // later on a shared machine. Enough to confirm they typed the
-            // address they meant, no more.
-            'maskedEmail' => $pending->maskedEmail(),
+            // Masked: this page can be resumed a week later on a shared
+            // machine. Enough to confirm they typed what they meant, no more.
+            'maskedContact' => $pending->maskedContact(),
+            'channel' => $pending->contact()->channel,
             'resendIn' => $this->codes->secondsUntilResend($pending),
             'locked' => $this->codes->isLocked($pending),
         ];
@@ -338,6 +359,15 @@ class RegistrationController extends Controller
      */
     private function restart(): RedirectResponse
     {
+        /*
+         * Already signed in: the signup was finished in another tab of this
+         * browser — the link in the email, opened beside the code screen.
+         * Follow it rather than call the session expired.
+         */
+        if ($user = request()->user()) {
+            return $this->landing($user)->withCookie($this->codes->forgetCookie());
+        }
+
         return to_route('login')
             ->with('error', __('common.auth.login.session_expired'))
             ->withCookie($this->codes->forgetCookie());
@@ -359,10 +389,6 @@ class RegistrationController extends Controller
     /**
      * Where a freshly created account lands.
      *
-     * Mirrors Http\Responses\VerifyEmailResponse: the code flow replaces the
-     * emailed link, so this is now the moment that used to be "came back from
-     * the inbox and clicked" — the one place the intro tour makes sense.
-     *
      * A seller does not get the tour. Their shop is sitting in the review
      * queue and cannot publish anything yet, so the honest next screen is the
      * one that says so — see Seller\WelcomeController.
@@ -373,12 +399,16 @@ class RegistrationController extends Controller
             return to_route('seller.welcome');
         }
 
-        if ($user->needsOnboarding()) {
+        $redirects = app(PostLoginRedirectService::class);
+
+        // Not mid-purchase, though: someone who signed up from the checkout's
+        // contact box goes straight back to pay, tour or not.
+        if ($user->needsOnboarding() && ! $redirects->pendingCheckout(request())) {
             // The remembered page waits in the session until the tour ends.
             return to_route('onboarding.show');
         }
 
-        $intended = app(PostLoginRedirectService::class)->pull(request(), $user);
+        $intended = $redirects->pull(request(), $user);
 
         return $intended !== null ? redirect($intended) : to_route('products.index');
     }

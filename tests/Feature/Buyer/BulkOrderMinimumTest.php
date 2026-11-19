@@ -113,13 +113,20 @@ test('a pro-mode line cannot be edited back down below the minimum', function ()
     expect((int) $item->fresh()->quantity)->toBe(20);
 });
 
-test('a guest cannot add to the cart', function () {
-    $product = createBulkProduct();
+test('a visitor in pro mode is held to the bulk minimum like a buyer', function () {
+    // Visitors shop without signing in now — on the same rules.
+    shopInProMode();
+    $product = createBulkProduct(minimum: 20);
 
-    $this->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 1])
-        ->assertRedirect(route('login'));
+    $this->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 5])
+        ->assertSessionHasErrors('quantity');
 
     expect(CartItem::count())->toBe(0);
+
+    $this->post(route('cart.add'), ['product_id' => $product->id, 'quantity' => 20])
+        ->assertSessionHasNoErrors();
+
+    expect((int) CartItem::first()->quantity)->toBe(20);
 });
 
 test('a trade-only product does not open on personal prices', function () {

@@ -22,6 +22,8 @@ import type {
 } from '@/components/admin/cancel-order-dialog';
 import CathedisPanel from '@/components/admin/cathedis-panel';
 import type { CathedisPanelData } from '@/components/admin/cathedis-panel';
+import DhlPanel from '@/components/admin/dhl-panel';
+import type { DhlPanelData } from '@/components/admin/dhl-panel';
 import PriceModeBadge from '@/components/admin/price-mode-badge';
 import { useTranslation } from '@/hooks/use-translation';
 import AdminLayout from '@/layouts/admin/layout';
@@ -90,12 +92,15 @@ const Show = ({
     payment,
     cancellationReasons,
     cathedis,
+    dhl,
 }: {
     group: OrderGroup;
     payment: CardPayment | null;
     cancellationReasons: CancellationReason[];
     /** Null when the purchase does not ship with Cathedis. */
     cathedis: CathedisPanelData | null;
+    /** Null when the purchase does not ship with DHL Express. */
+    dhl: DhlPanelData | null;
 }) => {
     const { t } = useTranslation();
     const paidOnline =
@@ -573,6 +578,13 @@ const Show = ({
                         <CathedisPanel
                             reference={group.primary_reference}
                             data={cathedis}
+                        />
+                    )}
+
+                    {dhl && (
+                        <DhlPanel
+                            reference={group.primary_reference}
+                            data={dhl}
                         />
                     )}
 

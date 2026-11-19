@@ -92,7 +92,7 @@ class FortifyServiceProvider extends ServiceProvider
             return Inertia::render('auth/login/identify', [
                 'status' => $request->session()->get('status'),
                 'resume' => $pending ? [
-                    'maskedEmail' => $pending->maskedEmail(),
+                    'maskedContact' => $pending->maskedContact(),
                     'step' => $pending->nextStep(),
                 ] : null,
                 /*

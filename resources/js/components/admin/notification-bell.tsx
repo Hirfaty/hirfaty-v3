@@ -15,6 +15,7 @@ const KIND_ICON: Record<string, LucideIcon> = {
     'purchase.placed': ShoppingBag,
     'payment.refund_needed': CreditCard,
     'cathedis.delivery_issue': Truck,
+    'dhl.delivery_issue': Truck,
 };
 
 export function notificationIcon(kind: string): LucideIcon {

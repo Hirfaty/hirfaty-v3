@@ -6,6 +6,10 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -21,6 +25,129 @@ use Illuminate\Validation\ValidationException;
  */
 class CartService
 {
+    /**
+     * The cookie holding a visitor's basket token. Only its SHA-256 is stored
+     * (`carts.guest_token_hash`), so a leaked table cannot be replayed into
+     * someone's basket. Encrypted like every app cookie.
+     */
+    public const GUEST_COOKIE = 'hirfaty_cart';
+
+    /** A visitor's basket waits a month for them to come back. */
+    private const GUEST_COOKIE_MINUTES = 60 * 24 * 30;
+
+    /**
+     * The basket this request shops from: the account's once signed in, else
+     * the one the visitor's cookie names. Null when there is none yet —
+     * reading never creates one, so a bot browsing the catalogue leaves no
+     * empty rows behind.
+     */
+    public function current(Request $request): ?Cart
+    {
+        if ($user = $request->user()) {
+            return Cart::firstWhere('user_id', $user->id);
+        }
+
+        $token = $request->cookie(self::GUEST_COOKIE);
+
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        return Cart::whereNull('user_id')
+            ->firstWhere('guest_token_hash', hash('sha256', $token));
+    }
+
+    /**
+     * The basket to write to, made (with its cookie) on a visitor's first
+     * "add to cart".
+     */
+    public function currentOrCreate(Request $request): Cart
+    {
+        if ($user = $request->user()) {
+            return Cart::firstOrCreate(['user_id' => $user->id]);
+        }
+
+        if ($cart = $this->current($request)) {
+            return $cart;
+        }
+
+        $token = Str::random(48);
+
+        $cart = Cart::create(['guest_token_hash' => hash('sha256', $token)]);
+
+        Cookie::queue(self::GUEST_COOKIE, $token, self::GUEST_COOKIE_MINUTES);
+
+        return $cart;
+    }
+
+    /**
+     * Whether this line is in the basket this request shops from — checked
+     * before a quantity change or a removal, so nobody edits another
+     * basket's line by guessing its id.
+     */
+    public function ownsItem(Request $request, CartItem $item): bool
+    {
+        $cart = $this->current($request);
+
+        return $cart !== null && $item->cart_id === $cart->id;
+    }
+
+    /**
+     * Fold the visitor's basket into the account they just signed in to.
+     *
+     * An account with no basket simply takes the visitor's over. One that
+     * already has lines gets the visitor's added to them through addLine(),
+     * so every line is held to the same stock and minimum checks; one that
+     * can no longer be bought (sold out, withdrawn) is dropped rather than
+     * failing the sign-in. Runs on every sign-in (AppServiceProvider), so
+     * whichever door they came through — a code, a password, Google — the
+     * basket follows.
+     */
+    public function adoptGuestCart(User $user, Request $request): void
+    {
+        $token = $request->cookie(self::GUEST_COOKIE);
+
+        if (! is_string($token) || $token === '') {
+            return;
+        }
+
+        Cookie::queue(Cookie::forget(self::GUEST_COOKIE));
+
+        $guest = Cart::whereNull('user_id')
+            ->firstWhere('guest_token_hash', hash('sha256', $token));
+
+        if (! $guest) {
+            return;
+        }
+
+        // An artisan or an admin does not shop: nothing to fold it into.
+        if (! $user->isBuyer()) {
+            $guest->delete();
+
+            return;
+        }
+
+        $own = Cart::firstWhere('user_id', $user->id);
+
+        if (! $own) {
+            $guest->update(['user_id' => $user->id, 'guest_token_hash' => null]);
+
+            return;
+        }
+
+        $audience = app(PriceModeService::class)->audience($request);
+
+        foreach ($guest->items as $item) {
+            try {
+                $this->addLine($own, $item->product_id, $item->product_variant_id, (int) $item->quantity, $audience);
+            } catch (ValidationException) {
+                continue;
+            }
+        }
+
+        $guest->delete();
+    }
+
     /**
      * Add (or top up) a line, after checking the variant belongs to the
      * product and there is stock to cover the new total quantity.

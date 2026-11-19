@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePoll } from '@inertiajs/react';
 import { useTranslation } from '@/hooks/use-translation';
 import heroWeaver from '@/images/hero/hero-3.jpg';
 import { sell } from '@/routes';
@@ -20,11 +20,14 @@ import SellerAuthShell from './SellerAuthShell';
  * quietly turn their signup into a buyer account.
  */
 export default function SellerVerify({
-    maskedEmail,
+    maskedContact,
+    channel,
     resendIn,
     locked,
 }: {
-    maskedEmail: string;
+    maskedContact: string;
+    /** Whether the code went by email or SMS. */
+    channel: 'email' | 'phone';
     /** Seconds left on the resend cooldown when the page was rendered. */
     resendIn: number;
     /** The current code has taken all the wrong guesses it will take. */
@@ -32,24 +35,43 @@ export default function SellerVerify({
 }) {
     const { t } = useTranslation();
 
+    /*
+     * The signup email also has a "confirm" button. Someone who presses it
+     * instead of typing the code — in another tab, or on their phone — is
+     * noticed here within a few seconds: the server sees the signup
+     * confirmed and this screen moves on by itself.
+     */
+    usePoll(3000, {}, { keepAlive: false, autoStart: channel === 'email' });
+
     return (
         <SellerAuthShell
             image={heroWeaver}
             quote={t('seller.join.quote_verify')}
             title={t('common.auth.login.verify_title')}
-            titleAccent={t('common.auth.login.verify_title_accent')}
-            subtitle={t('common.auth.login.verify_subtitle').replace(
-                ':email',
-                maskedEmail,
+            titleAccent={t(
+                channel === 'phone'
+                    ? 'common.auth.login.title_accent_sms'
+                    : 'common.auth.login.verify_title_accent',
             )}
+            subtitle={t(
+                channel === 'phone'
+                    ? 'common.auth.login.verify_subtitle_sms'
+                    : 'common.auth.login.verify_subtitle',
+            ).replace(':email', maskedContact)}
         >
             <CodeEntry
                 submit={verifyCode.form()}
                 resendUrl={resend.url()}
                 resendIn={resendIn}
                 locked={locked}
-                submitLabel={t('common.auth.login.verify_submit')}
+                submitLabel={t(
+                    channel === 'phone'
+                        ? 'common.auth.login.verify_submit_sms'
+                        : 'common.auth.login.verify_submit',
+                )}
                 testId="sell-verify-button"
+                channel={channel}
+                withLink
             />
 
             <p className="mt-5 text-sm text-souk-brown-deep/65">
@@ -57,7 +79,7 @@ export default function SellerVerify({
                     href={sell()}
                     className="text-souk-brown underline underline-offset-4 transition-colors hover:text-souk-brown-deep"
                 >
-                    {t('common.auth.login.wrong_email')}
+                    {t('common.auth.login.wrong_contact')}
                 </Link>
             </p>
         </SellerAuthShell>

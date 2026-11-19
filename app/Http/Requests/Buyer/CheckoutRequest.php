@@ -65,6 +65,20 @@ class CheckoutRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'shipping_phone' => ['required', 'string', 'max:30'],
+            /*
+             * Asked only of a buyer who signed in by phone and has no address
+             * on file: every order should leave Hirfaty a way to write to
+             * them. Stored as `contact_email`, never as the sign-in address —
+             * see CheckoutDestinationService::backfillProfile. Anyone else's
+             * address is already known, so the field is dropped.
+             */
+            'email' => [
+                Rule::excludeIf(fn () => ! $this->asksForEmail()),
+                'required',
+                'string',
+                'email',
+                'max:255',
+            ],
 
             /*
              * Scoped to the buyer's own book. Without the scope a crafted
@@ -98,6 +112,18 @@ class CheckoutRequest extends FormRequest
                 $cityIds === null ? 'exists:cities,id' : Rule::in($cityIds),
             ],
             'postal_code' => ['required_without:address_id', 'nullable', 'string', 'max:20'],
+            /*
+             * The town abroad, where `city_id` has nothing to offer: required
+             * there with a new address, since DHL needs it apart from the
+             * street. Morocco names its city by id instead.
+             */
+            'city_name' => [
+                'exclude_if:country,'.Address::DEFAULT_COUNTRY,
+                Rule::requiredIf(fn () => blank($this->input('address_id')) && filled($this->input('country'))),
+                'nullable',
+                'string',
+                'max:100',
+            ],
             /*
              * Whitelisted against the rate cards' own countries — every active
              * carrier's together — rather than being free text or a hardcoded
@@ -144,12 +170,20 @@ class CheckoutRequest extends FormRequest
         ];
     }
 
+    /** Whether this buyer has no sign-in address to be written to. */
+    public function asksForEmail(): bool
+    {
+        return blank($this->user()?->email);
+    }
+
     /**
      * @return array<string, string>
      */
     public function messages(): array
     {
         return [
+            'email.required' => __('buyer.checkout.err_email'),
+            'email.email' => __('buyer.checkout.err_email'),
             'first_name.required' => __('buyer.checkout.err_first_name'),
             'last_name.required' => __('buyer.checkout.err_last_name'),
             'shipping_address.required_without' => __('buyer.checkout.err_address'),
@@ -157,6 +191,7 @@ class CheckoutRequest extends FormRequest
             'city_id.exists' => __('buyer.checkout.err_city'),
             'city_id.in' => __('buyer.checkout.err_city'),
             'postal_code.required_without' => __('buyer.checkout.err_postal_code'),
+            'city_name.required' => __('buyer.checkout.err_city_name'),
             'country.required_without' => __('buyer.checkout.err_country'),
             'country.in' => __('buyer.checkout.err_country'),
             'shipping_phone.required' => __('buyer.checkout.err_phone'),

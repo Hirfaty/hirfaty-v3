@@ -64,6 +64,8 @@ class Order extends Model
         // and dispatch screens actually read.
         'delivery_service_id', 'delivery_service_name',
         'shipping_address', 'shipping_phone', 'notes', 'delivered_at', 'cancellation_reason',
+        // The destination's country and postcode on their own — DHL needs them.
+        'shipping_country', 'shipping_postal_code', 'shipping_city',
         // The desk's picked reasons (codes, translated on display) and its
         // decision on the money — see the cancellation details migration.
         'cancellation_tags', 'cancellation_refund',

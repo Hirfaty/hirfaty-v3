@@ -5,6 +5,7 @@ use App\Models\City;
 use App\Models\PendingRegistration;
 use App\Models\Store;
 use App\Models\User;
+use App\Notifications\LoginCodeNotification;
 use App\Notifications\NewSellerForAdmin;
 use App\Notifications\RegistrationCode;
 use App\Services\RegistrationCodeService;
@@ -35,7 +36,7 @@ beforeEach(function () {
  */
 function startSellerSignup(string $email = 'artisan@example.com'): array
 {
-    $response = test()->post(route('sell.identify'), ['email' => $email]);
+    $response = test()->post(route('sell.identify'), ['identifier' => $email]);
 
     // Decrypted on the way out: `withCookie()` encrypts whatever it is given,
     // so feeding it the raw response value would double-encrypt and `resolve()`
@@ -77,8 +78,6 @@ function sellerDetails(Category $category, City $city): array
         'first_name' => 'Youssef',
         'last_name' => 'El Fassi',
         'phone_number' => '+212612345678',
-        'password' => 'Zellige!2026Fes',
-        'password_confirmation' => 'Zellige!2026Fes',
         'terms_accepted' => true,
         'store_name' => 'Atelier Bab Boujloud',
         'type' => 'artist',
@@ -91,7 +90,7 @@ function sellerDetails(Category $category, City $city): array
 // ── The door itself ────────────────────────────────────────────────────
 
 test('the artisan door starts a seller-intent signup', function () {
-    $this->post(route('sell.identify'), ['email' => 'Artisan@Example.com'])
+    $this->post(route('sell.identify'), ['identifier' => 'Artisan@Example.com'])
         ->assertRedirect(route('login.verify'));
 
     $pending = PendingRegistration::firstWhere('email', 'artisan@example.com');
@@ -111,11 +110,13 @@ test('the artisan door starts a seller-intent signup', function () {
 test('an existing account is sent to sign in rather than signed up', function (string $role) {
     $user = User::factory()->create(['role' => $role, 'email' => 'known@example.com']);
 
-    $this->post(route('sell.identify'), ['email' => $user->email])
-        ->assertRedirect(route('login.password'));
+    // A sign-in code for the account it already is — never a seller signup.
+    $this->post(route('sell.identify'), ['identifier' => $user->email])
+        ->assertRedirect(route('login.code'));
 
     expect(PendingRegistration::where('email', $user->email)->exists())->toBeFalse();
-    Notification::assertNothingSentTo($user);
+    Notification::assertSentTo($user, LoginCodeNotification::class);
+    Notification::assertSentOnDemandTimes(RegistrationCode::class, 0);
 })->with(['buyer', 'seller']);
 
 test('a signed-in seller is sent to their dashboard', function () {
@@ -175,7 +176,12 @@ test('finishing creates a seller and a workshop awaiting review', function () {
     expect($user->role)->toBe('seller')
         // Typing back a code sent to that inbox is the proof of ownership —
         // no second trip through an emailed link.
-        ->and($user->email_verified_at)->not->toBeNull();
+        ->and($user->email_verified_at)->not->toBeNull()
+        // Artisans sign in with a code too.
+        ->and($user->password)->toBeNull()
+        // Typed on the form, never proven: it must not sign anyone in.
+        ->and($user->phone_number)->toBe('+212612345678')
+        ->and($user->phone_verified_at)->toBeNull();
 
     $store = $user->store;
 
@@ -257,7 +263,7 @@ test('a new artisan is announced to the onboarding inbox in French', function ()
 });
 
 test('a shopper signup does not announce a new artisan', function () {
-    $response = $this->post(route('login.identify'), ['email' => 'shopper@example.com']);
+    $response = $this->post(route('login.identify'), ['identifier' => 'shopper@example.com']);
     $cookie = $response->getCookie(RegistrationCodeService::COOKIE)->getValue();
 
     $code = null;
@@ -267,15 +273,9 @@ test('a shopper signup does not announce a new artisan', function () {
         return true;
     });
 
+    // The code alone makes a shopper's account.
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->post(route('login.verify.store'), ['code' => $code]);
-
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.details.store'), [
-            'password' => 'Zellige!2026Fes',
-            'password_confirmation' => 'Zellige!2026Fes',
-            'terms_accepted' => true,
-        ]);
 
     expect(User::firstWhere('email', 'shopper@example.com')?->role)->toBe('buyer');
     Notification::assertSentOnDemandTimes(NewSellerForAdmin::class, 0);
@@ -309,7 +309,7 @@ test('a shopper signup cannot self-assign the seller role', function () {
     [$category, $city] = sellerTaxonomy();
 
     // Deliberately the *buyer* door.
-    $response = $this->post(route('login.identify'), ['email' => 'shopper@example.com']);
+    $response = $this->post(route('login.identify'), ['identifier' => 'shopper@example.com']);
     $cookie = $response->getCookie(RegistrationCodeService::COOKIE)->getValue();
 
     $code = null;
@@ -322,14 +322,12 @@ test('a shopper signup cannot self-assign the seller role', function () {
         },
     );
 
+    // Workshop fields posted along with the code change nothing…
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->post(route('login.verify.store'), ['code' => $code]);
+        ->post(route('login.verify.store'), ['code' => $code, ...sellerDetails($category, $city)]);
 
-    // The details screen stays the shopper's, lists and all.
-    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
-        ->get(route('login.details'))
-        ->assertInertia(fn ($page) => $page->component('auth/login/details'));
-
+    // …and neither does posting them at the artisan's last step afterwards:
+    // the signup is spent, and the account it made is a shopper's.
     $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
         ->post(route('login.details.store'), sellerDetails($category, $city));
 
@@ -338,4 +336,34 @@ test('a shopper signup cannot self-assign the seller role', function () {
     expect($user->role)->toBe('buyer')
         ->and($user->store)->toBeNull()
         ->and(Store::count())->toBe(0);
+});
+
+test('an artisan who signs up by phone keeps that number, proven', function () {
+    $sms = fakeSms();
+    [$category, $city] = sellerTaxonomy();
+
+    $response = $this->post(route('sell.identify'), ['identifier' => '0661 23 45 67'])
+        ->assertRedirect(route('login.verify'));
+    $cookie = $response->getCookie(RegistrationCodeService::COOKIE)->getValue();
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.verify.store'), ['code' => $sms->codeTo('+212661234567')])
+        ->assertRedirect(route('login.details'));
+
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->get(route('login.details'))
+        ->assertInertia(fn ($page) => $page->where('verifiedPhone', '+212 6 61 23 45 67'));
+
+    // No number on the form: the proven one is used, and one posted anyway
+    // cannot replace it.
+    $this->withCookie(RegistrationCodeService::COOKIE, $cookie)
+        ->post(route('login.details.store'), [...sellerDetails($category, $city), 'phone_number' => '+212699999999'])
+        ->assertRedirect(route('seller.welcome'));
+
+    $seller = User::firstWhere('phone_number', '+212661234567');
+
+    expect($seller->role)->toBe('seller')
+        ->and($seller->email)->toBeNull()
+        ->and($seller->phone_verified_at)->not->toBeNull()
+        ->and($seller->store)->not->toBeNull();
 });

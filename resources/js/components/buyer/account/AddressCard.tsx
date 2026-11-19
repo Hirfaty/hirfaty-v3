@@ -9,7 +9,7 @@ import type { AddressRow } from './types';
 /**
  * The one address checkout pre-fills — a card on the right of the page rather
  * than another flush section, so it reads as a distinct object next to the
- * identity/password form on the left.
+ * identity form on the left.
  *
  * Edited in place when it exists, created when it doesn't — never "add
  * another". A buyer with several saved addresses would otherwise end up with

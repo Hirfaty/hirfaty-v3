@@ -49,11 +49,11 @@ return [
     // ── Identify: the email field ────────────────────────────────────────
     'auth.login.identify_title' => 'Sign in or',
     'auth.login.identify_title_accent' => 'create your account',
-    'auth.login.identify_subtitle' => 'Not sure if you already have an account? Enter your email and we will check for you.',
-    'auth.login.email_required' => 'Email address (required)',
+    'auth.login.identify_subtitle' => 'No password needed: enter your email or phone number and we will send you a code.',
+    'auth.login.email_required' => 'Email or phone number',
     'auth.login.identify_submit' => 'Continue',
-    'auth.login.privacy_note' => 'Securing your personal information is our priority. We only use your email to confirm the account.',
-    'auth.login.identify_again' => 'That took too long — enter your email again to pick up where you were.',
+    'auth.login.privacy_note' => 'Securing your personal information is our priority. Your email or number is only used to sign you in and keep you posted on your orders.',
+    'auth.login.identify_again' => 'That took too long — enter your email or number again to pick up where you were.',
 
     // The artisan and trade doors, shown as cards below the form. "Hirfaty
     // Seller" and "Hirfaty Business" are product names and stay in Latin
@@ -82,7 +82,7 @@ return [
     'auth.login.code_subtitle' => 'We sent a 6-digit sign-in code to :email. Enter it below and you are in — no password needed.',
     'auth.login.code_submit' => 'Sign me in',
     'auth.login.code_sent' => 'A sign-in code is on its way.',
-    'auth.login.code_unavailable' => 'This account needs its password. Codes are not available for accounts with two-step verification.',
+    'auth.login.code_unavailable' => 'This account signs in with its password.',
 
     // ── Signup code: confirming a new address ───────────────────────────
     'auth.login.verify_title' => 'Check your',
@@ -96,8 +96,8 @@ return [
     'auth.login.link_invalid' => 'That link is no longer valid. If your account is already set up, sign in; otherwise enter your email to get a new code.',
     'auth.login.link_title' => 'Almost',
     'auth.login.link_title_accent' => 'there',
-    'auth.login.link_subtitle' => 'You opened the link sent to :email. Continue here to finish signing up.',
-    'auth.login.link_submit' => 'Continue signing up',
+    'auth.login.link_subtitle' => 'You opened the link sent to :email. Confirm it\'s you.',
+    'auth.login.link_submit' => 'Confirm my email',
 
     // Shared by both code screens (see CodeEntry.tsx).
     'auth.login.code_label' => 'Confirmation code',
@@ -259,4 +259,36 @@ return [
 
     // ── Note beside product prices ──────────────────────────────────────
     'tax_included' => '(taxes included)',
+    // Short, beside a price: "200 MAD TTC" / "200 د.م. مع الضريبة".
+    'ttc' => 'TTC',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'auth.contact.required' => 'Enter your email or phone number.',
+    'auth.contact.invalid_phone' => 'This number does not look right — check the number of digits and the country code.',
+    'auth.contact.invalid_email' => 'This email address does not look right — please check it.',
+    'auth.contact.phone_unavailable' => 'Signing in by phone is not available yet — please use your email address.',
+    'auth.contact.not_a_shopper' => 'This belongs to an artisan or admin account — use another one to place an order.',
+    'auth.contact.use_password' => 'This account signs in with a password — sign in with your email address.',
+    'auth.contact.phone_taken' => 'This number is already on an account but was never confirmed — sign in with your email address.',
+    'auth.contact.send_failed' => 'We could not send the code. Check the number, or use your email address.',
+    'auth.contact.too_many' => 'Too many codes requested. Try again in :minutes min.',
+    'auth.contact.placeholder' => 'Email or phone',
+    'auth.contact.suggest' => 'Did you mean',
+    'auth.contact.phone_incomplete' => 'Incomplete or invalid number for this country — check the digits.',
+    'auth.contact.will_sms' => 'Code by SMS to',
+    'auth.contact.will_email' => 'Code by email to',
+    'auth.contact.country_unknown' => 'Unknown country',
+    'auth.sms.code' => 'Hirfaty: your code is :code. It expires in :minutes minutes. Do not share it with anyone.',
+    'auth.login.terms_continue' => 'By continuing, you accept the',
+    'auth.login.code_subtitle_sms' => 'We sent a 6-digit sign-in code by SMS to :email. Enter it below and you are in — no password needed.',
+    'auth.login.verify_subtitle_sms' => 'You are new here — we sent a 6-digit code by SMS to :email. Enter it to confirm the number.',
+    'auth.login.code_spam_hint_sms' => 'Still nothing? A text can take a minute — also check the number is really yours.',
+    'auth.login.wrong_contact' => 'Not the right one? Start again',
+    'auth.login.title_accent_sms' => 'phone',
+    'auth.login.verify_submit_sms' => 'Confirm my number',
+    'auth.login.link_confirmed_title' => 'Email',
+    'auth.login.link_confirmed_accent' => 'confirmed',
+    'auth.login.link_confirmed_body' => 'Go back to the window where you started: it carries on by itself.',
+    'auth.login.link_continue_here' => 'Continue on this device instead',
+    'auth.login.code_or_link' => 'You can also just click the button in the email — this page will carry on by itself.',
 ];

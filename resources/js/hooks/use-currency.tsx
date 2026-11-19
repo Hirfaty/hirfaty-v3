@@ -14,6 +14,33 @@ export type CurrencyPayload = {
 
 export type CurrencyOption = { code: string; symbol: string };
 
+/*
+ * How an Arabic page writes the currencies that have an Arabic symbol: the
+ * dirham as "د.م." (what Moroccan shops print), the Gulf ones likewise.
+ * €, $, £ and CA$ are read the same in every language and stay as they are.
+ */
+const ARABIC_SYMBOLS: Record<string, string> = {
+    MAD: 'د.م.',
+    AED: 'د.إ.',
+    SAR: 'ر.س.',
+    QAR: 'ر.ق.',
+    KWD: 'د.ك.',
+    BHD: 'د.ب.',
+    OMR: 'ر.ع.',
+    TND: 'د.ت.',
+    DZD: 'د.ج.',
+    EGP: 'ج.م.',
+};
+
+/** The symbol to print for `code` in the page's language. */
+export function localSymbol(
+    code: string,
+    symbol: string,
+    locale: string | undefined,
+): string {
+    return locale === 'ar' ? (ARABIC_SYMBOLS[code] ?? symbol) : symbol;
+}
+
 /** What the server falls back to, mirrored here for the first paint. */
 const BASE: CurrencyPayload = {
     code: 'MAD',
@@ -23,6 +50,17 @@ const BASE: CurrencyPayload = {
     rate: 1,
     is_base: true,
 };
+
+/**
+ * The dirham's symbol in the page's language — "د.م." in Arabic, else "MAD" —
+ * for screens that print MAD figures themselves (the artisan's order and
+ * product pages).
+ */
+export function useMadSymbol(): string {
+    const { locale } = usePage().props as unknown as { locale?: string };
+
+    return localSymbol('MAD', 'MAD', locale);
+}
 
 /**
  * Prices, in whatever currency this visitor is reading.
@@ -41,12 +79,21 @@ export function useCurrency() {
     const page = usePage().props as unknown as {
         currency?: CurrencyPayload;
         currencyOptions?: CurrencyOption[];
+        locale?: string;
     };
 
     // `currency` is a lazy prop, so a response that never evaluated it (or a
     // component rendered outside a normal page load) legitimately has none.
-    const currency = page.currency ?? BASE;
-    const options = page.currencyOptions ?? [];
+    // Symbols are the page language's: "د.م." on an Arabic page.
+    const raw = page.currency ?? BASE;
+    const currency = {
+        ...raw,
+        symbol: localSymbol(raw.code, raw.symbol, page.locale),
+    };
+    const options = (page.currencyOptions ?? []).map((option) => ({
+        ...option,
+        symbol: localSymbol(option.code, option.symbol, page.locale),
+    }));
 
     const format = (
         value: number,
@@ -55,7 +102,7 @@ export function useCurrency() {
         locale: string,
     ) => {
         const meta = code === currency.code ? currency : null;
-        const symbol = meta?.symbol ?? code;
+        const symbol = meta?.symbol ?? localSymbol(code, code, page.locale);
 
         const formatted = new Intl.NumberFormat(locale, {
             minimumFractionDigits: 0,

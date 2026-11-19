@@ -31,10 +31,11 @@ test('a protected page a guest opens brings them back after signing in', functio
     $user = User::factory()->create(['role' => 'buyer']);
 
     // Laravel's own guest redirect records the URL; login must now honour it.
-    $this->get(route('cart.show'))->assertRedirect();
+    // (Not the basket: a visitor may open that without signing in.)
+    $this->get(route('buyer.account.orders.index'))->assertRedirect();
 
     $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
-        ->assertRedirect(route('cart.show'));
+        ->assertRedirect(route('buyer.account.orders.index'));
 });
 
 test('with nowhere to return to, sign-in still lands where it always did', function () {

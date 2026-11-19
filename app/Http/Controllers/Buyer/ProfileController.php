@@ -12,8 +12,7 @@ use Illuminate\Http\RedirectResponse;
  *
  * Its own endpoint rather than the shared Settings\ProfileController, which
  * validates and writes the email — the one field this form must not touch.
- * The password half of the page posts to `user-password.update` instead,
- * which already returns back() and needs nothing here.
+ * There is no password half: shoppers sign in with a code and have none.
  */
 class ProfileController extends Controller
 {

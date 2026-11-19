@@ -17,7 +17,8 @@
      * to the tab they came from and type six digits. The sign-in code has no
      * button — a link that signs straight into an existing account is a
      * different security bargain from one that confirms an address. The
-     * `button` key therefore exists in the registration_code block only.
+     * Both blocks have a `button` key now: the sign-in email carries a
+     * one-click link too (LoginCodeService::linkFor).
      *
      * $code, $locale, $expiresInMinutes, $copy, $url
      */

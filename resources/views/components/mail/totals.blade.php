@@ -10,7 +10,7 @@
       total — ['label' => …, 'amount' => 32.0]; emphasised, above a rule
 
     Amounts are forced `dir="ltr"`: "32,00 MAD" is a left-to-right token and
-    Arabic must not reorder it.
+    Arabic must not reorder it. In Arabic the dirham is written "د.م.".
 --}}
 @props(['lines' => [], 'total' => null])
 @aware(['locale' => 'fr'])
@@ -32,7 +32,7 @@
                         {{ $line['label'] }}
                     </td>
                     <td align="{{ $end }}" dir="ltr" style="padding:5px 0; font-family:{{ $font }}; font-size:13px; color:{{ $theme['soft'] }};">
-                        {{ number_format($line['amount'], 2) }} MAD
+                        {{ number_format($line['amount'], 2) }} {{ $rtl ? 'د.م.' : 'MAD' }}
                     </td>
                 </tr>
             @endforeach
@@ -52,7 +52,7 @@
                         {{ $total['label'] }}
                     </td>
                     <td align="{{ $end }}" dir="ltr" style="padding:12px 0 0 0; font-family:{{ $font }}; font-size:15px; font-weight:700; color:{{ $theme['ink'] }};">
-                        {{ number_format($total['amount'], 2) }} MAD
+                        {{ number_format($total['amount'], 2) }} {{ $rtl ? 'د.م.' : 'MAD' }}
                     </td>
                 </tr>
             @endif

@@ -22,6 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useMadSymbol } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import type { Order, OrderStatus } from '@/types';
@@ -65,6 +66,8 @@ function SellerOrderDetail({
     order: Order;
     cancellationReasons: Record<string, string>;
 }) {
+    // "د.م." in Arabic, "MAD" otherwise.
+    const mad = useMadSymbol();
     const { t } = useTranslation();
     const { data, setData, processing, errors } = useForm<{
         status: OrderStatus;
@@ -200,7 +203,7 @@ function SellerOrderDetail({
                                                 {Number(
                                                     item.unit_price,
                                                 ).toLocaleString('fr-FR')}{' '}
-                                                MAD
+                                                {mad}
                                             </TableCell>
                                             <TableCell className="text-end font-medium tabular-nums">
                                                 {itemSubtotal(
@@ -208,7 +211,7 @@ function SellerOrderDetail({
                                                     item.unit_price,
                                                     item.quantity,
                                                 ).toLocaleString('fr-FR')}{' '}
-                                                MAD
+                                                {mad}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -226,7 +229,8 @@ function SellerOrderDetail({
                                     <div className="flex justify-between text-sm text-muted-foreground">
                                         <span>Sous-total produits</span>
                                         <span className="tabular-nums">
-                                            {total.toLocaleString('fr-FR')} MAD
+                                            {total.toLocaleString('fr-FR')}{' '}
+                                            {mad}
                                         </span>
                                     </div>
                                     <div className="flex justify-between text-sm text-muted-foreground">
@@ -235,7 +239,7 @@ function SellerOrderDetail({
                                             {Number(
                                                 order.delivery_fee,
                                             ).toLocaleString('fr-FR')}{' '}
-                                            MAD
+                                            {mad}
                                         </span>
                                     </div>
                                     <Separator className="my-2" />
@@ -246,7 +250,7 @@ function SellerOrderDetail({
                                                 total +
                                                 Number(order.delivery_fee)
                                             ).toLocaleString('fr-FR')}{' '}
-                                            MAD
+                                            {mad}
                                         </span>
                                     </div>
                                 </div>

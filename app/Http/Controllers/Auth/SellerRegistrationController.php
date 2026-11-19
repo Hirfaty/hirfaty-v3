@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\PendingRegistration;
-use App\Models\User;
-use App\Services\LoginCodeService;
+use App\Services\ContactSignInService;
 use App\Services\RegistrationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +29,7 @@ class SellerRegistrationController extends Controller
 {
     public function __construct(
         private readonly RegistrationCodeService $codes,
+        private readonly ContactSignInService $signIn,
     ) {}
 
     /**
@@ -52,47 +52,25 @@ class SellerRegistrationController extends Controller
     }
 
     /**
-     * Decide which screen this address belongs on.
+     * Decide which screen this address or number belongs on.
      *
-     * Mirrors LoginIdentifyController::identify, including the deliberate
-     * disclosure of which addresses have accounts — inherent to
-     * identifier-first, mitigated by the throttle on the route rather than by
-     * pretending otherwise. See that controller for the full reasoning.
+     * Someone who already has an account — a shopper included — is sent to
+     * sign in, not to sign up: an existing shopper cannot become a seller by
+     * typing their address here, because that would hand out the role on the
+     * strength of a form post. Promotion is an admin decision
+     * (Admin\UserController).
      */
     public function identify(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255'],
-        ]);
+        $contact = $this->signIn->parse($request);
 
-        // Lowercased to match `fortify.lowercase_usernames`, which is on —
-        // otherwise someone who capitalised their address goes down the signup
-        // branch and collides on the unique index at the end of it.
-        $email = mb_strtolower(trim($validated['email']));
+        $result = $this->signIn->begin($request, $contact, PendingRegistration::INTENT_SELLER);
 
-        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
-
-        if ($user) {
-            /*
-             * Already has an account: sign in, don't sign up. Including a
-             * buyer — an existing shopper cannot become a seller by typing
-             * their address here, because that would hand out the role on the
-             * strength of a form post. Promotion is an admin decision
-             * (Admin\UserController), and this screen must not route around
-             * it.
-             */
-            $request->session()->put(LoginCodeService::SESSION_KEY, $user->email);
-
-            return to_route('login.password');
-        }
-
-        $token = $this->codes->start(
-            $email,
-            app()->getLocale(),
-            PendingRegistration::INTENT_SELLER,
-        );
-
-        return to_route('login.verify')
-            ->withCookie($this->codes->resumeCookie($token));
+        return match ($result['outcome']) {
+            ContactSignInService::CODE => to_route('login.code'),
+            ContactSignInService::PASSWORD => to_route('login.password'),
+            default => to_route('login.verify')
+                ->withCookie($this->codes->resumeCookie($result['token'])),
+        };
     }
 }

@@ -132,7 +132,7 @@ export default function CartSheet() {
                                         <span className="shrink-0 font-display text-sm text-ink">
                                             {money(item.line_total)}{' '}
                                             <span className="text-[10px]">
-                                                TTC
+                                                {t('common.ttc')}
                                             </span>
                                         </span>
                                     </li>
@@ -154,7 +154,9 @@ export default function CartSheet() {
                                     </span>
                                     <span className="font-display text-lg text-ink">
                                         {money(cart.subtotal)}{' '}
-                                        <span className="text-xs">TTC</span>
+                                        <span className="text-xs">
+                                            {t('common.ttc')}
+                                        </span>
                                     </span>
                                 </div>
                                 <Link

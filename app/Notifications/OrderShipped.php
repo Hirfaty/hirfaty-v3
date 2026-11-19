@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\NotifiesBuyer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -20,7 +21,7 @@ use Illuminate\Support\Collection;
  */
 class OrderShipped extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use NotifiesBuyer, Queueable;
 
     /**
      * @param  Collection  $orders  Every order that just moved to `shipped`
@@ -29,9 +30,9 @@ class OrderShipped extends Notification implements ShouldQueue
      */
     public function __construct(public Collection $orders) {}
 
-    public function via(object $notifiable): array
+    protected function smsKey(): string
     {
-        return ['mail'];
+        return 'buyer.sms.order_shipped';
     }
 
     public function toMail(object $notifiable): MailMessage

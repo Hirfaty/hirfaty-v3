@@ -30,7 +30,8 @@ class SavedAddressResource extends JsonResource
             'recipient_phone' => $this->recipient_phone,
             'address_line' => $this->address_line,
             'city_id' => $this->city_id,
-            'city_name' => $this->city?->translated_name,
+            // The Moroccan city in the visitor's language, else the town typed abroad.
+            'city_name' => $this->city?->translated_name ?? $this->city_name,
             'postal_code' => $this->postal_code,
             'country' => $this->country,
             'country_name' => app(CountryService::class)->name($country),

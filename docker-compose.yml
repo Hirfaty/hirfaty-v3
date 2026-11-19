@@ -44,13 +44,22 @@ services:
       - ./docker/seaweedfs/s3-config.json:/etc/seaweedfs/s3-config.json:ro
     restart: unless-stopped
 
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: mailpit
+  # One local inbox for everything the app sends: Messagepit, Mailpit's fork
+  # that also takes texts through a Twilio-compatible endpoint. Mail goes in
+  # over SMTP (MAIL_MAILER=smtp, MAIL_PORT=1025), texts over HTTP
+  # (SMS_DRIVER=messagepit), and both are read at http://localhost:8025 — the
+  # Email and SMS tabs. Nothing reaches a real inbox or phone.
+  #
+  # The host ports move with MESSAGEPIT_*_PORT in .env if another project's
+  # Mailpit already holds 1025/8025 (then set MAIL_PORT to match).
+  messagepit:
+    image: ghcr.io/coreydaley/messagepit:latest
+    container_name: hirfaty-messagepit
     restart: unless-stopped
     ports:
-      - '8025:8025'
-      - '1025:1025'
+      - '${MESSAGEPIT_SMTP_PORT:-1025}:1025' # SMTP: mail in
+      - '${MESSAGEPIT_UI_PORT:-8025}:8025' # web UI + API
+      - '${MESSAGEPIT_SMS_PORT:-8200}:8200' # Twilio-compatible SMS in
 
 volumes:
   db_data:

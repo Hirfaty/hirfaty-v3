@@ -12,6 +12,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\BrochureController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\Buyer\CartController;
+use App\Http\Controllers\Buyer\CheckoutContactController;
 use App\Http\Controllers\Buyer\CheckoutController;
 use App\Http\Controllers\Buyer\DashboardController as BuyerDashboardController;
 use App\Http\Controllers\Buyer\OnboardingController;
@@ -260,6 +261,16 @@ Route::middleware(['auth', 'verified', 'role:super_admin'])
         Route::post('/cathedis/pickup', [Admin\CathedisShipmentController::class, 'pickup'])->name('cathedis.pickup');
         Route::get('/cathedis/cities', [Admin\CathedisShipmentController::class, 'cities'])->name('cathedis.cities');
 
+        // DHL Express (abroad): check and create the shipment, its documents,
+        // its checkpoints, and the courier booking.
+        Route::post('/orders/{order}/dhl', [Admin\DhlShipmentController::class, 'store'])->name('orders.dhl.store');
+        Route::post('/orders/{order}/dhl/check', [Admin\DhlShipmentController::class, 'check'])->name('orders.dhl.check');
+        Route::get('/orders/{order}/dhl/documents/{type}', [Admin\DhlShipmentController::class, 'document'])->name('orders.dhl.document');
+        Route::post('/orders/{order}/dhl/refresh', [Admin\DhlShipmentController::class, 'refresh'])->name('orders.dhl.refresh');
+        Route::post('/orders/{order}/dhl/pickup', [Admin\DhlShipmentController::class, 'pickup'])->name('orders.dhl.pickup');
+        Route::delete('/orders/{order}/dhl/pickup', [Admin\DhlShipmentController::class, 'cancelPickup'])->name('orders.dhl.pickup.cancel');
+        Route::get('/dhl/towns', [Admin\DhlShipmentController::class, 'towns'])->name('dhl.towns');
+
         // Invoices — one per purchase, the PDF the buyer downloads.
         Route::get('/invoices', [Admin\InvoiceController::class, 'index'])->name('invoices.index');
         Route::get('/invoices/{purchase}', [Admin\InvoiceController::class, 'download'])->name('invoices.download');
@@ -416,20 +427,56 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/wishlist', [BuyerProductController::class, 'toggleWishlist'])->name('products.wishlist');
 });
 
-// Buyer — both normal and professional buyers shop through these routes;
-// only the prices they are shown differ.
-Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(function () {
+/*
+ * The basket and checkout, open to visitors who have not signed in as well as
+ * to shoppers (artisans and admins are turned away — EnsureShopper). A
+ * visitor's basket lives against a cookie (CartService) and follows them into
+ * their account when they sign in.
+ *
+ * At checkout a visitor gives an email or phone and confirms it with a code
+ * (the `checkout.contact.*` routes, throttled like every other endpoint that
+ * sends one). That signs them in, which is what placing the order below
+ * needs.
+ */
+Route::middleware('shopper')->group(function () {
     Route::get('/cart', [CartController::class, 'show'])->name('cart.show');
     Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
     Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{cartItem}', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/merge', [CartController::class, 'merge'])->name('cart.merge');
 
     Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    // Abroad, DHL's live price for the basket — asked by the page as the destination changes.
+    Route::get('/checkout/delivery-quote', [CheckoutController::class, 'deliveryQuote'])
+        ->middleware('throttle:60,1')
+        ->name('checkout.delivery_quote');
+    // Abroad, the towns DHL knows for the postcode typed, for the "Ville" field.
+    Route::get('/checkout/towns', [CheckoutController::class, 'towns'])
+        ->middleware('throttle:60,1')
+        ->name('checkout.towns');
     // "Buy now" on a product page: one piece straight to checkout, cart untouched.
     Route::post('/checkout/buy-now', [CheckoutController::class, 'startBuyNow'])->name('checkout.buy_now.start');
     Route::get('/checkout/buy-now', [CheckoutController::class, 'buyNow'])->name('checkout.buy_now');
+});
+
+Route::middleware('guest')->prefix('checkout/contact')->name('checkout.contact.')->group(function () {
+    Route::post('/', [CheckoutContactController::class, 'send'])
+        ->middleware('throttle:5,1')
+        ->name('send');
+    Route::post('/resend', [CheckoutContactController::class, 'resend'])
+        ->middleware('throttle:5,1')
+        ->name('resend');
+    Route::post('/verify', [CheckoutContactController::class, 'verify'])
+        ->middleware('throttle:10,1')
+        ->name('verify');
+    Route::post('/reset', [CheckoutContactController::class, 'reset'])->name('reset');
+});
+
+// Buyer — both normal and professional buyers shop through these routes;
+// only the prices they are shown differ.
+Route::middleware(['auth', 'verified', 'role:buyer,professional_buyer'])->group(function () {
+    Route::post('/cart/merge', [CartController::class, 'merge'])->name('cart.merge');
+
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/checkout/confirmation/{purchase}', [CheckoutController::class, 'confirmation'])->name('checkout.confirmation');
     // Card payment for a purchase — see Buyer\PaymentController.
     Route::get('/checkout/pay/{purchase}', [BuyerPaymentController::class, 'launch'])->name('checkout.pay');
@@ -580,6 +627,20 @@ Route::prefix('login')->name('login.')->group(function () {
     Route::post('/code/verify', [LoginCodeController::class, 'verify'])
         ->middleware('throttle:10,1')
         ->name('code.verify');
+
+    /*
+     * The "sign me in" button in the sign-in email — the code in one click.
+     * Signed and tied to the latest send (LoginCodeService::resolveLink). In
+     * another browser the GET only asks, so a mail scanner opening the link
+     * signs nobody in.
+     */
+    Route::get('/code/{loginCode}/link', [LoginCodeController::class, 'showLink'])
+        ->middleware('throttle:10,1')
+        ->name('code.link');
+
+    Route::post('/code/{loginCode}/link', [LoginCodeController::class, 'confirmLink'])
+        ->middleware('throttle:10,1')
+        ->name('code.link.confirm');
 
     // ── Finishing a signup ──────────────────────────────────────────────
     Route::get('/verify', [RegistrationController::class, 'showVerify'])->name('verify');

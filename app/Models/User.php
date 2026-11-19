@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Notifications\BuyerVerifyEmail;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\SellerVerifyEmail;
+use App\Support\Contact;
 use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail as AuthMustVerifyEmail;
@@ -25,6 +26,7 @@ use Override;
  * @property string|null $first_name
  * @property string|null $last_name
  * @property string|null $phone_number
+ * @property CarbonImmutable|null $phone_verified_at
  * @property string $role
  * @property int|null $created_by
  * @property CarbonImmutable|null $onboarded_at
@@ -40,7 +42,7 @@ use Override;
  * @property int $is_banned
  * @property string|null $email
  * @property CarbonImmutable|null $email_verified_at
- * @property string $password
+ * @property string|null $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property CarbonImmutable|null $two_factor_confirmed_at
@@ -85,7 +87,11 @@ use Override;
 // review: nothing writes them any more, and they decide nothing — prices
 // follow the buyer's own choice (PriceModeService). Kept for the records they
 // already hold.
-#[Fillable(['email', 'password', 'first_name', 'last_name', 'phone_number', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at', 'onboarded_at'])]
+//
+// `phone_verified_at` is fillable for the same reason as `email_verified_at`:
+// the code flows (RegistrationCodeService) stamp it when an SMS code proves
+// the number, and they whitelist what they write.
+#[Fillable(['email', 'contact_email', 'password', 'first_name', 'last_name', 'phone_number', 'phone_verified_at', 'role', 'bio', 'terms_accepted', 'terms_accepted_at', 'locale', 'email_verified_at', 'onboarded_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements AuthMustVerifyEmail
 {
@@ -107,6 +113,7 @@ class User extends Authenticatable implements AuthMustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'professional_verified_at' => 'datetime',
             'onboarded_at' => 'datetime',
             'professional_requested_at' => 'datetime',
@@ -207,25 +214,81 @@ class User extends Authenticatable implements AuthMustVerifyEmail
 
     /**
      * Admin-created accounts may have no email yet (see the users.email
-     * nullable migration), and every notification sent through here is
-     * mail-only — dispatching one would queue a job that can only fail in the
-     * worker with "no To address". A seller reaches this: an admin can list
-     * products for them, so a buyer's order fires NewOrderReceived at an
-     * account that has no address on file.
+     * nullable migration), and a shopper who signed up with a phone number
+     * has none at all. Most notifications are mail-only, and dispatching one
+     * to an account with no address queues a job that can only do nothing.
      *
-     * Drop it instead. Nothing is lost that could have been delivered, and
-     * the notification resumes working the moment an address is filled in.
-     * The admin bell (database channel) does not come through here: it is
-     * sent with the Notification facade by AdminNotificationService, so an
+     * So it is dropped when the account has neither an address nor a
+     * verified number. With a verified number it goes through: the buyer's
+     * order updates carry an SMS version (NotifiesBuyer), and a mail-only one
+     * is skipped by the mail channel itself, which sends nothing without a
+     * route. The admin bell (database channel) does not come through here: it
+     * is sent with the Notification facade by AdminNotificationService, so an
      * admin with no address still gets it.
      */
     public function notify($instance): void
     {
-        if ($this->email === null) {
+        if ($this->email === null && $this->routeNotificationForSms() === null) {
             return;
         }
 
         $this->notifyViaTrait($instance);
+    }
+
+    /**
+     * Where an SMS goes: the number, only once a code sent to it has been
+     * typed back. `phone_number` is otherwise free text — a typo in it must
+     * not send someone else this buyer's order updates.
+     */
+    public function routeNotificationForSms(): ?string
+    {
+        return $this->phone_verified_at !== null && filled($this->phone_number)
+            ? $this->phone_number
+            : null;
+    }
+
+    /**
+     * "Verified" means a code proved one way of reaching them — the address
+     * *or* the number. A shopper who signed up by phone has no address to
+     * verify, and the `verified` middleware on the buyer routes must not lock
+     * them out of their own orders for it.
+     */
+    #[Override]
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null || $this->phone_verified_at !== null;
+    }
+
+    /** Whether this account can sign in with a password at all. */
+    public function hasPassword(): bool
+    {
+        return filled($this->getAuthPassword());
+    }
+
+    /**
+     * How they are reached, for showing back to them: the address when there
+     * is one, else the verified number.
+     */
+    public function contact(): ?Contact
+    {
+        if (filled($this->email)) {
+            return Contact::email($this->email);
+        }
+
+        return $this->routeNotificationForSms() !== null
+            ? Contact::phone($this->phone_number)
+            : null;
+    }
+
+    /**
+     * An address to write to: the sign-in one, else the one a buyer who
+     * signed in by phone typed at checkout (`contact_email`). For the desk
+     * and exports only — the typed one was never confirmed, so it opens
+     * nothing and order mail is not routed to it (see NotifiesBuyer).
+     */
+    public function reachableEmail(): ?string
+    {
+        return filled($this->email) ? $this->email : ($this->contact_email ?: null);
     }
 
     public function sendEmailVerificationNotification()

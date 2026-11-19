@@ -10,6 +10,7 @@ import {
     TrendingUp,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
@@ -85,9 +86,6 @@ const ORDER_STATUS: Record<string, { label: string; className: string }> = {
     cancelled: { label: 'Annulée', className: 'bg-rose-100 text-rose-700' },
 };
 
-const money = (n: number) =>
-    `${new Intl.NumberFormat('fr-MA').format(Math.round(n))} MAD`;
-
 export default function SellerDashboard({
     store,
     stats,
@@ -97,6 +95,8 @@ export default function SellerDashboard({
     topProducts,
 }: DashboardProps) {
     const { t } = useTranslation();
+    // MAD as written in the page's language ("د.م." in Arabic).
+    const { baseMoney: money } = useCurrency();
     // Scale the bars against the tallest month so a flat run of small months
     // still reads as a chart rather than a row of slivers.
     const peak = Math.max(...salesChart.map((r) => r.total), 1);

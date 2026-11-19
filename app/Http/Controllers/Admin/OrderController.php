@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Services\AdminOrderListService;
 use App\Services\Cathedis\CathedisShipmentService;
+use App\Services\DhlExpress\DhlShipmentService;
 use App\Services\OrderCancellationService;
 use App\Services\OrderStatusService;
 use App\Services\RefundService;
@@ -88,7 +89,7 @@ class OrderController extends Controller
      * Route-model-bound on a single order because that is what a link carries;
      * the group is reassembled from it here.
      */
-    public function show(Order $order, OrderCancellationService $cancellations, RefundService $refunds, CathedisShipmentService $cathedis)
+    public function show(Order $order, OrderCancellationService $cancellations, RefundService $refunds, CathedisShipmentService $cathedis, DhlShipmentService $dhl)
     {
         $orders = $order->groupOrders()
             ->with(['buyer', 'store', 'items.product.images', 'city'])
@@ -112,6 +113,8 @@ class OrderController extends Controller
             'cancellationReasons' => $cancellations->options(),
             // The Cathedis parcel, or why it cannot be created yet; null off Cathedis.
             'cathedis' => $cathedis->panel($orders),
+            // The DHL Express shipment abroad, or why it cannot be created yet; null off DHL.
+            'dhl' => $dhl->panel($orders),
             'payment' => $payment ? [
                 'provider' => $payment->provider,
                 'charge_id' => $payment->charge_id,
@@ -248,8 +251,9 @@ class OrderController extends Controller
             'primary_reference' => $first->reference,
             'created_at' => $first->created_at,
             'buyer' => [
-                'name' => $buyerName !== '' ? $buyerName : ($buyer->email ?? '—'),
-                'email' => $buyer->email ?? null,
+                'name' => $buyerName !== '' ? $buyerName : ($buyer->reachableEmail() ?? '—'),
+                // The checkout-typed address of a buyer who signed in by phone.
+                'email' => $buyer->reachableEmail(),
             ],
             'shipping_address' => $first->shipping_address,
             'shipping_phone' => $first->shipping_phone,

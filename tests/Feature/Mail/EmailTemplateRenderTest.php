@@ -213,3 +213,16 @@ test('every email template renders without email-hostile CSS', function () {
     // unreadable, and this is a list meant to be worked through.
     expect(implode("\n", $failures))->toBe('');
 });
+
+test('an Arabic order email writes the dirham in Arabic, the others as MAD', function () {
+    $fixture = mailFixture();
+    $data = mailViews()['buyer.order-placed.ar']($fixture);
+
+    $arabic = view('emails.buyer.order-placed.ar', $data)->render();
+    $french = view('emails.buyer.order-placed.fr', mailViews()['buyer.order-placed.fr']($fixture))->render();
+
+    expect($arabic)->toContain('د.م.')
+        ->and($arabic)->not->toMatch('/\d MAD/')
+        ->and($french)->toMatch('/\d MAD/')
+        ->and($french)->not->toContain('د.م.');
+});

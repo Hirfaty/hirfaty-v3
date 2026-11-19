@@ -52,6 +52,8 @@
         -->
         <env name="FILESYSTEM_DISK" value="public"/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Never the local Messagepit container: tests read texts through fakeSms(). -->
+        <env name="SMS_DRIVER" value="log"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!--
             No Resend credentials, whatever .env holds, so a newsletter signup
@@ -101,5 +103,14 @@
         -->
         <env name="CURRENCY_RATES_ENABLED" value="false"/>
         <env name="CURRENCY_GEO_ENABLED" value="false"/>
+        <!--
+            DHL Express is unconfigured under test, so checkout prices abroad
+            on the rate card and nothing reaches DHL even when a developer's
+            .env holds real credentials. DHL's tests set the config themselves
+            and fake the API with Http::fake().
+        -->
+        <env name="DHL_EXPRESS_USERNAME" value=""/>
+        <env name="DHL_EXPRESS_PASSWORD" value=""/>
+        <env name="DHL_EXPRESS_ACCOUNT_NUMBER" value=""/>
     </php>
 </phpunit>

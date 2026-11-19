@@ -12,7 +12,6 @@ import {
     Heart,
     Home,
     Leaf,
-    LogIn,
     MapPin,
     Minus,
     Package,
@@ -1017,12 +1016,12 @@ const ProductDetail = ({
             return;
         }
 
-        if (!auth.user) {
-            router.visit(loginHref);
-
-            return;
-        }
-
+        /*
+         * A visitor adds to the basket like anyone else — it is kept against
+         * their browser and follows them into an account when they give an
+         * email or phone at checkout. (An artisan's or admin's request is
+         * refused by the server, with its message.)
+         */
         if (needsChoice) {
             return;
         }
@@ -1082,12 +1081,6 @@ const ProductDetail = ({
         }
 
         if (unavailable || buying) {
-            return;
-        }
-
-        if (!auth.user) {
-            router.visit(loginHref);
-
             return;
         }
 
@@ -1507,17 +1500,9 @@ const ProductDetail = ({
                     <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                         <button
                             onClick={handleAddToCart}
-                            /*
-                             * A guest's button is their way in to signing up,
-                             * so it stays live while the piece is buyable —
-                             * but not for one nobody can buy: a live "sign in
-                             * to buy" that did nothing on click was a dead end.
-                             */
-                            disabled={
-                                unavailable ||
-                                adding ||
-                                (!!auth.user && needsChoice)
-                            }
+                            // Visitors add to the basket too, so they pick
+                            // a variant first like everyone else.
+                            disabled={unavailable || adding || needsChoice}
                             aria-live="polite"
                             className={`inline-flex flex-1 items-center justify-center gap-2.5 rounded-xl px-6 py-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${
                                 adding
@@ -1534,14 +1519,6 @@ const ProductDetail = ({
                                     <Check
                                         className="h-4 w-4"
                                         strokeWidth={2.2}
-                                    />
-                                </>
-                            ) : !auth.user && !unavailable ? (
-                                <>
-                                    {t('buyer.detail.login_to_buy')}
-                                    <LogIn
-                                        className="h-4 w-4"
-                                        strokeWidth={1.6}
                                     />
                                 </>
                             ) : unpriced ? (
@@ -1589,7 +1566,7 @@ const ProductDetail = ({
                     {!unavailable && (
                         <button
                             onClick={handleBuyNow}
-                            disabled={buying || (!!auth.user && needsChoice)}
+                            disabled={buying || needsChoice}
                             data-test="buy-now"
                             className="mt-3 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-souk-title px-6 py-4 text-sm font-medium text-white transition-colors hover:bg-souk-brown-deep disabled:cursor-not-allowed disabled:opacity-45"
                         >

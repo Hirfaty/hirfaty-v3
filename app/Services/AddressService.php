@@ -42,6 +42,8 @@ class AddressService
                 'recipient_phone' => $data['recipient_phone'] ?? null,
                 'address_line' => $data['address_line'],
                 'city_id' => $data['city_id'],
+                // Abroad only: a Moroccan address names its city by id.
+                'city_name' => empty($data['city_id']) ? ($data['city_name'] ?? null) : null,
                 'postal_code' => $data['postal_code'] ?? null,
                 // Coalesced rather than passed straight through: the column
                 // has a default, but handing Eloquent an explicit null would
@@ -70,6 +72,7 @@ class AddressService
             'recipient_phone' => $data['recipient_phone'] ?? null,
             'address_line' => $data['address_line'],
             'city_id' => $data['city_id'],
+            'city_name' => empty($data['city_id']) ? ($data['city_name'] ?? $address->city_name) : null,
             'postal_code' => $data['postal_code'] ?? null,
             'country' => $data['country'] ?? Address::DEFAULT_COUNTRY,
         ]);

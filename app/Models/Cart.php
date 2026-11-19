@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cart extends Model
 {
-    protected $fillable = ['user_id'];
+    // `guest_token_hash`: a visitor's basket, before they sign in — see
+    // CartService::current().
+    protected $fillable = ['user_id', 'guest_token_hash'];
+
+    protected $hidden = ['guest_token_hash'];
 
     public function user()
     {

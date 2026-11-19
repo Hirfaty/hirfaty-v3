@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Coins, Clock, ShoppingBag } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useCurrency } from '@/hooks/use-currency';
 import { useTranslation } from '@/hooks/use-translation';
 import SellerLayout from '@/layouts/seller/layout';
 import { formatDate } from '@/lib/utils';
@@ -29,9 +30,6 @@ const ORDER_STATUS: Record<string, { label: string; className: string }> = {
     },
     cancelled: { label: 'Annulée', className: 'bg-rose-100 text-rose-700' },
 };
-
-const money = (value: number | string) =>
-    `${new Intl.NumberFormat('fr-MA').format(Math.round(Number(value)))} MAD`;
 
 function Stat({
     label,
@@ -72,6 +70,8 @@ const Index = ({
     orders: PaginatedData<Order>;
 }) => {
     const { t } = useTranslation();
+    // MAD as written in the page's language ("د.م." in Arabic).
+    const { baseMoney: money } = useCurrency();
 
     return (
         <div className="flex flex-col gap-6 p-6 md:p-8">

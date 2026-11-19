@@ -3,11 +3,8 @@ import { ArrowRight, Building2, Hammer, MapPin, Users } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
-import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
-import { usePasswordCheck } from '@/hooks/use-password-check';
 import { useTranslation } from '@/hooks/use-translation';
 import registerPhoto from '@/images/auth/register-3.jpg';
 import { store as createAccount } from '@/routes/login/details';
@@ -44,22 +41,27 @@ const DESCRIPTION_MAX = 2500;
  * Everything here is required, and submitting it puts the shop in the queue.
  *
  * Uncontrolled throughout: Inertia's `<Form>` reads the live DOM on submit, so
- * the only local state is what the UI itself needs to render — the strength
- * meter, the selected type tile and the character count.
+ * the only local state is what the UI itself needs to render — the selected
+ * type tile and the character count. No password: artisans sign in with a
+ * code, like everyone but the admins.
  */
 export default function SellerDetails({
     categories,
     cities,
     types,
+    verifiedPhone,
 }: {
     categories: Option[];
     cities: Option[];
     types: StoreType[];
+    /**
+     * Signed up by phone: the number the code proved. Shown, not asked for —
+     * it is the one on the account.
+     */
+    verifiedPhone: string | null;
 }) {
     const { t } = useTranslation();
 
-    const [passwordValue, setPasswordValue] = useState('');
-    const passwordCheck = usePasswordCheck();
     const [type, setType] = useState<StoreType>(types[0] ?? 'artist');
     const [descriptionLength, setDescriptionLength] = useState(0);
 
@@ -74,8 +76,6 @@ export default function SellerDetails({
         >
             <Form
                 {...createAccount.form()}
-                onBefore={passwordCheck.onBefore}
-                resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="mt-7"
             >
@@ -141,91 +141,33 @@ export default function SellerDetails({
                                     >
                                         {t('common.auth.login.phone')}
                                     </label>
-                                    <Input
-                                        id="phone_number"
-                                        name="phone_number"
-                                        type="tel"
-                                        required
-                                        autoComplete="tel"
-                                        placeholder="+212 6 12 34 56 78"
-                                        className={fieldClass}
-                                    />
+                                    {verifiedPhone ? (
+                                        <Input
+                                            id="phone_number"
+                                            type="tel"
+                                            readOnly
+                                            disabled
+                                            dir="ltr"
+                                            value={verifiedPhone}
+                                            className={fieldClass}
+                                        />
+                                    ) : (
+                                        <Input
+                                            id="phone_number"
+                                            name="phone_number"
+                                            type="tel"
+                                            required
+                                            autoComplete="tel"
+                                            placeholder="+212 6 12 34 56 78"
+                                            className={fieldClass}
+                                        />
+                                    )}
                                     <InputError
                                         message={errors.phone_number}
                                         className="mt-1.5"
                                     />
                                 </div>
-
-                                <div>
-                                    <label
-                                        htmlFor="password"
-                                        className={labelClass}
-                                    >
-                                        {t('common.auth.login.password')}
-                                    </label>
-                                    <PasswordInput
-                                        id="password"
-                                        name="password"
-                                        required
-                                        autoComplete="new-password"
-                                        className={fieldClass}
-                                        onChange={(e) => {
-                                            setPasswordValue(e.target.value);
-                                            passwordCheck.clearError(
-                                                'password',
-                                            );
-                                        }}
-                                    />
-                                    <PasswordStrengthMeter
-                                        password={passwordValue}
-                                    />
-                                    <InputError
-                                        message={
-                                            passwordCheck.errors.password ??
-                                            errors.password
-                                        }
-                                        className="mt-1.5"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label
-                                        htmlFor="password_confirmation"
-                                        className={labelClass}
-                                    >
-                                        {t(
-                                            'common.auth.login.password_confirm',
-                                        )}
-                                    </label>
-                                    <PasswordInput
-                                        id="password_confirmation"
-                                        name="password_confirmation"
-                                        required
-                                        autoComplete="new-password"
-                                        className={fieldClass}
-                                        onChange={() =>
-                                            passwordCheck.clearError(
-                                                'password_confirmation',
-                                            )
-                                        }
-                                    />
-                                    <InputError
-                                        message={
-                                            passwordCheck.errors
-                                                .password_confirmation ??
-                                            errors.password_confirmation
-                                        }
-                                        className="mt-1.5"
-                                    />
-                                </div>
                             </div>
-
-                            {/* Password::defaults() enforces this everywhere,
-                                so spell the rules out rather than letting
-                                people discover them by failing. */}
-                            <p className="mt-1.5 text-[11px] leading-relaxed text-souk-brown-deep/45">
-                                {t('common.auth.login.password_hint')}
-                            </p>
                         </fieldset>
 
                         {/* ── Your workshop ───────────────────────────── */}

@@ -174,4 +174,79 @@ return [
         'pickup_point_id' => env('CATHEDIS_PICKUP_POINT_ID'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | DHL Express (delivery abroad) — MyDHL API
+    |--------------------------------------------------------------------------
+    |
+    | Basic auth with the MyDHL API username and password DHL sends by email,
+    | plus the DHL Express account number every shipment is billed to. The
+    | test environment (…/mydhlapi/test) and production (…/mydhlapi) have
+    | different usernames and passwords; the account number is the same.
+    |
+    | The shipper is Hirfaty's desk — it gathers every workshop's piece and
+    | hands DHL one parcel per purchase — so its address is what DHL prints on
+    | the label and where its courier comes to collect.
+    |
+    */
+
+    'dhl_express' => [
+        'url' => env('DHL_EXPRESS_URL', 'https://express.api.dhl.com/mydhlapi/test'),
+        'username' => env('DHL_EXPRESS_USERNAME'),
+        'password' => env('DHL_EXPRESS_PASSWORD'),
+        'account_number' => env('DHL_EXPRESS_ACCOUNT_NUMBER'),
+        // Express Worldwide (goods). A different product only on DHL's advice.
+        'product_code' => env('DHL_EXPRESS_PRODUCT_CODE', 'P'),
+        // Price delivery abroad at checkout with DHL's own rates for the
+        // account (DhlRateService), the rate card being only the fallback.
+        'live_rates' => (bool) env('DHL_EXPRESS_LIVE_RATES', true),
+        'shipper' => [
+            'company' => env('DHL_EXPRESS_SHIPPER_COMPANY', 'Hirfaty'),
+            'name' => env('DHL_EXPRESS_SHIPPER_NAME'),
+            'phone' => env('DHL_EXPRESS_SHIPPER_PHONE'),
+            'email' => env('DHL_EXPRESS_SHIPPER_EMAIL'),
+            'address' => env('DHL_EXPRESS_SHIPPER_ADDRESS'),
+            'city' => env('DHL_EXPRESS_SHIPPER_CITY', 'Casablanca'),
+            'postal_code' => env('DHL_EXPRESS_SHIPPER_POSTAL_CODE'),
+            'country' => env('DHL_EXPRESS_SHIPPER_COUNTRY', 'MA'),
+        ],
+        // When the desk's door closes, and where the courier asks for the parcel.
+        'pickup_close_time' => env('DHL_EXPRESS_PICKUP_CLOSE_TIME', '18:00'),
+        'pickup_location' => env('DHL_EXPRESS_PICKUP_LOCATION', 'reception'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS — one-time codes and order updates for phone sign-ins
+    |--------------------------------------------------------------------------
+    |
+    | `log` writes each message to the log instead of sending it: the default,
+    | and what the tests use. `messagepit` delivers to the local Messagepit
+    | container (docker-compose.yml), which catches local mail too — texts are
+    | in its SMS tab at http://localhost:8025. Production needs
+    | `twilio`, or nobody signing in by phone ever receives their code —
+    | SmsService refuses phone sign-in outright there rather than pretend it
+    | sent one.
+    |
+    | `twilio`: the account SID and auth token from the Twilio console, and the
+    | sender — a Twilio number, or an alphanumeric sender ID ("Hirfaty") where
+    | the destination country allows one (Morocco does, once registered).
+    |
+    */
+
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_FROM'),
+        ],
+        'messagepit' => [
+            'url' => env('MESSAGEPIT_URL', 'http://127.0.0.1:8200'),
+            // Only checked when the container runs with MP_TWILIO_AUTH_TOKEN.
+            'token' => env('MESSAGEPIT_TOKEN'),
+            'from' => env('MESSAGEPIT_FROM', 'Hirfaty'),
+        ],
+    ],
+
 ];

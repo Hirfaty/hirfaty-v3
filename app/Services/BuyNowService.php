@@ -64,7 +64,7 @@ class BuyNowService
      * The one-line cart checkout works from, never saved. Null when nothing
      * is waiting, or the piece has gone off sale since.
      */
-    public function cart(Session $session, User $buyer): ?Cart
+    public function cart(Session $session, ?User $buyer): ?Cart
     {
         $held = $session->get(self::SESSION_KEY);
 
@@ -91,7 +91,9 @@ class BuyNowService
             }
         }
 
-        $cart = new Cart(['user_id' => $buyer->id]);
+        // A visitor may hold a piece too: the page is shown to them, and they
+        // are signed in by the contact box before anything is billed.
+        $cart = new Cart(['user_id' => $buyer?->id]);
         $cart->setRelation('user', $buyer);
         $cart->setRelation('items', new Collection([
             $this->line($product, $variant, max(1, (int) ($held['quantity'] ?? 1))),

@@ -77,6 +77,18 @@ class PostLoginRedirectService
     }
 
     /**
+     * Whether the destination waiting is the checkout — a signup begun in its
+     * contact box, which should land back there rather than on the intro
+     * tour.
+     */
+    public function pendingCheckout(Request $request): bool
+    {
+        $path = $this->sanitize($request, $request->session()->get(self::SESSION_KEY));
+
+        return $path !== null && str_starts_with($path, '/checkout');
+    }
+
+    /**
      * A relative path with its query string, or null.
      *
      * Absolute URLs are accepted only for this site's own host (Laravel

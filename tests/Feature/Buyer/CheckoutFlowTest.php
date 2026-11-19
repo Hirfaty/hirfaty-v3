@@ -649,6 +649,36 @@ test('checkout refuses a country it does not ship to', function () {
     expect(Order::count())->toBe(0);
 });
 
+/*
+ * DHL Express needs the destination's country and postcode apart from the
+ * printable line to ship abroad, so every order keeps them on their own.
+ */
+test('an order keeps the country and postcode it ships to', function () {
+    Notification::fake();
+
+    $buyer = createBuyer();
+    $city = City::create(['name' => 'Tanger', 'region' => 'Tanger-Tétouan-Al Hoceïma']);
+    $store = createStoreWithSeller('Cuivre');
+
+    $cart = Cart::create(['user_id' => $buyer->id]);
+    CartItem::create([
+        'cart_id' => $cart->id,
+        'product_id' => createProductForStore($store, 'Lanterne', 80.00, 5)->id,
+        'quantity' => 1,
+    ]);
+
+    $this->actingAs($buyer)->post(route('checkout.store'), checkoutPayload([
+        'shipping_address' => '3 Rue de la Kasbah',
+        'city_id' => $city->id,
+        'postal_code' => ' 90000 ',
+    ]))->assertRedirect();
+
+    $order = Order::withoutGlobalScope(Order::SETTLED_SCOPE)->sole();
+
+    expect($order->shipping_country)->toBe('MA')
+        ->and($order->shipping_postal_code)->toBe('90000');
+});
+
 /* The field is real and reachable; there is simply nothing behind it yet. */
 test('every discount code is rejected for now', function () {
     $buyer = createBuyer();

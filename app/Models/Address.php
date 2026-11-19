@@ -15,7 +15,7 @@ class Address extends Model
 {
     protected $fillable = [
         'user_id', 'label', 'recipient_name', 'recipient_phone',
-        'address_line', 'city_id', 'postal_code', 'country', 'is_default',
+        'address_line', 'city_id', 'city_name', 'postal_code', 'country', 'is_default',
     ];
 
     /** The only country Hirfaty ships to today — see the migration. */
@@ -47,7 +47,7 @@ class Address extends Model
      */
     public function toShippingLine(): string
     {
-        $cityLine = trim(collect([$this->city?->name, $this->postal_code])
+        $cityLine = trim(collect([$this->townName(), $this->postal_code])
             ->filter()
             ->implode(' '));
 
@@ -56,5 +56,11 @@ class Address extends Model
             $this->address_line,
             $cityLine,
         ])->filter()->implode(', '));
+    }
+
+    /** The Moroccan city on file, else the town typed for an address abroad. */
+    public function townName(): ?string
+    {
+        return $this->city?->name ?? (filled($this->city_name) ? $this->city_name : null);
     }
 }

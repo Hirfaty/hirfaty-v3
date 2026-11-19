@@ -219,6 +219,8 @@ class CheckoutService
                 $checkoutData['city_id'] ?? null,
                 $service,
                 $cart->items,
+                // Abroad, DHL's live price (cached since the page quoted it).
+                $checkoutData['postal_code'] ?? null,
             );
 
             /*
@@ -277,6 +279,10 @@ class CheckoutService
                     // Every order a split basket produces ships to the same
                     // buyer, so each carries the number its courier should call.
                     'shipping_phone' => $checkoutData['shipping_phone'] ?? null,
+                    // Apart from the line too: DHL ships abroad on these.
+                    'shipping_country' => $checkoutData['country'] ?? null,
+                    'shipping_postal_code' => $checkoutData['postal_code'] ?? null,
+                    'shipping_city' => $checkoutData['city_name'] ?? null,
                     'notes' => $checkoutData['notes'] ?? null,
                 ]);
 

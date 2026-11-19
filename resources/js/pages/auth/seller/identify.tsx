@@ -1,7 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
 import { BadgeCheck, Store, Truck } from 'lucide-react';
-import InputError from '@/components/input-error';
-import { Input } from '@/components/ui/input';
+import ContactInput from '@/components/contact-input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
 import heroPotter from '@/images/hero/hero-2.jpg';
@@ -14,8 +13,6 @@ import SellerAuthShell from './SellerAuthShell';
  * empty column reads as decoration rather than something to type in. The
  * visible border moves to the wrapper so the focus ring can sit on the box.
  */
-const fieldClass = 'border-b-0 pe-0 text-base text-souk-title';
-
 const fieldBoxClass =
     'rounded-lg border border-souk-brown/30 bg-white px-4 transition-colors focus-within:border-souk-brown';
 
@@ -86,25 +83,17 @@ export default function SellerIdentify() {
                     <>
                         <div>
                             <label
-                                htmlFor="email"
+                                htmlFor="identifier"
                                 className="mb-1.5 block text-sm font-medium tracking-normal text-souk-title normal-case"
                             >
                                 {t('common.auth.login.email_required')}
                             </label>
-                            <div className={fieldBoxClass}>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    required
-                                    autoFocus
-                                    autoComplete="email"
-                                    className={fieldClass}
-                                />
-                            </div>
-                            <InputError
-                                message={errors.email}
-                                className="mt-1.5"
+                            <ContactInput
+                                id="identifier"
+                                name="identifier"
+                                autoFocus
+                                error={errors.identifier}
+                                boxClassName={fieldBoxClass}
                             />
                         </div>
 

@@ -27,7 +27,9 @@ class CartController extends Controller
 
     public function show(Request $request)
     {
-        $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
+        // A visitor who has added nothing yet sees an empty basket — no row
+        // is made just for looking.
+        $cart = $this->cart->current($request) ?? new Cart;
         // `variant.media` too: a line shows the chosen variant's own photo when
         // the seller uploaded one, and without the eager load that is an extra
         // query per basket line.
@@ -73,7 +75,9 @@ class CartController extends Controller
             'variant_id' => ['nullable', 'integer'],
         ]);
 
-        $cart = Cart::firstOrCreate(['user_id' => Auth::id()]);
+        // Signed in or not: a visitor's basket is kept against a cookie and
+        // follows them into their account when they sign in.
+        $cart = $this->cart->currentOrCreate($request);
 
         $this->cart->addLine(
             $cart,
@@ -88,6 +92,8 @@ class CartController extends Controller
 
     public function update(Request $request, CartItem $cartItem)
     {
+        abort_unless($this->cart->ownsItem($request, $cartItem), 404);
+
         $data = $request->validate([
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
@@ -103,8 +109,10 @@ class CartController extends Controller
         return back();
     }
 
-    public function remove(CartItem $cartItem)
+    public function remove(Request $request, CartItem $cartItem)
     {
+        abort_unless($this->cart->ownsItem($request, $cartItem), 404);
+
         $cartItem->delete();
 
         return back()->with('success', 'Item removed.');

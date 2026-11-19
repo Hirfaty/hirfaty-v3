@@ -1,7 +1,6 @@
 import { Form, Link, usePage } from '@inertiajs/react';
 import { Hammer, RotateCcw } from 'lucide-react';
-import InputError from '@/components/input-error';
-import { Input } from '@/components/ui/input';
+import ContactInput from '@/components/contact-input';
 import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/hooks/use-translation';
 import { sell } from '@/routes';
@@ -13,31 +12,24 @@ import type { SocialProvider } from './SocialButtons';
 
 /*
  * The one field on this screen gets a boxed treatment rather than the house
- * underline. `Input` is underline-only by default (`border-0 border-b`) and
- * stays that way everywhere else; here the field is the entire screen, and a
- * bare underline floating in a large empty card reads as decoration rather
- * than something to type in. `border-b-0` wins over the component's own
- * `border-b` because Input merges through tailwind-merge, and the visible
- * border moves to the wrapper so the focus ring can sit on the whole box.
+ * underline: here the field is the entire screen, and a bare underline
+ * floating in a large empty card reads as decoration rather than something to
+ * type in.
  */
-const fieldClass = 'border-b-0 pe-0 text-base text-souk-title';
-
 const fieldBoxClass =
     'rounded-lg border border-souk-brown/30 bg-white px-4 transition-colors focus-within:border-souk-brown';
 
 /**
- * The front door — one email field, for signing in *and* signing up.
+ * The front door — one "email or phone" field, for signing in *and* up.
  *
- * What comes next is decided server-side by
- * Auth\LoginIdentifyController::identify: a password screen if the address has
- * an account, an emailed code if it doesn't. That is why this screen asks
- * nothing beyond the address, and why there is no "create an account" link —
- * this *is* the create-an-account link.
+ * Whatever is typed gets a 6-digit code (Auth\LoginIdentifyController): by
+ * email or SMS, to an account that exists or to make one. No password —
+ * only admins keep one, and the server sends them to the password screen.
+ * There is no "create an account" link because this *is* the
+ * create-an-account link.
  *
- * The step indicator is suppressed (`step={null}`) even though signup does
- * have three stages: at this point we do not yet know whether the visitor is
- * signing in or signing up, so "step 1 of 3" would promise two more screens
- * that a returning visitor never sees.
+ * `step={null}`: at this point we do not yet know whether the visitor is
+ * signing in or signing up.
  */
 export default function LoginIdentify({
     resume,
@@ -47,7 +39,7 @@ export default function LoginIdentify({
      * A signup already in progress in this browser, if any. Server-resolved
      * from the resume cookie — see RegistrationCodeService::resolve.
      */
-    resume: { maskedEmail: string; step: 'verify' | 'details' } | null;
+    resume: { maskedContact: string; step: 'verify' | 'details' } | null;
     /**
      * Which of Google/Facebook have credentials configured. Server-decided so
      * the screen cannot offer a button whose route would 404; defaults to none
@@ -125,7 +117,7 @@ export default function LoginIdentify({
                     <p className="mt-0.5 text-xs text-souk-brown-deep/65">
                         {t('common.auth.login.resume_body').replace(
                             ':email',
-                            resume.maskedEmail,
+                            resume.maskedContact,
                         )}
                     </p>
                     <Link
@@ -143,32 +135,21 @@ export default function LoginIdentify({
                     <>
                         <div>
                             <label
-                                htmlFor="email"
+                                htmlFor="identifier"
                                 className="mb-1.5 block text-sm font-medium tracking-normal text-souk-title normal-case"
                             >
                                 {t('common.auth.login.email_required')}
                             </label>
-                            <div className={fieldBoxClass}>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    required
-                                    autoFocus
-                                    autoComplete="email"
-                                    className={fieldClass}
-                                />
-                            </div>
-                            <InputError
-                                message={errors.email}
-                                className="mt-1.5"
+                            <ContactInput
+                                id="identifier"
+                                name="identifier"
+                                autoFocus
+                                error={errors.identifier}
+                                boxClassName={fieldBoxClass}
                             />
                         </div>
 
-                        {/* Plain text, not a link: there is no /privacy route
-                            in this app yet, and a 404 undercuts the exact
-                            reassurance the sentence is there to give. */}
-                        <p className="mt-4 text-xs leading-relaxed text-souk-brown-deep/55">
+                        <p className="mt-3 text-xs leading-relaxed text-souk-brown-deep/55">
                             {t('common.auth.login.privacy_note')}
                         </p>
 
@@ -181,6 +162,34 @@ export default function LoginIdentify({
                             {processing && <Spinner />}
                             {t('common.auth.login.identify_submit')}
                         </button>
+
+                        {/*
+                         * No password, no form after the code: a new
+                         * shopper's account is made the moment the code is
+                         * accepted, so this is where the terms are agreed to.
+                         */}
+                        <p className="mt-4 text-[11px] leading-relaxed text-souk-brown-deep/55">
+                            {t('common.auth.login.terms_continue')}{' '}
+                            <Link
+                                href={route('privacy')}
+                                className="text-souk-brown underline underline-offset-4"
+                            >
+                                {t('common.auth.login.terms_privacy')}
+                            </Link>{' '}
+                            {t('common.auth.login.terms_and')}{' '}
+                            <Link
+                                href={route('terms')}
+                                className="text-souk-brown underline underline-offset-4"
+                            >
+                                {t('common.auth.login.terms_conditions')}
+                            </Link>
+                            .
+                        </p>
+
+                        {/* Loi 09-08: required under the sign-up form. */}
+                        <p className="mt-2 text-[11px] leading-relaxed text-souk-brown-deep/45">
+                            {t('common.auth.login.cndp_notice')}
+                        </p>
                     </>
                 )}
             </Form>

@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use App\Health\Checks\DiskSpaceCheck;
+use App\Models\User;
+use App\Services\CartService;
 use App\Services\LocaleService;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Events\LocaleUpdated;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
@@ -65,6 +68,18 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(LocaleUpdated::class, function (LocaleUpdated $event) {
             if (in_array($event->locale, LocaleService::SUPPORTED, true)) {
                 URL::defaults(['locale' => $event->locale]);
+            }
+        });
+
+        /*
+         * Whatever way someone signs in — a code, a password, Google, the
+         * contact box at checkout — the basket they filled as a visitor comes
+         * with them. On the event rather than in each door, so a new door
+         * cannot forget it.
+         */
+        Event::listen(Login::class, function (Login $event) {
+            if ($event->user instanceof User) {
+                app(CartService::class)->adoptGuestCart($event->user, request());
             }
         });
     }

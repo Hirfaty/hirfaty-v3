@@ -48,11 +48,11 @@ return [
     // ── التعريف: حقل البريد الإلكتروني ──────────────────────────────────
     'auth.login.identify_title' => 'سجّل الدخول أو',
     'auth.login.identify_title_accent' => 'أنشئ حسابك',
-    'auth.login.identify_subtitle' => 'لا تتذكّر إن كان لديك حساب؟ أدخل بريدك الإلكتروني وسنتحقّق لك.',
-    'auth.login.email_required' => 'البريد الإلكتروني (مطلوب)',
+    'auth.login.identify_subtitle' => 'بدون كلمة مرور: أدخل بريدك الإلكتروني أو رقم هاتفك وسنرسل لك رمزاً.',
+    'auth.login.email_required' => 'البريد الإلكتروني أو رقم الهاتف',
     'auth.login.identify_submit' => 'متابعة',
-    'auth.login.privacy_note' => 'حماية معلوماتك الشخصية أولويتنا. لا نستخدم بريدك إلا لتأكيد الحساب.',
-    'auth.login.identify_again' => 'استغرق ذلك وقتاً طويلاً — أدخل بريدك الإلكتروني مرة أخرى للمتابعة.',
+    'auth.login.privacy_note' => 'حماية معلوماتك الشخصية أولويتنا. لا نستخدم بريدك أو رقمك إلا لتسجيل دخولك وإطلاعك على طلباتك.',
+    'auth.login.identify_again' => 'استغرق ذلك وقتاً طويلاً — أدخل بريدك الإلكتروني أو رقمك مرة أخرى للمتابعة.',
 
     // بابا الحرفي والأعمال، في بطاقتين أسفل الاستمارة. «Hirfaty Seller»
     // و«Hirfaty Business» أسماء منتجات تبقى بالحرف اللاتيني في كل اللغات،
@@ -81,7 +81,7 @@ return [
     'auth.login.code_subtitle' => 'أرسلنا رمز دخول من ستة أرقام إلى :email. أدخله أدناه وستدخل حسابك — بلا كلمة مرور.',
     'auth.login.code_submit' => 'سجّل دخولي',
     'auth.login.code_sent' => 'رمز الدخول في الطريق إليك.',
-    'auth.login.code_unavailable' => 'هذا الحساب يحتاج كلمة المرور. الرموز غير متاحة للحسابات التي تستخدم التحقّق بخطوتين.',
+    'auth.login.code_unavailable' => 'هذا الحساب يسجّل الدخول بكلمة المرور.',
 
     // ── رمز التسجيل: تأكيد عنوان جديد ──────────────────────────────────
     'auth.login.verify_title' => 'تحقّق من',
@@ -95,8 +95,8 @@ return [
     'auth.login.link_invalid' => 'هذا الرابط لم يعد صالحاً. إذا كان حسابك قد أُنشئ بالفعل، سجّل الدخول؛ وإلا أدخل بريدك الإلكتروني لتلقي رمز جديد.',
     'auth.login.link_title' => 'أوشكت',
     'auth.login.link_title_accent' => 'على الانتهاء',
-    'auth.login.link_subtitle' => 'لقد فتحت الرابط المرسل إلى :email. تابع هنا لإتمام تسجيلك.',
-    'auth.login.link_submit' => 'متابعة التسجيل',
+    'auth.login.link_subtitle' => 'فتحت الرابط المرسل إلى :email. أكّد أنه أنت.',
+    'auth.login.link_submit' => 'تأكيد بريدي الإلكتروني',
 
     // مشتركة بين شاشتي الرمز (انظر CodeEntry.tsx).
     'auth.login.code_label' => 'رمز التأكيد',
@@ -251,4 +251,36 @@ return [
 
     // ── ملاحظة بجانب أسعار المنتجات ────────────────────────────────────
     'tax_included' => '(شامل الضرائب)',
+    // Short, beside a price: "200 MAD TTC" / "200 د.م. مع الضريبة".
+    'ttc' => 'مع الضريبة',
+
+    // Passwordless sign-in by email or phone, and guest checkout.
+    'auth.contact.required' => 'أدخل بريدك الإلكتروني أو رقم هاتفك.',
+    'auth.contact.invalid_phone' => 'يبدو أن هذا الرقم غير صحيح — تحقّق من عدد الأرقام ومن رمز الدولة.',
+    'auth.contact.invalid_email' => 'يبدو أن هذا البريد الإلكتروني غير صحيح — يرجى التحقّق منه.',
+    'auth.contact.phone_unavailable' => 'تسجيل الدخول بالهاتف غير متاح بعد — استخدم بريدك الإلكتروني.',
+    'auth.contact.not_a_shopper' => 'هذا يخصّ حساب حِرفي أو مسؤول — استخدم وسيلة اتصال أخرى لإتمام الطلب.',
+    'auth.contact.use_password' => 'هذا الحساب يسجّل الدخول بكلمة مرور — سجّل الدخول ببريدك الإلكتروني.',
+    'auth.contact.phone_taken' => 'هذا الرقم مسجّل في حساب لم يؤكّده بعد — سجّل الدخول ببريدك الإلكتروني.',
+    'auth.contact.send_failed' => 'تعذّر إرسال الرمز. تحقّق من الرقم أو استخدم بريدك الإلكتروني.',
+    'auth.contact.too_many' => 'طلبات رموز كثيرة. أعد المحاولة بعد :minutes دقيقة.',
+    'auth.contact.placeholder' => 'البريد أو الهاتف',
+    'auth.contact.suggest' => 'هل تقصد',
+    'auth.contact.phone_incomplete' => 'الرقم ناقص أو غير صالح لهذا البلد — تحقّق من الأرقام.',
+    'auth.contact.will_sms' => 'الرمز عبر رسالة نصية إلى',
+    'auth.contact.will_email' => 'الرمز عبر البريد الإلكتروني إلى',
+    'auth.contact.country_unknown' => 'بلد غير معروف',
+    'auth.sms.code' => 'حرفتي: رمزك هو :code. ينتهي خلال :minutes دقيقة. لا تشاركه مع أحد.',
+    'auth.login.terms_continue' => 'بالمتابعة، أنت توافق على',
+    'auth.login.code_subtitle_sms' => 'أرسلنا رمز دخول من 6 أرقام عبر رسالة نصية إلى :email. أدخله أدناه وستدخل مباشرة — بدون كلمة مرور.',
+    'auth.login.verify_subtitle_sms' => 'أنت جديد هنا — أرسلنا رمزاً من 6 أرقام عبر رسالة نصية إلى :email. أدخله لتأكيد الرقم.',
+    'auth.login.code_spam_hint_sms' => 'لم يصل شيء؟ قد تستغرق الرسالة دقيقة — وتأكّد أيضاً أن الرقم رقمك.',
+    'auth.login.wrong_contact' => 'ليس الصحيح؟ ابدأ من جديد',
+    'auth.login.title_accent_sms' => 'هاتفك',
+    'auth.login.verify_submit_sms' => 'تأكيد رقمي',
+    'auth.login.link_confirmed_title' => 'تم تأكيد',
+    'auth.login.link_confirmed_accent' => 'البريد',
+    'auth.login.link_confirmed_body' => 'عد إلى النافذة التي بدأت منها: ستكمل من تلقاء نفسها.',
+    'auth.login.link_continue_here' => 'المتابعة على هذا الجهاز بدلاً من ذلك',
+    'auth.login.code_or_link' => 'يمكنك أيضاً الضغط على الزر في البريد الإلكتروني — ستكمل هذه الصفحة من تلقاء نفسها.',
 ];
